@@ -1,5 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { logAudit } from "./auditService";
+import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 
 export async function saveQuote(job, data, actor) {
   const total = (Number(data.labour_estimate) || 0) + (Number(data.parts_estimate) || 0);
@@ -7,9 +8,9 @@ export async function saveQuote(job, data, actor) {
   if (data.id) {
     quote = await base44.entities.Quote.update(data.id, { ...data, total });
   } else {
-    quote = await base44.entities.Quote.create({ ...data, job_id: job.id, total, status: "draft" });
+    quote = await base44.entities.Quote.create({ ...data, job_id: job.id, total, currency: DEFAULT_QUOTE_TEMPLATE.currency, status: "draft" });
     await base44.entities.Job.update(job.id, { quote_status: "draft" });
-    await logAudit({ eventType: "quote_generated", jobId: job.id, actor, summary: "Quote generated", newValue: `$${total}` });
+    await logAudit({ eventType: "quote_generated", jobId: job.id, actor, summary: "Quote generated", newValue: `${DEFAULT_QUOTE_TEMPLATE.currency} ${total}` });
   }
   return quote;
 }

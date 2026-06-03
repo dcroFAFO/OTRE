@@ -25,7 +25,7 @@ export async function createInvoice(job, amount, actor) {
     status: DEFAULT_INVOICE_SETTINGS.default_status,
   });
   await base44.entities.Job.update(job.id, { payment_status: DEFAULT_INVOICE_SETTINGS.default_status, status: "invoice_outstanding" });
-  await logAudit({ eventType: "invoice_created", jobId: job.id, actor, summary: `Invoice created ($${amount})`, visibility: "customer" });
+  await logAudit({ eventType: "invoice_created", jobId: job.id, actor, summary: `Invoice created (${DEFAULT_INVOICE_SETTINGS.currency} ${amount})`, visibility: "customer" });
   return invoice;
 }
 
