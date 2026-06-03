@@ -16,6 +16,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import Overview from '@/pages/dashboard/Overview';
 import Jobs from '@/pages/dashboard/Jobs';
 import Calendar from '@/pages/dashboard/Calendar';
+import Kanban from '@/pages/dashboard/Kanban';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
         <Route index element={<Overview />} />
         <Route path="jobs" element={<Jobs />} />
         <Route path="calendar" element={<Calendar />} />
+        <Route path="kanban" element={<Kanban />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
