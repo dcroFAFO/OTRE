@@ -1,0 +1,39 @@
+{
+  "name": "StaffProfile",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string"
+    },
+    "short_name": {
+      "type": "string",
+      "description": "Display name on cards e.g. Mason R."
+    },
+    "email": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "employee",
+        "technician"
+      ],
+      "default": "technician"
+    },
+    "color": {
+      "type": "string",
+      "description": "Accent color token for calendar"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Linked User record id for portal access"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Attachment",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "description": "photo / document"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "internal",
+        "customer"
+      ],
+      "default": "internal"
+    },
+    "uploaded_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "file_url"
+  ]
+}

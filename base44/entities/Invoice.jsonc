@@ -1,0 +1,43 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "number": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "unpaid",
+        "outstanding",
+        "paid",
+        "refunded"
+      ],
+      "default": "outstanding"
+    },
+    "payment_provider": {
+      "type": "string",
+      "description": "Provider-agnostic placeholder"
+    },
+    "payment_intent_ref": {
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "job_id"
+  ]
+}

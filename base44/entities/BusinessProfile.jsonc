@@ -1,0 +1,52 @@
+{
+  "name": "BusinessProfile",
+  "type": "object",
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Unique business slug"
+    },
+    "name": {
+      "type": "string"
+    },
+    "legal_name": {
+      "type": "string"
+    },
+    "tagline": {
+      "type": "string"
+    },
+    "subheading": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "opening_hours": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

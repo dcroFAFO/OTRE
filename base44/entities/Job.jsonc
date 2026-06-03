@@ -1,0 +1,122 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "reference": {
+      "type": "string",
+      "description": "Human-readable job reference e.g. OTR-1042"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Denormalized for fast display"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "scooter_id": {
+      "type": "string"
+    },
+    "scooter_label": {
+      "type": "string",
+      "description": "e.g. Segway Ninebot Max G30"
+    },
+    "issue_description": {
+      "type": "string"
+    },
+    "job_type": {
+      "type": "string",
+      "default": "repair"
+    },
+    "status": {
+      "type": "string",
+      "default": "requested"
+    },
+    "waiting_reason": {
+      "type": "string",
+      "description": "customer/technician/supplier/parts"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Day the job is scheduled on the calendar"
+    },
+    "preferred_time_window": {
+      "type": "string"
+    },
+    "rideable": {
+      "type": "boolean",
+      "default": true
+    },
+    "location_preference": {
+      "type": "string",
+      "description": "drop_off / pickup / onsite"
+    },
+    "assigned_technician_id": {
+      "type": "string"
+    },
+    "assigned_technician_name": {
+      "type": "string"
+    },
+    "payment_status": {
+      "type": "string",
+      "default": "unpaid"
+    },
+    "quote_status": {
+      "type": "string",
+      "default": "draft"
+    },
+    "ready_for_pickup": {
+      "type": "boolean",
+      "default": false
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "parts_required": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "business_slug": {
+      "type": "string",
+      "default": "otr-scooters"
+    }
+  },
+  "required": [
+    "customer_name"
+  ]
+}

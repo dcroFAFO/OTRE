@@ -1,0 +1,73 @@
+{
+  "name": "Quote",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "labour_estimate": {
+      "type": "number",
+      "default": 0
+    },
+    "parts_estimate": {
+      "type": "number",
+      "default": 0
+    },
+    "diagnosis_notes": {
+      "type": "string"
+    },
+    "recommended_repair": {
+      "type": "string"
+    },
+    "total": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "approved",
+        "rejected"
+      ],
+      "default": "draft"
+    },
+    "sent_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approval_status": {
+      "type": "string",
+      "default": "pending"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "kind": {
+            "type": "string",
+            "description": "labour / part"
+          }
+        }
+      }
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "job_id"
+  ]
+}

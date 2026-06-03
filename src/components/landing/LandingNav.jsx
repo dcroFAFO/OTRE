@@ -1,0 +1,72 @@
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Zap, Menu, X } from "lucide-react";
+import { DEFAULT_BUSINESS } from "@/config/businessConfig";
+import { cn } from "@/lib/utils";
+
+export default function LandingNav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const links = [
+    { label: "Services", href: "#services" },
+    { label: "How it works", href: "#journey" },
+    { label: "Book", href: "#book" },
+  ];
+
+  return (
+    <header
+      className={cn(
+        "fixed top-0 inset-x-0 z-50 transition-all duration-300",
+        scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border" : "bg-transparent"
+      )}
+    >
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center justify-between">
+        <a href="#top" className="flex items-center gap-2">
+          <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground">
+            <Zap className="h-5 w-5 text-accent" />
+          </span>
+          <span className="font-heading font-extrabold text-lg tracking-tight">{DEFAULT_BUSINESS.name}</span>
+        </a>
+
+        <nav className="hidden md:flex items-center gap-8">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              {l.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-2">
+          <Link to="/portal"><Button variant="ghost" size="sm">Customer Login</Button></Link>
+          <a href="#book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book a Technician</Button></a>
+        </div>
+
+        <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {open && (
+        <div className="md:hidden bg-background border-b border-border px-5 py-4 space-y-3">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-muted-foreground">
+              {l.label}
+            </a>
+          ))}
+          <div className="flex gap-2 pt-2">
+            <Link to="/portal" className="flex-1"><Button variant="outline" size="sm" className="w-full">Login</Button></Link>
+            <a href="#book" className="flex-1"><Button size="sm" className="w-full bg-accent text-accent-foreground">Book</Button></a>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}

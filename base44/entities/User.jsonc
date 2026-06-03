@@ -1,0 +1,26 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "employee",
+        "technician",
+        "customer"
+      ],
+      "default": "customer",
+      "description": "Platform role for access control"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Contact phone"
+    },
+    "display_role_title": {
+      "type": "string",
+      "description": "Friendly job title e.g. Lead Technician"
+    }
+  },
+  "required": []
+}

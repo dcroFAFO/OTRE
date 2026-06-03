@@ -1,0 +1,33 @@
+{
+  "name": "JobNote",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "internal",
+        "customer"
+      ],
+      "default": "internal"
+    },
+    "author_id": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "author_role": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "body"
+  ]
+}

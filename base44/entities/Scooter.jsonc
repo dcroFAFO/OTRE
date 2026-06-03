@@ -1,0 +1,27 @@
+{
+  "name": "Scooter",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string"
+    },
+    "make": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "year": {
+      "type": "string"
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "model"
+  ]
+}

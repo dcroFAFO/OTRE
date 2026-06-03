@@ -1,0 +1,49 @@
+import { base44 } from "@/api/base44Client";
+import { logAudit } from "./auditService";
+
+export async function saveQuote(job, data, actor) {
+  const total = (Number(data.labour_estimate) || 0) + (Number(data.parts_estimate) || 0);
+  let quote;
+  if (data.id) {
+    quote = await base44.entities.Quote.update(data.id, { ...data, total });
+  } else {
+    quote = await base44.entities.Quote.create({ ...data, job_id: job.id, total, status: "draft" });
+    await base44.entities.Job.update(job.id, { quote_status: "draft" });
+    await logAudit({ eventType: "quote_generated", jobId: job.id, actor, summary: "Quote generated", newValue: `$${total}` });
+  }
+  return quote;
+}
+
+export async function sendQuote(quote, job, actor) {
+  const updated = await base44.entities.Quote.update(quote.id, {
+    status: "sent",
+    sent_date: new Date().toISOString(),
+  });
+  await base44.entities.Job.update(job.id, { quote_status: "sent", status: "quote_sent" });
+  await logAudit({ eventType: "quote_sent", jobId: job.id, actor, summary: "Quote sent to customer", visibility: "customer" });
+  return updated;
+}
+
+export async function setQuoteApproval(quote, job, approved, actor) {
+  const updated = await base44.entities.Quote.update(quote.id, {
+    status: approved ? "approved" : "rejected",
+    approval_status: approved ? "approved" : "rejected",
+  });
+  await base44.entities.Job.update(job.id, {
+    quote_status: approved ? "approved" : "rejected",
+    status: approved ? "quote_approved" : job.status,
+  });
+  await logAudit({
+    eventType: approved ? "quote_approved" : "quote_rejected",
+    jobId: job.id,
+    actor,
+    summary: approved ? "Quote approved" : "Quote rejected",
+    visibility: "customer",
+  });
+  return updated;
+}
+
+export async function getJobQuote(jobId) {
+  const quotes = await base44.entities.Quote.filter({ job_id: jobId }, "-created_date", 1);
+  return quotes[0] || null;
+}

@@ -1,0 +1,48 @@
+{
+  "name": "AuditEvent",
+  "type": "object",
+  "properties": {
+    "event_type": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "actor_role": {
+      "type": "string"
+    },
+    "previous_value": {
+      "type": "string"
+    },
+    "new_value": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable event summary"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "internal",
+        "customer",
+        "system"
+      ],
+      "default": "internal"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata",
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "event_type"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "ServiceItem",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
