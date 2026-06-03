@@ -1,23 +1,17 @@
 {
-  "name": "ServiceItem",
+  "name": "JobType",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
-    "name": {
+    "key": {
       "type": "string"
     },
-    "category": {
-      "type": "string"
-    },
-    "category_key": {
+    "label": {
       "type": "string"
     },
     "description": {
-      "type": "string"
-    },
-    "icon": {
       "type": "string"
     },
     "order": {
@@ -30,6 +24,7 @@
     }
   },
   "required": [
-    "name"
+    "key",
+    "label"
   ]
 }

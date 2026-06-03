@@ -1,32 +1,33 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle } from "lucide-react";
-import { DEFAULT_BUSINESS } from "@/config/businessConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { ROLES } from "@/config/jobConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { to: "/dashboard/jobs", label: "Jobs", icon: ListChecks },
-  { to: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
-];
 
 export default function DashboardShell({ user, children }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const { data: { business, app } } = usePlatformConfig();
+  const nav = [
+    { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
+    { to: "/dashboard/jobs", label: app.dashboard.nav.jobs, icon: ListChecks },
+    { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
+  ];
 
   const Sidebar = () => (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 px-5 h-16 border-b border-border">
         <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground"><Zap className="h-5 w-5 text-accent" /></span>
         <div>
-          <p className="font-heading font-extrabold text-sm leading-tight">{DEFAULT_BUSINESS.name}</p>
-          <p className="text-[11px] text-muted-foreground">Job Platform</p>
+          <p className="font-heading font-extrabold text-sm leading-tight">{business.name}</p>
+          <p className="text-[11px] text-muted-foreground">{app.terminology.platformLabel}</p>
         </div>
       </div>
       <nav className="flex-1 p-3 space-y-1">
-        {NAV.map((n) => {
+        {nav.map((n) => {
           const active = pathname === n.to;
           return (
             <Link key={n.to} to={n.to} onClick={() => setOpen(false)}
@@ -60,7 +61,7 @@ export default function DashboardShell({ user, children }) {
       {/* Mobile top bar */}
       <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-card border-b border-border">
         <button onClick={() => setOpen(true)}><Menu className="h-6 w-6" /></button>
-        <span className="font-heading font-bold">{DEFAULT_BUSINESS.name}</span>
+        <span className="font-heading font-bold">{business.name}</span>
         <span className="w-6" />
       </div>
       {open && (

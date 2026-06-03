@@ -39,7 +39,7 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
 
       <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground truncate">
         <Bike className="h-3.5 w-3.5 shrink-0" />
-        {job.scooter_label || "—"}
+        {job.asset_label || job.scooter_label || "—"}
       </p>
       {!compact && (
         <p className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground line-clamp-2">

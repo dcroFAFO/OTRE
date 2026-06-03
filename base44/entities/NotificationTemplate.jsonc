@@ -1,28 +1,22 @@
 {
-  "name": "ServiceItem",
+  "name": "NotificationTemplate",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
-    "name": {
+    "key": {
       "type": "string"
     },
-    "category": {
+    "channel": {
+      "type": "string",
+      "default": "email"
+    },
+    "subject": {
       "type": "string"
     },
-    "category_key": {
+    "body": {
       "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "icon": {
-      "type": "string"
-    },
-    "order": {
-      "type": "number",
-      "default": 0
     },
     "active": {
       "type": "boolean",
@@ -30,6 +24,7 @@
     }
   },
   "required": [
-    "name"
+    "key",
+    "channel"
   ]
 }

@@ -5,6 +5,9 @@
     "job_id": {
       "type": "string"
     },
+    "template_id": {
+      "type": "string"
+    },
     "labour_estimate": {
       "type": "number",
       "default": 0
@@ -23,15 +26,14 @@
       "type": "number",
       "default": 0
     },
+    "currency": {
+      "type": "string",
+      "default": "AUD"
+    },
     "status": {
       "type": "string",
-      "enum": [
-        "draft",
-        "sent",
-        "approved",
-        "rejected"
-      ],
-      "default": "draft"
+      "default": "draft",
+      "description": "Configurable quote status key"
     },
     "sent_date": {
       "type": "string",
@@ -57,7 +59,7 @@
           },
           "kind": {
             "type": "string",
-            "description": "labour / part"
+            "description": "Configurable line item type"
           }
         }
       }

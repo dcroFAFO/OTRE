@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobInvoice, createInvoice, setPaymentStatus } from "@/services/paymentService";
+import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
 
 export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const [invoice, setInvoice] = useState(null);
-  const [amount, setAmount] = useState(125);
+  const [amount, setAmount] = useState(0);
 
   useEffect(() => { getJobInvoice(job.id).then(setInvoice); }, [job.id]);
 
@@ -23,7 +24,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
 
       {invoice ? (
         <div className="rounded-xl border border-border p-4 space-y-2">
-          <div className="flex justify-between text-sm"><span className="text-muted-foreground">{invoice.number}</span><span className="font-heading text-xl font-extrabold">${(invoice.amount || 0).toFixed(2)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">{invoice.number}</span><span className="font-heading text-xl font-extrabold">{invoice.currency || DEFAULT_INVOICE_SETTINGS.currency} {(invoice.amount || 0).toFixed(2)}</span></div>
           {canEdit ? (
             <div className="flex flex-wrap gap-2 pt-1">
               <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>
@@ -39,7 +40,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
         </div>
       ) : canEdit ? (
         <div className="flex items-end gap-2">
-          <div className="space-y-1"><Label>Amount ($)</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32" /></div>
+          <div className="space-y-1"><Label>Amount ({DEFAULT_INVOICE_SETTINGS.currency})</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32" /></div>
           <Button size="sm" onClick={create}>Create invoice</Button>
         </div>
       ) : <p className="text-sm text-muted-foreground">No invoice yet.</p>}

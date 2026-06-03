@@ -1,0 +1,52 @@
+{
+  "name": "InvoiceSetting",
+  "type": "object",
+  "properties": {
+    "business_slug": {
+      "type": "string"
+    },
+    "prefix": {
+      "type": "string",
+      "default": "INV"
+    },
+    "currency": {
+      "type": "string",
+      "default": "AUD"
+    },
+    "default_status": {
+      "type": "string",
+      "default": "outstanding"
+    },
+    "payment_statuses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tax_label": {
+      "type": "string"
+    },
+    "tax_rate": {
+      "type": "number",
+      "default": 0
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "business_slug"
+  ]
+}

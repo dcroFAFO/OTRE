@@ -7,9 +7,11 @@ import { Sparkles, Send } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
+import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 
 export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
+  const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
   const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "", recommended_repair: "" });
   const [aiMsg, setAiMsg] = useState("");
 
@@ -32,11 +34,11 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
       {canEdit ? (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>Labour estimate ($)</Label><Input type="number" value={form.labour_estimate} onChange={(e) => setForm({ ...form, labour_estimate: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Parts estimate ($)</Label><Input type="number" value={form.parts_estimate} onChange={(e) => setForm({ ...form, parts_estimate: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{labelFor("labour_estimate")} ($)</Label><Input type="number" value={form.labour_estimate} onChange={(e) => setForm({ ...form, labour_estimate: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{labelFor("parts_estimate")} ($)</Label><Input type="number" value={form.parts_estimate} onChange={(e) => setForm({ ...form, parts_estimate: e.target.value })} /></div>
           </div>
-          <div className="space-y-1"><Label>Diagnosis notes</Label><Textarea value={form.diagnosis_notes} onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })} className="h-20" /></div>
-          <div className="space-y-1"><Label>Recommended repair</Label><Textarea value={form.recommended_repair} onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })} className="h-20" /></div>
+          <div className="space-y-1"><Label>{labelFor("diagnosis_notes")}</Label><Textarea value={form.diagnosis_notes} onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })} className="h-20" /></div>
+          <div className="space-y-1"><Label>{labelFor("recommended_repair")}</Label><Textarea value={form.recommended_repair} onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })} className="h-20" /></div>
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
             <span className="text-sm font-medium">Quote total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>

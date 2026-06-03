@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Zap, Menu, X } from "lucide-react";
-import { DEFAULT_BUSINESS } from "@/config/businessConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { cn } from "@/lib/utils";
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { data: { business, app } } = usePlatformConfig();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -15,11 +16,7 @@ export default function LandingNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const links = [
-    { label: "Services", href: "#services" },
-    { label: "How it works", href: "#journey" },
-    { label: "Book", href: "#book" },
-  ];
+  const links = app.landing.navLinks;
 
   return (
     <header
@@ -33,7 +30,7 @@ export default function LandingNav() {
           <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground">
             <Zap className="h-5 w-5 text-accent" />
           </span>
-          <span className="font-heading font-extrabold text-lg tracking-tight">{DEFAULT_BUSINESS.name}</span>
+          <span className="font-heading font-extrabold text-lg tracking-tight">{business.name}</span>
         </a>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -45,8 +42,8 @@ export default function LandingNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          <Link to="/portal"><Button variant="ghost" size="sm">Customer Login</Button></Link>
-          <a href="#book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book a Technician</Button></a>
+          <Link to="/portal"><Button variant="ghost" size="sm">{app.landing.portalLabel}</Button></Link>
+          <a href="#book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">{business.primaryCta.label}</Button></a>
         </div>
 
         <button className="md:hidden p-2" onClick={() => setOpen(!open)}>

@@ -1,5 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { logAudit } from "./auditService";
+import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
 
 // Provider-agnostic payment abstraction. No provider (Stripe/Square/PayPal)
 // is hard-coded — a real provider can be wired into the stubs below later.
@@ -18,11 +19,12 @@ export const paymentProviderStub = {
 export async function createInvoice(job, amount, actor) {
   const invoice = await base44.entities.Invoice.create({
     job_id: job.id,
-    number: `INV-${Date.now().toString().slice(-6)}`,
+    number: `${DEFAULT_INVOICE_SETTINGS.prefix}-${Date.now().toString().slice(-6)}`,
     amount: Number(amount) || 0,
-    status: "outstanding",
+    currency: DEFAULT_INVOICE_SETTINGS.currency,
+    status: DEFAULT_INVOICE_SETTINGS.default_status,
   });
-  await base44.entities.Job.update(job.id, { payment_status: "outstanding", status: "invoice_outstanding" });
+  await base44.entities.Job.update(job.id, { payment_status: DEFAULT_INVOICE_SETTINGS.default_status, status: "invoice_outstanding" });
   await logAudit({ eventType: "invoice_created", jobId: job.id, actor, summary: `Invoice created ($${amount})`, visibility: "customer" });
   return invoice;
 }

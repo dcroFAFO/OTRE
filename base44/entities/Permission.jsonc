@@ -1,28 +1,18 @@
 {
-  "name": "ServiceItem",
+  "name": "Permission",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
-    "name": {
+    "role_key": {
       "type": "string"
     },
-    "category": {
-      "type": "string"
-    },
-    "category_key": {
+    "action": {
       "type": "string"
     },
     "description": {
       "type": "string"
-    },
-    "icon": {
-      "type": "string"
-    },
-    "order": {
-      "type": "number",
-      "default": 0
     },
     "active": {
       "type": "boolean",
@@ -30,6 +20,7 @@
     }
   },
   "required": [
-    "name"
+    "role_key",
+    "action"
   ]
 }

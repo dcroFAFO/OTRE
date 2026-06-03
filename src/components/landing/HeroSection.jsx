@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, CheckCircle2 } from "lucide-react";
-import { DEFAULT_BUSINESS, CUSTOMER_JOURNEY } from "@/config/businessConfig";
+import { CUSTOMER_JOURNEY, DEFAULT_DEMO_PREVIEW_JOB } from "@/config/businessConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import JourneyCard from "./JourneyCard";
 
 // Floating positions for the parallax journey cards (settle into place).
@@ -15,6 +16,7 @@ const FLOATS = [
 
 export default function HeroSection() {
   const [activeStep, setActiveStep] = useState(2);
+  const { data: { business, app } } = usePlatformConfig();
 
   useEffect(() => {
     const t = setInterval(() => setActiveStep((s) => (s + 1) % CUSTOMER_JOURNEY.length), 1800);
@@ -30,26 +32,26 @@ export default function HeroSection() {
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
           <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-            <Zap className="h-3.5 w-3.5" /> Repairs · Servicing · Sales
+            <Zap className="h-3.5 w-3.5" /> {app.landing.heroEyebrow}
           </span>
           <h1 className="mt-5 font-heading text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold leading-[1.05] tracking-tight text-foreground">
-            {DEFAULT_BUSINESS.tagline}
+            {business.tagline}
           </h1>
-          <p className="mt-5 text-lg text-muted-foreground max-w-xl">{DEFAULT_BUSINESS.subheading}</p>
+          <p className="mt-5 text-lg text-muted-foreground max-w-xl">{business.subheading}</p>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#book">
               <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl">
-                {DEFAULT_BUSINESS.primaryCta.label} <ArrowRight className="h-4 w-4" />
+                {business.primaryCta.label} <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
             <a href="#services">
-              <Button size="lg" variant="outline" className="rounded-xl">{DEFAULT_BUSINESS.secondaryCta.label}</Button>
+              <Button size="lg" variant="outline" className="rounded-xl">{business.secondaryCta.label}</Button>
             </a>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            {["Track your repair live", "Approve quotes online", "Updates drop-off to pickup"].map((t) => (
+            {app.landing.heroBenefits.map((t) => (
               <span key={t} className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-accent" /> {t}</span>
             ))}
           </div>
@@ -81,8 +83,8 @@ export default function HeroSection() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Job OTR-1042</p>
-                <p className="font-heading font-bold text-foreground">Segway Ninebot Max G30</p>
+                <p className="text-xs text-muted-foreground">Job {DEFAULT_DEMO_PREVIEW_JOB.reference}</p>
+                <p className="font-heading font-bold text-foreground">{DEFAULT_DEMO_PREVIEW_JOB.assetLabel}</p>
               </div>
               <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent">Live</span>
             </div>

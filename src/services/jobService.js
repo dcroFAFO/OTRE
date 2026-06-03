@@ -1,6 +1,7 @@
 import { base44 } from "@/api/base44Client";
 import { logAudit } from "./auditService";
 import { getStatus } from "@/config/jobConfig";
+import { CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY, DEFAULT_APP_SETTINGS, READY_STATUS_KEY, REOPEN_STATUS_KEY } from "@/config/platformConfig";
 
 // All job mutations route through this service so audit events stay in sync.
 
@@ -29,7 +30,7 @@ export async function assignTechnician(job, tech, actor) {
     jobId: job.id,
     actor,
     newValue: tech?.short_name || tech?.full_name,
-    summary: `Technician ${tech?.short_name || tech?.full_name || "—"} assigned`,
+    summary: `${DEFAULT_APP_SETTINGS.terminology.staffAssignmentLabel} ${tech?.short_name || tech?.full_name || "—"} assigned`,
   });
   return updated;
 }
@@ -51,26 +52,26 @@ export async function rescheduleJob(job, newDate, actor) {
 export async function markReadyForPickup(job, actor) {
   const updated = await base44.entities.Job.update(job.id, {
     ready_for_pickup: true,
-    status: "ready_for_pickup",
+    status: READY_STATUS_KEY,
   });
   await logAudit({
     eventType: "ready_for_pickup",
     jobId: job.id,
     actor,
-    summary: "Marked ready for pickup",
+    summary: `Marked ${DEFAULT_APP_SETTINGS.terminology.readyStateLabel.toLowerCase()}`,
     visibility: "customer",
   });
   return updated;
 }
 
 export async function cancelJob(job, actor) {
-  const updated = await base44.entities.Job.update(job.id, { status: "cancelled" });
+  const updated = await base44.entities.Job.update(job.id, { status: CANCELLED_STATUS_KEY });
   await logAudit({ eventType: "job_cancelled", jobId: job.id, actor, summary: "Job cancelled", visibility: "customer" });
   return updated;
 }
 
 export async function reopenJob(job, actor) {
-  const updated = await base44.entities.Job.update(job.id, { status: "active" });
+  const updated = await base44.entities.Job.update(job.id, { status: REOPEN_STATUS_KEY });
   await logAudit({ eventType: "job_reopened", jobId: job.id, actor, summary: "Job reopened" });
   return updated;
 }

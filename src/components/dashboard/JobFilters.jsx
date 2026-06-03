@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { JOB_STATUSES, PAYMENT_STATUSES, JOB_TYPES, WAITING_REASONS } from "@/config/jobConfig";
+import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 
 export default function JobFilters({ filters, setFilters, staff }) {
   const set = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
@@ -10,10 +11,10 @@ export default function JobFilters({ filters, setFilters, staff }) {
     <div className="flex flex-wrap gap-2.5">
       <div className="relative flex-1 min-w-[180px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input value={filters.q} onChange={(e) => set("q", e.target.value)} placeholder="Search customer, scooter, ref..." className="pl-9" />
+        <Input value={filters.q} onChange={(e) => set("q", e.target.value)} placeholder={`Search ${DEFAULT_APP_SETTINGS.terminology.customerSingular}, ${DEFAULT_APP_SETTINGS.terminology.assetSingular}, ref...`} className="pl-9" />
       </div>
       <FilterSelect value={filters.status} onChange={(v) => set("status", v)} placeholder="Status" options={JOB_STATUSES.map((s) => ({ v: s.key, l: s.label }))} />
-      <FilterSelect value={filters.tech} onChange={(v) => set("tech", v)} placeholder="Technician" options={staff.map((s) => ({ v: s.short_name || s.full_name, l: s.short_name || s.full_name }))} />
+      <FilterSelect value={filters.tech} onChange={(v) => set("tech", v)} placeholder={DEFAULT_APP_SETTINGS.terminology.staffAssignmentLabel} options={staff.map((s) => ({ v: s.short_name || s.full_name, l: s.short_name || s.full_name }))} />
       <FilterSelect value={filters.payment} onChange={(v) => set("payment", v)} placeholder="Payment" options={PAYMENT_STATUSES.map((s) => ({ v: s.key, l: s.label }))} />
       <FilterSelect value={filters.type} onChange={(v) => set("type", v)} placeholder="Job type" options={JOB_TYPES.map((s) => ({ v: s.key, l: s.label }))} />
       <FilterSelect value={filters.waiting} onChange={(v) => set("waiting", v)} placeholder="Waiting" options={WAITING_REASONS.map((s) => ({ v: s.key, l: s.label }))} />

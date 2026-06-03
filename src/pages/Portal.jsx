@@ -4,12 +4,13 @@ import { base44 } from "@/api/base44Client";
 import { Zap, ArrowLeft, Bike } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
-import { DEFAULT_BUSINESS } from "@/config/businessConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import JobCard from "@/components/shared/JobCard";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 
 export default function Portal() {
   const { user, isLoading } = useCurrentUser();
+  const { data: { business, app } } = usePlatformConfig();
   const [jobs, setJobs] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -23,8 +24,8 @@ export default function Portal() {
   if (!user) {
     return (
       <Centered>
-        <h1 className="font-heading text-2xl font-extrabold">Customer Portal</h1>
-        <p className="mt-2 text-muted-foreground">Sign in to view and track your scooter repairs.</p>
+        <h1 className="font-heading text-2xl font-extrabold">{app.landing.portalLabel}</h1>
+        <p className="mt-2 text-muted-foreground">Sign in to view and track your {app.terminology.jobPlural}.</p>
         <button onClick={() => base44.auth.redirectToLogin(window.location.href)} className="mt-5 rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Sign in</button>
       </Centered>
     );
@@ -44,22 +45,22 @@ export default function Portal() {
     <div className="min-h-screen bg-secondary/30">
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-4xl px-5 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2"><span className="grid place-items-center h-8 w-8 rounded-lg bg-primary text-primary-foreground"><Zap className="h-4 w-4 text-accent" /></span><span className="font-heading font-extrabold">{DEFAULT_BUSINESS.name}</span></Link>
+          <Link to="/" className="flex items-center gap-2"><span className="grid place-items-center h-8 w-8 rounded-lg bg-primary text-primary-foreground"><Zap className="h-4 w-4 text-accent" /></span><span className="font-heading font-extrabold">{business.name}</span></Link>
           <button onClick={() => base44.auth.logout(window.location.origin)} className="text-sm text-muted-foreground hover:text-foreground">Sign out</button>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-5 py-8">
         <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4" /> Back to site</Link>
-        <h1 className="font-heading text-2xl font-extrabold tracking-tight">Your repairs</h1>
-        <p className="text-muted-foreground text-sm">Track progress and approve quotes for your scooters.</p>
+        <h1 className="font-heading text-2xl font-extrabold tracking-tight">Your {app.terminology.jobPlural}</h1>
+        <p className="text-muted-foreground text-sm">Track progress and approve quotes online.</p>
 
         <div className="mt-6 grid sm:grid-cols-2 gap-3">
           {jobs.map((j) => <JobCard key={j.id} job={j} onClick={() => setSelectedId(j.id)} />)}
           {jobs.length === 0 && (
             <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
               <Bike className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No repairs yet. <Link to="/#book" className="text-accent font-medium">Book one →</Link>
+              No {app.terminology.jobPlural} yet. <Link to="/#book" className="text-accent font-medium">Book one →</Link>
             </div>
           )}
         </div>

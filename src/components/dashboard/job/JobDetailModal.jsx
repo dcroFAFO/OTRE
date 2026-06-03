@@ -33,7 +33,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
             <div>
               <p className="text-xs text-primary-foreground/70">{job.reference}</p>
               <h2 className="font-heading text-xl font-extrabold">{job.customer_name}</h2>
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-primary-foreground/80"><Bike className="h-4 w-4" /> {job.scooter_label}</p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-primary-foreground/80"><Bike className="h-4 w-4" /> {job.asset_label || job.scooter_label}</p>
             </div>
             <StatusPill value={job.status} />
           </div>

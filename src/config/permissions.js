@@ -1,45 +1,7 @@
-// Modular permission map. Not hard-coded into UI components — components call
-// can(role, action) instead of checking roles inline.
+// Modular permission helpers; defaults are seeded into Role/Permission entities.
+import { DEFAULT_ROLE_PERMISSIONS, STAFF_ROLE_KEYS } from "./platformConfig";
 
-const PERMISSIONS = {
-  admin: ["*"],
-  employee: [
-    "job.view.all",
-    "job.create",
-    "job.update",
-    "job.status.change",
-    "job.assign",
-    "job.reschedule",
-    "job.note.internal",
-    "job.note.customer",
-    "job.attach",
-    "job.quote.manage",
-    "job.invoice.manage",
-    "job.payment.manage",
-    "job.cancel",
-    "job.reopen",
-    "job.archive",
-    "calendar.manage",
-    "dashboard.view",
-  ],
-  technician: [
-    "job.view.assigned",
-    "job.status.change",
-    "job.note.internal",
-    "job.note.customer",
-    "job.attach",
-    "job.checklist.update",
-    "dashboard.view",
-  ],
-  customer: [
-    "job.view.own",
-    "quote.approve",
-    "quote.reject",
-    "customer.upload",
-    "customer.message",
-    "invoice.pay",
-  ],
-};
+const PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
 
 export function can(role, action) {
   if (!role) return false;
@@ -48,5 +10,5 @@ export function can(role, action) {
 }
 
 export function isStaff(role) {
-  return ["admin", "employee", "technician"].includes(role);
+  return STAFF_ROLE_KEYS.includes(role);
 }

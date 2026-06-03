@@ -20,18 +20,33 @@
       "type": "string"
     },
     "scooter_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Legacy asset link for OTR demo data"
     },
     "scooter_label": {
       "type": "string",
-      "description": "e.g. Segway Ninebot Max G30"
+      "description": "Legacy asset label kept for backward compatibility"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "Generic item/equipment/vehicle/location/object related to the job"
+    },
+    "asset_label": {
+      "type": "string",
+      "description": "Generic display label for the item/equipment/vehicle/location/object"
+    },
+    "service_item_id": {
+      "type": "string"
+    },
+    "service_category_key": {
+      "type": "string"
     },
     "issue_description": {
       "type": "string"
     },
     "job_type": {
       "type": "string",
-      "default": "repair"
+      "default": "service"
     },
     "status": {
       "type": "string",
@@ -39,7 +54,7 @@
     },
     "waiting_reason": {
       "type": "string",
-      "description": "customer/technician/supplier/parts"
+      "description": "Configurable wait reason key"
     },
     "scheduled_date": {
       "type": "string",
@@ -51,17 +66,20 @@
     },
     "rideable": {
       "type": "boolean",
-      "default": true
+      "default": true,
+      "description": "Legacy OTR-specific intake flag"
     },
     "location_preference": {
       "type": "string",
-      "description": "drop_off / pickup / onsite"
+      "description": "Configurable booking location/preference key"
     },
     "assigned_technician_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Assigned staff member id"
     },
     "assigned_technician_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Assigned staff display name"
     },
     "payment_status": {
       "type": "string",

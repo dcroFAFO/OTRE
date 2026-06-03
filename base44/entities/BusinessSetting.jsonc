@@ -1,28 +1,19 @@
 {
-  "name": "ServiceItem",
+  "name": "BusinessSetting",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
-    "name": {
+    "key": {
       "type": "string"
     },
-    "category": {
-      "type": "string"
-    },
-    "category_key": {
-      "type": "string"
+    "value": {
+      "type": "object",
+      "additionalProperties": true
     },
     "description": {
       "type": "string"
-    },
-    "icon": {
-      "type": "string"
-    },
-    "order": {
-      "type": "number",
-      "default": 0
     },
     "active": {
       "type": "boolean",
@@ -30,6 +21,7 @@
     }
   },
   "required": [
-    "name"
+    "business_slug",
+    "key"
   ]
 }

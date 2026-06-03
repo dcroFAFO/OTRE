@@ -1,0 +1,32 @@
+{
+  "name": "PaymentProviderConfig",
+  "type": "object",
+  "properties": {
+    "business_slug": {
+      "type": "string"
+    },
+    "provider_key": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "default": "not_configured"
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "active": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "business_slug",
+    "provider_key",
+    "display_name"
+  ]
+}

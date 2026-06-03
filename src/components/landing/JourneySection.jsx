@@ -1,19 +1,21 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { CUSTOMER_JOURNEY } from "@/config/businessConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import JourneyCard from "./JourneyCard";
 
 export default function JourneySection() {
+  const { data: { app } } = usePlatformConfig();
   return (
     <section id="journey" className="relative py-20 sm:py-28 bg-secondary/40 border-y border-border">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="max-w-2xl">
-          <span className="text-sm font-semibold text-accent">How it works</span>
+          <span className="text-sm font-semibold text-accent">{app.landing.journeyEyebrow}</span>
           <h2 className="mt-2 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            From drop-off to pickup — always in the loop
+            {app.landing.journeyTitle}
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Every job moves through clear, tracked stages. You'll know exactly where your scooter is at all times.
+            {app.landing.journeyBody}
           </p>
         </div>
 

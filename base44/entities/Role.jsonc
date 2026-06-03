@@ -1,24 +1,22 @@
 {
-  "name": "ServiceItem",
+  "name": "Role",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
-    "name": {
+    "key": {
       "type": "string"
     },
-    "category": {
-      "type": "string"
-    },
-    "category_key": {
+    "label": {
       "type": "string"
     },
     "description": {
       "type": "string"
     },
-    "icon": {
-      "type": "string"
+    "is_staff": {
+      "type": "boolean",
+      "default": false
     },
     "order": {
       "type": "number",
@@ -30,6 +28,7 @@
     }
   },
   "required": [
-    "name"
+    "key",
+    "label"
   ]
 }

@@ -12,15 +12,14 @@
       "type": "number",
       "default": 0
     },
+    "currency": {
+      "type": "string",
+      "default": "AUD"
+    },
     "status": {
       "type": "string",
-      "enum": [
-        "unpaid",
-        "outstanding",
-        "paid",
-        "refunded"
-      ],
-      "default": "outstanding"
+      "default": "outstanding",
+      "description": "Configurable invoice/payment status key"
     },
     "payment_provider": {
       "type": "string",

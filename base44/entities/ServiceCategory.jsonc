@@ -1,17 +1,14 @@
 {
-  "name": "ServiceItem",
+  "name": "ServiceCategory",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
+    "key": {
+      "type": "string"
+    },
     "name": {
-      "type": "string"
-    },
-    "category": {
-      "type": "string"
-    },
-    "category_key": {
       "type": "string"
     },
     "description": {
@@ -30,6 +27,7 @@
     }
   },
   "required": [
+    "key",
     "name"
   ]
 }

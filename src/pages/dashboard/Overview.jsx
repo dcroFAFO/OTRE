@@ -7,6 +7,7 @@ import JobCard from "@/components/shared/JobCard";
 import { useJobs } from "@/hooks/useJobs";
 import { listRecentAudit } from "@/services/auditService";
 import { isThisWeek } from "date-fns";
+import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 
 export default function Overview() {
   const navigate = useNavigate();
@@ -32,26 +33,26 @@ export default function Overview() {
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="font-heading text-2xl font-extrabold tracking-tight">Overview</h1>
-        <p className="text-muted-foreground text-sm">Everything happening across your workshop right now.</p>
+        <h1 className="font-heading text-2xl font-extrabold tracking-tight">{DEFAULT_APP_SETTINGS.dashboard.nav.overview}</h1>
+        <p className="text-muted-foreground text-sm">{DEFAULT_APP_SETTINGS.dashboard.overviewSubtitle}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Active jobs" value={m.active} icon={Briefcase} onClick={() => navigate("/dashboard/jobs")} />
-        <MetricCard label="Awaiting customer" value={m.awaitingCustomer} icon={Clock} tone="amber" />
-        <MetricCard label="Waiting for parts" value={m.waitingParts} icon={Package} tone="amber" />
-        <MetricCard label="Ready for pickup" value={m.readyPickup} icon={PackageCheck} tone="emerald" />
-        <MetricCard label="Invoice outstanding" value={m.outstanding} icon={CreditCard} tone="rose" />
-        <MetricCard label="Completed this week" value={m.completedWeek} icon={CheckCircle2} tone="emerald" />
-        <MetricCard label="Bookings requested" value={m.requested} icon={Inbox} tone="accent" />
-        <MetricCard label="Total jobs" value={jobs.length} icon={Activity} />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.active} value={m.active} icon={Briefcase} onClick={() => navigate("/dashboard/jobs")} />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.awaitingCustomer} value={m.awaitingCustomer} icon={Clock} tone="amber" />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.waitingParts} value={m.waitingParts} icon={Package} tone="amber" />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.readyPickup} value={m.readyPickup} icon={PackageCheck} tone="emerald" />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.outstanding} value={m.outstanding} icon={CreditCard} tone="rose" />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.completedWeek} value={m.completedWeek} icon={CheckCircle2} tone="emerald" />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.requested} value={m.requested} icon={Inbox} tone="accent" />
+        <MetricCard label={DEFAULT_APP_SETTINGS.dashboard.metrics.total} value={jobs.length} icon={Activity} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-3">
-          <h2 className="font-heading font-bold">Upcoming jobs</h2>
+          <h2 className="font-heading font-bold">Upcoming {DEFAULT_APP_SETTINGS.terminology.jobPlural}</h2>
           <div className="grid sm:grid-cols-2 gap-3">
-            {upcoming.length === 0 && <p className="text-sm text-muted-foreground">No scheduled jobs.</p>}
+            {upcoming.length === 0 && <p className="text-sm text-muted-foreground">No scheduled {DEFAULT_APP_SETTINGS.terminology.jobPlural}.</p>}
             {upcoming.map((j) => <JobCard key={j.id} job={j} onClick={() => goJob(j)} />)}
           </div>
         </div>

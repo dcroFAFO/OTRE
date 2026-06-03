@@ -27,6 +27,29 @@
     "address": {
       "type": "string"
     },
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
     "opening_hours": {
       "type": "array",
       "items": {
@@ -40,6 +63,13 @@
           }
         }
       }
+    },
+    "currency": {
+      "type": "string",
+      "default": "AUD"
+    },
+    "timezone": {
+      "type": "string"
     },
     "is_default": {
       "type": "boolean",

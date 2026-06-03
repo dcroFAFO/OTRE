@@ -5,6 +5,7 @@ import JobCard from "@/components/shared/JobCard";
 import JobFilters from "@/components/dashboard/JobFilters";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { useJobs, useStaff } from "@/hooks/useJobs";
+import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 
 const EMPTY = { q: "", status: "all", tech: "all", payment: "all", type: "all", waiting: "all" };
 
@@ -22,7 +23,7 @@ export default function Jobs() {
 
   const filtered = useMemo(() => jobs.filter((j) => {
     const q = filters.q.toLowerCase();
-    const matchQ = !q || [j.customer_name, j.scooter_label, j.reference, j.issue_description].some((v) => v?.toLowerCase().includes(q));
+    const matchQ = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description].some((v) => v?.toLowerCase().includes(q));
     return matchQ
       && (filters.status === "all" || j.status === filters.status)
       && (filters.tech === "all" || j.assigned_technician_name === filters.tech)
@@ -34,8 +35,8 @@ export default function Jobs() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-heading text-2xl font-extrabold tracking-tight">Jobs</h1>
-        <p className="text-muted-foreground text-sm">{filtered.length} of {jobs.length} jobs</p>
+        <h1 className="font-heading text-2xl font-extrabold tracking-tight">{DEFAULT_APP_SETTINGS.dashboard.nav.jobs}</h1>
+        <p className="text-muted-foreground text-sm">{filtered.length} of {jobs.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}</p>
       </div>
 
       <JobFilters filters={filters} setFilters={setFilters} staff={staff} />

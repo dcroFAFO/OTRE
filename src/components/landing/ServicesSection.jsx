@@ -1,11 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag, Truck, Wrench as Fallback } from "lucide-react";
-import { DEFAULT_SERVICES } from "@/config/businessConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 
 const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag, Truck };
 
 export default function ServicesSection() {
+  const { data: { services, app } } = usePlatformConfig();
   return (
     <section id="services" className="relative py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -16,17 +17,17 @@ export default function ServicesSection() {
           transition={{ duration: 0.6 }}
           className="max-w-2xl"
         >
-          <span className="text-sm font-semibold text-accent">What we do</span>
+          <span className="text-sm font-semibold text-accent">{app.landing.servicesEyebrow}</span>
           <h2 className="mt-2 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            Everything your scooter needs, in one place
+            {app.landing.servicesTitle}
           </h2>
           <p className="mt-3 text-muted-foreground">
-            From quick puncture fixes to full electrical diagnostics and brand-new scooters — handled by people who know e-scooters inside out.
+            {app.landing.servicesBody}
           </p>
         </motion.div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {DEFAULT_SERVICES.map((s, i) => {
+          {services.map((s, i) => {
             const Icon = ICONS[s.icon] || Fallback;
             return (
               <motion.div

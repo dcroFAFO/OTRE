@@ -1,24 +1,30 @@
 {
-  "name": "ServiceItem",
+  "name": "JobStatus",
   "type": "object",
   "properties": {
     "business_slug": {
       "type": "string"
     },
-    "name": {
+    "key": {
       "type": "string"
     },
-    "category": {
+    "label": {
       "type": "string"
     },
-    "category_key": {
+    "group": {
       "type": "string"
     },
-    "description": {
-      "type": "string"
+    "color": {
+      "type": "string",
+      "default": "slate"
     },
-    "icon": {
-      "type": "string"
+    "is_default_intake": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_terminal": {
+      "type": "boolean",
+      "default": false
     },
     "order": {
       "type": "number",
@@ -30,6 +36,7 @@
     }
   },
   "required": [
-    "name"
+    "key",
+    "label"
   ]
 }
