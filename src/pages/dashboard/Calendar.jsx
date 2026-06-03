@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
 import { DragDropContext } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { startOfWeek, addDays, addWeeks, format } from "date-fns";
+import { ChevronLeft, ChevronRight, CalendarDays, List } from "lucide-react";
+import { startOfWeek, addDays, addWeeks, format, isToday } from "date-fns";
 import CalendarColumn from "@/components/dashboard/calendar/CalendarColumn";
+import DailyTimeline from "@/components/dashboard/calendar/DailyTimeline";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { rescheduleJob } from "@/services/jobService";
+import { cn } from "@/lib/utils";
 
 export default function Calendar() {
   const user = useDashboardUser();
@@ -17,6 +19,8 @@ export default function Calendar() {
   const { data: jobs } = useJobs();
   const invalidate = useInvalidateJobs();
   const [weekOffset, setWeekOffset] = useState(0);
+  const [viewMode, setViewMode] = useState("week"); // week | day
+  const [selectedDay, setSelectedDay] = useState(format(new Date(), "yyyy-MM-dd"));
 
   const selectedId = new URLSearchParams(location.search).get("id");
   const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -33,33 +37,116 @@ export default function Calendar() {
     const { destination, draggableId, source } = result;
     if (!destination || destination.droppableId === source.droppableId) return;
     const job = jobs.find((j) => j.id === draggableId);
+    if (!job) return;
     await rescheduleJob(job, destination.droppableId, user);
     invalidate();
   };
 
+  const openJob = (id) => navigate(`/dashboard/calendar?id=${id}`);
+  const closeJob = () => { navigate("/dashboard/calendar"); invalidate(); };
+
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold tracking-tight flex items-center gap-2"><CalendarDays className="h-6 w-6 text-accent" /> Calendar</h1>
-          <p className="text-muted-foreground text-sm">{format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}</p>
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight flex items-center gap-2">
+            <CalendarDays className="h-6 w-6 text-accent" /> Calendar
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}
+          </p>
         </div>
+
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekOffset((w) => w - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <Button variant="outline" size="sm" onClick={() => setWeekOffset(0)}>Today</Button>
-          <Button variant="outline" size="icon" onClick={() => setWeekOffset((w) => w + 1)}><ChevronRight className="h-4 w-4" /></Button>
+          {/* View toggle */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setViewMode("week")}
+              className={cn("px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors",
+                viewMode === "week" ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Weekly
+            </button>
+            <button
+              onClick={() => setViewMode("day")}
+              className={cn("px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors border-l border-border",
+                viewMode === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}
+            >
+              <List className="h-3.5 w-3.5" /> Daily
+            </button>
+          </div>
+
+          {/* Week navigation */}
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekOffset((w) => w - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => { setWeekOffset(0); setSelectedDay(format(new Date(), "yyyy-MM-dd")); }}>
+            Today
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekOffset((w) => w + 1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-2 overflow-x-auto pb-3">
-          {days.map((d) => (
-            <CalendarColumn key={format(d, "yyyy-MM-dd")} date={d} jobs={byDay[format(d, "yyyy-MM-dd")] || []} onOpen={(id) => navigate(`/dashboard/calendar?id=${id}`)} />
-          ))}
-        </div>
-      </DragDropContext>
+      {viewMode === "week" ? (
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="flex gap-2 overflow-x-auto pb-3 min-h-[400px]">
+            {days.map((d) => (
+              <CalendarColumn
+                key={format(d, "yyyy-MM-dd")}
+                date={d}
+                jobs={byDay[format(d, "yyyy-MM-dd")] || []}
+                onOpen={openJob}
+              />
+            ))}
+          </div>
+        </DragDropContext>
+      ) : (
+        <>
+          {/* Day selector */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {days.map((d) => {
+              const key = format(d, "yyyy-MM-dd");
+              const count = (byDay[key] || []).length;
+              const today = isToday(d);
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedDay(key)}
+                  className={cn(
+                    "flex flex-col items-center px-3 py-2 rounded-xl border text-xs font-medium transition-all min-w-[60px] shrink-0",
+                    selectedDay === key
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : today
+                      ? "border-accent text-accent"
+                      : "border-border hover:bg-secondary"
+                  )}
+                >
+                  <span className="text-[10px] uppercase">{format(d, "EEE")}</span>
+                  <span className="text-lg font-extrabold font-heading leading-none">{format(d, "d")}</span>
+                  {count > 0 && (
+                    <span className={cn("mt-0.5 rounded-full text-[10px] font-bold px-1",
+                      selectedDay === key ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary")}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <DailyTimeline
+            date={days.find((d) => format(d, "yyyy-MM-dd") === selectedDay) || days[0]}
+            jobs={byDay[selectedDay] || []}
+            onOpen={openJob}
+            actor={user}
+            onRefresh={invalidate}
+          />
+        </>
+      )}
 
-      <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={() => navigate("/dashboard/calendar")} />
+      <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={closeJob} />
     </div>
   );
 }
