@@ -28,9 +28,16 @@ export const SCOOTER_BRANDS = {
   Aovo: ["Aovo Pro", "Aovo M365", "Aovo ES80", "Other model"],
   iScooter: ["iScooter i9", "iScooter i10", "iScooter iX5", "Other model"],
   "E-Glide": ["E-Glide G60", "E-Glide GT", "Other model"],
+  Dragon: ["Dragon GTR", "Dragon GTS", "Dragon GT", "Dragon Z", "Other model"],
   Other: [],
 };
 
-export const BRAND_NAMES = Object.keys(SCOOTER_BRANDS).sort((a, b) =>
-  a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)
-);
+// Most popular brands first, then the rest alphabetically, with "Other" last.
+const POPULAR = ["Kaabo", "Segway", "Dualtron", "Dragon", "Nami", "Ninebot", "Vsett"];
+
+export const BRAND_NAMES = (() => {
+  const rest = Object.keys(SCOOTER_BRANDS)
+    .filter((b) => b !== "Other" && !POPULAR.includes(b))
+    .sort((a, b) => a.localeCompare(b));
+  return [...POPULAR, ...rest, "Other"];
+})();
