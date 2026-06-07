@@ -11,6 +11,7 @@ import JobActions from "./JobActions";
 import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel";
+import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
 import JobChecklistPanel from "./JobChecklistPanel";
@@ -65,6 +66,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />
                     <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />
                     <ModalTab value="notes" label="Notes" />
+                    <ModalTab value="private" label="Private" />
                     <ModalTab value="parts" label="Parts" />
                     <ModalTab value="files" label="Files" />
                     <ModalTab value="activity" label="History" />
@@ -90,6 +92,9 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
                     <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
+                  </TabsContent>
+                  <TabsContent value="private" className="mt-0">
+                    <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                   </TabsContent>
                   <TabsContent value="parts" className="mt-0">
                     <JobPartsPanel job={job} canEdit={canManage} />

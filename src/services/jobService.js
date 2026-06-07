@@ -97,6 +97,18 @@ export async function toggleChecklistItem(job, index, actor) {
   return updated;
 }
 
+export async function savePrivateNotes(job, privateNotes, actor) {
+  const updated = await base44.entities.Job.update(job.id, { private_notes: privateNotes });
+  await logAudit({
+    eventType: "private_notes_updated",
+    jobId: job.id,
+    actor,
+    summary: "Private notes updated",
+    visibility: "internal",
+  });
+  return updated;
+}
+
 export async function addNote(job, { body, visibility }, actor) {
   const note = await base44.entities.JobNote.create({
     job_id: job.id,

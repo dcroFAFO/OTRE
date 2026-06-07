@@ -44,6 +44,10 @@
     "issue_description": {
       "type": "string"
     },
+    "private_notes": {
+      "type": "string",
+      "description": "Internal technician-only notes (repair issues, part failures). Never shown to customers."
+    },
     "job_type": {
       "type": "string",
       "default": "service"
