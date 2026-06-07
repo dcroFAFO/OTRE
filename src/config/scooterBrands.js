@@ -35,6 +35,15 @@ export const SCOOTER_BRANDS = {
 // Most popular brands first, then the rest alphabetically, with "Other" last.
 const POPULAR = ["Kaabo", "Segway", "Dualtron", "Dragon", "Nami", "Ninebot", "Vsett"];
 
+// Returns true if the chosen model is valid for the chosen brand.
+// "Other"/custom brands accept any model; known brands require a model from their list.
+export function isModelValidForBrand(make, model) {
+  if (!make) return false;
+  if (make === "Other") return true;
+  const models = SCOOTER_BRANDS[make] || [];
+  return models.includes(model);
+}
+
 export const BRAND_NAMES = (() => {
   const rest = Object.keys(SCOOTER_BRANDS)
     .filter((b) => b !== "Other" && !POPULAR.includes(b))

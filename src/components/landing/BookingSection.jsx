@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
+import { isModelValidForBrand } from "@/config/scooterBrands";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 const options = (key) => field(key).options || [];
@@ -30,6 +31,8 @@ export default function BookingSection() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
+
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -41,7 +44,7 @@ export default function BookingSection() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.consent || !form.asset_label) return;
+    if (!form.consent || !form.asset_label || !modelMatchesBrand) return;
     setSubmitting(true);
     const job = await createBookingRequest({ ...form, photo_url: photoUrl });
     setSubmitting(false);
@@ -104,6 +107,9 @@ export default function BookingSection() {
                 setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))
               }
             />
+            {form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand && (
+              <p className="text-sm text-destructive">The selected model doesn't belong to {form.asset_make}. Please pick a matching model.</p>
+            )}
           </Field>
           <Field label={field("issue_description").label} required>
             <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-24" required />
@@ -149,7 +155,7 @@ export default function BookingSection() {
             <span>{DEFAULT_BOOKING_COPY.consentText}</span>
           </label>
 
-          <Button type="submit" disabled={submitting || !form.consent} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
+          <Button type="submit" disabled={submitting || !form.consent || !modelMatchesBrand} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : DEFAULT_BOOKING_COPY.submitLabel}
           </Button>
         </form>
