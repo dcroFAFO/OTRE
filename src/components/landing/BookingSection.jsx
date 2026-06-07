@@ -9,12 +9,14 @@ import { Loader2, CheckCircle2, Upload, CalendarCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
+import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 const options = (key) => field(key).options || [];
 
 const EMPTY = {
   customer_name: "", phone: "", email: "", asset_label: "", issue_description: "",
+  asset_make: "", asset_model: "", asset_custom_make: "", asset_custom_model: "",
   preferred_date: "", preferred_time_window: "Anytime", rideable: true,
   location_preference: "drop_off", consent: false,
 };
@@ -39,7 +41,7 @@ export default function BookingSection() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.consent) return;
+    if (!form.consent || !form.asset_label) return;
     setSubmitting(true);
     const job = await createBookingRequest({ ...form, photo_url: photoUrl });
     setSubmitting(false);
@@ -93,7 +95,15 @@ export default function BookingSection() {
             <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder={field("email").placeholder} required />
           </Field>
           <Field label={field("asset_label").label} required>
-            <Input value={form.asset_label} onChange={(e) => set("asset_label", e.target.value)} placeholder={field("asset_label").placeholder} required />
+            <AssetBrandPicker
+              make={form.asset_make}
+              model={form.asset_model}
+              customMake={form.asset_custom_make}
+              customModel={form.asset_custom_model}
+              onChange={({ make, model, customMake, customModel, label }) =>
+                setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))
+              }
+            />
           </Field>
           <Field label={field("issue_description").label} required>
             <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-24" required />
