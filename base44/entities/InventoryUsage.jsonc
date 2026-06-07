@@ -1,0 +1,36 @@
+{
+  "name": "InventoryUsage",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "item_id": {
+      "type": "string"
+    },
+    "item_name": {
+      "type": "string",
+      "description": "Denormalised for fast display"
+    },
+    "qty_used": {
+      "type": "number",
+      "default": 1
+    },
+    "unit_cost": {
+      "type": "number",
+      "default": 0
+    },
+    "unit_sell": {
+      "type": "number",
+      "default": 0
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "item_id",
+    "qty_used"
+  ]
+}

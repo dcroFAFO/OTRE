@@ -12,6 +12,7 @@ import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
+import JobPartsPanel from "./JobPartsPanel";
 import AuditTimeline from "./AuditTimeline";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />
                     <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />
                     <ModalTab value="notes" label="Notes" />
+                    <ModalTab value="parts" label="Parts" />
                     <ModalTab value="files" label="Files" />
                     <ModalTab value="activity" label="History" />
                   </TabsList>
@@ -75,6 +77,9 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
                     <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
+                  </TabsContent>
+                  <TabsContent value="parts" className="mt-0">
+                    <JobPartsPanel job={job} canEdit={canManage} />
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
                     <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />

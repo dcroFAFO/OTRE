@@ -17,6 +17,7 @@ import Overview from '@/pages/dashboard/Overview';
 import Jobs from '@/pages/dashboard/Jobs';
 import Calendar from '@/pages/dashboard/Calendar';
 import Kanban from '@/pages/dashboard/Kanban';
+import Inventory from '@/pages/dashboard/Inventory';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -55,6 +56,7 @@ const AuthenticatedApp = () => {
         <Route path="jobs" element={<Jobs />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="kanban" element={<Kanban />} />
+        <Route path="inventory" element={<Inventory />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

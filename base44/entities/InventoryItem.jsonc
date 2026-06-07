@@ -1,0 +1,67 @@
+{
+  "name": "InventoryItem",
+  "type": "object",
+  "properties": {
+    "business_slug": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Part or consumable name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Stock keeping unit / part number"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "tyre",
+        "brake",
+        "battery",
+        "electrical",
+        "bearing",
+        "lubricant",
+        "fastener",
+        "cable",
+        "other"
+      ],
+      "default": "other"
+    },
+    "description": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string",
+      "default": "ea",
+      "description": "Unit of measure e.g. ea, ml, m"
+    },
+    "cost_price": {
+      "type": "number",
+      "default": 0
+    },
+    "sell_price": {
+      "type": "number",
+      "default": 0
+    },
+    "qty_on_hand": {
+      "type": "number",
+      "default": 0
+    },
+    "qty_low_threshold": {
+      "type": "number",
+      "default": 2,
+      "description": "Alert when stock falls below this"
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
