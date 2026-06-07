@@ -13,6 +13,12 @@ const NOTIFY_STATUSES = {
     message: "Your scooter has been repaired and is ready to collect. Please come by during our opening hours: Mon–Fri 9am–5:30pm · Sat 10am–3pm.",
     color: "#16a34a",
   },
+  completed: {
+    subject: "Your scooter job is complete ✅",
+    heading: "Job Completed",
+    message: "Your scooter job has been marked as completed. Thank you for choosing OTR Scooters — we hope to see you again!",
+    color: "#2563eb",
+  },
 };
 
 Deno.serve(async (req) => {
