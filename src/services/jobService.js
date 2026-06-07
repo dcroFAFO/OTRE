@@ -82,6 +82,21 @@ export async function archiveJob(job, actor) {
   return updated;
 }
 
+export async function toggleChecklistItem(job, index, actor) {
+  const checklist = (job.checklist || []).map((c, i) =>
+    i === index ? { ...c, done: !c.done } : c
+  );
+  const updated = await base44.entities.Job.update(job.id, { checklist });
+  const item = checklist[index];
+  await logAudit({
+    eventType: "checklist_updated",
+    jobId: job.id,
+    actor,
+    summary: `Checklist item "${item.label}" marked ${item.done ? "done" : "not done"}`,
+  });
+  return updated;
+}
+
 export async function addNote(job, { body, visibility }, actor) {
   const note = await base44.entities.JobNote.create({
     job_id: job.id,

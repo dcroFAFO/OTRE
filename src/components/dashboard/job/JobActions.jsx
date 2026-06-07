@@ -26,6 +26,10 @@ export default function JobActions({ job, actor, onChange }) {
 
   const isTerminal = [CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY].includes(job.status);
 
+  const checklist = job.checklist || [];
+  const pendingChecks = checklist.filter((c) => !c.done).length;
+  const checklistBlocked = pendingChecks > 0;
+
   return (
     <div className="space-y-6">
 
@@ -120,10 +124,11 @@ export default function JobActions({ job, actor, onChange }) {
                 variant="emerald"
               />
               <ActionButton
-                label="Complete job"
+                label={checklistBlocked ? `Complete job (${pendingChecks} check${pendingChecks !== 1 ? "s" : ""} left)` : "Complete job"}
                 icon={CheckCircle2}
                 onClick={run("complete", () => changeStatus(job, COMPLETE_STATUS_KEY, actor))}
                 busy={busy === "complete"}
+                disabled={checklistBlocked}
                 variant="emerald"
               />
               <ActionButton
@@ -156,7 +161,7 @@ export default function JobActions({ job, actor, onChange }) {
   );
 }
 
-function ActionButton({ label, icon: Icon, onClick, busy, variant = "default" }) {
+function ActionButton({ label, icon: Icon, onClick, busy, disabled, variant = "default" }) {
   const styles = {
     default: "border-border text-foreground hover:bg-secondary",
     emerald: "border-emerald-200 text-emerald-700 hover:bg-emerald-50",
@@ -166,7 +171,7 @@ function ActionButton({ label, icon: Icon, onClick, busy, variant = "default" })
   return (
     <button
       onClick={onClick}
-      disabled={busy}
+      disabled={busy || disabled}
       className={cn(
         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50",
         styles[variant]

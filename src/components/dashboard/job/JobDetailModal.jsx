@@ -13,6 +13,7 @@ import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
+import JobChecklistPanel from "./JobChecklistPanel";
 import AuditTimeline from "./AuditTimeline";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,13 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                 <div className="border-b border-border px-5 pt-3 bg-background sticky top-0 z-10">
                   <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap">
                     {canManage && <ModalTab value="manage" label="Actions" />}
+                    {job.checklist?.length > 0 && (
+                      <ModalTab
+                        value="checklist"
+                        label="Checklist"
+                        badge={`${job.checklist.filter((c) => c.done).length}/${job.checklist.length}`}
+                      />
+                    )}
                     <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />
                     <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />
                     <ModalTab value="notes" label="Notes" />
@@ -67,6 +75,11 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   {canManage && (
                     <TabsContent value="manage" className="mt-0">
                       <JobActions job={job} actor={actor} onChange={bump} />
+                    </TabsContent>
+                  )}
+                  {job.checklist?.length > 0 && (
+                    <TabsContent value="checklist" className="mt-0">
+                      <JobChecklistPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                     </TabsContent>
                   )}
                   <TabsContent value="quote" className="mt-0">
