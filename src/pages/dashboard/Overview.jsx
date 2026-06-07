@@ -6,6 +6,7 @@ import {
   Inbox, Activity, Search, ArrowRight, CalendarDays, AlertTriangle
 } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
+import MonthlySummary from "@/components/dashboard/MonthlySummary";
 import JobCard from "@/components/shared/JobCard";
 import { useJobs } from "@/hooks/useJobs";
 import { listRecentAudit } from "@/services/auditService";
@@ -111,6 +112,9 @@ export default function Overview() {
             onClick={() => navigate("/dashboard/jobs")} />
         ))}
       </div>
+
+      {/* Monthly summary */}
+      <MonthlySummary jobs={jobs} />
 
       {/* Pending requests alert */}
       {m.requested > 0 && (
