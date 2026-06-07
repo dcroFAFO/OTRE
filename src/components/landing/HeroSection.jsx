@@ -9,12 +9,12 @@ const ICONS = { CalendarCheck, UserCheck, Search, FileText, Clock, Wrench, Packa
 
 // Reduced: only 6 cards, simplified positioning, no per-card infinite loops
 const CARD_LAYOUT = [
-  { top: "4%",   left: "4%",   delay: 0.05, entryX: -16 },
-  { top: "8%",   right: "3%",  delay: 0.12, entryX: 16  },
-  { top: "32%",  left: "1%",   delay: 0.18, entryX: -16 },
-  { top: "34%",  right: "2%",  delay: 0.24, entryX: 16  },
-  { bottom: "12%", left: "3%", delay: 0.30, entryX: -16 },
-  { bottom: "10%", right: "4%",delay: 0.36, entryX: 16  },
+  { top: "2%",   left: "0%",   delay: 0.05, entryX: -16 },
+  { top: "4%",   right: "0%",  delay: 0.12, entryX: 16  },
+  { top: "26%",  left: "-2%",  delay: 0.18, entryX: -16 },
+  { top: "28%",  right: "-2%", delay: 0.24, entryX: 16  },
+  { bottom: "6%", left: "0%",  delay: 0.30, entryX: -16 },
+  { bottom: "4%", right: "0%", delay: 0.36, entryX: 16  },
 ];
 
 function FloatingJourneyCard({ item, layout }) {
@@ -50,7 +50,7 @@ function LiveJobPreview() {
       initial={{ opacity: 0, scale: 0.96, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ delay: 0.55, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute inset-x-[12%] top-1/2 -translate-y-1/2 z-20 rounded-3xl border border-border bg-card/98 p-5 shadow-2xl shadow-primary/10"
+      className="absolute inset-x-[20%] top-1/2 -translate-y-1/2 z-20 rounded-3xl border border-border bg-card/98 p-5 shadow-2xl shadow-primary/10"
     >
       <div className="flex items-center justify-between mb-4">
         <div>
