@@ -23,6 +23,30 @@ Deno.serve(async (req) => {
     const service = job.service_category_key || job.job_type || 'general repair';
     const issue = job.issue_description || '';
 
+    // 1. SEARCH MY OWN E-STORE FIRST.
+    // Match active products against the job context (asset/service/issue keywords).
+    const storeProducts = await base44.asServiceRole.entities.Product.filter({ active: true }, 'order', 500);
+    const haystackTerms = `${asset} ${service} ${issue}`
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3);
+
+    const storeMatches = storeProducts
+      .filter((p) => {
+        const text = `${p.name || ''} ${p.description || ''} ${p.category_label || ''} ${p.sku || ''}`.toLowerCase();
+        return haystackTerms.some((t) => text.includes(t));
+      })
+      .slice(0, 8)
+      .map((p) => ({
+        name: p.name || 'Part',
+        typical_price: Number(p.price) || 0,
+        retailer: 'My e-store',
+        source: 'estore',
+        in_stock: p.in_stock !== false,
+        note: p.description || (p.category_label ? `${p.category_label}${p.sku ? ` · ${p.sku}` : ''}` : ''),
+      }));
+
+    // 2. SEARCH ONLINE in priority order: eScootNow, then Alibaba, eBay, Amazon.
     const prompt = `You are a parts-sourcing specialist for an electric scooter repair workshop.
 
 Find the real, currently available replacement parts and consumables commonly needed for this job, specific to the exact make/model.
@@ -31,12 +55,18 @@ Scooter (make/model): ${asset}
 Service type: ${service}
 Reported issue: ${issue}
 
-Search retailers such as eBay, Amazon, iScoot, Scooter Hut, and other reputable electric scooter parts suppliers. Return the parts a technician would realistically need for this service on THIS specific scooter (e.g. for a brake job: brake pads, brake fluid, brake cable/lever if applicable, etc.).
+Search retailers in THIS STRICT PRIORITY ORDER and prefer earlier sources:
+1. eScootNow (escootnow.com.au) — the workshop's primary supplier, always check first
+2. Alibaba (alibaba.com)
+3. eBay
+4. Amazon
+
+For each part, source it from the highest-priority retailer that has it in stock. Return the parts a technician would realistically need for this service on THIS specific scooter (e.g. for a brake job: brake pads, brake fluid, brake cable/lever if applicable, etc.).
 
 For each part provide:
 - name: clear part name including fitment if relevant
 - typical_price: a realistic current AUD price (number only)
-- retailer: where it is commonly available (e.g. eBay, Amazon, iScoot, Scooter Hut)
+- retailer: which retailer it was sourced from — MUST be one of: eScootNow, Alibaba, eBay, Amazon
 - note: short fitment/compatibility note for this make/model
 
 Only include parts genuinely relevant to this scooter and service. Return between 2 and 8 parts. Prices must be realistic current market prices in AUD.`;
@@ -66,12 +96,25 @@ Only include parts genuinely relevant to this scooter and service. Return betwee
       },
     });
 
-    const parts = (result?.parts || []).map((p) => ({
-      name: p.name || 'Part',
-      typical_price: Number(p.typical_price) || 0,
-      retailer: p.retailer || '',
-      note: p.note || '',
-    }));
+    // Order online retailers by the workshop's preferred priority.
+    const retailerRank = { escootnow: 0, alibaba: 1, ebay: 2, amazon: 3 };
+    const rankOf = (r) => {
+      const key = (r || '').toLowerCase().replace(/[^a-z]/g, '');
+      return retailerRank[key] ?? 99;
+    };
+
+    const onlineParts = (result?.parts || [])
+      .map((p) => ({
+        name: p.name || 'Part',
+        typical_price: Number(p.typical_price) || 0,
+        retailer: p.retailer || '',
+        source: 'online',
+        note: p.note || '',
+      }))
+      .sort((a, b) => rankOf(a.retailer) - rankOf(b.retailer));
+
+    // My e-store always comes first, then online results in priority order.
+    const parts = [...storeMatches, ...onlineParts];
 
     return Response.json({ parts, asset, service });
   } catch (error) {

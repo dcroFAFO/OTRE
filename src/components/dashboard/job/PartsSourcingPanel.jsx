@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Plus, Check, ExternalLink } from "lucide-react";
+import { Search, Loader2, Plus, Check, ExternalLink, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function PartsSourcingPanel({ job, actor, onAdded }) {
@@ -98,9 +98,15 @@ export default function PartsSourcingPanel({ job, actor, onAdded }) {
                     {p.note && <p className="text-xs text-muted-foreground">{p.note}</p>}
                     <div className="mt-1 flex items-center gap-2">
                       {p.retailer && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <ExternalLink className="h-3 w-3" /> {p.retailer}
-                        </span>
+                        p.source === "estore" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                            <Store className="h-3 w-3" /> {p.retailer}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <ExternalLink className="h-3 w-3" /> {p.retailer}
+                          </span>
+                        )
                       )}
                       {isSel && (
                         <span className="inline-flex items-center gap-1 text-[11px]">
