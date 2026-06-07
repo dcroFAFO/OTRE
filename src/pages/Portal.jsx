@@ -8,6 +8,7 @@ import { isStaff } from "@/config/permissions";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import JobCard from "@/components/shared/JobCard";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
+import SupportChat from "@/components/portal/SupportChat";
 
 export default function Portal() {
   const { user, isLoading } = useCurrentUser();
@@ -69,6 +70,8 @@ export default function Portal() {
       </main>
 
       <JobDetailModal jobId={selectedId} actor={{ ...user, role: "customer" }} open={!!selectedId} onClose={() => setSelectedId(null)} onChange={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
+
+      <SupportChat user={user} />
     </div>
   );
 }
