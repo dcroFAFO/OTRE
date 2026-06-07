@@ -4,8 +4,8 @@ export const DEFAULT_BUSINESS = {
   slug: DEFAULT_BUSINESS_SLUG,
   name: "OTR Scooters",
   legalName: "On The Run Scooters",
-  tagline: "Electric scooter repairs, servicing, and sales — made simple.",
-  subheading: "Book a technician, track your repair, approve quotes, and stay updated from drop-off to pickup.",
+  tagline: "Expert electric scooter repairs, servicing, and sales.",
+  subheading: "From puncture fixes and battery replacements to full diagnostics and brand-new scooters — handled by specialists who know e-scooters inside out.",
   email: "hello@otrscooters.com",
   phone: "(03) 9000 1234",
   address: "12 Workshop Lane, Melbourne VIC",
@@ -19,8 +19,8 @@ export const DEFAULT_BUSINESS = {
     { day: "Saturday", hours: "10:00 — 15:00" },
     { day: "Sunday", hours: "Closed" },
   ],
-  primaryCta: { label: "Book a Technician", target: "#book" },
-  secondaryCta: { label: "View Services", target: "#services" },
+  primaryCta: { label: "View Services", target: "#services" },
+  secondaryCta: { label: "Book a Technician", target: "#book" },
 };
 
 export const DEFAULT_APP_SETTINGS = {
@@ -41,10 +41,10 @@ export const DEFAULT_APP_SETTINGS = {
     navLinks: [
       { label: "Services", href: "#services" },
       { label: "How it works", href: "#journey" },
-      { label: "Book", href: "#book" },
+      { label: "Book a repair", href: "#book" },
     ],
     heroEyebrow: "Repairs · Servicing · Sales",
-    heroBenefits: ["Track your repair live", "Approve quotes online", "Updates drop-off to pickup"],
+    heroBenefits: ["All major brands serviced", "Genuine & compatible parts", "Transparent fixed-price quotes"],
     servicesEyebrow: "What we do",
     servicesTitle: "Everything your scooter needs, in one place",
     servicesBody: "From quick puncture fixes to full electrical diagnostics and brand-new scooters — handled by people who know e-scooters inside out.",
