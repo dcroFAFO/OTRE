@@ -254,6 +254,10 @@ export const DEFAULT_NOTIFICATION_TEMPLATES = [
   { key: "invoice_created", channel: "email", subject: "Your invoice is ready", body: "Hi {customer_name}, your invoice for {reference} is ready." },
 ];
 
+// Standard turnaround target in days (created → completed). Used by the
+// technician turnaround tracker to flag categories running over target.
+export const DEFAULT_TURNAROUND_TARGET_DAYS = 3;
+
 export const DEFAULT_DEMO_PREVIEW_JOB = {
   reference: "OTR-1042",
   assetLabel: "Segway Ninebot Max G30",

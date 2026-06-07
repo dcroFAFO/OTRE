@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 import MonthlySummary from "@/components/dashboard/MonthlySummary";
+import TurnaroundTracker from "@/components/dashboard/TurnaroundTracker";
 import JobCard from "@/components/shared/JobCard";
 import { useJobs } from "@/hooks/useJobs";
 import { listRecentAudit } from "@/services/auditService";
@@ -115,6 +116,9 @@ export default function Overview() {
 
       {/* Monthly summary */}
       <MonthlySummary jobs={jobs} />
+
+      {/* Turnaround tracker */}
+      <TurnaroundTracker jobs={jobs} />
 
       {/* Pending requests alert */}
       {m.requested > 0 && (
