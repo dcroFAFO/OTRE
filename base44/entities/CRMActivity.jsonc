@@ -1,0 +1,125 @@
+{
+  "name": "CRMActivity",
+  "type": "object",
+  "properties": {
+    "related_type": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "contact",
+        "company",
+        "deal"
+      ]
+    },
+    "related_id": {
+      "type": "string"
+    },
+    "lead_id": {
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "deal_id": {
+      "type": "string"
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "note",
+        "call",
+        "email",
+        "sms",
+        "meeting",
+        "task",
+        "status_change",
+        "deal_stage_change",
+        "assignment_change",
+        "file_upload",
+        "form_submission",
+        "automation",
+        "system"
+      ],
+      "default": "note"
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "no_answer",
+        "left_voicemail",
+        "interested",
+        "not_interested",
+        "follow_up_needed",
+        "booked_meeting",
+        "sent_proposal",
+        "closed_won",
+        "closed_lost",
+        "other"
+      ]
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "inbound",
+        "outbound",
+        "internal"
+      ],
+      "default": "internal"
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "assigned_to": {
+      "type": "string"
+    },
+    "activity_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mentioned_user_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attachment_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "related_type",
+    "related_id"
+  ]
+}

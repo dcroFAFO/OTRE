@@ -1,0 +1,208 @@
+{
+  "name": "CRMContact",
+  "type": "object",
+  "properties": {
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "secondary_email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "mobile_phone": {
+      "type": "string"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "company_name": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": [
+        "subscriber",
+        "lead",
+        "marketing_qualified_lead",
+        "sales_qualified_lead",
+        "opportunity",
+        "customer",
+        "evangelist",
+        "other"
+      ],
+      "default": "lead"
+    },
+    "contact_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "do_not_contact",
+        "bounced",
+        "unsubscribed"
+      ],
+      "default": "active"
+    },
+    "lead_source": {
+      "type": "string",
+      "enum": [
+        "website",
+        "referral",
+        "social_media",
+        "paid_ads",
+        "organic_search",
+        "email_campaign",
+        "event",
+        "cold_outreach",
+        "partner",
+        "manual_entry",
+        "other"
+      ],
+      "default": "manual_entry"
+    },
+    "source_detail": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number",
+      "default": 0
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lists": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "website": {
+      "type": "string"
+    },
+    "linkedin_url": {
+      "type": "string"
+    },
+    "twitter_url": {
+      "type": "string"
+    },
+    "facebook_url": {
+      "type": "string"
+    },
+    "address_line_1": {
+      "type": "string"
+    },
+    "address_line_2": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "postal_code": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string"
+    },
+    "birthday": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes_summary": {
+      "type": "string"
+    },
+    "last_contacted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "next_follow_up_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_activity_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "total_deal_value": {
+      "type": "number",
+      "default": 0
+    },
+    "open_deal_count": {
+      "type": "number",
+      "default": 0
+    },
+    "closed_won_deal_count": {
+      "type": "number",
+      "default": 0
+    },
+    "closed_lost_deal_count": {
+      "type": "number",
+      "default": 0
+    },
+    "email_opt_in": {
+      "type": "boolean",
+      "default": true
+    },
+    "sms_opt_in": {
+      "type": "boolean",
+      "default": false
+    },
+    "do_not_call": {
+      "type": "boolean",
+      "default": false
+    },
+    "custom_fields": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "private",
+        "team",
+        "all_crm_users"
+      ],
+      "default": "all_crm_users"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": []
+}

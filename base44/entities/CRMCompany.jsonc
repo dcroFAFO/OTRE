@@ -1,0 +1,151 @@
+{
+  "name": "CRMCompany",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "company_size": {
+      "type": "string"
+    },
+    "annual_revenue": {
+      "type": "number"
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "company_type": {
+      "type": "string",
+      "enum": [
+        "prospect",
+        "partner",
+        "customer",
+        "vendor",
+        "competitor",
+        "other"
+      ],
+      "default": "prospect"
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": [
+        "subscriber",
+        "lead",
+        "marketing_qualified_lead",
+        "sales_qualified_lead",
+        "opportunity",
+        "customer",
+        "evangelist",
+        "other"
+      ],
+      "default": "lead"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "archived"
+      ],
+      "default": "active"
+    },
+    "description": {
+      "type": "string"
+    },
+    "address_line_1": {
+      "type": "string"
+    },
+    "address_line_2": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "postal_code": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string"
+    },
+    "linkedin_url": {
+      "type": "string"
+    },
+    "twitter_url": {
+      "type": "string"
+    },
+    "facebook_url": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "custom_fields": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "primary_contact_id": {
+      "type": "string"
+    },
+    "contact_count": {
+      "type": "number",
+      "default": 0
+    },
+    "open_deal_count": {
+      "type": "number",
+      "default": 0
+    },
+    "total_deal_value": {
+      "type": "number",
+      "default": 0
+    },
+    "last_contacted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "next_follow_up_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_activity_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "private",
+        "team",
+        "all_crm_users"
+      ],
+      "default": "all_crm_users"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

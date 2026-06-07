@@ -1,0 +1,61 @@
+{
+  "name": "CRMNote",
+  "type": "object",
+  "properties": {
+    "related_type": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "contact",
+        "company",
+        "deal"
+      ]
+    },
+    "related_id": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "plain_text_body": {
+      "type": "string"
+    },
+    "author_id": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "mentioned_user_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pinned": {
+      "type": "boolean",
+      "default": false
+    },
+    "private_note": {
+      "type": "boolean",
+      "default": false
+    },
+    "edited": {
+      "type": "boolean",
+      "default": false
+    },
+    "edited_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deleted": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "related_type",
+    "related_id",
+    "body"
+  ]
+}

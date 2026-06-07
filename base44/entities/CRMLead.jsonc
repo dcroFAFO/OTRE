@@ -1,0 +1,195 @@
+{
+  "name": "CRMLead",
+  "type": "object",
+  "properties": {
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "company_name": {
+      "type": "string"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "lead_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "attempted_contact",
+        "contacted",
+        "qualified",
+        "unqualified",
+        "converted",
+        "lost"
+      ],
+      "default": "new"
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": [
+        "subscriber",
+        "lead",
+        "marketing_qualified_lead",
+        "sales_qualified_lead",
+        "opportunity",
+        "customer",
+        "evangelist",
+        "other"
+      ],
+      "default": "lead"
+    },
+    "lead_source": {
+      "type": "string",
+      "enum": [
+        "website",
+        "referral",
+        "social_media",
+        "paid_ads",
+        "organic_search",
+        "email_campaign",
+        "event",
+        "cold_outreach",
+        "partner",
+        "manual_entry",
+        "other"
+      ],
+      "default": "manual_entry"
+    },
+    "source_detail": {
+      "type": "string"
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "assigned_team_id": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number",
+      "default": 0
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium"
+    },
+    "qualification_status": {
+      "type": "string",
+      "enum": [
+        "unqualified",
+        "researching",
+        "qualified",
+        "disqualified"
+      ],
+      "default": "unqualified"
+    },
+    "qualification_notes": {
+      "type": "string"
+    },
+    "budget": {
+      "type": "number"
+    },
+    "expected_value": {
+      "type": "number"
+    },
+    "need": {
+      "type": "string"
+    },
+    "timeline": {
+      "type": "string"
+    },
+    "decision_maker": {
+      "type": "boolean",
+      "default": false
+    },
+    "company_size": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "location_city": {
+      "type": "string"
+    },
+    "location_state": {
+      "type": "string"
+    },
+    "location_country": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "custom_fields": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "last_contacted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "next_follow_up_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "converted_contact_id": {
+      "type": "string"
+    },
+    "converted_company_id": {
+      "type": "string"
+    },
+    "converted_deal_id": {
+      "type": "string"
+    },
+    "converted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lost_reason": {
+      "type": "string"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "private",
+        "team",
+        "all_crm_users"
+      ],
+      "default": "all_crm_users"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": []
+}
