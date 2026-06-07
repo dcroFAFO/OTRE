@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Kanban, Package } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Kanban, Package, FileText } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { ROLES } from "@/config/jobConfig";
 import { base44 } from "@/api/base44Client";
@@ -17,6 +17,7 @@ export default function DashboardShell({ user, children }) {
     { to: "/dashboard/kanban", label: "Kanban", icon: Kanban },
     { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
     { to: "/dashboard/inventory", label: "Inventory", icon: Package },
+    { to: "/dashboard/templates", label: "Templates", icon: FileText },
   ];
 
   const Sidebar = () => (

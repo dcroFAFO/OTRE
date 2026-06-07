@@ -1,0 +1,68 @@
+{
+  "name": "JobTemplate",
+  "type": "object",
+  "properties": {
+    "business_slug": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Template name e.g. Tyre Change Front"
+    },
+    "category": {
+      "type": "string",
+      "description": "e.g. tyre, brake, battery, service"
+    },
+    "issue_description": {
+      "type": "string"
+    },
+    "job_type": {
+      "type": "string",
+      "default": "service"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "parts_required": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "default": "needed"
+          }
+        }
+      }
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -7,7 +7,8 @@ import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
 import StatusPill from "@/components/shared/StatusPill";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
-import { LayoutGrid, List, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, List, SlidersHorizontal, FileText } from "lucide-react";
+import NewJobFromTemplateModal from "@/components/dashboard/job/NewJobFromTemplateModal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export default function Jobs() {
   const invalidate = useInvalidateJobs();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [view, setView] = useState("grid"); // grid | list
+  const [templateModal, setTemplateModal] = useState(false);
 
   const selectedId = new URLSearchParams(location.search).get("id");
   const open = (id) => navigate(`/dashboard/jobs?id=${id}`);
@@ -50,6 +52,9 @@ export default function Jobs() {
           </p>
         </div>
         <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTemplateModal(true)}>
+            <FileText className="h-4 w-4" /> New from Template
+          </Button>
           <Button variant={view === "grid" ? "secondary" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setView("grid")}>
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -78,6 +83,11 @@ export default function Jobs() {
       )}
 
       <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={close} />
+      <NewJobFromTemplateModal
+        open={templateModal}
+        onClose={() => setTemplateModal(false)}
+        onCreated={(job) => { invalidate(); open(job.id); }}
+      />
     </div>
   );
 }
