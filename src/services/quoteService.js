@@ -48,3 +48,43 @@ export async function getJobQuote(jobId) {
   const quotes = await base44.entities.Quote.filter({ job_id: jobId }, "-created_date", 1);
   return quotes[0] || null;
 }
+
+// Append technician-selected sourced parts as line items on the job's quote,
+// creating the quote if needed, and recompute the parts estimate + total.
+export async function addPartsToQuote(job, parts, actor) {
+  let quote = await getJobQuote(job.id);
+  if (!quote) {
+    quote = await base44.entities.Quote.create({
+      job_id: job.id,
+      currency: DEFAULT_QUOTE_TEMPLATE.currency,
+      status: "draft",
+      labour_estimate: 0,
+      parts_estimate: 0,
+      total: 0,
+    });
+    await base44.entities.Job.update(job.id, { quote_status: "draft" });
+  }
+
+  const newItems = parts.map((p) => ({
+    description: p.retailer ? `${p.name} (${p.retailer})` : p.name,
+    qty: Number(p.qty) || 1,
+    unit_price: Number(p.typical_price) || 0,
+    kind: "part",
+  }));
+
+  const line_items = [...(quote.line_items || []), ...newItems];
+  const parts_estimate = line_items
+    .filter((li) => li.kind === "part")
+    .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
+  const total = (Number(quote.labour_estimate) || 0) + parts_estimate;
+
+  const updated = await base44.entities.Quote.update(quote.id, { line_items, parts_estimate, total });
+  await logAudit({
+    eventType: "quote_generated",
+    jobId: job.id,
+    actor,
+    summary: `Added ${parts.length} sourced part(s) to quote`,
+    newValue: `${DEFAULT_QUOTE_TEMPLATE.currency} ${total.toFixed(2)}`,
+  });
+  return updated;
+}

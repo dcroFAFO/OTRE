@@ -8,6 +8,7 @@ import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
+import PartsSourcingPanel from "@/components/dashboard/job/PartsSourcingPanel";
 
 export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
@@ -15,7 +16,10 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "", recommended_repair: "" });
   const [aiMsg, setAiMsg] = useState("");
 
-  useEffect(() => { getJobQuote(job.id).then((q) => { setQuote(q); if (q) setForm(q); }); }, [job.id]);
+  const loadQuote = async () => { const q = await getJobQuote(job.id); setQuote(q); if (q) setForm(q); };
+  useEffect(() => { loadQuote(); }, [job.id]);
+
+  const partItems = (quote?.line_items || []).filter((li) => li.kind === "part");
 
   const total = (Number(form.labour_estimate) || 0) + (Number(form.parts_estimate) || 0);
 
@@ -39,6 +43,23 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           </div>
           <div className="space-y-1"><Label>{labelFor("diagnosis_notes")}</Label><Textarea value={form.diagnosis_notes} onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })} className="h-20" /></div>
           <div className="space-y-1"><Label>{labelFor("recommended_repair")}</Label><Textarea value={form.recommended_repair} onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })} className="h-20" /></div>
+
+          <PartsSourcingPanel job={job} actor={actor} onAdded={() => { loadQuote(); onChange?.(); }} />
+
+          {partItems.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Parts on quote</Label>
+              <div className="rounded-xl border border-border divide-y divide-border">
+                {partItems.map((li, i) => (
+                  <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
+                    <span className="font-medium tabular-nums">${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
             <span className="text-sm font-medium">Quote total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
