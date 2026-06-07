@@ -2,8 +2,8 @@ export const DEFAULT_BUSINESS_SLUG = "otr-scooters";
 
 export const DEFAULT_BUSINESS = {
   slug: DEFAULT_BUSINESS_SLUG,
-  name: "OTR Scooters",
-  legalName: "On The Run Scooters",
+  name: "On The Run Electrics",
+  legalName: "On The Run Electrics",
   tagline: "Expert electric scooter repairs, servicing, and sales.",
   subheading: "From puncture fixes and battery replacements to full diagnostics and brand-new scooters — handled by specialists who know e-scooters inside out.",
   email: "hello@otrscooters.com",
