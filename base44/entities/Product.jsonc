@@ -1,0 +1,64 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Product name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Stock keeping unit / supplier part number"
+    },
+    "category_key": {
+      "type": "string",
+      "description": "Storefront category key e.g. tyres, brake-pads"
+    },
+    "category_label": {
+      "type": "string",
+      "description": "Human-readable category name"
+    },
+    "group_key": {
+      "type": "string",
+      "description": "Top-level group e.g. esn-originals, oem-spares, tyres-brakes, everything-else"
+    },
+    "description": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "AUD"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "in_stock": {
+      "type": "boolean",
+      "default": true
+    },
+    "supplier": {
+      "type": "string",
+      "default": "eScootNow",
+      "description": "Supplier the order is forwarded to"
+    },
+    "supplier_url": {
+      "type": "string",
+      "description": "Link to the product on the supplier store"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

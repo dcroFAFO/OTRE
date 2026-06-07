@@ -1,0 +1,87 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "reference": {
+      "type": "string",
+      "description": "Human-readable order reference e.g. ORD-1042"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "shipping_address": {
+      "type": "string"
+    },
+    "fulfilment_method": {
+      "type": "string",
+      "enum": [
+        "delivery",
+        "click_collect"
+      ],
+      "default": "delivery"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number",
+      "default": 0
+    },
+    "total": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "AUD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "forwarded_to_supplier",
+        "processing",
+        "shipped",
+        "completed",
+        "cancelled"
+      ],
+      "default": "received"
+    },
+    "supplier": {
+      "type": "string",
+      "default": "eScootNow"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "customer_name"
+  ]
+}
