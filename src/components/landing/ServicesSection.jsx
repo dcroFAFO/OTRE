@@ -6,15 +6,14 @@ import ScrollReveal from "./ScrollReveal";
 
 const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag, Truck };
 
-// Subtle colour accent per category
 const CATEGORY_ACCENTS = {
-  Diagnostics: "from-violet-50 to-transparent group-hover:from-violet-100",
-  Repairs:     "from-rose-50 to-transparent group-hover:from-rose-100",
-  Power:       "from-amber-50 to-transparent group-hover:from-amber-100",
-  Maintenance: "from-teal-50 to-transparent group-hover:from-teal-100",
-  Parts:       "from-indigo-50 to-transparent group-hover:from-indigo-100",
-  Sales:       "from-emerald-50 to-transparent group-hover:from-emerald-100",
-  Booking:     "from-sky-50 to-transparent group-hover:from-sky-100",
+  Diagnostics: "from-violet-50 to-transparent hover:from-violet-100",
+  Repairs:     "from-rose-50 to-transparent hover:from-rose-100",
+  Power:       "from-amber-50 to-transparent hover:from-amber-100",
+  Maintenance: "from-teal-50 to-transparent hover:from-teal-100",
+  Parts:       "from-indigo-50 to-transparent hover:from-indigo-100",
+  Sales:       "from-emerald-50 to-transparent hover:from-emerald-100",
+  Booking:     "from-sky-50 to-transparent hover:from-sky-100",
 };
 const CATEGORY_ICON_COLORS = {
   Diagnostics: "bg-violet-100 text-violet-700 group-hover:bg-violet-600 group-hover:text-white",
@@ -31,7 +30,6 @@ export default function ServicesSection() {
 
   return (
     <section id="services" className="relative py-20 sm:py-28 overflow-hidden">
-      {/* Subtle section separator */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -48,22 +46,19 @@ export default function ServicesSection() {
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((s, i) => {
             const Icon = ICONS[s.icon] || Wrench;
-            const accentGrad = CATEGORY_ACCENTS[s.category] || "from-secondary to-transparent group-hover:from-secondary/80";
+            const accentGrad = CATEGORY_ACCENTS[s.category] || "from-secondary to-transparent hover:from-secondary/80";
             const iconColor = CATEGORY_ICON_COLORS[s.category] || "bg-secondary text-primary group-hover:bg-primary group-hover:text-primary-foreground";
 
             return (
               <motion.div
                 key={s.name}
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.48, delay: (i % 3) * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/6 transition-shadow"
+                transition={{ duration: 0.45, delay: (i % 3) * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/6 hover:-translate-y-1 transition-all duration-200"
               >
-                {/* Subtle per-category gradient wash */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${accentGrad} transition-all duration-300 pointer-events-none`} />
-
                 <div className="relative p-6">
                   <span className={`grid place-items-center h-11 w-11 rounded-2xl transition-all duration-300 ${iconColor}`}>
                     <Icon className="h-5 w-5" />

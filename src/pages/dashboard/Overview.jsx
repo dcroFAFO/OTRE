@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -18,8 +18,14 @@ import { cn } from "@/lib/utils";
 export default function Overview() {
   const navigate = useNavigate();
   const { data: jobs } = useJobs();
-  const { data: audit } = useQuery({ queryKey: ["recentAudit"], queryFn: () => listRecentAudit(16), initialData: [] });
+  const { data: audit } = useQuery({ queryKey: ["recentAudit"], queryFn: () => listRecentAudit(16), initialData: [], staleTime: 60 * 1000 });
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 220);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const m = useMemo(() => ({
     active: jobs.filter((j) => ["active", "booked", "technician_assigned", "repair_in_progress"].includes(j.status)).length,
@@ -41,13 +47,15 @@ export default function Overview() {
   );
 
   const quickSearch = useMemo(() => {
-    if (!q.trim()) return [];
-    const lower = q.toLowerCase();
+    if (!debouncedQ.trim()) return [];
+    const lower = debouncedQ.toLowerCase();
     return jobs.filter((j) =>
       [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
         .some((v) => v?.toLowerCase().includes(lower))
     ).slice(0, 5);
-  }, [jobs, q]);
+  }, [jobs, debouncedQ]);
+
+  const recentAudit = useMemo(() => audit.slice(0, 10), [audit]);
 
   const goJob = (j) => navigate(`/dashboard/jobs?id=${j.id}`);
 
@@ -147,7 +155,7 @@ export default function Overview() {
             <h2 className="font-heading font-bold flex items-center gap-2"><Activity className="h-4 w-4 text-accent" /> Recent activity</h2>
           </div>
           <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
-            {audit.slice(0, 10).map((a) => (
+            {recentAudit.map((a) => (
               <div key={a.id} className="px-3.5 py-2.5 hover:bg-secondary/40 transition-colors cursor-default">
                 <p className="text-sm text-foreground leading-snug">{a.summary}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{a.actor_name} · {new Date(a.created_date).toLocaleString()}</p>

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,11 +50,7 @@ export default function BookingSection() {
     return (
       <section id="book" className="py-20 sm:py-28">
         <div className="mx-auto max-w-2xl px-5 sm:px-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="rounded-3xl border border-accent/30 bg-card p-10 text-center shadow-xl"
-          >
+          <div className="rounded-3xl border border-accent/30 bg-card p-10 text-center shadow-xl animate-in fade-in zoom-in-95 duration-300">
             <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/15 text-accent">
               <CheckCircle2 className="h-8 w-8" />
             </span>
@@ -67,7 +62,7 @@ export default function BookingSection() {
             <Button className="mt-6" variant="outline" onClick={() => { setDone(null); setForm(EMPTY); setPhotoUrl(null); }}>
               {DEFAULT_BOOKING_COPY.anotherLabel}
             </Button>
-          </motion.div>
+          </div>
         </div>
       </section>
     );
@@ -82,12 +77,8 @@ export default function BookingSection() {
           <p className="mt-3 text-muted-foreground">{DEFAULT_BOOKING_COPY.body}</p>
         </div>
 
-        <motion.form
+        <form
           onSubmit={submit}
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
           className="mt-10 rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl space-y-5"
         >
           <div className="grid sm:grid-cols-2 gap-4">
@@ -151,7 +142,7 @@ export default function BookingSection() {
           <Button type="submit" disabled={submitting || !form.consent} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : DEFAULT_BOOKING_COPY.submitLabel}
           </Button>
-        </motion.form>
+        </form>
       </div>
     </section>
   );

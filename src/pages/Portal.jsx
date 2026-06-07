@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Zap, ArrowLeft, Bike } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
@@ -11,13 +12,14 @@ import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 export default function Portal() {
   const { user, isLoading } = useCurrentUser();
   const { data: { business, app } } = usePlatformConfig();
-  const [jobs, setJobs] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    if (!user) return;
-    base44.entities.Job.filter({ customer_email: user.email, archived: false }, "-created_date", 100).then(setJobs);
-  }, [user]);
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["portalJobs", user?.email],
+    queryFn: () => base44.entities.Job.filter({ customer_email: user.email, archived: false }, "-created_date", 50),
+    enabled: !!user && !isStaff(user.role),
+  });
 
   if (isLoading) return <Spinner />;
 
@@ -66,7 +68,7 @@ export default function Portal() {
         </div>
       </main>
 
-      <JobDetailModal jobId={selectedId} actor={{ ...user, role: "customer" }} open={!!selectedId} onClose={() => setSelectedId(null)} onChange={() => base44.entities.Job.filter({ customer_email: user.email, archived: false }, "-created_date", 100).then(setJobs)} />
+      <JobDetailModal jobId={selectedId} actor={{ ...user, role: "customer" }} open={!!selectedId} onClose={() => setSelectedId(null)} onChange={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
     </div>
   );
 }

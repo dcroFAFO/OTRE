@@ -6,6 +6,7 @@ export function useJobs(filter = {}) {
     queryKey: ["jobs", filter],
     queryFn: () => base44.entities.Job.filter({ archived: false, ...filter }, "-created_date", 200),
     initialData: [],
+    staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching
   });
 }
 

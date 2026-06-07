@@ -41,5 +41,7 @@ export function usePlatformConfig() {
       services: DEFAULT_SERVICES,
       app: DEFAULT_APP_SETTINGS,
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes — config rarely changes
+    gcTime: 10 * 60 * 1000,
   });
 }

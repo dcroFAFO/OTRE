@@ -1,4 +1,5 @@
 import React from "react";
+const CURRENT_YEAR = new Date().getFullYear();
 import { Link } from "react-router-dom";
 import { Zap, Mail, Phone, MapPin } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
@@ -36,7 +37,7 @@ export default function LandingFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 py-5 text-center text-xs text-primary-foreground/50">
-        © {new Date().getFullYear()} {business.legalName}. Powered by a modular job management platform.
+        © {CURRENT_YEAR} {business.legalName}. Powered by a modular job management platform.
       </div>
     </footer>
   );

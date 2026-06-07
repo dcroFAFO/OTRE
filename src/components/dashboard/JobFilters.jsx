@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,15 @@ export const EMPTY_FILTERS = { q: "", status: "all", tech: "all", payment: "all"
 const isActive = (filters) => Object.entries(filters).some(([k, v]) => k !== "q" ? v !== "all" : v !== "");
 
 export default function JobFilters({ filters, setFilters, staff }) {
+  const [localQ, setLocalQ] = useState(filters.q);
   const set = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
-  const reset = () => setFilters(EMPTY_FILTERS);
+  const reset = () => { setLocalQ(""); setFilters(EMPTY_FILTERS); };
   const active = isActive(filters);
+
+  useEffect(() => {
+    const t = setTimeout(() => set("q", localQ), 250);
+    return () => clearTimeout(t);
+  }, [localQ]);
 
   return (
     <div className="space-y-2">
@@ -22,13 +28,13 @@ export default function JobFilters({ filters, setFilters, staff }) {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            value={filters.q}
-            onChange={(e) => set("q", e.target.value)}
+            value={localQ}
+            onChange={(e) => setLocalQ(e.target.value)}
             placeholder={`Search ${DEFAULT_APP_SETTINGS.terminology.customerSingular}, ${DEFAULT_APP_SETTINGS.terminology.assetSingular}, ref...`}
             className="pl-9"
           />
-          {filters.q && (
-            <button onClick={() => set("q", "")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+          {localQ && (
+            <button onClick={() => { setLocalQ(""); set("q", ""); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
