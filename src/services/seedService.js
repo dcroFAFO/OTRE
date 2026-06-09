@@ -93,11 +93,29 @@ async function seedConfiguration() {
   }
 }
 
+// Cache the "already seeded" result for the session so repeat dashboard mounts
+// don't make any request at all.
+let seedCompletePromise = null;
+
+async function isSeedComplete() {
+  if (!seedCompletePromise) {
+    seedCompletePromise = base44.entities.AppSetting
+      .filter({ key: "seed_complete" }, "", 1)
+      .then((rows) => rows.length > 0)
+      .catch(() => {
+        // On any error (e.g. rate limit), fail safe: assume seeded so we never
+        // kick off the heavy ~50-call sequence, and allow a later retry.
+        seedCompletePromise = null;
+        return true;
+      });
+  }
+  return seedCompletePromise;
+}
+
 export async function seedIfEmpty() {
   // Fast guard: if a previous run already completed, skip the ~50 sequential
-  // createIfNone checks entirely (one read instead of fifty+).
-  const done = await base44.entities.AppSetting.filter({ key: "seed_complete" }, "", 1);
-  if (done.length > 0) return false;
+  // createIfNone checks entirely (one cached read instead of fifty+).
+  if (await isSeedComplete()) return false;
 
   await seedConfiguration();
 
