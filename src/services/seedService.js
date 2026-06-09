@@ -94,6 +94,11 @@ async function seedConfiguration() {
 }
 
 export async function seedIfEmpty() {
+  // Fast guard: if a previous run already completed, skip the ~50 sequential
+  // createIfNone checks entirely (one read instead of fifty+).
+  const done = await base44.entities.AppSetting.filter({ key: "seed_complete" }, "", 1);
+  if (done.length > 0) return false;
+
   await seedConfiguration();
 
   const existing = await base44.entities.Job.list("-created_date", 1);
@@ -115,5 +120,7 @@ export async function seedIfEmpty() {
       await base44.entities.Invoice.create({ job_id: job.id, number: `${DEFAULT_INVOICE_SETTINGS.prefix}-${j.reference}`, amount: 125, currency: DEFAULT_BUSINESS.currency, status: j.payment_status });
     }
   }
+
+  await base44.entities.AppSetting.create({ key: "seed_complete", value: { at: new Date().toISOString() }, description: "Marks initial seeding as complete", active: true });
   return true;
 }
