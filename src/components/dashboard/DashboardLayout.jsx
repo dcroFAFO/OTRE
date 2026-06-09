@@ -1,14 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, Link, useOutletContext } from "react-router-dom";
 import DashboardShell from "./DashboardShell";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
 import { isSeedCached } from "@/services/seedService";
+import { setUserContext } from "@/lib/logger";
 import SeedLoadingScreen from "./SeedLoadingScreen";
 
 export default function DashboardLayout() {
   const { user, isLoading } = useCurrentUser();
   const [seedDone, setSeedDone] = useState(false);
+
+  // Attach the signed-in user (id + role only) to every log entry — makes
+  // errors in the Debug Panel traceable to a specific user. See lib/logger.js.
+  useEffect(() => {
+    setUserContext(user);
+  }, [user]);
 
   if (isLoading) {
     return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;

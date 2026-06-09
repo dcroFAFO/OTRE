@@ -8,9 +8,13 @@ const INTAKE_STATUS = "requested";
 const JOB_TYPE = "repair";
 
 Deno.serve(async (req) => {
+  // requestMeta lets the catch block log a useful, PII-free summary on failure
+  // (field names only — never customer details).
+  const requestMeta = { fn: "createBooking" };
   try {
     const base44 = createClientFromRequest(req);
     const form = await req.json();
+    requestMeta.fields = Object.keys(form || {});
 
     if (!form.customer_name || !form.email || !form.issue_description) {
       return Response.json({ error: "customer_name, email and issue_description are required" }, { status: 400 });
@@ -58,6 +62,9 @@ Deno.serve(async (req) => {
 
     return Response.json(job);
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
+    console.error("[createBooking] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
+    // Public endpoint — never expose internal error details to visitors.
+    return Response.json({ error: "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });
   }
 });

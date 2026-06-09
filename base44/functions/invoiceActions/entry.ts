@@ -8,12 +8,18 @@ const CURRENCY = "AUD";
 const DEFAULT_STATUS = "outstanding";
 
 Deno.serve(async (req) => {
+  // requestMeta is filled in as parsing progresses so the catch block can log
+  // a useful summary (who, which action, which record) when something fails.
+  const requestMeta = { fn: "invoiceActions" };
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    requestMeta.userId = user.id;
 
     const { action, jobId, ...params } = await req.json();
+    requestMeta.action = action;
+    requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
     const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
@@ -78,6 +84,9 @@ Deno.serve(async (req) => {
 
     return Response.json(result);
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
+    console.error("[invoiceActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
+    // Safe, friendly message — internal details stay in the server logs.
+    return Response.json({ error: "Something went wrong while updating the invoice. Please try again." }, { status: 500 });
   }
 });

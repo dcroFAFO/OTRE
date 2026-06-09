@@ -155,6 +155,8 @@ function isoDaysFromNow(d) {
 }
 
 Deno.serve(async (req) => {
+  // Hoisted so the catch block can log which step failed.
+  let body = {};
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -163,7 +165,7 @@ Deno.serve(async (req) => {
     }
 
     const db = base44.asServiceRole.entities;
-    const body = await req.json().catch(() => ({}));
+    body = await req.json().catch(() => ({}));
     const step = body.step || "all";
 
     const isSeeded = async () => {
@@ -249,6 +251,10 @@ Deno.serve(async (req) => {
     await steps[step]();
     return Response.json({ ok: true, step });
   } catch (error) {
+    // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
+    // The raw message IS returned here (unlike other functions) because this
+    // endpoint is admin-only and the setup screen surfaces it for troubleshooting.
+    console.error("[seedPlatform] failed", JSON.stringify({ step: body?.step, message: error.message, stack: error.stack }));
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
