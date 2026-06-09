@@ -23,6 +23,8 @@ import Notifications from '@/pages/dashboard/Notifications';
 import CRMLeads from '@/pages/dashboard/crm/CRMLeads';
 import CRMContacts from '@/pages/dashboard/crm/CRMContacts';
 import CRMCompanies from '@/pages/dashboard/crm/CRMCompanies';
+import AdminFeedback from '@/pages/admin/AdminFeedback';
+import FeedbackButton from '@/components/feedback/FeedbackButton';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,6 +70,7 @@ const AuthenticatedApp = () => {
         <Route path="crm/contacts" element={<CRMContacts />} />
         <Route path="crm/companies" element={<CRMCompanies />} />
       </Route>
+      <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -82,6 +85,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <AuthenticatedApp />
+          <FeedbackButton />
         </Router>
         <Toaster />
       </QueryClientProvider>

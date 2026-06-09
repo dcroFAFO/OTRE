@@ -1,0 +1,112 @@
+{
+  "name": "Feedback",
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string",
+      "description": "Short summary of the feedback"
+    },
+    "feedback_type": {
+      "type": "string",
+      "enum": [
+        "Bug Report",
+        "Feature Request",
+        "General Feedback",
+        "UI / UX Issue",
+        "Performance Issue",
+        "Other"
+      ],
+      "default": "General Feedback"
+    },
+    "message": {
+      "type": "string",
+      "description": "Full feedback message"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "default": "Medium"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Under Review",
+        "Planned",
+        "In Progress",
+        "Resolved",
+        "Rejected",
+        "Archived"
+      ],
+      "default": "New"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Internal admin-only notes"
+    },
+    "submitted_by": {
+      "type": "string",
+      "description": "User id of the submitter"
+    },
+    "submitted_by_name": {
+      "type": "string"
+    },
+    "submitted_by_email": {
+      "type": "string"
+    },
+    "page_context": {
+      "type": "string",
+      "description": "URL where the feedback was submitted"
+    },
+    "device_context": {
+      "type": "string",
+      "description": "Device type and screen size"
+    },
+    "app_context": {
+      "type": "string",
+      "description": "Browser user agent"
+    },
+    "attachment": {
+      "type": "string",
+      "description": "Optional screenshot/file URL"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "upvotes": {
+      "type": "number",
+      "default": 0
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "subject",
+    "message"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
