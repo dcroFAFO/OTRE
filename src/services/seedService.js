@@ -38,7 +38,11 @@ const DEMO_JOBS = [
   { reference: "OTR-1047", customer_name: "Maya Foster", customer_email: "maya@example.com", customer_phone: "0466 777 888", asset_label: "Inokim Light 2", issue_description: "Annual service + tyre check", status: "technician_assigned", assigned_technician_name: "Priya N.", payment_status: "unpaid", quote_status: "draft", job_type: "service", offset: 3 },
 ];
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function createIfNone(entity, query, data) {
+  // Small pause between calls so the long seeding sequence doesn't trip the API rate limit.
+  await sleep(60);
   const existing = await base44.entities[entity].filter(query, "", 1);
   if (existing.length === 0) return base44.entities[entity].create(data);
   return existing[0];
@@ -119,6 +123,10 @@ export async function seedIfEmpty() {
 
   await seedConfiguration();
 
+  // Persist the marker as soon as config seeding succeeds, so a later hiccup
+  // (e.g. demo-job creation) never forces the heavy ~50-call config sequence to re-run.
+  await base44.entities.AppSetting.create({ key: "seed_complete", value: { at: new Date().toISOString() }, description: "Marks initial seeding as complete", active: true });
+
   const existing = await base44.entities.Job.list("-created_date", 1);
   if (existing.length > 0) return false;
 
@@ -139,6 +147,5 @@ export async function seedIfEmpty() {
     }
   }
 
-  await base44.entities.AppSetting.create({ key: "seed_complete", value: { at: new Date().toISOString() }, description: "Marks initial seeding as complete", active: true });
   return true;
 }
