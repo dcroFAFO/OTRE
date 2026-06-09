@@ -20,6 +20,7 @@ import Calendar from '@/pages/dashboard/Calendar';
 import Kanban from '@/pages/dashboard/Kanban';
 import Inventory from '@/pages/dashboard/Inventory';
 import Templates from '@/pages/dashboard/Templates';
+import Notifications from '@/pages/dashboard/Notifications';
 import CRMLeads from '@/pages/dashboard/crm/CRMLeads';
 import CRMContacts from '@/pages/dashboard/crm/CRMContacts';
 import CRMCompanies from '@/pages/dashboard/crm/CRMCompanies';
@@ -64,6 +65,7 @@ const AuthenticatedApp = () => {
         <Route path="kanban" element={<Kanban />} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="templates" element={<Templates />} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="crm/leads" element={<CRMLeads />} />
         <Route path="crm/contacts" element={<CRMContacts />} />
         <Route path="crm/companies" element={<CRMCompanies />} />

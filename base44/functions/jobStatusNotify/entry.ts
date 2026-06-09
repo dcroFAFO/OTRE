@@ -41,6 +41,12 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: "status not in notify list or unchanged" });
     }
 
+    // Respect the admin toggle
+    const settingsRows = await base44.asServiceRole.entities.NotificationSetting.list("-created_date", 1);
+    if (settingsRows[0] && settingsRows[0].notify_status_change === false) {
+      return Response.json({ skipped: "status change notifications disabled" });
+    }
+
     const email = data.customer_email;
     if (!email) {
       return Response.json({ skipped: "no customer email on job" });
