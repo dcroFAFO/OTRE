@@ -60,7 +60,9 @@ Deno.serve(async (req) => {
     }
 
     const recipients = new Set();
-    if (settings?.admin_inbox) recipients.add(settings.admin_inbox);
+    if (settings?.admin_inbox) {
+      settings.admin_inbox.split(",").map((e) => e.trim()).filter(Boolean).forEach((e) => recipients.add(e));
+    }
     if (settings?.notify_staff_on_booking !== false && data.assigned_technician_id) {
       const staff = await base44.asServiceRole.entities.StaffProfile.get(data.assigned_technician_id).catch(() => null);
       if (staff?.email) recipients.add(staff.email);

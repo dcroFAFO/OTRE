@@ -85,7 +85,9 @@ Deno.serve(async (req) => {
 
     const recipients = new Set();
     if (job?.customer_email) recipients.add(job.customer_email);
-    if (settings?.admin_inbox) recipients.add(settings.admin_inbox);
+    if (settings?.admin_inbox) {
+      settings.admin_inbox.split(",").map((e) => e.trim()).filter(Boolean).forEach((e) => recipients.add(e));
+    }
     if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const html = invoiceHtml(state, data, currency, amount);

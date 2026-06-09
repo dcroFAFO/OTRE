@@ -3,12 +3,12 @@ import { base44 } from "@/api/base44Client";
 import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Bell, Mail, Save, ShieldAlert } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_BUSINESS_SLUG } from "@/config/platformConfig";
+import InboxMultiSelect from "@/components/dashboard/notifications/InboxMultiSelect";
 
 const TOGGLES = [
   { key: "notify_status_change", label: "Job status changes", desc: "Email customers when their job moves to In Progress, Ready for Pickup or Completed." },
@@ -21,9 +21,16 @@ export default function Notifications() {
   const { user } = useOutletContext();
   const { toast } = useToast();
   const [setting, setSetting] = useState(null);
+  const [accounts, setAccounts] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    base44.entities.StaffProfile.filter({ active: true }).then((staff) => {
+      const list = (staff || [])
+        .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+        .map((s) => ({ email: s.email, label: s.short_name || s.full_name || s.email, role: s.role }));
+      setAccounts(list);
+    });
     base44.entities.NotificationSetting.list("-created_date", 1).then((rows) => {
       setSetting(rows[0] || {
         business_slug: DEFAULT_BUSINESS_SLUG,
@@ -81,16 +88,13 @@ export default function Notifications() {
           <CardTitle className="flex items-center gap-2 text-base"><Mail className="h-4 w-4" /> Business inbox</CardTitle>
         </CardHeader>
         <CardContent>
-          <Label htmlFor="admin_inbox" className="text-sm">Admin / business email</Label>
-          <Input
-            id="admin_inbox"
-            type="email"
-            placeholder="hello@otrscooters.com"
+          <Label className="text-sm">Recipients</Label>
+          <InboxMultiSelect
+            accounts={accounts}
             value={setting.admin_inbox || ""}
-            onChange={(e) => update("admin_inbox", e.target.value)}
-            className="mt-1.5"
+            onChange={(v) => update("admin_inbox", v)}
           />
-          <p className="text-xs text-muted-foreground mt-1.5">New bookings and invoice notifications are sent to this address.</p>
+          <p className="text-xs text-muted-foreground mt-1.5">New bookings and invoice notifications are sent to these recipients. Pick from staff accounts or add another email.</p>
         </CardContent>
       </Card>
 
