@@ -9,7 +9,16 @@ export default function DashboardLayout() {
   const { user, isLoading } = useCurrentUser();
   const [ready, setReady] = useState(false);
 
-  useEffect(() => { seedIfEmpty().finally(() => setReady(true)); }, []);
+  // Seeding is a one-time setup task — only run it for admins. Other staff
+  // (e.g. technicians) skip it and load the dashboard immediately.
+  useEffect(() => {
+    if (isLoading) return;
+    if (user?.role === "admin") {
+      seedIfEmpty().finally(() => setReady(true));
+    } else {
+      setReady(true);
+    }
+  }, [isLoading, user?.role]);
 
   if (isLoading || !ready) {
     return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
