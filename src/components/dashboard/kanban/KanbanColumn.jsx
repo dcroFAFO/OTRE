@@ -28,7 +28,7 @@ export default function KanbanColumn({ status, jobs, onJobClick }) {
   const dotStyle = DOT_STYLES[status.color] || DOT_STYLES.slate;
 
   return (
-    <div className={cn("flex flex-col rounded-xl border-2 min-h-[520px] w-72 shrink-0", colStyle)}>
+    <div className={cn("flex flex-col rounded-xl border-2 min-h-[300px] w-full", colStyle)}>
       {/* Column Header */}
       <div className="flex items-center justify-between px-3.5 py-3 border-b border-current/10">
         <div className="flex items-center gap-2">
