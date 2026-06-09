@@ -1,129 +1,54 @@
 import { base44 } from "@/api/base44Client";
-import { logAudit } from "./auditService";
-import { getStatus } from "@/config/jobConfig";
-import { CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY, DEFAULT_APP_SETTINGS, READY_STATUS_KEY, REOPEN_STATUS_KEY } from "@/config/platformConfig";
 
-// All job mutations route through this service so audit events stay in sync.
+// Thin frontend wrapper — all job business logic and audit logging runs
+// server-side in functions/jobActions. The UI only displays the outcome.
 
-export async function changeStatus(job, newStatus, actor) {
-  if (job.status === newStatus) return job;
-  const updated = await base44.entities.Job.update(job.id, { status: newStatus });
-  await logAudit({
-    eventType: "status_changed",
+const invoke = async (payload) => {
+  const res = await base44.functions.invoke("jobActions", payload);
+  return res.data;
+};
+
+export async function changeStatus(job, newStatus) {
+  return invoke({ action: "change_status", jobId: job.id, newStatus });
+}
+
+export async function assignTechnician(job, tech) {
+  return invoke({
+    action: "assign_technician",
     jobId: job.id,
-    actor,
-    previousValue: getStatus(job.status).label,
-    newValue: getStatus(newStatus).label,
-    summary: `Status changed to "${getStatus(newStatus).label}"`,
-    visibility: "customer",
+    techId: tech?.id || null,
+    techName: tech?.short_name || tech?.full_name || null,
   });
-  return updated;
 }
 
-export async function assignTechnician(job, tech, actor) {
-  const updated = await base44.entities.Job.update(job.id, {
-    assigned_technician_id: tech?.id || null,
-    assigned_technician_name: tech?.short_name || tech?.full_name || null,
-  });
-  await logAudit({
-    eventType: "job_assigned",
-    jobId: job.id,
-    actor,
-    newValue: tech?.short_name || tech?.full_name,
-    summary: `${DEFAULT_APP_SETTINGS.terminology.staffAssignmentLabel} ${tech?.short_name || tech?.full_name || "—"} assigned`,
-  });
-  return updated;
+export async function rescheduleJob(job, newDate) {
+  return invoke({ action: "reschedule", jobId: job.id, newDate });
 }
 
-export async function rescheduleJob(job, newDate, actor) {
-  const updated = await base44.entities.Job.update(job.id, { scheduled_date: newDate });
-  await logAudit({
-    eventType: "job_rescheduled",
-    jobId: job.id,
-    actor,
-    previousValue: job.scheduled_date,
-    newValue: newDate,
-    summary: `Rescheduled to ${newDate}`,
-    visibility: "customer",
-  });
-  return updated;
+export async function markReadyForPickup(job) {
+  return invoke({ action: "mark_ready", jobId: job.id });
 }
 
-export async function markReadyForPickup(job, actor) {
-  const updated = await base44.entities.Job.update(job.id, {
-    ready_for_pickup: true,
-    status: READY_STATUS_KEY,
-  });
-  await logAudit({
-    eventType: "ready_for_pickup",
-    jobId: job.id,
-    actor,
-    summary: `Marked ${DEFAULT_APP_SETTINGS.terminology.readyStateLabel.toLowerCase()}`,
-    visibility: "customer",
-  });
-  return updated;
+export async function cancelJob(job) {
+  return invoke({ action: "cancel", jobId: job.id });
 }
 
-export async function cancelJob(job, actor) {
-  const updated = await base44.entities.Job.update(job.id, { status: CANCELLED_STATUS_KEY });
-  await logAudit({ eventType: "job_cancelled", jobId: job.id, actor, summary: "Job cancelled", visibility: "customer" });
-  return updated;
+export async function reopenJob(job) {
+  return invoke({ action: "reopen", jobId: job.id });
 }
 
-export async function reopenJob(job, actor) {
-  const updated = await base44.entities.Job.update(job.id, { status: REOPEN_STATUS_KEY });
-  await logAudit({ eventType: "job_reopened", jobId: job.id, actor, summary: "Job reopened" });
-  return updated;
+export async function archiveJob(job) {
+  return invoke({ action: "archive", jobId: job.id });
 }
 
-export async function archiveJob(job, actor) {
-  const updated = await base44.entities.Job.update(job.id, { archived: true });
-  await logAudit({ eventType: "job_archived", jobId: job.id, actor, summary: "Job archived" });
-  return updated;
+export async function toggleChecklistItem(job, index) {
+  return invoke({ action: "toggle_checklist", jobId: job.id, index });
 }
 
-export async function toggleChecklistItem(job, index, actor) {
-  const checklist = (job.checklist || []).map((c, i) =>
-    i === index ? { ...c, done: !c.done } : c
-  );
-  const updated = await base44.entities.Job.update(job.id, { checklist });
-  const item = checklist[index];
-  await logAudit({
-    eventType: "checklist_updated",
-    jobId: job.id,
-    actor,
-    summary: `Checklist item "${item.label}" marked ${item.done ? "done" : "not done"}`,
-  });
-  return updated;
+export async function savePrivateNotes(job, privateNotes) {
+  return invoke({ action: "save_private_notes", jobId: job.id, privateNotes });
 }
 
-export async function savePrivateNotes(job, privateNotes, actor) {
-  const updated = await base44.entities.Job.update(job.id, { private_notes: privateNotes });
-  await logAudit({
-    eventType: "private_notes_updated",
-    jobId: job.id,
-    actor,
-    summary: "Private notes updated",
-    visibility: "internal",
-  });
-  return updated;
-}
-
-export async function addNote(job, { body, visibility }, actor) {
-  const note = await base44.entities.JobNote.create({
-    job_id: job.id,
-    body,
-    visibility,
-    author_id: actor?.id,
-    author_name: actor?.full_name || actor?.short_name,
-    author_role: actor?.role,
-  });
-  await logAudit({
-    eventType: visibility === "customer" ? "customer_note_added" : "note_added",
-    jobId: job.id,
-    actor,
-    summary: visibility === "customer" ? "Customer-visible note added" : "Internal note added",
-    visibility: visibility === "customer" ? "customer" : "internal",
-  });
-  return note;
+export async function addNote(job, { body, visibility }) {
+  return invoke({ action: "add_note", jobId: job.id, body, visibility });
 }
