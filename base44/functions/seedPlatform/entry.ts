@@ -163,10 +163,13 @@ Deno.serve(async (req) => {
     }
 
     const db = base44.asServiceRole.entities;
+    const body = await req.json().catch(() => ({}));
+    const step = body.step || "all";
 
-    // Idempotency guard — if already seeded, do nothing.
-    const done = await db.AppSetting.filter({ key: "seed_complete" }, "", 1);
-    if (done.length > 0) return Response.json({ seeded: false, reason: "already_seeded" });
+    const isSeeded = async () => {
+      const done = await db.AppSetting.filter({ key: "seed_complete" }, "", 1);
+      return done.length > 0;
+    };
 
     const createIfNone = async (entity, query, data) => {
       const existing = await db[entity].filter(query, "", 1);
@@ -174,51 +177,77 @@ Deno.serve(async (req) => {
       return existing[0];
     };
 
-    // --- Configuration ---
-    await createIfNone("BusinessProfile", { slug: SLUG }, BUSINESS);
-    await createIfNone("AppSetting", { key: "app" }, { key: "app", value: APP_SETTINGS, description: "Configurable platform terminology and UI labels", active: true });
-    await createIfNone("BusinessSetting", { business_slug: SLUG, key: "booking_copy" }, { business_slug: SLUG, key: "booking_copy", value: BOOKING_COPY, active: true });
-    await createIfNone("InvoiceSetting", { business_slug: SLUG }, { business_slug: SLUG, ...INVOICE_SETTINGS, active: true });
-    await createIfNone("PaymentProviderConfig", { business_slug: SLUG, provider_key: PAYMENT_PROVIDER.provider_key }, { business_slug: SLUG, ...PAYMENT_PROVIDER });
-    await createIfNone("QuoteTemplate", { business_slug: SLUG, name: QUOTE_TEMPLATE.name }, { business_slug: SLUG, ...QUOTE_TEMPLATE, active: true });
+    // Each step is idempotent (createIfNone guards), so re-running after a
+    // partial failure is always safe.
+    const steps = {
+      business: async () => {
+        await createIfNone("BusinessProfile", { slug: SLUG }, BUSINESS);
+        await createIfNone("AppSetting", { key: "app" }, { key: "app", value: APP_SETTINGS, description: "Configurable platform terminology and UI labels", active: true });
+        await createIfNone("BusinessSetting", { business_slug: SLUG, key: "booking_copy" }, { business_slug: SLUG, key: "booking_copy", value: BOOKING_COPY, active: true });
+        await createIfNone("InvoiceSetting", { business_slug: SLUG }, { business_slug: SLUG, ...INVOICE_SETTINGS, active: true });
+        await createIfNone("PaymentProviderConfig", { business_slug: SLUG, provider_key: PAYMENT_PROVIDER.provider_key }, { business_slug: SLUG, ...PAYMENT_PROVIDER });
+        await createIfNone("QuoteTemplate", { business_slug: SLUG, name: QUOTE_TEMPLATE.name }, { business_slug: SLUG, ...QUOTE_TEMPLATE, active: true });
+      },
+      services: async () => {
+        for (const [i, item] of SERVICE_CATEGORIES.entries())
+          await createIfNone("ServiceCategory", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
+        for (const [i, item] of SERVICES.entries())
+          await createIfNone("ServiceItem", { business_slug: SLUG, name: item.name }, { business_slug: SLUG, ...item, order: i, active: true });
+      },
+      statuses: async () => {
+        for (const [i, item] of JOB_STATUSES.entries())
+          await createIfNone("JobStatus", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
+        for (const [i, item] of JOB_TYPES.entries())
+          await createIfNone("JobType", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
+      },
+      roles: async () => {
+        for (const [key, role] of Object.entries(ROLES)) {
+          await createIfNone("Role", { business_slug: SLUG, key }, { business_slug: SLUG, ...role, order: Object.keys(ROLES).indexOf(key), active: true });
+          for (const action of ROLE_PERMISSIONS[key] || [])
+            await createIfNone("Permission", { business_slug: SLUG, role_key: key, action }, { business_slug: SLUG, role_key: key, action, active: true });
+        }
+      },
+      booking: async () => {
+        for (const field of BOOKING_FIELDS)
+          await createIfNone("BookingFieldConfig", { business_slug: SLUG, key: field.key }, { business_slug: SLUG, ...field, active: true });
+      },
+      templates: async () => {
+        for (const template of NOTIFICATION_TEMPLATES)
+          await createIfNone("NotificationTemplate", { business_slug: SLUG, key: template.key, channel: template.channel }, { business_slug: SLUG, ...template, active: true });
+      },
+      demo: async () => {
+        const existingJobs = await db.Job.list("-created_date", 1);
+        if (existingJobs.length > 0) return;
+        const staff = await db.StaffProfile.list("", 1);
+        if (staff.length === 0)
+          await db.StaffProfile.bulkCreate(TECHS.map((s) => ({ ...s, business_slug: SLUG })));
+        for (const j of DEMO_JOBS) {
+          const { offset, asset_label, ...rest } = j;
+          const job = await db.Job.create({ ...rest, asset_label, scooter_label: asset_label, scheduled_date: isoDaysFromNow(offset), business_slug: SLUG });
+          if (j.quote_status !== "draft")
+            await db.Quote.create({ job_id: job.id, labour_estimate: 80, parts_estimate: 45, total: 125, currency: CURRENCY, status: j.quote_status === "approved" ? "approved" : "sent", recommended_repair: j.issue_description, sent_date: new Date().toISOString() });
+          if (j.payment_status === "outstanding" || j.payment_status === "paid")
+            await db.Invoice.create({ job_id: job.id, number: `${INVOICE_SETTINGS.prefix}-${j.reference}`, amount: 125, currency: CURRENCY, status: j.payment_status });
+        }
+      },
+      finish: async () => {
+        await createIfNone("AppSetting", { key: "seed_complete" }, { key: "seed_complete", value: { at: new Date().toISOString() }, description: "Marks initial seeding as complete", active: true });
+      },
+    };
 
-    for (const [i, item] of SERVICE_CATEGORIES.entries())
-      await createIfNone("ServiceCategory", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
-    for (const [i, item] of SERVICES.entries())
-      await createIfNone("ServiceItem", { business_slug: SLUG, name: item.name }, { business_slug: SLUG, ...item, order: i, active: true });
-    for (const [i, item] of JOB_STATUSES.entries())
-      await createIfNone("JobStatus", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
-    for (const [i, item] of JOB_TYPES.entries())
-      await createIfNone("JobType", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
-    for (const [key, role] of Object.entries(ROLES)) {
-      await createIfNone("Role", { business_slug: SLUG, key }, { business_slug: SLUG, ...role, order: Object.keys(ROLES).indexOf(key), active: true });
-      for (const action of ROLE_PERMISSIONS[key] || [])
-        await createIfNone("Permission", { business_slug: SLUG, role_key: key, action }, { business_slug: SLUG, role_key: key, action, active: true });
+    if (step === "check") {
+      return Response.json({ seeded: await isSeeded() });
     }
-    for (const field of BOOKING_FIELDS)
-      await createIfNone("BookingFieldConfig", { business_slug: SLUG, key: field.key }, { business_slug: SLUG, ...field, active: true });
-    for (const template of NOTIFICATION_TEMPLATES)
-      await createIfNone("NotificationTemplate", { business_slug: SLUG, key: template.key, channel: template.channel }, { business_slug: SLUG, ...template, active: true });
 
-    // --- Demo data (only if no jobs yet) ---
-    const existingJobs = await db.Job.list("-created_date", 1);
-    if (existingJobs.length === 0) {
-      const staff = await db.StaffProfile.list("", 1);
-      if (staff.length === 0)
-        await db.StaffProfile.bulkCreate(TECHS.map((s) => ({ ...s, business_slug: SLUG })));
-
-      for (const j of DEMO_JOBS) {
-        const { offset, asset_label, ...rest } = j;
-        const job = await db.Job.create({ ...rest, asset_label, scooter_label: asset_label, scheduled_date: isoDaysFromNow(offset), business_slug: SLUG });
-        if (j.quote_status !== "draft")
-          await db.Quote.create({ job_id: job.id, labour_estimate: 80, parts_estimate: 45, total: 125, currency: CURRENCY, status: j.quote_status === "approved" ? "approved" : "sent", recommended_repair: j.issue_description, sent_date: new Date().toISOString() });
-        if (j.payment_status === "outstanding" || j.payment_status === "paid")
-          await db.Invoice.create({ job_id: job.id, number: `${INVOICE_SETTINGS.prefix}-${j.reference}`, amount: 125, currency: CURRENCY, status: j.payment_status });
-      }
+    if (step === "all") {
+      if (await isSeeded()) return Response.json({ seeded: false, reason: "already_seeded" });
+      for (const name of Object.keys(steps)) await steps[name]();
+      return Response.json({ seeded: true });
     }
 
-    await db.AppSetting.create({ key: "seed_complete", value: { at: new Date().toISOString() }, description: "Marks initial seeding as complete", active: true });
-    return Response.json({ seeded: true });
+    if (!steps[step]) return Response.json({ error: `Unknown step: ${step}` }, { status: 400 });
+    await steps[step]();
+    return Response.json({ ok: true, step });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

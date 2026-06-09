@@ -1,27 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Outlet, Link, useOutletContext } from "react-router-dom";
 import DashboardShell from "./DashboardShell";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
-import { seedIfEmpty } from "@/services/seedService";
+import { isSeedCached } from "@/services/seedService";
+import SeedLoadingScreen from "./SeedLoadingScreen";
 
 export default function DashboardLayout() {
   const { user, isLoading } = useCurrentUser();
-  const [ready, setReady] = useState(false);
+  const [seedDone, setSeedDone] = useState(false);
 
-  // Seeding is a one-time setup task — only run it for admins. Other staff
-  // (e.g. technicians) skip it and load the dashboard immediately.
-  useEffect(() => {
-    if (isLoading) return;
-    if (user?.role === "admin") {
-      seedIfEmpty().finally(() => setReady(true));
-    } else {
-      setReady(true);
-    }
-  }, [isLoading, user?.role]);
-
-  if (isLoading || !ready) {
+  if (isLoading) {
     return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
+  }
+
+  // First-time setup is admin-only and cached locally once complete, so
+  // returning users go straight to the dashboard without any seed check.
+  if (user?.role === "admin" && !isSeedCached() && !seedDone) {
+    return <SeedLoadingScreen onDone={() => setSeedDone(true)} />;
   }
 
   if (!isStaff(user?.role)) {
