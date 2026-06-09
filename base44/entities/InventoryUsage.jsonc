@@ -26,6 +26,23 @@
     },
     "note": {
       "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "inventory",
+        "estore"
+      ],
+      "default": "inventory",
+      "description": "Where the part came from: internal inventory or the e-store"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "Linked e-store Product id when source is estore"
+    },
+    "product_sku": {
+      "type": "string",
+      "description": "Linked e-store Product SKU"
     }
   },
   "required": [

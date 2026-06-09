@@ -14,7 +14,7 @@ export default function JobPartsPanel({ job, canEdit }) {
 
   const { data: usages = [] } = useQuery({
     queryKey: ["inventoryUsage", job.id],
-    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.id }, "-created_date", 50),
+    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 50),
   });
 
   const { data: allItems = [] } = useQuery({
@@ -36,6 +36,7 @@ export default function JobPartsPanel({ job, canEdit }) {
         unit_cost: item.cost_price,
         unit_sell: item.sell_price,
         note,
+        source: "inventory",
       });
       // Decrement stock
       await base44.entities.InventoryItem.update(item.id, {
