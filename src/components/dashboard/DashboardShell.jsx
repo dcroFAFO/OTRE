@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Kanban, Package, FileText, Sparkles, Users, Building2, Bell, MessageSquare, Contact } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Kanban, Package, FileText, Sparkles, Users, Building2, Bell, MessageSquare, Contact, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { ROLES } from "@/config/jobConfig";
 import { crmHasAccess } from "@/config/crmConfig";
@@ -20,6 +20,7 @@ export default function DashboardShell({ user, children }) {
     { to: "/dashboard/templates", label: "Templates", icon: FileText },
     ...(user?.role === "admin" ? [
       { to: "/admin/clients", label: "Clients", icon: Contact },
+      { to: "/dashboard/estore", label: "eStore", icon: ShoppingBag },
       { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
       { to: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     ] : []),

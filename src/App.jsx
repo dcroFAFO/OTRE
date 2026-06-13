@@ -23,6 +23,7 @@ import Notifications from '@/pages/dashboard/Notifications';
 import CRMLeads from '@/pages/dashboard/crm/CRMLeads';
 import CRMContacts from '@/pages/dashboard/crm/CRMContacts';
 import CRMCompanies from '@/pages/dashboard/crm/CRMCompanies';
+import EStore from '@/pages/dashboard/EStore';
 import AdminFeedback from '@/pages/admin/AdminFeedback';
 import AdminClients from '@/pages/admin/AdminClients';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
         <Route path="crm/leads" element={<CRMLeads />} />
         <Route path="crm/contacts" element={<CRMContacts />} />
         <Route path="crm/companies" element={<CRMCompanies />} />
+        <Route path="estore" element={<EStore />} />
       </Route>
       <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="/admin/clients" element={<AdminClients />} />
