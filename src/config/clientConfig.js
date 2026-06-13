@@ -12,17 +12,8 @@ export const CLIENT_STATUSES = [
   { key: "closed", label: "Closed", color: "slate" },
 ];
 
-export const ACCOUNT_TYPES = [
-  { key: "individual", label: "Individual" },
-  { key: "business", label: "Business" },
-  { key: "fleet", label: "Fleet" },
-  { key: "wholesale", label: "Wholesale" },
-];
-
 export const CLIENT_TAGS = [
   { key: "vip", label: "VIP", color: "accent" },
-  { key: "lead", label: "Lead", color: "violet" },
-  { key: "prospect", label: "Prospect", color: "violet" },
   { key: "active_client", label: "Active Client", color: "emerald" },
   { key: "past_client", label: "Past Client", color: "slate" },
   { key: "high_priority", label: "High Priority", color: "rose" },
@@ -31,5 +22,4 @@ export const CLIENT_TAGS = [
 
 const byKey = (list) => Object.fromEntries(list.map((x) => [x.key, x]));
 export const CLIENT_STATUS_MAP = byKey(CLIENT_STATUSES);
-export const ACCOUNT_TYPE_MAP = byKey(ACCOUNT_TYPES);
 export const CLIENT_TAG_MAP = byKey(CLIENT_TAGS);

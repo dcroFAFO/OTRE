@@ -26,10 +26,9 @@ export default function AdminClients() {
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
     let list = clients.filter((c) => {
-      const matchQ = !q || [c.full_name, c.email, c.phone, c.company, c.id].some((v) => v?.toLowerCase?.().includes(q));
+      const matchQ = !q || [c.full_name, c.email, c.phone, c.id].some((v) => v?.toLowerCase?.().includes(q));
       return matchQ
         && (filters.status === "all" || (c.status || "active") === filters.status)
-        && (filters.account_type === "all" || (c.account_type || "individual") === filters.account_type)
         && (filters.tag === "all" || (c.tags || []).includes(filters.tag));
     });
     const sorters = {

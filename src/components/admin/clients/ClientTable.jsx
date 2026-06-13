@@ -1,8 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, Building2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import { ClientStatusBadge, ClientTagBadge } from "./ClientStatusBadge";
-import { ACCOUNT_TYPE_MAP } from "@/config/clientConfig";
 import { format } from "date-fns";
 
 export default function ClientTable({ clients, onView }) {
@@ -14,7 +13,6 @@ export default function ClientTable({ clients, onView }) {
             <tr className="border-b border-border bg-secondary/40 text-left text-xs text-muted-foreground">
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Contact</th>
-              <th className="px-4 py-3 font-semibold">Account</th>
               <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-4 py-3 font-semibold">Tags</th>
               <th className="px-4 py-3 font-semibold">Signed up</th>
@@ -26,13 +24,11 @@ export default function ClientTable({ clients, onView }) {
               <tr key={c.id} className="hover:bg-secondary/30 transition-colors">
                 <td className="px-4 py-3 max-w-[200px]">
                   <button onClick={() => onView(c)} className="font-medium text-left hover:underline truncate block">{c.full_name}</button>
-                  {c.company && <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate"><Building2 className="h-3 w-3" /> {c.company}</p>}
                 </td>
                 <td className="px-4 py-3 max-w-[180px]">
                   <p className="truncate">{c.email || "—"}</p>
                   <p className="text-[11px] text-muted-foreground">{c.phone || ""}</p>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{ACCOUNT_TYPE_MAP[c.account_type]?.label || "Individual"}</td>
                 <td className="px-4 py-3"><ClientStatusBadge value={c.status || "active"} /></td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1 max-w-[160px]">

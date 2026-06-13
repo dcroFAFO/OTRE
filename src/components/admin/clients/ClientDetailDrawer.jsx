@@ -6,11 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, Building2, Loader2, User, Receipt, Wrench, MessageSquare } from "lucide-react";
+import { Mail, Phone, CalendarDays, Loader2, User, Receipt, Wrench, MessageSquare } from "lucide-react";
 import { ClientStatusBadge } from "./ClientStatusBadge";
 import ClientTagEditor from "./ClientTagEditor";
 import ClientHistoryTimeline from "./ClientHistoryTimeline";
-import { CLIENT_STATUSES, ACCOUNT_TYPES } from "@/config/clientConfig";
+import { CLIENT_STATUSES } from "@/config/clientConfig";
 import { updateClient, listClientNotes, addClientNote, fetchClientHistory } from "@/services/clientService";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
@@ -28,7 +28,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
 
   useEffect(() => {
     if (client && open) {
-      setForm({ ...client, tags: client.tags || [], status: client.status || "active", account_type: client.account_type || "individual" });
+      setForm({ ...client, tags: client.tags || [], status: client.status || "active" });
       loadNotes();
       loadHistory();
     }
@@ -51,7 +51,6 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
     try {
       await updateClient(client, {
         full_name: form.full_name, email: form.email, phone: form.phone,
-        company: form.company, account_type: form.account_type,
         status: form.status, tags: form.tags,
       }, actor);
       toast({ title: "Client updated" });
@@ -92,14 +91,13 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h2 className="font-heading text-xl font-extrabold flex items-center gap-2"><User className="h-5 w-5 text-primary-foreground/70" /> {client.full_name}</h2>
-                  {client.company && <p className="text-sm text-primary-foreground/70 mt-0.5">{client.company}</p>}
                 </div>
                 <ClientStatusBadge value={client.status || "active"} />
               </div>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-primary-foreground/70">
                 {client.email && <a href={`mailto:${client.email}`} className="flex items-center gap-1 hover:text-primary-foreground"><Mail className="h-3 w-3" /> {client.email}</a>}
                 {client.phone && <a href={`tel:${client.phone}`} className="flex items-center gap-1 hover:text-primary-foreground"><Phone className="h-3 w-3" /> {client.phone}</a>}
-                <span className="flex items-center gap-1"><Building2 className="h-3 w-3" /> Signed up {client.created_date ? format(new Date(client.created_date), "d MMM yyyy") : "—"}</span>
+                <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Signed up {client.created_date ? format(new Date(client.created_date), "d MMM yyyy") : "—"}</span>
               </div>
               {history?.counts && (
                 <div className="mt-4 flex gap-4 text-xs">
@@ -123,15 +121,6 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Email"><Input value={form.email || ""} onChange={(e) => set("email", e.target.value)} /></Field>
                   <Field label="Phone"><Input value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} /></Field>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Company"><Input value={form.company || ""} onChange={(e) => set("company", e.target.value)} /></Field>
-                  <Field label="Account type">
-                    <Select value={form.account_type} onValueChange={(v) => set("account_type", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{ACCOUNT_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Field>
                 </div>
                 <Field label="Status">
                   <Select value={form.status} onValueChange={(v) => set("status", v)}>
