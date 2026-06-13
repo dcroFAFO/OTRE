@@ -33,10 +33,9 @@ Deno.serve(async (req) => {
       issue_description: form.issue_description,
       job_type: JOB_TYPE,
       status: INTAKE_STATUS,
-      scheduled_date: form.preferred_date || null,
-      preferred_time_window: form.preferred_time_window,
+      scheduled_date: form.asap ? null : (form.preferred_date || null),
+      preferred_time_window: form.asap ? "ASAP" : form.preferred_time_window,
       rideable: form.rideable,
-      location_preference: form.location_preference,
       business_slug: SLUG,
     });
 

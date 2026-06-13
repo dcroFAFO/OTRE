@@ -20,7 +20,7 @@ const EMPTY = {
   customer_name: "", phone: "", email: "", asset_label: "", issue_type: "", issue_description: "",
   asset_make: "", asset_model: "", asset_custom_make: "", asset_custom_model: "",
   preferred_date: "", preferred_time_window: "Anytime", rideable: true,
-  location_preference: "drop_off", consent: false,
+  asap: false, consent: false,
 };
 
 export default function BookingSection() {
@@ -132,7 +132,11 @@ export default function BookingSection() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label={field("preferred_date").label}>
-              <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} />
+              <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
+              <label className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
+                <Checkbox checked={form.asap} onCheckedChange={(v) => setForm((f) => ({ ...f, asap: !!v, preferred_date: v ? "" : f.preferred_date }))} />
+                <span>ASAP — as soon as possible</span>
+              </label>
             </Field>
             <Field label={field("preferred_time_window").label}>
               <Select value={form.preferred_time_window} onValueChange={(v) => set("preferred_time_window", v)}>
@@ -143,12 +147,6 @@ export default function BookingSection() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label={field("location_preference").label}>
-              <Select value={form.location_preference} onValueChange={(v) => set("location_preference", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{options("location_preference").map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </Field>
             <Field label={field("rideable").label}>
               <Select value={form.rideable ? "yes" : "no"} onValueChange={(v) => set("rideable", v === "yes")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
