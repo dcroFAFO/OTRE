@@ -35,13 +35,13 @@ export default function DashboardShell({ user, children }) {
 
   const Sidebar = () => (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-5 h-16 border-b border-border">
+      <Link to="/" className="flex items-center gap-2 px-5 h-16 border-b border-border hover:bg-secondary/40 transition-colors">
         <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground"><Zap className="h-5 w-5 text-accent" /></span>
         <div>
           <p className="font-heading font-extrabold text-sm leading-tight">{business.name}</p>
           <p className="text-[11px] text-muted-foreground">{app.terminology.platformLabel}</p>
         </div>
-      </div>
+      </Link>
       <nav className="flex-1 p-3 space-y-1">
         {nav.map((n) => {
           const active = pathname === n.to;
