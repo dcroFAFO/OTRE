@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const STORE_ID = Deno.env.get("ECWID_STORE_ID");
 const TOKEN = Deno.env.get("ECWID_SECRET_TOKEN");
+const ECWID_HEADERS = { "Authorization": `Bearer ${TOKEN}` };
 
 // Map Ecwid category names to our internal category/group keys
 function mapCategory(categoryName = "") {
@@ -31,28 +32,7 @@ function mapCategory(categoryName = "") {
   if (name.includes("electrical") || name.includes("electric")) return { category_key: "electrical", category_label: "Other Electrical", group_key: "everything-else", group_label: "Everything else" };
   if (name.includes("service")) return { category_key: "services", category_label: "eScootNow Services", group_key: "everything-else", group_label: "Everything else" };
   if (name.includes("clearance") || name.includes("sale")) return { category_key: "clearance", category_label: "Clearance items", group_key: "everything-else", group_label: "Everything else" };
-  // Default fallback
   return { category_key: "non-electrical", category_label: "Other Non-Electrical", group_key: "everything-else", group_label: "Everything else" };
-}
-
-const ECWID_HEADERS = { "Authorization": `Bearer ${TOKEN}` };
-
-async function fetchAllEcwidProducts() {
-  const products = [];
-  let offset = 0;
-  const limit = 100;
-
-  while (true) {
-    const url = `https://app.ecwid.com/api/v3/${STORE_ID}/products?limit=${limit}&offset=${offset}&enabled=true`;
-    const res = await fetch(url, { headers: ECWID_HEADERS });
-    if (!res.ok) throw new Error(`Ecwid API error: ${res.status} ${await res.text()}`);
-    const data = await res.json();
-    products.push(...(data.items || []));
-    if (products.length >= data.total || (data.items || []).length < limit) break;
-    offset += limit;
-  }
-
-  return products;
 }
 
 async function fetchEcwidCategories() {
@@ -67,21 +47,33 @@ async function fetchEcwidCategories() {
   return map;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (user?.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    if (!user || !['admin', 'technician'].includes(user?.role)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch categories map and all products from Ecwid
-    const [categoryMap, ecwidProducts] = await Promise.all([
-      fetchEcwidCategories(),
-      fetchAllEcwidProducts(),
-    ]);
+    // Parse optional pagination params: offset into Ecwid, page_size (max products per call)
+    const body = await req.json().catch(() => ({}));
+    const ecwidOffset = body.offset ?? 0;
+    const pageSize = Math.min(body.page_size ?? 25, 50); // max 50 per invocation
 
-    // Get existing products keyed by supplier_url (Ecwid product URL) or sku
+    // Fetch this page of Ecwid products
+    const ecwidUrl = `https://app.ecwid.com/api/v3/${STORE_ID}/products?limit=${pageSize}&offset=${ecwidOffset}&enabled=true`;
+    const ecwidRes = await fetch(ecwidUrl, { headers: ECWID_HEADERS });
+    if (!ecwidRes.ok) throw new Error(`Ecwid API error: ${ecwidRes.status} ${await ecwidRes.text()}`);
+    const ecwidData = await ecwidRes.json();
+    const ecwidProducts = ecwidData.items || [];
+    const ecwidTotal = ecwidData.total ?? 0;
+
+    // Fetch categories (small request, cheap)
+    const categoryMap = await fetchEcwidCategories();
+
+    // Load existing products for upsert matching
     const existing = await base44.asServiceRole.entities.Product.filter({ supplier: "eScootNow" });
     const existingBySku = {};
     for (const p of existing) {
@@ -91,20 +83,16 @@ Deno.serve(async (req) => {
     let created = 0;
     let updated = 0;
 
-    const BATCH_SIZE = 20;
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
     for (let i = 0; i < ecwidProducts.length; i++) {
       const ep = ecwidProducts[i];
-      // Resolve category name from first category id
       const catId = ep.categoryIds?.[0];
       const catName = catId ? (categoryMap[catId] || "") : "";
       const catMapped = mapCategory(catName);
 
-      const imageUrl = ep.thumbnailUrl || ep.imageUrl || ep.originalImageUrl || "";
+      const imageUrl = ep.hdThumbnailUrl || ep.thumbnailUrl || ep.imageUrl || ep.originalImageUrl || "";
       const price = ep.price ?? ep.defaultDisplayedPrice ?? 0;
       const inStock = ep.inStock !== false && (ep.unlimited || (ep.quantity ?? 1) > 0);
-      const productUrl = `https://escootnow.com.au/p/${ep.id}`;
+      const productUrl = ep.url || `https://escootnow.com.au/p/${ep.id}`;
 
       const payload = {
         name: ep.name || "Unnamed Product",
@@ -129,16 +117,22 @@ Deno.serve(async (req) => {
         created++;
       }
 
-      // Small pause every batch to avoid rate limits
-      if ((i + 1) % BATCH_SIZE === 0) await sleep(500);
+      // 300ms between writes to respect rate limits
+      if (i < ecwidProducts.length - 1) await sleep(300);
     }
+
+    const nextOffset = ecwidOffset + ecwidProducts.length;
+    const hasMore = nextOffset < ecwidTotal;
 
     return Response.json({
       success: true,
-      total: ecwidProducts.length,
       created,
       updated,
-      message: `Sync complete: ${created} created, ${updated} updated.`,
+      processed: ecwidProducts.length,
+      total: ecwidTotal,
+      next_offset: hasMore ? nextOffset : null,
+      has_more: hasMore,
+      message: `Synced ${created + updated} products (${created} new, ${updated} updated). ${hasMore ? `${ecwidTotal - nextOffset} remaining.` : "All done!"}`,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

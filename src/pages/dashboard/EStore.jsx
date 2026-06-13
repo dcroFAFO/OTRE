@@ -10,6 +10,7 @@ export default function EStore() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(null); // { processed, total }
   const [syncResult, setSyncResult] = useState(null);
 
   const { data: products = [], isLoading } = useQuery({
@@ -20,14 +21,34 @@ export default function EStore() {
   const handleSync = async () => {
     setSyncing(true);
     setSyncResult(null);
+    setSyncProgress(null);
+
+    let offset = 0;
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    const PAGE_SIZE = 25;
+
     try {
-      const res = await base44.functions.invoke("syncEcwidProducts", {});
-      setSyncResult({ success: true, message: res.data.message, total: res.data.total });
+      while (true) {
+        const res = await base44.functions.invoke("syncEcwidProducts", { offset, page_size: PAGE_SIZE });
+        const data = res.data;
+        totalCreated += data.created;
+        totalUpdated += data.updated;
+        setSyncProgress({ processed: offset + data.processed, total: data.total });
+
+        if (!data.has_more) break;
+        offset = data.next_offset;
+        // Brief pause between pages
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
       qc.invalidateQueries(["estore-products"]);
+      setSyncResult({ success: true, message: `Sync complete: ${totalCreated} new, ${totalUpdated} updated.` });
     } catch (err) {
       setSyncResult({ success: false, message: err.message || "Sync failed." });
     } finally {
       setSyncing(false);
+      setSyncProgress(null);
     }
   };
 
@@ -56,7 +77,11 @@ export default function EStore() {
         </div>
         <Button onClick={handleSync} disabled={syncing} className="gap-2 rounded-xl">
           <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
-          {syncing ? "Syncing…" : "Sync from Ecwid"}
+          {syncing
+            ? syncProgress
+              ? `Syncing… ${syncProgress.processed}/${syncProgress.total}`
+              : "Starting…"
+            : "Sync from Ecwid"}
         </Button>
       </div>
 
