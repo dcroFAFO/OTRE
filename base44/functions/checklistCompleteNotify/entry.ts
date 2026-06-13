@@ -1,5 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+async function sendMail({ to, subject, body, from_name }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
+  const from = `${from_name || "On The Run Electrics"} <hello@ontherunelectrics.com.au>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: recipients, subject, html: body }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  return res.json();
+}
+
 const isFull = (list) => Array.isArray(list) && list.length > 0 && list.every((c) => c.done);
 
 Deno.serve(async (req) => {
@@ -90,7 +104,7 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await base44.asServiceRole.functions.invoke('sendMail', {
+    await sendMail({
       to: email,
       subject: `Repair checklist completed${reference}`,
       body: htmlBody,

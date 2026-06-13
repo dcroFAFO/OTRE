@@ -2,6 +2,21 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const BUSINESS = { name: "On The Run Electrics", accent: "#16b8a6", dark: "#16223f" };
 
+async function sendMail({ to, subject, body, from_name }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
+  const from = `${from_name || "On The Run Electrics"} <hello@ontherunelectrics.com.au>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: recipients, subject, html: body }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  return res.json();
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 function statusLabel(key) {
   if (!key) return "—";
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -74,6 +89,7 @@ Deno.serve(async (req) => {
     const jobs = await base44.asServiceRole.entities.Job.filter({ archived: false, scheduled_date: todayStr });
 
     const results = [];
+    let first = true;
     for (const tech of techs) {
       const theirJobs = jobs.filter((j) => j.assigned_technician_id === tech.user_id);
       if (theirJobs.length === 0) continue;
@@ -81,7 +97,9 @@ Deno.serve(async (req) => {
       const name = (tech.short_name || tech.full_name || "there").split(" ")[0];
       const html = buildEmail(name, theirJobs, todayLabel);
 
-      await base44.asServiceRole.functions.invoke('sendMail', {
+      if (!first) await sleep(600);
+      first = false;
+      await sendMail({
         from_name: BUSINESS.name,
         to: tech.email,
         subject: `Your ${theirJobs.length} job${theirJobs.length === 1 ? "" : "s"} for ${todayLabel}`,

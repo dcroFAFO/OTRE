@@ -6,6 +6,21 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 const BUSINESS = { name: "OTR Scooters", dark: "#16223f", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com" };
 const STALE_DAYS = 7;
 
+async function sendMail({ to, subject, body, from_name }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
+  const from = `${from_name || "On The Run Electrics"} <hello@ontherunelectrics.com.au>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: recipients, subject, html: body }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  return res.json();
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // Statuses that are finished — we don't chase these.
 const TERMINAL = new Set(["completed", "cancelled", "ready_for_pickup", "closed"]);
 
@@ -102,9 +117,12 @@ Deno.serve(async (req) => {
     }
 
     const results = [];
+    let first = true;
     for (const [email, { name, items }] of recipientJobs) {
       const rows = items.map((i) => jobRow(i.job, i.lastActivity, i.days)).join("");
-      await base44.asServiceRole.functions.invoke('sendMail', {
+      if (!first) await sleep(600);
+      first = false;
+      await sendMail({
         from_name: BUSINESS.name,
         to: email,
         subject: `${items.length} stale job${items.length === 1 ? "" : "s"} need attention`,

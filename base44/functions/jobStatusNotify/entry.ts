@@ -1,5 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+async function sendMail({ to, subject, body, from_name }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
+  const from = `${from_name || "On The Run Electrics"} <hello@ontherunelectrics.com.au>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: recipients, subject, html: body }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  return res.json();
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const NOTIFY_STATUSES = {
   repair_in_progress: {
     subject: "Your scooter is now being repaired 🔧",
@@ -113,7 +128,7 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await base44.asServiceRole.functions.invoke('sendMail', {
+    await sendMail({
       to: email,
       subject: `${subject}${reference}`,
       body: htmlBody,
@@ -149,7 +164,8 @@ Deno.serve(async (req) => {
     </td></tr>
   </table>
 </body></html>`;
-      await base44.asServiceRole.functions.invoke('sendMail', {
+      await sleep(600);
+      await sendMail({
         to: email,
         subject: `How did we do?${reference}`,
         body: feedbackHtml,
