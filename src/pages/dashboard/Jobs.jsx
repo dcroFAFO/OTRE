@@ -53,14 +53,15 @@ export default function Jobs() {
             {filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
           </p>
         </div>
-        <button
-          onClick={() => setTemplateModal(true)}
-          className="flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg px-4 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          <Plus className="h-4 w-4 text-accent" />
-          New Job
-        </button>
       </div>
+
+      <button
+        onClick={() => setTemplateModal(true)}
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg px-4 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
+      >
+        <Plus className="h-4 w-4 text-accent" />
+        New Job
+      </button>
 
       <JobFilters filters={filters} setFilters={setFilters} staff={staff} />
 
