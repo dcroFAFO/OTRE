@@ -6,7 +6,7 @@ import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import JobListTable from "@/components/dashboard/job/JobListTable";
 import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
-import { SlidersHorizontal, FileText } from "lucide-react";
+import { SlidersHorizontal, Plus } from "lucide-react";
 import { getJobGroup, jobMatchesGroup } from "@/config/jobGroups";
 import NewJobFromTemplateModal from "@/components/dashboard/job/NewJobFromTemplateModal";
 import { Button } from "@/components/ui/button";
@@ -53,9 +53,13 @@ export default function Jobs() {
             {filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
           </p>
         </div>
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTemplateModal(true)}>
-          <FileText className="h-4 w-4" /> New from Template
-        </Button>
+        <button
+          onClick={() => setTemplateModal(true)}
+          className="flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg px-4 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Plus className="h-4 w-4 text-accent" />
+          New Job
+        </button>
       </div>
 
       <JobFilters filters={filters} setFilters={setFilters} staff={staff} />

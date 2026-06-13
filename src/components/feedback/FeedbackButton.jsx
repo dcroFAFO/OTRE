@@ -1,15 +1,19 @@
 import React, { useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import FeedbackModal from "./FeedbackModal";
 
-// Floating "Send Feedback" button — visible only to logged-in users.
-// Bottom-left so it never collides with the portal support chat (bottom-right).
+// Floating "Send Feedback" button — only shown to logged-in users on the
+// landing page and customer portal (staff don't leave feedback).
+const FEEDBACK_PATHS = ["/", "/portal"];
+
 export default function FeedbackButton() {
   const { user } = useCurrentUser();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
 
-  if (!user) return null;
+  if (!user || !FEEDBACK_PATHS.includes(pathname)) return null;
 
   return (
     <>
