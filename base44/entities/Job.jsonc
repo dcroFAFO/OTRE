@@ -48,6 +48,68 @@
       "type": "string",
       "description": "Internal technician-only notes (repair issues, part failures). Never shown to customers."
     },
+    "intake": {
+      "type": "object",
+      "description": "Standardised technician intake details captured when a scooter is received",
+      "properties": {
+        "make": {
+          "type": "string",
+          "description": "Scooter make / brand"
+        },
+        "model": {
+          "type": "string",
+          "description": "Scooter model"
+        },
+        "serial_number": {
+          "type": "string",
+          "description": "Frame / serial number (VIN)"
+        },
+        "battery_condition": {
+          "type": "string",
+          "enum": [
+            "good",
+            "fair",
+            "poor",
+            "faulty",
+            "unknown"
+          ],
+          "description": "Assessed battery condition on intake"
+        },
+        "battery_voltage": {
+          "type": "string",
+          "description": "Measured battery voltage at intake"
+        },
+        "odometer_km": {
+          "type": "number",
+          "description": "Odometer reading in km, if available"
+        },
+        "physical_condition": {
+          "type": "string",
+          "description": "Notes on physical condition / existing damage"
+        },
+        "accessories_received": {
+          "type": "string",
+          "description": "Items received with the scooter e.g. charger, key"
+        },
+        "powers_on": {
+          "type": "boolean",
+          "description": "Whether the scooter powers on at intake"
+        },
+        "initial_issue_notes": {
+          "type": "string",
+          "description": "Technician's initial assessment of the reported issue"
+        },
+        "intake_by_name": {
+          "type": "string",
+          "description": "Name of the technician who completed intake"
+        },
+        "intake_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When intake was completed"
+        }
+      }
+    },
     "job_type": {
       "type": "string",
       "default": "service"

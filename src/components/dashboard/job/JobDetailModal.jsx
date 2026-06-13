@@ -16,6 +16,7 @@ import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
 import JobStoreProductsPanel from "./JobStoreProductsPanel";
 import JobChecklistPanel from "./JobChecklistPanel";
+import IntakePanel from "./IntakePanel";
 import AuditTimeline from "./AuditTimeline";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                 <div className="border-b border-border px-5 pt-3 bg-background sticky top-0 z-10">
                   <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap">
                     {canManage && <ModalTab value="manage" label="Actions" />}
+                    {canManage && <ModalTab value="intake" label="Intake" badge={job.intake?.intake_date ? "✓" : null} />}
                     {job.checklist?.length > 0 && (
                       <ModalTab
                         value="checklist"
@@ -78,6 +80,11 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   {canManage && (
                     <TabsContent value="manage" className="mt-0">
                       <JobActions job={job} actor={actor} onChange={bump} />
+                    </TabsContent>
+                  )}
+                  {canManage && (
+                    <TabsContent value="intake" className="mt-0">
+                      <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                     </TabsContent>
                   )}
                   {job.checklist?.length > 0 && (
