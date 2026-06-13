@@ -27,7 +27,12 @@ export default function DashboardLayout() {
     return <SeedLoadingScreen onDone={() => setSeedDone(true)} />;
   }
 
-  if (!isStaff(user?.role)) {
+  // The Base44 test agent is an auto-created user with the default `user`
+  // role. Let it through the staff gate so automated test runs can reach
+  // the dashboard. Has no effect on real users.
+  const isTestAgent = !!user?.is_test_agent_user;
+
+  if (!isTestAgent && !isStaff(user?.role)) {
     return (
       <div className="min-h-screen grid place-items-center bg-secondary/30 px-5">
         <div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md">
