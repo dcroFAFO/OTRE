@@ -8,6 +8,10 @@
     "template_id": {
       "type": "string"
     },
+    "labour_hours": {
+      "type": "number",
+      "description": "Estimated time to complete in hours (labour billed at $80/hr, min 1hr)"
+    },
     "labour_estimate": {
       "type": "number",
       "default": 0

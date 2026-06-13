@@ -3,25 +3,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Send } from "lucide-react";
+import { Sparkles, Send, Plus, Clock } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 import PartsSourcingPanel from "@/components/dashboard/job/PartsSourcingPanel";
+import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
+
+const LABOUR_RATE = 80;
+const MIN_HOURS = 1;
+const labourCost = (hours) => Math.max(MIN_HOURS, Number(hours) || 0) * LABOUR_RATE;
 
 export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
-  const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "", recommended_repair: "" });
+  const [form, setForm] = useState({ labour_hours: "", labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "", recommended_repair: "" });
   const [aiMsg, setAiMsg] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const loadQuote = async () => { const q = await getJobQuote(job.id); setQuote(q); if (q) setForm(q); };
+  const loadQuote = async () => { const q = await getJobQuote(job.id); setQuote(q); if (q) setForm({ labour_hours: "", ...q }); };
   useEffect(() => { loadQuote(); }, [job.id]);
 
   const partItems = (quote?.line_items || []).filter((li) => li.kind === "part");
 
-  const total = (Number(form.labour_estimate) || 0) + (Number(form.parts_estimate) || 0);
+  const labour = form.labour_hours !== "" ? labourCost(form.labour_hours) : (Number(form.labour_estimate) || 0);
+  const total = labour + (Number(form.parts_estimate) || 0);
 
   const save = async () => { const q = await saveQuote(job, { ...form, id: quote?.id }, actor); setQuote(q); onChange?.(); };
   const send = async () => { if (!quote) await save(); const q = await getJobQuote(job.id); const s = await sendQuote(q, job, actor); setQuote(s); onChange?.(); };
@@ -37,28 +44,34 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
 
       {canEdit ? (
         <>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><Label>{labelFor("labour_estimate")} ($)</Label><Input type="number" value={form.labour_estimate} onChange={(e) => setForm({ ...form, labour_estimate: e.target.value })} /></div>
-            <div className="space-y-1"><Label>{labelFor("parts_estimate")} ($)</Label><Input type="number" value={form.parts_estimate} onChange={(e) => setForm({ ...form, parts_estimate: e.target.value })} /></div>
+          <div className="space-y-1">
+            <Label className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-accent" /> Time to complete (hours)</Label>
+            <Input type="number" min={0} step="0.25" placeholder="e.g. 1.5" value={form.labour_hours} onChange={(e) => setForm({ ...form, labour_hours: e.target.value })} />
+            <p className="text-xs text-muted-foreground">Labour at ${LABOUR_RATE}/hr (min {MIN_HOURS}hr) = <span className="font-semibold text-foreground">${labour.toFixed(2)}</span></p>
           </div>
           <div className="space-y-1"><Label>{labelFor("diagnosis_notes")}</Label><Textarea value={form.diagnosis_notes} onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })} className="h-20" /></div>
           <div className="space-y-1"><Label>{labelFor("recommended_repair")}</Label><Textarea value={form.recommended_repair} onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })} className="h-20" /></div>
 
+          <div className="flex items-center justify-between">
+            <Label>Parts on quote</Label>
+            <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="gap-1.5"><Plus className="h-4 w-4" /> Add item</Button>
+          </div>
+          {partItems.length > 0 ? (
+            <div className="rounded-xl border border-border divide-y divide-border">
+              {partItems.map((li, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
+                  <span className="font-medium tabular-nums">${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No parts added yet. Use "Add item" to pick from the parts catalogue.</p>
+          )}
+
           <PartsSourcingPanel job={job} actor={actor} onAdded={() => { loadQuote(); onChange?.(); }} />
 
-          {partItems.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Parts on quote</Label>
-              <div className="rounded-xl border border-border divide-y divide-border">
-                {partItems.map((li, i) => (
-                  <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
-                    <span className="font-medium tabular-nums">${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <PartPickerModal job={job} actor={actor} open={pickerOpen} onOpenChange={setPickerOpen} onAdded={() => { loadQuote(); onChange?.(); }} />
 
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
             <span className="text-sm font-medium">Quote total</span>

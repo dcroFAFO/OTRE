@@ -3,6 +3,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 // All quote business logic (totals, status transitions, job sync, audit) runs server-side.
 
 const CURRENCY = "AUD";
+const LABOUR_RATE = 80; // $/hour
+const MIN_HOURS = 1;
+
+// Labour cost derived from time-to-complete: $80/hr, minimum 1 hour.
+const labourFromHours = (hours) => Math.max(MIN_HOURS, Number(hours) || 0) * LABOUR_RATE;
 
 Deno.serve(async (req) => {
   // requestMeta is filled in as parsing progresses so the catch block can log
@@ -45,6 +50,10 @@ Deno.serve(async (req) => {
     switch (action) {
       case "save": {
         const data = params.data || {};
+        // When labour_hours is supplied, labour cost is computed from it.
+        if (data.labour_hours != null && data.labour_hours !== "") {
+          data.labour_estimate = labourFromHours(data.labour_hours);
+        }
         const total = (Number(data.labour_estimate) || 0) + (Number(data.parts_estimate) || 0);
         if (data.id) {
           result = await base44.entities.Quote.update(data.id, { ...data, total });
