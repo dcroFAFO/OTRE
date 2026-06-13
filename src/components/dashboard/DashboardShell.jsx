@@ -5,6 +5,7 @@ import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { ROLES } from "@/config/jobConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import PartsNavItem from "./PartsNavItem";
 
 
 export default function DashboardShell({ user, children }) {
@@ -19,11 +20,12 @@ export default function DashboardShell({ user, children }) {
     { to: "/dashboard/templates", label: "Templates", icon: FileText },
     ...(user?.role === "admin" ? [
       { to: "/admin/clients", label: "Clients", icon: Contact },
-      { to: "/dashboard/parts", label: "Parts", icon: ShoppingBag },
-      { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
-      { to: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     ] : []),
   ];
+  const adminNav = user?.role === "admin" ? [
+    { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
+    { to: "/admin/feedback", label: "Feedback", icon: MessageSquare },
+  ] : [];
 
   const Sidebar = () => (
     <div className="flex h-full flex-col">
@@ -36,6 +38,17 @@ export default function DashboardShell({ user, children }) {
       </Link>
       <nav className="flex-1 p-3 space-y-1">
         {nav.map((n) => {
+          const active = pathname === n.to;
+          return (
+            <Link key={n.to} to={n.to} onClick={() => setOpen(false)}
+              className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}>
+              <n.icon className="h-4.5 w-4.5" /> {n.label}
+            </Link>
+          );
+        })}
+        {user?.role === "admin" && <PartsNavItem onNavigate={() => setOpen(false)} />}
+        {adminNav.map((n) => {
           const active = pathname === n.to;
           return (
             <Link key={n.to} to={n.to} onClick={() => setOpen(false)}
