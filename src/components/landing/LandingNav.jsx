@@ -35,12 +35,12 @@ export default function LandingNav() {
       )}
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center justify-between">
-        <a href="#top" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground">
             <Zap className="h-5 w-5 text-accent" />
           </span>
           <span className="font-heading font-extrabold text-lg tracking-tight">{business.name}</span>
-        </a>
+        </Link>
 
         <nav className="hidden md:flex items-center gap-8">
           {links.map((l) => (
