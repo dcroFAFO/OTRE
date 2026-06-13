@@ -11,18 +11,20 @@ import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import { isModelValidForBrand } from "@/config/scooterBrands";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 const options = (key) => field(key).options || [];
 
 const EMPTY = {
-  customer_name: "", phone: "", email: "", asset_label: "", issue_description: "",
+  customer_name: "", phone: "", email: "", asset_label: "", issue_type: "", issue_description: "",
   asset_make: "", asset_model: "", asset_custom_make: "", asset_custom_model: "",
   preferred_date: "", preferred_time_window: "Anytime", rideable: true,
   location_preference: "drop_off", consent: false,
 };
 
 export default function BookingSection() {
+  const { data: { services } } = usePlatformConfig();
   const [form, setForm] = useState(EMPTY);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -42,11 +44,15 @@ export default function BookingSection() {
     setUploading(false);
   };
 
+  const isOther = form.issue_type === "Other";
+  const issueValid = form.issue_type && (!isOther || form.issue_description.trim());
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.consent || !form.asset_label || !modelMatchesBrand) return;
+    if (!form.consent || !form.asset_label || !modelMatchesBrand || !issueValid) return;
     setSubmitting(true);
-    const job = await createBookingRequest({ ...form, photo_url: photoUrl });
+    const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
+    const job = await createBookingRequest({ ...form, issue_description, photo_url: photoUrl });
     setSubmitting(false);
     setDone(job);
   };
@@ -112,7 +118,16 @@ export default function BookingSection() {
             )}
           </Field>
           <Field label={field("issue_description").label} required>
-            <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-24" required />
+            <Select value={form.issue_type} onValueChange={(v) => set("issue_type", v)}>
+              <SelectTrigger><SelectValue placeholder="Select a service…" /></SelectTrigger>
+              <SelectContent>
+                {services.map((s) => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            {isOther && (
+              <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-24 mt-2" required />
+            )}
           </Field>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -155,7 +170,7 @@ export default function BookingSection() {
             <span>{DEFAULT_BOOKING_COPY.consentText}</span>
           </label>
 
-          <Button type="submit" disabled={submitting || !form.consent || !modelMatchesBrand} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
+          <Button type="submit" disabled={submitting || !form.consent || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : DEFAULT_BOOKING_COPY.submitLabel}
           </Button>
         </form>
