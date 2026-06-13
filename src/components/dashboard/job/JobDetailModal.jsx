@@ -18,6 +18,7 @@ import JobStoreProductsPanel from "./JobStoreProductsPanel";
 import JobChecklistPanel from "./JobChecklistPanel";
 import IntakePanel from "./IntakePanel";
 import AuditTimeline from "./AuditTimeline";
+import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
 import { DEFAULT_APP_SETTINGS, DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
@@ -68,6 +69,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     )}
                     <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />
                     <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />
+                    <ModalTab value="customer" label="Customer" />
                     <ModalTab value="notes" label="Notes" />
                     <ModalTab value="private" label="Private" />
                     <ModalTab value="parts" label="Parts" />
@@ -97,6 +99,9 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="invoice" className="mt-0">
                     <InvoicePanel job={job} actor={actor} canEdit={can(role, "job.invoice.manage") || role === "admin"} onChange={bump} />
+                  </TabsContent>
+                  <TabsContent value="customer" className="mt-0">
+                    <CustomerHistoryPanel job={job} />
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
                     <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
