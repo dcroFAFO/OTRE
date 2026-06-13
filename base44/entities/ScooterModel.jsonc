@@ -1,0 +1,62 @@
+{
+  "name": "ScooterModel",
+  "type": "object",
+  "properties": {
+    "make": {
+      "type": "string",
+      "description": "Scooter make / brand e.g. Segway"
+    },
+    "model": {
+      "type": "string",
+      "description": "Scooter model e.g. Ninebot MAX G2"
+    },
+    "battery_voltage": {
+      "type": "string",
+      "description": "Nominal battery voltage e.g. 36V"
+    },
+    "battery_amperage": {
+      "type": "string",
+      "description": "Battery capacity in Ah e.g. 15.3Ah"
+    },
+    "battery_capacity_wh": {
+      "type": "string",
+      "description": "Battery capacity in Wh e.g. 551Wh"
+    },
+    "motor_power": {
+      "type": "string",
+      "description": "Motor power e.g. 450W nominal / 900W peak"
+    },
+    "wheel_size": {
+      "type": "string",
+      "description": "Wheel / tyre size e.g. 10 inch"
+    },
+    "tyre_type": {
+      "type": "string",
+      "description": "Tyre type e.g. Tubeless pneumatic, Solid"
+    },
+    "charger_spec": {
+      "type": "string",
+      "description": "Charger output e.g. 42V 2A"
+    },
+    "max_speed": {
+      "type": "string",
+      "description": "Top speed e.g. 25 km/h"
+    },
+    "weight_kg": {
+      "type": "number",
+      "description": "Scooter weight in kg"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Extra technician notes (common faults, torque specs, etc.)"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "make",
+    "model"
+  ]
+}

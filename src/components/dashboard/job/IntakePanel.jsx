@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,7 @@ import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { useToast } from "@/components/ui/use-toast";
 import { logError } from "@/lib/logger";
 import { format } from "date-fns";
+import ScooterSpecBox from "./ScooterSpecBox";
 
 const BATTERY_CONDITIONS = [
   { key: "good", label: "Good" },
@@ -36,9 +37,28 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
     ...(job.intake || {}),
   });
   const [saving, setSaving] = useState(false);
+  const [spec, setSpec] = useState(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const models = form.make ? (SCOOTER_BRANDS[form.make] || []) : [];
+
+  // Look up reference specs for the selected make/model and auto-fill battery voltage.
+  useEffect(() => {
+    if (!form.make || !form.model) { setSpec(null); return; }
+    let cancelled = false;
+    base44.entities.ScooterModel.filter({ make: form.make, model: form.model }).then((rows) => {
+      if (cancelled) return;
+      const match = rows?.[0] || null;
+      setSpec(match);
+      if (match) {
+        setForm((f) => ({
+          ...f,
+          battery_voltage: f.battery_voltage || match.battery_voltage || "",
+        }));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [form.make, form.model]);
 
   const save = async () => {
     setSaving(true);
@@ -96,6 +116,8 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
           )}
         </Field>
       </div>
+
+      <ScooterSpecBox spec={spec} />
 
       <Field label="Serial / frame number">
         <Input value={form.serial_number || ""} onChange={(e) => set("serial_number", e.target.value)} placeholder="e.g. SN-12345678" />
