@@ -6,6 +6,7 @@ import { ROLES } from "@/config/jobConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import PartsNavItem from "./PartsNavItem";
+import JobsNavItem from "./JobsNavItem";
 
 
 export default function DashboardShell({ user, children }) {
@@ -14,7 +15,6 @@ export default function DashboardShell({ user, children }) {
   const { data: { business, app } } = usePlatformConfig();
   const nav = [
     { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
-    { to: "/dashboard/jobs", label: app.dashboard.nav.jobs, icon: ListChecks },
     { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
     { to: "/dashboard/inventory", label: "Inventory", icon: Package },
     { to: "/dashboard/templates", label: "Templates", icon: FileText },
@@ -37,14 +37,17 @@ export default function DashboardShell({ user, children }) {
         </div>
       </Link>
       <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
-        {nav.map((n) => {
+        {nav.map((n, idx) => {
           const active = pathname === n.to;
           return (
-            <Link key={n.to} to={n.to} onClick={() => setOpen(false)}
-              className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}>
-              <n.icon className="h-4.5 w-4.5" /> {n.label}
-            </Link>
+            <React.Fragment key={n.to}>
+              <Link to={n.to} onClick={() => setOpen(false)}
+                className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}>
+                <n.icon className="h-4.5 w-4.5" /> {n.label}
+              </Link>
+              {idx === 0 && <JobsNavItem label={app.dashboard.nav.jobs} onNavigate={() => setOpen(false)} />}
+            </React.Fragment>
           );
         })}
         {user?.role === "admin" && <PartsNavItem onNavigate={() => setOpen(false)} />}
