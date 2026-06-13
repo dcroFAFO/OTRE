@@ -24,6 +24,7 @@ import CRMLeads from '@/pages/dashboard/crm/CRMLeads';
 import CRMContacts from '@/pages/dashboard/crm/CRMContacts';
 import CRMCompanies from '@/pages/dashboard/crm/CRMCompanies';
 import AdminFeedback from '@/pages/admin/AdminFeedback';
+import AdminClients from '@/pages/admin/AdminClients';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
 
 const AuthenticatedApp = () => {
@@ -71,6 +72,7 @@ const AuthenticatedApp = () => {
         <Route path="crm/companies" element={<CRMCompanies />} />
       </Route>
       <Route path="/admin/feedback" element={<AdminFeedback />} />
+      <Route path="/admin/clients" element={<AdminClients />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
