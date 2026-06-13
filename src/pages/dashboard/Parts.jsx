@@ -1,16 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { RefreshCw, Search, Package, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { RefreshCw, Package, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PartsFilters from "@/components/dashboard/parts/PartsFilters";
+import { buildPartsFacets, applyPartsFilters } from "@/lib/partsFilter";
 
-export default function EStore() {
+const EMPTY_FILTERS = { search: "", category: "", brand: "", suits: "", stock: "" };
+
+export default function Parts() {
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(null); // { processed, total }
+  const [syncProgress, setSyncProgress] = useState(null);
   const [syncResult, setSyncResult] = useState(null);
 
   const { data: products = [], isLoading } = useQuery({
@@ -38,7 +41,6 @@ export default function EStore() {
 
         if (!data.has_more) break;
         offset = data.next_offset;
-        // Brief pause between pages
         await new Promise((r) => setTimeout(r, 500));
       }
 
@@ -52,15 +54,8 @@ export default function EStore() {
     }
   };
 
-  const filtered = products.filter((p) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      p.name?.toLowerCase().includes(q) ||
-      p.sku?.toLowerCase().includes(q) ||
-      p.category_label?.toLowerCase().includes(q)
-    );
-  });
+  const { categories, brands } = useMemo(() => buildPartsFacets(products), [products]);
+  const filtered = useMemo(() => applyPartsFilters(products, filters), [products, filters]);
 
   const activeCount = products.filter((p) => p.active).length;
   const inStockCount = products.filter((p) => p.in_stock).length;
@@ -70,9 +65,9 @@ export default function EStore() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-foreground">eStore Products</h1>
+          <h1 className="font-heading text-2xl font-extrabold text-foreground">Parts</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            eScootNow product catalogue — synced from Ecwid.
+            eScootNow parts catalogue — synced from Ecwid.
           </p>
         </div>
         <Button onClick={handleSync} disabled={syncing} className="gap-2 rounded-xl">
@@ -104,7 +99,7 @@ export default function EStore() {
       {products.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Total products", value: products.length },
+            { label: "Total parts", value: products.length },
             { label: "Active", value: activeCount },
             { label: "In stock", value: inStockCount },
           ].map(({ label, value }) => (
@@ -116,16 +111,10 @@ export default function EStore() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 rounded-xl"
-        />
-      </div>
+      {/* Filters */}
+      {products.length > 0 && (
+        <PartsFilters filters={filters} setFilters={setFilters} categories={categories} brands={brands} />
+      )}
 
       {/* Product table */}
       {isLoading ? (
@@ -135,15 +124,21 @@ export default function EStore() {
       ) : products.length === 0 ? (
         <div className="py-20 text-center text-muted-foreground">
           <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="font-semibold">No products yet</p>
+          <p className="font-semibold">No parts yet</p>
           <p className="text-sm mt-1">Click "Sync from Ecwid" to import your eScootNow catalogue.</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="py-20 text-center text-muted-foreground">
+          <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p className="font-semibold">No parts match your filters</p>
+          <p className="text-sm mt-1">Try adjusting or clearing the filters above.</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                <th className="px-4 py-3 text-left">Product</th>
+                <th className="px-4 py-3 text-left">Part</th>
                 <th className="px-4 py-3 text-left hidden md:table-cell">Category</th>
                 <th className="px-4 py-3 text-right">Price</th>
                 <th className="px-4 py-3 text-center hidden sm:table-cell">Stock</th>

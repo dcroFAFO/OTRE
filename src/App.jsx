@@ -20,7 +20,7 @@ import Calendar from '@/pages/dashboard/Calendar';
 import Inventory from '@/pages/dashboard/Inventory';
 import Templates from '@/pages/dashboard/Templates';
 import Notifications from '@/pages/dashboard/Notifications';
-import EStore from '@/pages/dashboard/EStore';
+import Parts from '@/pages/dashboard/Parts';
 import AdminFeedback from '@/pages/admin/AdminFeedback';
 import AdminClients from '@/pages/admin/AdminClients';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
@@ -65,7 +65,7 @@ const AuthenticatedApp = () => {
         <Route path="inventory" element={<Inventory />} />
         <Route path="templates" element={<Templates />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="estore" element={<EStore />} />
+        <Route path="parts" element={<Parts />} />
       </Route>
       <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="/admin/clients" element={<AdminClients />} />

@@ -19,7 +19,7 @@ export default function DashboardShell({ user, children }) {
     { to: "/dashboard/templates", label: "Templates", icon: FileText },
     ...(user?.role === "admin" ? [
       { to: "/admin/clients", label: "Clients", icon: Contact },
-      { to: "/dashboard/estore", label: "eStore", icon: ShoppingBag },
+      { to: "/dashboard/parts", label: "Parts", icon: ShoppingBag },
       { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
       { to: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     ] : []),
