@@ -11,23 +11,9 @@
     "phone": {
       "type": "string"
     },
-    "company": {
-      "type": "string",
-      "description": "Company / organisation name"
-    },
     "user_id": {
       "type": "string",
       "description": "Linked User record id for portal access"
-    },
-    "account_type": {
-      "type": "string",
-      "enum": [
-        "individual",
-        "business",
-        "fleet",
-        "wholesale"
-      ],
-      "default": "individual"
     },
     "status": {
       "type": "string",
@@ -49,14 +35,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Segments e.g. vip, lead, prospect, active_client, past_client, high_priority, needs_attention"
-    },
-    "assigned_staff_id": {
-      "type": "string",
-      "description": "User/StaffProfile id of the staff member who owns this account"
-    },
-    "assigned_staff_name": {
-      "type": "string"
+      "description": "Segments e.g. vip, active_client, past_client, high_priority, needs_attention"
     },
     "last_activity_date": {
       "type": "string",

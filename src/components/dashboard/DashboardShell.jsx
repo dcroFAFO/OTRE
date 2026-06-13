@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Kanban, Package, FileText, Sparkles, Users, Building2, Bell, MessageSquare, Contact, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { ROLES } from "@/config/jobConfig";
-import { crmHasAccess } from "@/config/crmConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 
@@ -26,13 +25,6 @@ export default function DashboardShell({ user, children }) {
     ] : []),
   ];
 
-  const crmNav = [
-    { to: "/dashboard/crm/leads", label: "Leads", icon: Sparkles },
-    { to: "/dashboard/crm/contacts", label: "Contacts", icon: Users },
-    { to: "/dashboard/crm/companies", label: "Companies", icon: Building2 },
-  ];
-  const showCRM = crmHasAccess(user?.role);
-
   const Sidebar = () => (
     <div className="flex h-full flex-col">
       <Link to="/" className="flex items-center gap-2 px-5 h-16 border-b border-border hover:bg-secondary/40 transition-colors">
@@ -53,22 +45,6 @@ export default function DashboardShell({ user, children }) {
             </Link>
           );
         })}
-
-        {showCRM && (
-          <>
-            <p className="px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">CRM</p>
-            {crmNav.map((n) => {
-              const active = pathname === n.to;
-              return (
-                <Link key={n.to} to={n.to} onClick={() => setOpen(false)}
-                  className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}>
-                  <n.icon className="h-4.5 w-4.5" /> {n.label}
-                </Link>
-              );
-            })}
-          </>
-        )}
       </nav>
       <div className="p-3 border-t border-border">
         <div className="flex items-center gap-2.5 px-2 py-2">

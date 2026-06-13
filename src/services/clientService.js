@@ -33,7 +33,7 @@ export async function updateClient(customer, changes, actor) {
   if (changes.tags && JSON.stringify(changes.tags) !== JSON.stringify(customer.tags || [])) {
     parts.push(`tags → ${tagLabels(changes.tags) || "none"}`);
   }
-  ["full_name", "email", "phone", "company", "account_type", "assigned_staff_name"].forEach((f) => {
+  ["full_name", "email", "phone"].forEach((f) => {
     if (changes[f] !== undefined && changes[f] !== customer[f]) parts.push(`${f.replace(/_/g, " ")} updated`);
   });
 
