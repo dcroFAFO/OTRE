@@ -120,6 +120,44 @@ Deno.serve(async (req) => {
       from_name: "OTR Scooters",
     });
 
+    // On completion, also send a short feedback / review request.
+    if (newStatus === "completed") {
+      const feedbackHtml = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <tr><td style="background:#f59e0b;padding:28px 32px;">
+          <p style="margin:0;color:rgba(255,255,255,0.9);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+          <h1 style="margin:8px 0 0;color:#fff;font-size:24px;font-weight:700;">How did we do? ⭐</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 16px;font-size:16px;color:#1e293b;">Hi ${customerName},</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Thanks for choosing OTR Scooters for your repair on <strong>${assetLabel}</strong>. We'd love to hear how it went — your feedback helps us keep improving.</p>
+          <p style="margin:0 0 8px;font-size:15px;color:#1e293b;font-weight:600;">Rate your experience:</p>
+          <p style="margin:0 0 24px;font-size:28px;letter-spacing:6px;">
+            <a href="mailto:hello@otrscooters.com?subject=Review%20${data.reference || ""}%20-%205%20stars" style="text-decoration:none;">⭐⭐⭐⭐⭐</a>
+          </p>
+          <p style="margin:0;font-size:14px;color:#64748b;">Just reply to this email with any comments, or call us on <strong>(03) 9000 1234</strong>.</p>
+        </td></tr>
+        <tr><td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+          <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        to: email,
+        subject: `How did we do?${reference}`,
+        body: feedbackHtml,
+        from_name: "OTR Scooters",
+      });
+      console.log(`[jobStatusNotify] Feedback request sent to ${email}`);
+    }
+
     console.log(`[jobStatusNotify] Email sent to ${email} for status: ${newStatus}`);
     return Response.json({ sent: true, to: email, status: newStatus });
 
