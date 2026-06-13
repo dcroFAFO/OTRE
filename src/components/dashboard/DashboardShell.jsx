@@ -36,7 +36,7 @@ export default function DashboardShell({ user, children }) {
           <p className="text-[11px] text-muted-foreground">{app.terminology.platformLabel}</p>
         </div>
       </Link>
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
         {nav.map((n) => {
           const active = pathname === n.to;
           return (
