@@ -9,6 +9,7 @@ import { base44 } from "@/api/base44Client";
 import { Loader2, Wrench, Package, ClipboardList, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 
 const CATEGORY_COLORS = {
   tyre: "bg-blue-100 text-blue-700",
@@ -23,6 +24,7 @@ export default function NewJobFromTemplateModal({ open, onClose, onCreated }) {
   const [step, setStep] = useState("pick"); // pick | fill
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ customer_name: "", customer_phone: "", customer_email: "", asset_label: "" });
+  const [asset, setAsset] = useState({ make: "", model: "", customMake: "", customModel: "" });
   const [busy, setBusy] = useState(false);
 
   const { data: templates = [] } = useQuery({
@@ -53,6 +55,7 @@ export default function NewJobFromTemplateModal({ open, onClose, onCreated }) {
     setStep("pick");
     setSelected(null);
     setForm({ customer_name: "", customer_phone: "", customer_email: "", asset_label: "" });
+    setAsset({ make: "", model: "", customMake: "", customModel: "" });
     onClose();
   };
 
@@ -137,7 +140,13 @@ export default function NewJobFromTemplateModal({ open, onClose, onCreated }) {
               </div>
               <div className="col-span-2 space-y-1">
                 <Label className="text-xs">Scooter / Asset</Label>
-                <Input value={form.asset_label} onChange={(e) => set("asset_label", e.target.value)} placeholder="e.g. Xiaomi M365 Black" />
+                <AssetBrandPicker
+                  make={asset.make}
+                  model={asset.model}
+                  customMake={asset.customMake}
+                  customModel={asset.customModel}
+                  onChange={({ label, ...rest }) => { setAsset(rest); set("asset_label", label); }}
+                />
               </div>
             </div>
 
