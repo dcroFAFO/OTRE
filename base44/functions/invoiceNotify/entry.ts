@@ -2,6 +2,21 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const BUSINESS = { name: "OTR Scooters", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com" };
 
+async function sendMail({ to, subject, body, from_name }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
+  const from = `${from_name || "On The Run Electrics"} <hello@ontherunelectrics.com.au>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: recipients, subject, html: body }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  return res.json();
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const STATES = {
   outstanding: {
     subject: "Your invoice is ready",
@@ -91,8 +106,11 @@ Deno.serve(async (req) => {
     if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const html = invoiceHtml(state, data, currency, amount);
+    let first = true;
     for (const to of recipients) {
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      if (!first) await sleep(600);
+      first = false;
+      await sendMail({
         to,
         subject: `${state.subject}${data.number ? ` — ${data.number}` : ""}`,
         body: html,

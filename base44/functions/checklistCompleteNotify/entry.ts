@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await base44.asServiceRole.integrations.Core.SendEmail({
+    await base44.asServiceRole.functions.invoke('sendMail', {
       to: email,
       subject: `Repair checklist completed${reference}`,
       body: htmlBody,

@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await base44.asServiceRole.integrations.Core.SendEmail({
+    await base44.asServiceRole.functions.invoke('sendMail', {
       to: job.customer_email,
       subject: `Invoice ${invoice.number} from OTR Scooters — ${currency} ${total.toFixed(2)}`,
       body: htmlBody,

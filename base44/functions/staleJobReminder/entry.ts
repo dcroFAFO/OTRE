@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     const results = [];
     for (const [email, { name, items }] of recipientJobs) {
       const rows = items.map((i) => jobRow(i.job, i.lastActivity, i.days)).join("");
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      await base44.asServiceRole.functions.invoke('sendMail', {
         from_name: BUSINESS.name,
         to: email,
         subject: `${items.length} stale job${items.length === 1 ? "" : "s"} need attention`,

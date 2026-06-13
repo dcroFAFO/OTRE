@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     if (!job?.customer_email) return Response.json({ skipped: "no customer email" });
 
     const ref = job.reference ? ` (${job.reference})` : "";
-    await base44.asServiceRole.integrations.Core.SendEmail({
+    await base44.asServiceRole.functions.invoke('sendMail', {
       to: job.customer_email,
       subject: `New ${data.kind === "photo" ? "photo" : "file"} on your scooter job${ref}`,
       body: html(job, data),

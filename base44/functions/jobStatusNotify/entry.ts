@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await base44.asServiceRole.integrations.Core.SendEmail({
+    await base44.asServiceRole.functions.invoke('sendMail', {
       to: email,
       subject: `${subject}${reference}`,
       body: htmlBody,
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     </td></tr>
   </table>
 </body></html>`;
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      await base44.asServiceRole.functions.invoke('sendMail', {
         to: email,
         subject: `How did we do?${reference}`,
         body: feedbackHtml,

@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       const name = (tech.short_name || tech.full_name || "there").split(" ")[0];
       const html = buildEmail(name, theirJobs, todayLabel);
 
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      await base44.asServiceRole.functions.invoke('sendMail', {
         from_name: BUSINESS.name,
         to: tech.email,
         subject: `Your ${theirJobs.length} job${theirJobs.length === 1 ? "" : "s"} for ${todayLabel}`,
