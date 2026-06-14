@@ -14,7 +14,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'jobId is required' }, { status: 400 });
     }
 
-    const job = await base44.entities.Job.get(jobId);
+    // .get() throws ("Object not found") on a missing/invalid id (and also when
+    // RLS hides the job from this user) rather than returning null — treat that
+    // as a clean 404 instead of a generic 500.
+    let job;
+    try {
+      job = await base44.entities.Job.get(jobId);
+    } catch (lookupErr) {
+      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
+      else throw lookupErr;
+    }
     if (!job) {
       return Response.json({ error: 'Job not found' }, { status: 404 });
     }
