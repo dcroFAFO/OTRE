@@ -10,6 +10,7 @@ import { SlidersHorizontal, Plus } from "lucide-react";
 import { getJobGroup, jobMatchesGroup } from "@/config/jobGroups";
 import NewJobFromTemplateModal from "@/components/dashboard/job/NewJobFromTemplateModal";
 import { Button } from "@/components/ui/button";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 
 export default function Jobs() {
   const user = useDashboardUser();
@@ -18,7 +19,7 @@ export default function Jobs() {
   const { data: jobs } = useJobs();
   const { data: staff } = useStaff();
   const invalidate = useInvalidateJobs();
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useUrlFilters(EMPTY_FILTERS, ["id", "group"]);
   const [templateModal, setTemplateModal] = useState(false);
 
   const params = new URLSearchParams(location.search);
@@ -26,8 +27,17 @@ export default function Jobs() {
   const groupKey = params.get("group") || "all";
   const group = getJobGroup(groupKey);
 
-  const open = (id) => navigate(`/dashboard/jobs?id=${id}`);
-  const close = () => {navigate(`/dashboard/jobs${groupKey !== "all" ? `?group=${groupKey}` : ""}`);invalidate();};
+  const open = (id) => {
+    const next = new URLSearchParams(location.search);
+    next.set("id", id);
+    navigate(`/dashboard/jobs?${next.toString()}`);
+  };
+  const close = () => {
+    const next = new URLSearchParams(location.search);
+    next.delete("id");
+    navigate(`/dashboard/jobs${next.toString() ? `?${next.toString()}` : ""}`);
+    invalidate();
+  };
 
   const filtered = useMemo(() => jobs.filter((j) => {
     if (!jobMatchesGroup(j, groupKey)) return false;

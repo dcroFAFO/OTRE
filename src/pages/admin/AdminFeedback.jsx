@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import FeedbackSummaryCards from "@/components/admin/feedback/FeedbackSummaryCards";
 import FeedbackFilters, { EMPTY_FB_FILTERS } from "@/components/admin/feedback/FeedbackFilters";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 import FeedbackTable from "@/components/admin/feedback/FeedbackTable";
 import FeedbackDetailDrawer from "@/components/admin/feedback/FeedbackDetailDrawer";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ export default function AdminFeedback() {
   const { user, isLoading } = useCurrentUser();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [filters, setFilters] = useState(EMPTY_FB_FILTERS);
+  const [filters, setFilters] = useUrlFilters(EMPTY_FB_FILTERS);
   const [selected, setSelected] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [saving, setSaving] = useState(false);
