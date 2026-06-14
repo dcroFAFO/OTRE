@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
-export function useJobs(filter = {}) {
+export function useJobs() {
   return useQuery({
-    queryKey: ["jobs", filter],
+    queryKey: ["jobs"],
     queryFn: async () => {
-      const jobs = await base44.entities.Job.filter({ ...filter }, "-created_date", 200);
-      return jobs.filter((j) => !j.archived);
+      const res = await base44.functions.invoke("listJobs", {});
+      return res.data || [];
     },
     initialData: [],
     staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching
