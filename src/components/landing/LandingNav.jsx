@@ -51,7 +51,6 @@ export default function LandingNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          <Link to="/store"><Button variant="ghost" size="sm">Shop</Button></Link>
           <Link to="/portal"><Button variant="ghost" size="sm">{app.landing.portalLabel}</Button></Link>
           <a href="#book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book Now</Button></a>
         </div>
