@@ -125,9 +125,6 @@ export function isQuoteReadOnlyForStatus(status) {
 // ---------------------------------------------------------------------------
 export function isInvoiceReadOnlyForStatus(status) {
   const norm = normalizeJobStatus(status);
-  // Invoice is read-only once closed/paid
-  return (
-    inGroup(norm, CLOSED_PAID_STATUSES) ||
-    inGroup(norm, HOLD_CANCELLED_STATUSES)
-  );
+  // Invoice is read-only for completed and paid
+  return inGroup(norm, CLOSED_PAID_STATUSES);
 }

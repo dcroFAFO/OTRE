@@ -7,8 +7,9 @@ import StatusPill from "@/components/shared/StatusPill";
 import { getJobInvoice, createInvoice, setPaymentStatus } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { Send, Loader2, FileText, Package, Wrench } from "lucide-react";
+import { Send, Loader2, FileText, Package, Wrench, Lock, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const [invoice, setInvoice] = useState(null);
@@ -78,17 +79,28 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const currency = invoice?.currency || DEFAULT_INVOICE_SETTINGS.currency;
 
   if (loading) {
-    return <div className="flex items-center justify-center h-24"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex items-center justify-center h-24">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-heading font-bold">Invoice & Payment</h3>
+        <h3 className="font-heading font-bold flex items-center gap-2">
+          Invoice & Payment
+          {!canEdit && (
+            <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+              <Lock className="h-3 w-3" /> Read-only
+            </span>
+          )}
+        </h3>
         {invoice && <StatusPill kind="payment" value={invoice.status} />}
       </div>
 
-      {/* Line items preview */}
+      {/* Line items — shown in both editable and read-only */}
       {lineItems.length > 0 && (
         <div className="rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-2.5 bg-secondary/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -121,7 +133,9 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
             <tfoot>
               <tr className="bg-secondary/30">
                 <td colSpan={3} className="px-4 py-2.5 text-right font-semibold text-sm">Total</td>
-                <td className="px-4 py-2.5 text-right font-heading font-extrabold text-base">{currency} {lineTotal.toFixed(2)}</td>
+                <td className="px-4 py-2.5 text-right font-heading font-extrabold text-base">
+                  {currency} {lineTotal.toFixed(2)}
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -135,7 +149,16 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
             <span className="font-heading text-xl font-extrabold">{currency} {(invoice.amount || 0).toFixed(2)}</span>
           </div>
 
-          {canEdit && (
+          {/* Paid date (read-only info, always shown if present) */}
+          {invoice.paid_date && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Paid {format(new Date(invoice.paid_date), "d MMM yyyy, h:mm a")}
+            </p>
+          )}
+
+          {canEdit ? (
+            // ── Editable controls ──────────────────────────────────────────
             <div className="flex flex-wrap gap-2 pt-1">
               <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setStatus("paid")}>Mark paid</Button>
@@ -151,6 +174,20 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
                 Email invoice
               </Button>
             </div>
+          ) : (
+            // ── Read-only: keep send receipt action ────────────────────────
+            <div className="pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={sendEmail}
+                disabled={sending || !job.customer_email}
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Send receipt
+              </Button>
+            </div>
           )}
 
           {!job.customer_email && (
@@ -158,6 +195,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
           )}
         </div>
       ) : canEdit ? (
+        // ── No invoice yet, editable: allow creation ───────────────────────
         <div className="space-y-3">
           {lineTotal === 0 && (
             <div className="flex items-end gap-2">
@@ -172,10 +210,12 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
               {lineTotal > 0 ? `Create invoice · ${currency} ${lineTotal.toFixed(2)}` : "Create invoice"}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Creating an invoice will mark this job as invoice outstanding.</p>
+          <p className="text-xs text-muted-foreground">
+            Creating an invoice will mark this job as invoice outstanding.
+          </p>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No invoice yet.</p>
+        <p className="text-sm text-muted-foreground">No invoice has been created for this job.</p>
       )}
     </div>
   );
