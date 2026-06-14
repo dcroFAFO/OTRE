@@ -1,28 +1,26 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag, Truck } from "lucide-react";
+import { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import ScrollReveal from "./ScrollReveal";
 
-const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag, Truck };
+const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag };
 
 const CATEGORY_ACCENTS = {
-  Diagnostics: "from-violet-50 to-transparent hover:from-violet-100",
-  Repairs:     "from-rose-50 to-transparent hover:from-rose-100",
-  Power:       "from-amber-50 to-transparent hover:from-amber-100",
-  Maintenance: "from-teal-50 to-transparent hover:from-teal-100",
-  Parts:       "from-indigo-50 to-transparent hover:from-indigo-100",
-  Sales:       "from-emerald-50 to-transparent hover:from-emerald-100",
-  Booking:     "from-sky-50 to-transparent hover:from-sky-100",
+  Diagnostics: "from-violet-500/10 to-transparent hover:from-violet-500/20",
+  Repairs:     "from-rose-500/10 to-transparent hover:from-rose-500/20",
+  Power:       "from-amber-500/10 to-transparent hover:from-amber-500/20",
+  Maintenance: "from-teal-500/10 to-transparent hover:from-teal-500/20",
+  Parts:       "from-indigo-500/10 to-transparent hover:from-indigo-500/20",
+  Sales:       "from-emerald-500/10 to-transparent hover:from-emerald-500/20",
 };
 const CATEGORY_ICON_COLORS = {
-  Diagnostics: "bg-violet-100 text-violet-700 group-hover:bg-violet-600 group-hover:text-white",
-  Repairs:     "bg-rose-100 text-rose-700 group-hover:bg-rose-600 group-hover:text-white",
-  Power:       "bg-amber-100 text-amber-700 group-hover:bg-amber-600 group-hover:text-white",
-  Maintenance: "bg-teal-100 text-teal-700 group-hover:bg-teal-600 group-hover:text-white",
-  Parts:       "bg-indigo-100 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white",
-  Sales:       "bg-emerald-100 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white",
-  Booking:     "bg-sky-100 text-sky-700 group-hover:bg-sky-600 group-hover:text-white",
+  Diagnostics: "bg-violet-500/15 text-violet-300 group-hover:bg-violet-500 group-hover:text-white",
+  Repairs:     "bg-rose-500/15 text-rose-300 group-hover:bg-rose-500 group-hover:text-white",
+  Power:       "bg-amber-500/15 text-amber-300 group-hover:bg-amber-500 group-hover:text-white",
+  Maintenance: "bg-teal-500/15 text-teal-300 group-hover:bg-teal-500 group-hover:text-white",
+  Parts:       "bg-indigo-500/15 text-indigo-300 group-hover:bg-indigo-500 group-hover:text-white",
+  Sales:       "bg-emerald-500/15 text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white",
 };
 
 export default function ServicesSection() {
@@ -47,7 +45,7 @@ export default function ServicesSection() {
           {services.map((s, i) => {
             const Icon = ICONS[s.icon] || Wrench;
             const accentGrad = CATEGORY_ACCENTS[s.category] || "from-secondary to-transparent hover:from-secondary/80";
-            const iconColor = CATEGORY_ICON_COLORS[s.category] || "bg-secondary text-primary group-hover:bg-primary group-hover:text-primary-foreground";
+            const iconColor = CATEGORY_ICON_COLORS[s.category] || "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground";
 
             return (
               <motion.div
@@ -56,7 +54,7 @@ export default function ServicesSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.45, delay: (i % 3) * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/6 hover:-translate-y-1 transition-all duration-200"
+                className="group relative rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden shadow-sm hover:border-white/20 hover:-translate-y-1 transition-all duration-200"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${accentGrad} transition-all duration-300 pointer-events-none`} />
                 <div className="relative p-6">
