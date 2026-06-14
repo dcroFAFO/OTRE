@@ -22,6 +22,11 @@ import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
 import { DEFAULT_APP_SETTINGS, DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
+import {
+  getVisibleJobTabs,
+  isQuoteReadOnlyForStatus,
+  isInvoiceReadOnlyForStatus,
+} from "@/config/jobDetailsTabConfig";
 import { format } from "date-fns";
 
 export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
@@ -38,6 +43,11 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   const bump = () => { load(); setRefreshKey((k) => k + 1); onChange?.(); };
   const role = actor?.role;
   const canManage = can(role, "job.update") || role === "admin";
+
+  // Derive visible tabs and read-only flags from the job's status
+  const visibleTabs = job ? getVisibleJobTabs(job.status) : new Set();
+  const quoteReadOnly = job ? isQuoteReadOnlyForStatus(job.status) : false;
+  const invoiceReadOnly = job ? isInvoiceReadOnlyForStatus(job.status) : false;
 
   if (!open) return null;
 
@@ -67,8 +77,8 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         badge={`${job.checklist.filter((c) => c.done).length}/${job.checklist.length}`}
                       />
                     )}
-                    <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />
-                    <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />
+                    {visibleTabs.has("quote") && <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />}
+                    {visibleTabs.has("invoice") && <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />}
                     <ModalTab value="customer" label="Customer" />
                     <ModalTab value="notes" label="Notes" />
                     <ModalTab value="private" label="Private" />
@@ -94,12 +104,26 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                       <JobChecklistPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                     </TabsContent>
                   )}
-                  <TabsContent value="quote" className="mt-0">
-                    <QuotePanel job={job} actor={actor} canEdit={can(role, "job.quote.manage") || role === "admin"} onChange={bump} />
-                  </TabsContent>
-                  <TabsContent value="invoice" className="mt-0">
-                    <InvoicePanel job={job} actor={actor} canEdit={can(role, "job.invoice.manage") || role === "admin"} onChange={bump} />
-                  </TabsContent>
+                  {visibleTabs.has("quote") && (
+                    <TabsContent value="quote" className="mt-0">
+                      <QuotePanel
+                        job={job}
+                        actor={actor}
+                        canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
+                        onChange={bump}
+                      />
+                    </TabsContent>
+                  )}
+                  {visibleTabs.has("invoice") && (
+                    <TabsContent value="invoice" className="mt-0">
+                      <InvoicePanel
+                        job={job}
+                        actor={actor}
+                        canEdit={!invoiceReadOnly && (can(role, "job.invoice.manage") || role === "admin")}
+                        onChange={bump}
+                      />
+                    </TabsContent>
+                  )}
                   <TabsContent value="customer" className="mt-0">
                     <CustomerHistoryPanel job={job} />
                   </TabsContent>
