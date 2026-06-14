@@ -4,13 +4,13 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  RotateCcw, Archive, CalendarDays, Loader2, UserCircle2, AlertCircle, X
+  RotateCcw, Archive, CalendarDays, Loader2, AlertCircle, X
 } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
-import { assignTechnician, rescheduleJob } from "@/services/jobService";
+import { rescheduleJob } from "@/services/jobService";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
-import { useStaff } from "@/hooks/useJobs";
-import { DEFAULT_APP_SETTINGS, DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
+
+import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -86,7 +86,6 @@ const WORKFLOW_EVENTS = [
 const TERMINAL = ["completed", "cancelled"];
 
 export default function JobDetailsHeaderActions({ job, actor, onChange }) {
-  const { data: staff = [] } = useStaff();
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   // Waiting-reason modal state
@@ -156,16 +155,6 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
             {job.preferred_time_window && ` · ${job.preferred_time_window}`}
           </span>
         )}
-
-        {/* Tech assign */}
-        <TechAssignButton
-          job={job}
-          staff={staff}
-          busy={busy === "tech"}
-          onAssign={runUtil("tech", (v) =>
-            assignTechnician(job, v === "none" ? null : staff.find((s) => s.id === v))
-          )}
-        />
 
         {/* Reschedule */}
         <ReschedulePicker
@@ -256,28 +245,6 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function TechAssignButton({ job, staff, busy, onAssign }) {
-  return (
-    <Select value={job.assigned_technician_id || "none"} onValueChange={onAssign} disabled={busy}>
-      <SelectTrigger className="h-7 text-xs gap-1 px-2 border-dashed w-auto min-w-[130px] bg-transparent">
-        {busy
-          ? <Loader2 className="h-3 w-3 animate-spin" />
-          : <UserCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
-        }
-        <SelectValue placeholder={DEFAULT_APP_SETTINGS.terminology.staffAssignmentLabel || "Assign tech"} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">Unassigned</SelectItem>
-        {staff.map((s) => (
-          <SelectItem key={s.id} value={s.id}>
-            {s.short_name || s.full_name}
-            {s.role_label && <span className="text-muted-foreground ml-1.5 text-xs">· {s.role_label}</span>}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
 
 function ReschedulePicker({ job, busy, onReschedule }) {
   return (

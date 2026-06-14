@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Phone, Mail, Bike, Calendar, User, Wrench,
+  Phone, Mail, Bike, Calendar, User,
   CreditCard, AlertTriangle, MapPin, Hash
 } from "lucide-react";
 import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
@@ -206,11 +206,6 @@ function JobModalHeader({ job }) {
             <Calendar className="h-3 w-3" />
             {format(new Date(job.scheduled_date + "T12:00:00"), "EEE d MMM yyyy")}
             {job.preferred_time_window && ` · ${job.preferred_time_window}`}
-          </span>
-        )}
-        {job.assigned_technician_name && (
-          <span className="flex items-center gap-1">
-            <Wrench className="h-3 w-3" /> {job.assigned_technician_name}
           </span>
         )}
         {job.location_preference && (
