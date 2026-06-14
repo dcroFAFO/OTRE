@@ -18,7 +18,7 @@ export default function DashboardLayout() {
   }, [user]);
 
   if (isLoading) {
-    return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
+    return <div className="dark fixed inset-0 grid place-items-center bg-background"><div className="h-8 w-8 rounded-full border-4 border-white/20 border-t-accent animate-spin" /></div>;
   }
 
   // First-time setup is admin-only and cached locally once complete, so
@@ -29,7 +29,7 @@ export default function DashboardLayout() {
 
   if (!isStaff(user?.role)) {
     return (
-      <div className="min-h-screen grid place-items-center bg-secondary/30 px-5">
+      <div className="dark min-h-screen grid place-items-center bg-background text-foreground px-5">
         <div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md">
           <h1 className="font-heading text-2xl font-extrabold">Staff access only</h1>
           <p className="mt-2 text-muted-foreground">This area is for {`${user?.full_name ? user.full_name.split(" ")[0] + ", but your" : "your"}`} account isn't a staff member.</p>

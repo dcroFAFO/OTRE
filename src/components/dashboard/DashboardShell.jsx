@@ -79,7 +79,7 @@ export default function DashboardShell({ user, children }) {
   );
 
   return (
-    <div className="min-h-screen bg-secondary/30">
+    <div className="dark min-h-screen bg-background text-foreground">
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-card border-r border-border z-30"><Sidebar /></aside>
 
       {/* Mobile top bar */}

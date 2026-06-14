@@ -37,7 +37,7 @@ export default function SeedLoadingScreen({ onDone }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="fixed inset-0 grid place-items-center bg-secondary/30 px-5">
+    <div className="dark fixed inset-0 grid place-items-center bg-background text-foreground px-5">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center">
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
           <Zap className="h-6 w-6 text-accent" />
