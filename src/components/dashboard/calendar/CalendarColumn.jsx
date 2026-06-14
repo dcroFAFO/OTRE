@@ -10,7 +10,7 @@ export default function CalendarColumn({ date, jobs, onOpen }) {
   const past = isPast(date) && !today;
 
   return (
-    <div className="flex flex-col min-w-[190px] flex-1">
+    <div className="flex flex-col min-w-0">
       {/* Day header */}
       <div className={cn(
         "text-center pb-2.5 mb-2 border-b-2 transition-colors",

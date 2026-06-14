@@ -92,7 +92,7 @@ export default function Calendar() {
 
       {viewMode === "week" ? (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-2 overflow-x-auto pb-3 min-h-[400px]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pb-3 min-h-[400px]">
             {days.map((d) => (
               <CalendarColumn
                 key={format(d, "yyyy-MM-dd")}
@@ -106,7 +106,7 @@ export default function Calendar() {
       ) : (
         <>
           {/* Day selector */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-1.5 pb-1">
             {days.map((d) => {
               const key = format(d, "yyyy-MM-dd");
               const count = (byDay[key] || []).length;
