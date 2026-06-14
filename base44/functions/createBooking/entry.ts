@@ -94,6 +94,7 @@ Deno.serve(async (req) => {
       preferred_time_window: form.asap ? "ASAP" : form.preferred_time_window,
       rideable: form.rideable,
       business_slug: SLUG,
+      archived: false,
     });
 
     if (form.photo_url) {
