@@ -30,8 +30,16 @@ Deno.serve(async (req) => {
     // legitimate mutations (including customer note-adds) go through here.
     const db = base44.asServiceRole.entities;
 
-    const jobs = await db.Job.filter({ id: jobId }, "", 1);
-    const job = jobs[0];
+    // A missing/invalid id makes the SDK throw ("Object not found") rather than
+    // return []. Treat that as a clean 404 instead of a generic 500.
+    let job;
+    try {
+      const jobs = await db.Job.filter({ id: jobId }, "", 1);
+      job = jobs[0];
+    } catch (lookupErr) {
+      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
+      else throw lookupErr;
+    }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     // Authorization: staff can do everything. A customer may ONLY add a

@@ -32,8 +32,16 @@ Deno.serve(async (req) => {
     // they pass the staff-only entity write RLS deterministically.
     const db = base44.asServiceRole.entities;
 
-    const jobs = await db.Job.filter({ id: jobId }, "", 1);
-    const job = jobs[0];
+    // A missing/invalid id makes the SDK throw ("Object not found") rather than
+    // return []. Treat that as a clean 404 instead of a generic 500.
+    let job;
+    try {
+      const jobs = await db.Job.filter({ id: jobId }, "", 1);
+      job = jobs[0];
+    } catch (lookupErr) {
+      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
+      else throw lookupErr;
+    }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
@@ -68,8 +76,14 @@ Deno.serve(async (req) => {
       }
       case "set_payment_status": {
         const { invoiceId, status } = params;
-        const invoices = await db.Invoice.filter({ id: invoiceId }, "", 1);
-        const invoice = invoices[0];
+        let invoice;
+        try {
+          const invoices = await db.Invoice.filter({ id: invoiceId }, "", 1);
+          invoice = invoices[0];
+        } catch (lookupErr) {
+          if (String(lookupErr?.message || "").toLowerCase().includes("not found")) invoice = null;
+          else throw lookupErr;
+        }
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
 
         result = await db.Invoice.update(invoice.id, {
