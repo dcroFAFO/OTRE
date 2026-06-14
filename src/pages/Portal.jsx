@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Zap, ArrowLeft, Bike } from "lucide-react";
+import { Zap, ArrowLeft, Bike, AlertTriangle, RefreshCw } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
@@ -16,7 +17,7 @@ export default function Portal() {
   const [selectedId, setSelectedId] = useState(null);
   const qc = useQueryClient();
 
-  const { data: jobs = [] } = useQuery({
+  const { data: jobs = [], isError, isLoading: jobsLoading, refetch } = useQuery({
     queryKey: ["portalJobs", user?.email],
     queryFn: () => base44.entities.Job.filter({ customer_email: user.email, archived: false }, "-created_date", 50),
     enabled: !!user && !isStaff(user.role),
@@ -59,12 +60,28 @@ export default function Portal() {
         <p className="text-muted-foreground text-sm">Track progress and approve quotes online.</p>
 
         <div className="mt-6 grid sm:grid-cols-2 gap-3">
-          {jobs.map((j) => <JobCard key={j.id} job={j} onClick={() => setSelectedId(j.id)} />)}
-          {jobs.length === 0 && (
-            <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
-              <Bike className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No {app.terminology.jobPlural} yet. <Link to="/#book" className="text-accent font-medium">Book one →</Link>
+          {isError ? (
+            <div className="col-span-full rounded-2xl border border-rose-200 bg-rose-50 p-10 text-center">
+              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-rose-500" />
+              <p className="text-sm font-medium text-rose-800">Couldn't load your {app.terminology.jobPlural}.</p>
+              <button onClick={() => refetch()} className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100">
+                <RefreshCw className="h-3.5 w-3.5" /> Try again
+              </button>
             </div>
+          ) : jobsLoading ? (
+            <div className="col-span-full grid place-items-center py-10">
+              <div className="h-7 w-7 rounded-full border-4 border-border border-t-primary animate-spin" />
+            </div>
+          ) : (
+            <>
+              {jobs.map((j) => <JobCard key={j.id} job={j} onClick={() => setSelectedId(j.id)} />)}
+              {jobs.length === 0 && (
+                <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+                  <Bike className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  No {app.terminology.jobPlural} yet. <Link to="/#book" className="text-accent font-medium">Book one →</Link>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
