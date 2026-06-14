@@ -11,12 +11,12 @@
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 222 60% 18%;
+    --primary: 145 80% 10%;
     --primary-foreground: 0 0% 98%;
     --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 18%;
+    --secondary-foreground: 144 61% 20%;
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 141 84% 93%;
     --accent: 172 66% 42%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
@@ -35,11 +35,11 @@
     --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-foreground: 144 61% 20%;
+    --sidebar-primary: 142 72% 29%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 142 69% 58%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
