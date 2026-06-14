@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <p style="margin:0;color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+                  <p style="margin:0;color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">On The Run Electrics</p>
                   <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;font-weight:700;">Tax Invoice</h1>
                 </td>
                 <td align="right">
@@ -190,15 +190,15 @@ Deno.serve(async (req) => {
         <!-- CTA -->
         <tr>
           <td style="padding:0 36px 28px;">
-            <p style="margin:0 0 16px;font-size:14px;color:#64748b;">Please arrange payment at your earliest convenience. For questions, reply to this email or contact us directly.</p>
-            <p style="margin:0;font-size:13px;color:#94a3b8;">📞 (03) 9000 1234 &nbsp;·&nbsp; ✉️ hello@otrscooters.com &nbsp;·&nbsp; 📍 12 Workshop Lane, Melbourne VIC</p>
+            <p style="margin:0 0 16px;font-size:14px;color:#64748b;">Please arrange payment at your earliest convenience. For questions, just reply to this email.</p>
+            <p style="margin:0;font-size:13px;color:#94a3b8;">✉️ hello@ontherunelectrics.com.au</p>
           </td>
         </tr>
 
         <!-- Footer -->
         <tr>
           <td style="padding:16px 36px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-            <p style="margin:0;font-size:11px;color:#94a3b8;text-align:center;">OTR Scooters · ABN 00 000 000 000 · This is a tax invoice for GST purposes</p>
+            <p style="margin:0;font-size:11px;color:#94a3b8;text-align:center;">On The Run Electrics · This is a tax invoice for GST purposes</p>
           </td>
         </tr>
 
@@ -210,9 +210,9 @@ Deno.serve(async (req) => {
 
     await sendMail({
       to: job.customer_email,
-      subject: `Invoice ${invoice.number} from OTR Scooters — ${currency} ${total.toFixed(2)}`,
+      subject: `Invoice ${invoice.number} from On The Run Electrics — ${currency} ${total.toFixed(2)}`,
       body: htmlBody,
-      from_name: 'OTR Scooters',
+      from_name: 'On The Run Electrics',
     });
 
     console.log(`[sendInvoiceEmail] Sent invoice ${invoice.number} to ${job.customer_email}`);
