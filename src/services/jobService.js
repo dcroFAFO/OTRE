@@ -1,12 +1,10 @@
-import { base44 } from "@/api/base44Client";
+import { invokeFn } from "@/lib/serviceClient";
 
 // Thin frontend wrapper — all job business logic and audit logging runs
 // server-side in functions/jobActions. The UI only displays the outcome.
+// invokeFn throws a friendly error if the backend returns { error }.
 
-const invoke = async (payload) => {
-  const res = await base44.functions.invoke("jobActions", payload);
-  return res.data;
-};
+const invoke = (payload) => invokeFn("jobActions", payload);
 
 export async function changeStatus(job, newStatus) {
   return invoke({ action: "change_status", jobId: job.id, newStatus });

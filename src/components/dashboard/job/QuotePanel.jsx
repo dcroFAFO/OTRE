@@ -12,6 +12,9 @@ import PartsSourcingPanel from "@/components/dashboard/job/PartsSourcingPanel";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
 import AiQuoteDraft from "@/components/dashboard/job/AiQuoteDraft";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { errorMessage } from "@/lib/errors";
 
 const LABOUR_RATE = 80;
 const MIN_HOURS = 1;
@@ -24,6 +27,8 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     diagnosis_notes: "", recommended_repair: "",
   });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [busy, setBusy] = useState(null);
+  const { toast } = useToast();
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -42,25 +47,37 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     : (Number(form.labour_estimate) || 0);
   const total = labour + (Number(form.parts_estimate) || 0);
 
-  const save = async () => {
-    const q = await saveQuote(job, { ...form, id: quote?.id }, actor);
-    setQuote(q);
-    onChange?.();
+  const runQuote = async (key, fn, failTitle) => {
+    setBusy(key);
+    try {
+      await fn();
+      onChange?.();
+    } catch (err) {
+      toast({ variant: "destructive", title: failTitle, description: errorMessage(err) });
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const send = async () => {
-    if (!quote) await save();
+  const save = () => runQuote("save", async () => {
+    const q = await saveQuote(job, { ...form, id: quote?.id }, actor);
+    setQuote(q);
+  }, "Couldn't save the quote");
+
+  const send = () => runQuote("send", async () => {
+    if (!quote) {
+      const saved = await saveQuote(job, { ...form, id: quote?.id }, actor);
+      setQuote(saved);
+    }
     const q = await getJobQuote(job.id);
     const s = await sendQuote(q, job, actor);
     setQuote(s);
-    onChange?.();
-  };
+  }, "Couldn't send the quote");
 
-  const approve = async (ok) => {
+  const approve = (ok) => runQuote("approve", async () => {
     const s = await setQuoteApproval(quote, job, ok, actor);
     setQuote(s);
-    onChange?.();
-  };
+  }, "Couldn't update approval");
 
   // Apply an AI draft into the editable form only — fills text fields and
   // labour hours, leaves parts/estimates untouched, and saves nothing.
@@ -156,12 +173,16 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={save}>Save quote</Button>
-            <Button size="sm" onClick={send} className="gap-1.5">
-              <Send className="h-4 w-4" /> Send to customer
+            <Button variant="outline" size="sm" onClick={save} disabled={!!busy} className="gap-1.5">
+              {busy === "save" && <Loader2 className="h-4 w-4 animate-spin" />} Save quote
+            </Button>
+            <Button size="sm" onClick={send} disabled={!!busy} className="gap-1.5">
+              {busy === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send to customer
             </Button>
             {quote?.status === "sent" && (
-              <Button size="sm" variant="outline" onClick={() => approve(true)}>Approve manually</Button>
+              <Button size="sm" variant="outline" onClick={() => approve(true)} disabled={!!busy} className="gap-1.5">
+                {busy === "approve" && <Loader2 className="h-4 w-4 animate-spin" />} Approve manually
+              </Button>
             )}
           </div>
 

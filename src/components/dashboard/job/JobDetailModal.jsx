@@ -19,6 +19,9 @@ import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 import {
   getVisibleJobTabs,
   filterTabsForRole,
@@ -41,15 +44,20 @@ const TAB_LABELS = {
 
 export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
   const [job, setJob] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("intake");
 
   const load = useCallback(() => {
-    if (jobId) base44.entities.Job.get(jobId).then(setJob);
+    if (!jobId) return;
+    setLoadError(null);
+    base44.entities.Job.get(jobId)
+      .then(setJob)
+      .catch((err) => setLoadError(errorMessage(err)));
   }, [jobId]);
 
-  useEffect(() => { if (open) { load(); setActiveTab("intake"); } }, [jobId, open, load]);
-  useEffect(() => { if (!open) setJob(null); }, [open]);
+  useEffect(() => { if (open) { setJob(null); load(); setActiveTab("intake"); } }, [jobId, open, load]);
+  useEffect(() => { if (!open) { setJob(null); setLoadError(null); } }, [open]);
 
   const bump = () => { load(); setRefreshKey((k) => k + 1); onChange?.(); };
   const role = actor?.role;
@@ -67,7 +75,18 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0">
-        {!job ? (
+        {loadError ? (
+          <div className="flex flex-col items-center justify-center h-64 px-6 text-center">
+            <AlertTriangle className="h-8 w-8 text-rose-500 mb-3" />
+            <p className="text-sm font-medium text-rose-800">{loadError}</p>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" /> Try again
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+            </div>
+          </div>
+        ) : !job ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
           </div>

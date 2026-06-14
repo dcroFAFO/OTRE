@@ -11,13 +11,17 @@ import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { rescheduleJob } from "@/services/jobService";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { errorMessage } from "@/lib/errors";
 
 export default function Calendar() {
   const user = useDashboardUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: jobs } = useJobs();
+  const jobsQuery = useJobs();
+  const jobs = jobsQuery.data || [];
   const invalidate = useInvalidateJobs();
+  const { toast } = useToast();
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState("week"); // week | day
   const [selectedDay, setSelectedDay] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -38,7 +42,11 @@ export default function Calendar() {
     if (!destination || destination.droppableId === source.droppableId) return;
     const job = jobs.find((j) => j.id === draggableId);
     if (!job) return;
-    await rescheduleJob(job, destination.droppableId, user);
+    try {
+      await rescheduleJob(job, destination.droppableId, user);
+    } catch (err) {
+      toast({ variant: "destructive", title: "Couldn't reschedule", description: errorMessage(err) });
+    }
     invalidate();
   };
 

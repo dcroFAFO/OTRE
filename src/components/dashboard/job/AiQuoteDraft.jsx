@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, Check, X } from "lucide-react";
 import { aiService } from "@/services/aiService";
+import { errorMessage } from "@/lib/errors";
 
 const LABOUR_RATE = 80;
 
@@ -25,7 +26,7 @@ export default function AiQuoteDraft({ job, onApply }) {
         setDraft(r.draft);
       }
     } catch (e) {
-      setError(e?.response?.data?.error || "Could not generate a draft. Please try again.");
+      setError(errorMessage(e));
     }
     setLoading(false);
   };
