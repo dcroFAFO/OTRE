@@ -110,12 +110,12 @@ export function getVisibleJobTabs(status) {
 // ---------------------------------------------------------------------------
 export function isQuoteReadOnlyForStatus(status) {
   const norm = normalizeJobStatus(status);
-  // Quote is read-only once approved/active or beyond
+  // Editable: PRE_QUOTE statuses + cancelled + on_hold
+  // Read-only: quote_approved and everything beyond (active, repair, pickup, billing, done)
   return (
     inGroup(norm, APPROVED_ACTIVE_STATUSES) ||
     inGroup(norm, PICKUP_INVOICE_STATUSES) ||
-    inGroup(norm, CLOSED_PAID_STATUSES) ||
-    inGroup(norm, HOLD_CANCELLED_STATUSES)
+    inGroup(norm, CLOSED_PAID_STATUSES)
   );
 }
 
