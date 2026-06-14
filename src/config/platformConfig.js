@@ -91,7 +91,6 @@ export const DEFAULT_SERVICE_CATEGORIES = [
   { key: "maintenance", name: "Maintenance", icon: "Wrench", order: 3 },
   { key: "parts", name: "Parts", icon: "Package", order: 4 },
   { key: "sales", name: "Sales", icon: "ShoppingBag", order: 5 },
-  { key: "booking", name: "Booking", icon: "Truck", order: 6 },
 ];
 
 export const DEFAULT_SERVICES = [
@@ -103,7 +102,6 @@ export const DEFAULT_SERVICES = [
   { name: "General Servicing", category: "Maintenance", category_key: "maintenance", icon: "Wrench", description: "Tune-ups, tightening, lubrication and full safety inspection." },
   { name: "Parts Supply", category: "Parts", category_key: "parts", icon: "Package", description: "Genuine and compatible parts sourced for most major brands." },
   { name: "Scooter Sales", category: "Sales", category_key: "sales", icon: "ShoppingBag", description: "Quality new and refurbished electric scooters with warranty." },
-  { name: "Pickup & Assessment Booking", category: "Booking", category_key: "booking", icon: "Truck", description: "We can collect your scooter and assess it at our workshop." },
 ];
 
 export const DEFAULT_JOB_STATUSES = [
@@ -133,7 +131,6 @@ export const DEFAULT_JOB_TYPES = [
   { key: "service", label: "Service", description: "General service or maintenance" },
   { key: "diagnostic", label: "Diagnostic", description: "Investigation or assessment" },
   { key: "sales", label: "Sales", description: "Sales or purchase support" },
-  { key: "pickup", label: "Pickup / Assessment", description: "Collection or onsite assessment" },
 ];
 
 export const DEFAULT_JOB_TYPE_KEY = "repair";
@@ -192,11 +189,6 @@ export const DEFAULT_BOOKING_FIELDS = [
     { value: "Midday (12–3)", label: "Midday (12–3)" },
     { value: "Afternoon (3–5:30)", label: "Afternoon (3–5:30)" },
     { value: "Anytime", label: "Anytime" }
-  ]},
-  { key: "location_preference", label: "Drop-off preference", field_type: "select", maps_to: "location_preference", order: 7, options: [
-    { value: "drop_off", label: "I'll drop it off" },
-    { value: "pickup", label: "Please pick it up" },
-    { value: "onsite", label: "On-site / mobile" }
   ]},
   { key: "rideable", label: "Is the scooter rideable?", field_type: "boolean_select", maps_to: "rideable", order: 8, options: [
     { value: "yes", label: "Yes, it rides" },
