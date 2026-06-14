@@ -6,7 +6,7 @@ import {
   Phone, Mail, Bike, Calendar, User, Wrench,
   CreditCard, AlertTriangle, MapPin, Hash
 } from "lucide-react";
-import StatusPill from "@/components/shared/StatusPill";
+import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel";
@@ -18,7 +18,7 @@ import IntakePanel from "./IntakePanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
-import { DEFAULT_APP_SETTINGS, DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
+import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import {
   getVisibleJobTabs,
   isQuoteReadOnlyForStatus,
@@ -73,6 +73,10 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
         ) : (
           <>
             <JobModalHeader job={job} />
+
+            {canManage && (
+              <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
+            )}
 
             <div className="flex-1 overflow-y-auto">
               <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
@@ -172,7 +176,6 @@ function JobModalHeader({ job }) {
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <StatusPill value={job.status} />
           {outstanding && (
             <span className="flex items-center gap-1 text-xs bg-rose-500/30 text-rose-100 rounded-full px-2 py-0.5 border border-rose-400/40">
               <CreditCard className="h-3 w-3" /> Invoice outstanding
