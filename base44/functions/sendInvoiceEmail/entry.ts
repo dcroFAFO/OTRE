@@ -73,7 +73,11 @@ Deno.serve(async (req) => {
     }
 
     const currency = invoice.currency || 'AUD';
-    const total = invoice.amount || 0;
+    // Total is the sum of the rendered line items so the invoice never shows a
+    // figure that disagrees with its own rows. Fall back to the stored invoice
+    // amount only when no line items exist (nothing to sum).
+    const lineItemsTotal = lineItems.reduce((sum, li) => sum + (li.qty * li.unit_price), 0);
+    const total = lineItems.length > 0 ? lineItemsTotal : (invoice.amount || 0);
     const customerName = job.customer_name || 'Customer';
     const reference = job.reference || invoice.number;
     const assetLabel = job.asset_label || job.scooter_label || 'your scooter';
