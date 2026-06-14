@@ -4,10 +4,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Phone, Mail, Bike, Calendar, User, Wrench,
-  CreditCard, AlertTriangle, MapPin, Clock, Hash
+  CreditCard, AlertTriangle, MapPin, Hash
 } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
-import JobActions from "./JobActions";
 import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel";
@@ -15,9 +14,7 @@ import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
 import JobStoreProductsPanel from "./JobStoreProductsPanel";
-import JobChecklistPanel from "./JobChecklistPanel";
 import IntakePanel from "./IntakePanel";
-import AuditTimeline from "./AuditTimeline";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
 import { cn } from "@/lib/utils";
@@ -29,25 +26,40 @@ import {
 } from "@/config/jobDetailsTabConfig";
 import { format } from "date-fns";
 
+// Tab label map
+const TAB_LABELS = {
+  intake: "Intake",
+  quote: "Quote",
+  invoice: "Invoice",
+  customer: "Customer",
+  notes: "Notes",
+  private: "Private",
+  parts: "Parts",
+  files: "Files",
+};
+
 export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
   const [job, setJob] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("intake");
 
   const load = useCallback(() => {
     if (jobId) base44.entities.Job.get(jobId).then(setJob);
   }, [jobId]);
 
-  useEffect(() => { if (open) load(); }, [jobId, open, load]);
+  useEffect(() => { if (open) { load(); setActiveTab("intake"); } }, [jobId, open, load]);
   useEffect(() => { if (!open) setJob(null); }, [open]);
 
   const bump = () => { load(); setRefreshKey((k) => k + 1); onChange?.(); };
   const role = actor?.role;
   const canManage = can(role, "job.update") || role === "admin";
 
-  // Derive visible tabs and read-only flags from the job's status
-  const visibleTabs = job ? getVisibleJobTabs(job.status) : new Set();
+  const visibleTabs = job ? getVisibleJobTabs(job.status) : ["intake"];
   const quoteReadOnly = job ? isQuoteReadOnlyForStatus(job.status) : false;
   const invoiceReadOnly = job ? isInvoiceReadOnlyForStatus(job.status) : false;
+
+  // If active tab is no longer visible (e.g. after status change), fall back to first tab
+  const safeTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0] ?? "intake";
 
   if (!open) return null;
 
@@ -60,70 +72,51 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
           </div>
         ) : (
           <>
-            {/* Header */}
             <JobModalHeader job={job} />
 
-            {/* Tabs */}
             <div className="flex-1 overflow-y-auto">
-              <Tabs defaultValue={canManage ? "manage" : "notes"} className="flex flex-col h-full">
+              <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
                 <div className="border-b border-border px-5 pt-3 bg-background sticky top-0 z-10">
                   <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap">
-                    {canManage && <ModalTab value="manage" label="Actions" />}
-                    {canManage && <ModalTab value="intake" label="Intake" badge={job.intake?.intake_date ? "✓" : null} />}
-                    {job.checklist?.length > 0 && (
+                    {visibleTabs.map((tab) => (
                       <ModalTab
-                        value="checklist"
-                        label="Checklist"
-                        badge={`${job.checklist.filter((c) => c.done).length}/${job.checklist.length}`}
+                        key={tab}
+                        value={tab}
+                        label={TAB_LABELS[tab]}
+                        badge={
+                          tab === "quote" && job.quote_status && job.quote_status !== "draft"
+                            ? job.quote_status
+                            : tab === "intake" && job.intake?.intake_date
+                            ? "✓"
+                            : tab === "invoice" && job.payment_status && job.payment_status !== "unpaid"
+                            ? job.payment_status
+                            : null
+                        }
                       />
-                    )}
-                    {visibleTabs.has("quote") && <ModalTab value="quote" label="Quote" badge={job.quote_status && job.quote_status !== "draft" ? job.quote_status : null} />}
-                    {visibleTabs.has("invoice") && <ModalTab value="invoice" label="Invoice" badge={job.payment_status && job.payment_status !== "unpaid" ? job.payment_status : null} />}
-                    <ModalTab value="customer" label="Customer" />
-                    <ModalTab value="notes" label="Notes" />
-                    <ModalTab value="private" label="Private" />
-                    <ModalTab value="parts" label="Parts" />
-                    <ModalTab value="files" label="Files" />
-                    <ModalTab value="activity" label="History" />
+                    ))}
                   </TabsList>
                 </div>
 
                 <div className="p-5 flex-1">
-                  {canManage && (
-                    <TabsContent value="manage" className="mt-0">
-                      <JobActions job={job} actor={actor} onChange={bump} />
-                    </TabsContent>
-                  )}
-                  {canManage && (
-                    <TabsContent value="intake" className="mt-0">
-                      <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-                    </TabsContent>
-                  )}
-                  {job.checklist?.length > 0 && (
-                    <TabsContent value="checklist" className="mt-0">
-                      <JobChecklistPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-                    </TabsContent>
-                  )}
-                  {visibleTabs.has("quote") && (
-                    <TabsContent value="quote" className="mt-0">
-                      <QuotePanel
-                        job={job}
-                        actor={actor}
-                        canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
-                        onChange={bump}
-                      />
-                    </TabsContent>
-                  )}
-                  {visibleTabs.has("invoice") && (
-                    <TabsContent value="invoice" className="mt-0">
-                      <InvoicePanel
-                        job={job}
-                        actor={actor}
-                        canEdit={!invoiceReadOnly && (can(role, "job.invoice.manage") || role === "admin")}
-                        onChange={bump}
-                      />
-                    </TabsContent>
-                  )}
+                  <TabsContent value="intake" className="mt-0">
+                    <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                  </TabsContent>
+                  <TabsContent value="quote" className="mt-0">
+                    <QuotePanel
+                      job={job}
+                      actor={actor}
+                      canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
+                      onChange={bump}
+                    />
+                  </TabsContent>
+                  <TabsContent value="invoice" className="mt-0">
+                    <InvoicePanel
+                      job={job}
+                      actor={actor}
+                      canEdit={!invoiceReadOnly && (can(role, "job.invoice.manage") || role === "admin")}
+                      onChange={bump}
+                    />
+                  </TabsContent>
                   <TabsContent value="customer" className="mt-0">
                     <CustomerHistoryPanel job={job} />
                   </TabsContent>
@@ -140,9 +133,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
                     <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
-                  </TabsContent>
-                  <TabsContent value="activity" className="mt-0">
-                    <AuditTimeline jobId={job.id} refreshKey={refreshKey} />
                   </TabsContent>
                 </div>
               </Tabs>

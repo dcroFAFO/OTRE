@@ -57,18 +57,8 @@ function inGroup(status, group) {
 
 // ---------------------------------------------------------------------------
 // 2. getVisibleJobTabs(status)
-//    Returns the set of tab keys that should be visible for this job status.
-//    Falls back to PRE_QUOTE_STATUSES tabs and logs a warning for unknowns.
-//
-//    Tab keys mirror the Tabs values used in JobDetailModal:
-//      manage | intake | checklist | quote | invoice |
-//      customer | notes | private | parts | files | activity
-//
-//    Notes:
-//    - "manage", "intake", "checklist", "customer", "notes",
-//      "private", "files", "activity" are always shown
-//      (role / data guards are applied separately in the modal).
-//    - "quote" and "invoice" visibility is controlled here.
+//    Returns an ordered array of tab keys for the given job status.
+//    Falls back to PRE_QUOTE tabs and logs a warning for unknown statuses.
 // ---------------------------------------------------------------------------
 export function getVisibleJobTabs(status) {
   const norm = normalizeJobStatus(status);
@@ -81,8 +71,6 @@ export function getVisibleJobTabs(status) {
     ...HOLD_CANCELLED_STATUSES,
   ];
 
-  const ALWAYS_VISIBLE = ["manage", "intake", "checklist", "customer", "notes", "private", "parts", "files", "activity"];
-
   if (!allKnown.includes(norm)) {
     if (norm) {
       console.warn(
@@ -90,33 +78,30 @@ export function getVisibleJobTabs(status) {
         `Falling back to PRE_QUOTE tab set.`
       );
     }
-    // Fallback: same as PRE_QUOTE — show quote, hide invoice
-    return new Set([...ALWAYS_VISIBLE, "quote"]);
+    return ["intake", "quote", "customer", "notes", "private"];
   }
 
   if (inGroup(norm, PRE_QUOTE_STATUSES)) {
-    return new Set([...ALWAYS_VISIBLE, "quote"]);
+    return ["intake", "quote", "customer", "notes", "private"];
   }
 
   if (inGroup(norm, APPROVED_ACTIVE_STATUSES)) {
-    return new Set([...ALWAYS_VISIBLE, "quote", "invoice"]);
+    return ["intake", "quote", "customer", "notes", "private", "parts", "files"];
   }
 
   if (inGroup(norm, PICKUP_INVOICE_STATUSES)) {
-    return new Set([...ALWAYS_VISIBLE, "quote", "invoice"]);
+    return ["intake", "quote", "invoice", "customer", "notes", "private", "parts", "files"];
   }
 
   if (inGroup(norm, CLOSED_PAID_STATUSES)) {
-    return new Set([...ALWAYS_VISIBLE, "quote", "invoice"]);
+    return ["intake", "quote", "invoice", "notes", "customer", "private"];
   }
 
   if (inGroup(norm, HOLD_CANCELLED_STATUSES)) {
-    // Show quote; invoice only if job reached invoice stage
-    return new Set([...ALWAYS_VISIBLE, "quote"]);
+    return ["intake", "customer", "quote", "notes", "private"];
   }
 
-  // Should never reach here, but be safe
-  return new Set([...ALWAYS_VISIBLE, "quote"]);
+  return ["intake", "quote", "customer", "notes", "private"];
 }
 
 // ---------------------------------------------------------------------------
