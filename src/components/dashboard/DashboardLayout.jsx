@@ -27,18 +27,7 @@ export default function DashboardLayout() {
     return <SeedLoadingScreen onDone={() => setSeedDone(true)} />;
   }
 
-  // The Base44 Testing Agent runs as an auto-created account with the
-  // default `user` role and a recognizable email. Let it through the staff
-  // gate so automated test runs can reach the dashboard. No effect on real users.
-  const email = (user?.email || "").toLowerCase();
-  const isTestAgent =
-    !!user?.is_test_agent_user ||
-    email.includes("test-agent") ||
-    email.includes("testagent") ||
-    email.endsWith("@base44-test.com") ||
-    email.endsWith("@test.base44.com");
-
-  if (!isTestAgent && !isStaff(user?.role)) {
+  if (!isStaff(user?.role)) {
     return (
       <div className="min-h-screen grid place-items-center bg-secondary/30 px-5">
         <div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md">
