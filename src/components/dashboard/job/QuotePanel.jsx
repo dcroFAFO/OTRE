@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Send, Plus, Clock, Lock, CheckCircle2, XCircle, CalendarDays } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
-import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 import PartsSourcingPanel from "@/components/dashboard/job/PartsSourcingPanel";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
+import AiQuoteDraft from "@/components/dashboard/job/AiQuoteDraft";
 import { format } from "date-fns";
 
 const LABOUR_RATE = 80;
@@ -23,7 +23,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     labour_hours: "", labour_estimate: 0, parts_estimate: 0,
     diagnosis_notes: "", recommended_repair: "",
   });
-  const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
@@ -63,9 +62,15 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     onChange?.();
   };
 
-  const aiDraft = async () => {
-    const r = await aiService.draftQuote(job);
-    setAiMsg(r.message);
+  // Apply an AI draft into the editable form only — fills text fields and
+  // labour hours, leaves parts/estimates untouched, and saves nothing.
+  const applyAiDraft = (draft) => {
+    setForm((f) => ({
+      ...f,
+      diagnosis_notes: draft.diagnosis_notes || f.diagnosis_notes,
+      recommended_repair: draft.recommended_repair || f.recommended_repair,
+      labour_hours: draft.labour_hours != null ? String(draft.labour_hours) : f.labour_hours,
+    }));
   };
 
   return (
@@ -158,12 +163,9 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
             {quote?.status === "sent" && (
               <Button size="sm" variant="outline" onClick={() => approve(true)}>Approve manually</Button>
             )}
-            <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
-              <Sparkles className="h-4 w-4" /> AI draft
-            </Button>
           </div>
 
-          {aiMsg && <p className="text-xs text-muted-foreground italic">{aiMsg}</p>}
+          <AiQuoteDraft job={job} onApply={applyAiDraft} />
         </>
       ) : (
         // ── Read-only view ───────────────────────────────────────────────────
