@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ClipboardCheck, Loader2, CheckCircle2 } from "lucide-react";
+import { ClipboardCheck, Loader2, CheckCircle2, Camera, X, ImageIcon } from "lucide-react";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { useToast } from "@/components/ui/use-toast";
 import { logError } from "@/lib/logger";
@@ -38,6 +38,42 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   });
   const [saving, setSaving] = useState(false);
   const [spec, setSpec] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  // Load existing intake photos for this job
+  useEffect(() => {
+    base44.entities.Attachment.filter({ job_id: job.id, kind: "photo" }, "-created_date", 50)
+      .then((rows) => setPhotos(rows.filter((r) => r.file_name?.startsWith("intake_"))));
+  }, [job.id]);
+
+  const uploadPhoto = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const record = await base44.entities.Attachment.create({
+          job_id: job.id,
+          file_url,
+          file_name: `intake_${file.name}`,
+          kind: "photo",
+          visibility: "internal",
+          uploaded_by_name: actor?.full_name || "Technician",
+        });
+        setPhotos((prev) => [record, ...prev]);
+      }
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const removePhoto = async (photo) => {
+    await base44.entities.Attachment.delete(photo.id);
+    setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+  };
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const models = form.make ? (SCOOTER_BRANDS[form.make] || []) : [];
@@ -85,7 +121,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   };
 
   if (!canEdit) {
-    return <IntakeReadOnly intake={job.intake} />;
+    return <IntakeReadOnly intake={job.intake} jobId={job.id} />;
   }
 
   return (
@@ -157,6 +193,39 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         <Textarea value={form.initial_issue_notes || ""} onChange={(e) => set("initial_issue_notes", e.target.value)} placeholder="Technician's initial assessment of the reported issue..." className="h-24" />
       </Field>
 
+      {/* Condition photos */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs flex items-center gap-1.5"><Camera className="h-3.5 w-3.5" /> Condition photos</Label>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-accent cursor-pointer hover:opacity-80">
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            {uploading ? "Uploading..." : "Add photos"}
+            <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
+          </label>
+        </div>
+        {photos.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {photos.map((p) => (
+              <div key={p.id} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-secondary">
+                <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => removePhoto(p)}
+                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-6 cursor-pointer hover:border-accent/50 transition-colors">
+            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Upload condition photos</span>
+            <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
+          </label>
+        )}
+      </div>
+
       {job.intake?.intake_date && (
         <p className="text-[11px] text-muted-foreground flex items-center gap-1">
           <CheckCircle2 className="h-3 w-3 text-emerald-500" />
@@ -171,7 +240,14 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   );
 }
 
-function IntakeReadOnly({ intake }) {
+function IntakeReadOnly({ intake, jobId }) {
+  const [photos, setPhotos] = useState([]);
+  useEffect(() => {
+    if (!jobId) return;
+    base44.entities.Attachment.filter({ job_id: jobId, kind: "photo" }, "-created_date", 50)
+      .then((rows) => setPhotos(rows.filter((r) => r.file_name?.startsWith("intake_"))));
+  }, [jobId]);
+
   if (!intake || !intake.intake_date) {
     return <p className="text-sm text-muted-foreground text-center py-8">No intake recorded yet.</p>;
   }
@@ -189,13 +265,28 @@ function IntakeReadOnly({ intake }) {
   ].filter(([, v]) => v != null && v !== "");
 
   return (
-    <div className="space-y-2">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-3 gap-2 text-sm border-b border-border/60 py-1.5">
-          <span className="text-muted-foreground">{label}</span>
-          <span className="col-span-2 capitalize">{value}</span>
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="grid grid-cols-3 gap-2 text-sm border-b border-border/60 py-1.5">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="col-span-2 capitalize">{value}</span>
+          </div>
+        ))}
+      </div>
+      {photos.length > 0 && (
+        <div className="space-y-1.5 pt-2">
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><Camera className="h-3 w-3" /> Condition photos</p>
+          <div className="grid grid-cols-3 gap-2">
+            {photos.map((p) => (
+              <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer"
+                className="rounded-lg overflow-hidden border border-border aspect-square bg-secondary block">
+                <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+              </a>
+            ))}
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
