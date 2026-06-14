@@ -28,12 +28,16 @@ Deno.serve(async (req) => {
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
+    // Staff-only function (guarded above); use service role for DB writes so
+    // they pass the staff-only entity write RLS deterministically.
+    const db = base44.asServiceRole.entities;
+
+    const jobs = await db.Job.filter({ id: jobId }, "", 1);
     const job = jobs[0];
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
-      base44.entities.AuditEvent.create({
+      db.AuditEvent.create({
         event_type: eventType,
         job_id: job.id,
         actor_id: user.id,
@@ -50,28 +54,29 @@ Deno.serve(async (req) => {
     switch (action) {
       case "create": {
         const amount = Number(params.amount) || 0;
-        result = await base44.entities.Invoice.create({
+        result = await db.Invoice.create({
           job_id: job.id,
+          customer_email: job.customer_email || null,
           number: `${PREFIX}-${Date.now().toString().slice(-6)}`,
           amount,
           currency: CURRENCY,
           status: DEFAULT_STATUS,
         });
-        await base44.entities.Job.update(job.id, { payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
+        await db.Job.update(job.id, { payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
         await logAudit({ eventType: "invoice_created", summary: `Invoice created (${CURRENCY} ${amount})`, visibility: "customer" });
         break;
       }
       case "set_payment_status": {
         const { invoiceId, status } = params;
-        const invoices = await base44.entities.Invoice.filter({ id: invoiceId }, "", 1);
+        const invoices = await db.Invoice.filter({ id: invoiceId }, "", 1);
         const invoice = invoices[0];
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
 
-        result = await base44.entities.Invoice.update(invoice.id, {
+        result = await db.Invoice.update(invoice.id, {
           status,
           paid_date: status === "paid" ? new Date().toISOString() : null,
         });
-        await base44.entities.Job.update(job.id, {
+        await db.Job.update(job.id, {
           payment_status: status,
           status: status === "paid" ? "paid" : job.status,
         });

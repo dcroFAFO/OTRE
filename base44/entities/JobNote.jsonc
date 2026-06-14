@@ -29,5 +29,36 @@
   "required": [
     "job_id",
     "body"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "visibility": "customer"
+        }
+      ]
+    },
+    "write": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    }
+  }
 }

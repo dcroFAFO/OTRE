@@ -227,9 +227,9 @@ Deno.serve(async (req) => {
           const { offset, asset_label, ...rest } = j;
           const job = await db.Job.create({ ...rest, asset_label, scooter_label: asset_label, scheduled_date: isoDaysFromNow(offset), business_slug: SLUG });
           if (j.quote_status !== "draft")
-            await db.Quote.create({ job_id: job.id, labour_estimate: 80, parts_estimate: 45, total: 125, currency: CURRENCY, status: j.quote_status === "approved" ? "approved" : "sent", recommended_repair: j.issue_description, sent_date: new Date().toISOString() });
+            await db.Quote.create({ job_id: job.id, customer_email: job.customer_email || null, labour_estimate: 80, parts_estimate: 45, total: 125, currency: CURRENCY, status: j.quote_status === "approved" ? "approved" : "sent", recommended_repair: j.issue_description, sent_date: new Date().toISOString() });
           if (j.payment_status === "outstanding" || j.payment_status === "paid")
-            await db.Invoice.create({ job_id: job.id, number: `${INVOICE_SETTINGS.prefix}-${j.reference}`, amount: 125, currency: CURRENCY, status: j.payment_status });
+            await db.Invoice.create({ job_id: job.id, customer_email: job.customer_email || null, number: `${INVOICE_SETTINGS.prefix}-${j.reference}`, amount: 125, currency: CURRENCY, status: j.payment_status });
         }
       },
       finish: async () => {
