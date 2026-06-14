@@ -17,6 +17,12 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     requestMeta.userId = user.id;
 
+    // Invoice actions are staff-only — never callable by customers.
+    const STAFF_ROLES = ["admin", "employee", "technician"];
+    if (!STAFF_ROLES.includes(user.role)) {
+      return Response.json({ error: "Forbidden: staff access required" }, { status: 403 });
+    }
+
     const { action, jobId, ...params } = await req.json();
     requestMeta.action = action;
     requestMeta.jobId = jobId;

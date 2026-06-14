@@ -28,6 +28,18 @@ Deno.serve(async (req) => {
     const job = jobs[0];
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
+    // Authorization: staff can do everything. A customer may ONLY set quote
+    // approval, and only on a job that belongs to them (by email).
+    const STAFF_ROLES = ["admin", "employee", "technician"];
+    const isStaffUser = STAFF_ROLES.includes(user.role);
+    if (!isStaffUser) {
+      const ownsJob = job.customer_email && user.email &&
+        job.customer_email.toLowerCase() === user.email.toLowerCase();
+      if (!ownsJob || action !== "set_approval") {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const logAudit = ({ eventType, newValue = null, summary = "", visibility = "internal" }) =>
       base44.entities.AuditEvent.create({
         event_type: eventType,
