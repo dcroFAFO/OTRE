@@ -6,33 +6,8 @@ import { format } from "date-fns";
 
 export default function ClientTable({ clients, onView }) {
   return (
-    <>
-      {/* Mobile: stacked cards */}
-      <div className="space-y-2.5 md:hidden">
-        {clients.map((c) => (
-          <button key={c.id} onClick={() => onView(c)}
-            className="w-full text-left rounded-xl border border-border bg-card p-3.5 active:bg-secondary/40 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <p className="font-medium truncate">{c.full_name}</p>
-              <ClientStatusBadge value={c.status || "active"} />
-            </div>
-            <p className="mt-0.5 text-sm text-muted-foreground truncate">{c.email || "—"}</p>
-            {c.phone && <p className="text-xs text-muted-foreground">{c.phone}</p>}
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <div className="flex flex-wrap gap-1">
-                {(c.tags || []).slice(0, 2).map((t) => <ClientTagBadge key={t} value={t} />)}
-                {(c.tags || []).length > 2 && <span className="text-[11px] text-muted-foreground">+{c.tags.length - 2}</span>}
-              </div>
-              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                {c.created_date ? format(new Date(c.created_date), "d MMM yyyy") : "—"}
-              </span>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Desktop: table */}
-      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/40 text-left text-xs text-muted-foreground">
@@ -72,6 +47,6 @@ export default function ClientTable({ clients, onView }) {
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }

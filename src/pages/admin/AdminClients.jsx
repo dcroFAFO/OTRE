@@ -5,7 +5,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ClientSummaryCards from "@/components/admin/clients/ClientSummaryCards";
 import ClientFilters, { EMPTY_CLIENT_FILTERS } from "@/components/admin/clients/ClientFilters";
-import { useUrlFilters } from "@/hooks/useUrlFilters";
 import ClientTable from "@/components/admin/clients/ClientTable";
 import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
 import { listClients } from "@/services/clientService";
@@ -14,7 +13,7 @@ import { Users, AlertTriangle } from "lucide-react";
 
 export default function AdminClients() {
   const { user, isLoading } = useCurrentUser();
-  const [filters, setFilters] = useUrlFilters(EMPTY_CLIENT_FILTERS);
+  const [filters, setFilters] = useState(EMPTY_CLIENT_FILTERS);
   const [selected, setSelected] = useState(null);
 
   const { data: clients, isLoading: loadingClients, error, refetch } = useQuery({

@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const BUSINESS = { name: "On The Run Electrics", footer: "On The Run Electrics · hello@ontherunelectrics.com.au" };
+const BUSINESS = { name: "OTR Scooters", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com" };
 
 // Sends via Resend so we can reach any recipient (not just registered app users).
 async function sendMail({ to, subject, body, from_name }) {

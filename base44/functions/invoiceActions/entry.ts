@@ -17,35 +17,17 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     requestMeta.userId = user.id;
 
-    // Invoice actions are staff-only — never callable by customers.
-    const STAFF_ROLES = ["admin", "employee", "technician"];
-    if (!STAFF_ROLES.includes(user.role)) {
-      return Response.json({ error: "Forbidden: staff access required" }, { status: 403 });
-    }
-
     const { action, jobId, ...params } = await req.json();
     requestMeta.action = action;
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    // Staff-only function (guarded above); use service role for DB writes so
-    // they pass the staff-only entity write RLS deterministically.
-    const db = base44.asServiceRole.entities;
-
-    // A missing/invalid id makes the SDK throw ("Object not found") rather than
-    // return []. Treat that as a clean 404 instead of a generic 500.
-    let job;
-    try {
-      const jobs = await db.Job.filter({ id: jobId }, "", 1);
-      job = jobs[0];
-    } catch (lookupErr) {
-      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
-      else throw lookupErr;
-    }
+    const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
+    const job = jobs[0];
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
-      db.AuditEvent.create({
+      base44.entities.AuditEvent.create({
         event_type: eventType,
         job_id: job.id,
         actor_id: user.id,
@@ -62,35 +44,28 @@ Deno.serve(async (req) => {
     switch (action) {
       case "create": {
         const amount = Number(params.amount) || 0;
-        result = await db.Invoice.create({
+        result = await base44.entities.Invoice.create({
           job_id: job.id,
-          customer_email: job.customer_email || null,
           number: `${PREFIX}-${Date.now().toString().slice(-6)}`,
           amount,
           currency: CURRENCY,
           status: DEFAULT_STATUS,
         });
-        await db.Job.update(job.id, { payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
+        await base44.entities.Job.update(job.id, { payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
         await logAudit({ eventType: "invoice_created", summary: `Invoice created (${CURRENCY} ${amount})`, visibility: "customer" });
         break;
       }
       case "set_payment_status": {
         const { invoiceId, status } = params;
-        let invoice;
-        try {
-          const invoices = await db.Invoice.filter({ id: invoiceId }, "", 1);
-          invoice = invoices[0];
-        } catch (lookupErr) {
-          if (String(lookupErr?.message || "").toLowerCase().includes("not found")) invoice = null;
-          else throw lookupErr;
-        }
+        const invoices = await base44.entities.Invoice.filter({ id: invoiceId }, "", 1);
+        const invoice = invoices[0];
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
 
-        result = await db.Invoice.update(invoice.id, {
+        result = await base44.entities.Invoice.update(invoice.id, {
           status,
           paid_date: status === "paid" ? new Date().toISOString() : null,
         });
-        await db.Job.update(job.id, {
+        await base44.entities.Job.update(job.id, {
           payment_status: status,
           status: status === "paid" ? "paid" : job.status,
         });

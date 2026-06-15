@@ -25,7 +25,7 @@ export default function JobFilters({ filters, setFilters, staff }) {
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {/* Search */}
-        <div className="relative flex-1 min-w-full sm:min-w-[200px]">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={localQ}
@@ -65,7 +65,7 @@ export default function JobFilters({ filters, setFilters, staff }) {
 function FilterSelect({ value, onChange, placeholder, options }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-[145px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectTrigger className="w-[145px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>
         <SelectItem value="all">All {placeholder.toLowerCase()}</SelectItem>
         {options.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}

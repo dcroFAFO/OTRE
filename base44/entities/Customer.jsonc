@@ -49,46 +49,5 @@
   },
   "required": [
     "full_name"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

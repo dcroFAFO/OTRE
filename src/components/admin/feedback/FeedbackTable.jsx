@@ -6,48 +6,8 @@ import { format } from "date-fns";
 
 export default function FeedbackTable({ items, onView, onResolve, onArchive, busyId }) {
   return (
-    <>
-      {/* Mobile: stacked cards */}
-      <div className="space-y-2.5 md:hidden">
-        {items.map((f) => (
-          <div key={f.id} className="rounded-xl border border-border bg-card p-3.5">
-            <button onClick={() => onView(f)} className="block w-full text-left">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium truncate">{f.subject}</p>
-                <StatusBadge value={f.status} />
-              </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>{f.feedback_type}</span>
-                <PriorityBadge value={f.priority} />
-              </div>
-              <p className="mt-1.5 text-xs text-muted-foreground truncate">
-                {f.submitted_by_name || "—"}
-                {f.created_date && ` · ${format(new Date(f.created_date), "d MMM yyyy")}`}
-              </p>
-            </button>
-            <div className="mt-2.5 flex items-center justify-end gap-1 border-t border-border pt-2.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9" title="View" onClick={() => onView(f)}>
-                <Eye className="h-4 w-4" />
-              </Button>
-              {f.status !== "Resolved" && (
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-600" title="Mark resolved"
-                  disabled={busyId === f.id} onClick={() => onResolve(f)}>
-                  <CheckCircle2 className="h-4 w-4" />
-                </Button>
-              )}
-              {!f.is_archived && (
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" title="Archive"
-                  disabled={busyId === f.id} onClick={() => onArchive(f)}>
-                  <Archive className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop: table */}
-      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/40 text-left text-xs text-muted-foreground">
@@ -102,6 +62,6 @@ export default function FeedbackTable({ items, onView, onResolve, onArchive, bus
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }

@@ -35,29 +35,13 @@ export default function BookingSection() {
 
   const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
 
-  const [uploadError, setUploadError] = useState("");
-
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadError("");
-    if (!file.type.startsWith("image/")) {
-      setUploadError("Please choose an image file.");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("Image must be under 10MB.");
-      return;
-    }
     setUploading(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setPhotoUrl(file_url);
-    } catch {
-      setUploadError("Upload failed — please try again.");
-    } finally {
-      setUploading(false);
-    }
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setPhotoUrl(file_url);
+    setUploading(false);
   };
 
   const isOther = form.issue_type === "Other";
@@ -177,7 +161,6 @@ export default function BookingSection() {
               {photoUrl ? "Photo uploaded ✓" : "Upload a photo of the issue"}
               <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
             </label>
-            {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
           </Field>
 
           <label className="flex items-start gap-3 text-sm text-muted-foreground">

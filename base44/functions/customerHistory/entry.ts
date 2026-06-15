@@ -15,15 +15,7 @@ Deno.serve(async (req) => {
     if (!customer_id) return Response.json({ error: 'customer_id is required' }, { status: 400 });
 
     const svc = base44.asServiceRole.entities;
-    // .get() throws ("Object not found") on a missing/invalid id rather than
-    // returning null — treat that as a clean 404 instead of a generic 500.
-    let customer;
-    try {
-      customer = await svc.Customer.get(customer_id);
-    } catch (lookupErr) {
-      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) customer = null;
-      else throw lookupErr;
-    }
+    const customer = await svc.Customer.get(customer_id);
     if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
     const email = (customer.email || "").toLowerCase();

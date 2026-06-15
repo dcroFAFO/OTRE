@@ -16,13 +16,10 @@ import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { RefreshCw } from "lucide-react";
-import { errorMessage } from "@/lib/errors";
 
 export default function Overview() {
   const navigate = useNavigate();
-  const jobsQuery = useJobs();
-  const jobs = jobsQuery.data || [];
+  const { data: jobs } = useJobs();
   const { data: audit } = useQuery({ queryKey: ["recentAudit"], queryFn: () => listRecentAudit(16), initialData: [], staleTime: 60 * 1000 });
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -108,20 +105,6 @@ export default function Overview() {
           )}
         </div>
       </div>
-
-      {/* Jobs load error banner */}
-      {jobsQuery.isError && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
-            <p className="text-sm font-medium text-rose-800">{errorMessage(jobsQuery.error)} Figures below may be incomplete.</p>
-          </div>
-          <Button size="sm" variant="outline" className="border-rose-300 text-rose-800 hover:bg-rose-100 shrink-0 gap-1.5"
-            onClick={() => jobsQuery.refetch()} disabled={jobsQuery.isFetching}>
-            <RefreshCw className={cn("h-3.5 w-3.5", jobsQuery.isFetching && "animate-spin")} /> Retry
-          </Button>
-        </div>
-      )}
 
       {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

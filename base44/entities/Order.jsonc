@@ -83,35 +83,5 @@
   },
   "required": [
     "customer_name"
-  ],
-  "rls": {
-    "create": null,
-    "read": {
-      "$or": [
-        {
-          "data.customer_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

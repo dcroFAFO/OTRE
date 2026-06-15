@@ -46,59 +46,11 @@
     },
     "private_notes": {
       "type": "string",
-      "description": "Internal technician-only notes (repair issues, part failures). Never shown to customers.",
-      "rls": {
-        "read": {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        },
-        "write": {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        }
-      }
+      "description": "Internal technician-only notes (repair issues, part failures). Never shown to customers."
     },
     "intake": {
       "type": "object",
       "description": "Standardised technician intake details captured when a scooter is received",
-      "rls": {
-        "read": {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        },
-        "write": {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        }
-      },
       "properties": {
         "make": {
           "type": "string",
@@ -250,36 +202,5 @@
   },
   "required": [
     "customer_name"
-  ],
-  "rls": {
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        },
-        {
-          "customer_email": "{{user.email}}"
-        }
-      ]
-    },
-    "write": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    }
-  }
+  ]
 }

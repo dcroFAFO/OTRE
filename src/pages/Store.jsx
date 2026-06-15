@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShoppingCart, Search, Zap, Package, AlertTriangle, RefreshCw } from "lucide-react";
+import { ShoppingCart, Search, Zap, Package } from "lucide-react";
 import { CartProvider, useCart } from "@/lib/CartContext";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { ALL_CATEGORIES } from "@/config/storeConfig";
@@ -21,7 +21,7 @@ function StoreInner() {
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  const { data: products = [], isLoading, isError, refetch } = useQuery({
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ["store-products"],
     queryFn: () => base44.entities.Product.filter({ active: true }, "order", 500),
     initialData: [],
@@ -78,15 +78,7 @@ function StoreInner() {
             </p>
           </div>
 
-          {isError ? (
-            <div className="text-center py-20">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-rose-500" />
-              <p className="text-sm font-medium text-rose-800">Couldn't load products.</p>
-              <button onClick={() => refetch()} className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100">
-                <RefreshCw className="h-3.5 w-3.5" /> Try again
-              </button>
-            </div>
-          ) : !isLoading && filtered.length === 0 ? (
+          {!isLoading && filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-3 opacity-40" />
               <p>No products found{activeCategory ? " in this category" : ""}.</p>

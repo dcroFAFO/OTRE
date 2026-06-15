@@ -105,20 +105,6 @@ export function getVisibleJobTabs(status) {
 }
 
 // ---------------------------------------------------------------------------
-// 2b. filterTabsForRole(tabs, role)
-//     Customers must NEVER see internal-only tabs (private notes, intake
-//     diagnostics, parts sourcing). Returns only customer-safe tabs.
-// ---------------------------------------------------------------------------
-const CUSTOMER_SAFE_TABS = ["quote", "invoice", "notes", "files"];
-
-export function filterTabsForRole(tabs, role) {
-  if (role === "customer") {
-    return tabs.filter((t) => CUSTOMER_SAFE_TABS.includes(t));
-  }
-  return tabs;
-}
-
-// ---------------------------------------------------------------------------
 // 3. isQuoteReadOnlyForStatus(status)
 //    Returns true when the quote should be locked from editing.
 // ---------------------------------------------------------------------------

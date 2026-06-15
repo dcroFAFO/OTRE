@@ -171,7 +171,7 @@ export const DEFAULT_ROLES = {
 export const DEFAULT_ROLE_PERMISSIONS = {
   admin: ["*"],
   employee: ["job.view.all", "job.create", "job.update", "job.status.change", "job.assign", "job.reschedule", "job.note.internal", "job.note.customer", "job.attach", "job.quote.manage", "job.invoice.manage", "job.payment.manage", "job.cancel", "job.reopen", "job.archive", "calendar.manage", "dashboard.view"],
-  technician: ["job.view.assigned", "job.update", "job.status.change", "job.note.internal", "job.note.customer", "job.attach", "job.checklist.update", "dashboard.view"],
+  technician: ["job.view.assigned", "job.status.change", "job.note.internal", "job.note.customer", "job.attach", "job.checklist.update", "dashboard.view"],
   customer: ["job.view.own", "quote.approve", "quote.reject", "customer.upload", "customer.message", "invoice.pay"],
 };
 

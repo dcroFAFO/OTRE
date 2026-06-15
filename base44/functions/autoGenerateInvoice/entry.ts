@@ -17,9 +17,6 @@ Deno.serve(async (req) => {
 
     const jobId = event.entity_id;
 
-    // Owner email for RLS scoping on the generated invoice
-    const ownerEmail = data?.customer_email || null;
-
     // Check if an invoice already exists for this job
     const existing = await base44.asServiceRole.entities.Invoice.filter({ job_id: jobId }, "-created_date", 1);
     if (existing.length > 0) {
@@ -69,7 +66,6 @@ Deno.serve(async (req) => {
     // Create the invoice as a draft (outstanding status per settings)
     const invoice = await base44.asServiceRole.entities.Invoice.create({
       job_id: jobId,
-      customer_email: ownerEmail,
       number: invoiceNumber,
       amount: invoiceAmount,
       currency,
