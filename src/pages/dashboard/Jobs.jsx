@@ -7,21 +7,18 @@ import JobListTable from "@/components/dashboard/job/JobListTable";
 import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { SlidersHorizontal, Plus } from "lucide-react";
-import QueryStateBoundary from "@/components/shared/QueryStateBoundary";
 import { getJobGroup, jobMatchesGroup } from "@/config/jobGroups";
 import NewJobFromTemplateModal from "@/components/dashboard/job/NewJobFromTemplateModal";
 import { Button } from "@/components/ui/button";
-import { useUrlFilters } from "@/hooks/useUrlFilters";
 
 export default function Jobs() {
   const user = useDashboardUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const jobsQuery = useJobs();
-  const jobs = jobsQuery.data;
+  const { data: jobs } = useJobs();
   const { data: staff } = useStaff();
   const invalidate = useInvalidateJobs();
-  const [filters, setFilters] = useUrlFilters(EMPTY_FILTERS, ["id", "group"]);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [templateModal, setTemplateModal] = useState(false);
 
   const params = new URLSearchParams(location.search);
@@ -29,19 +26,10 @@ export default function Jobs() {
   const groupKey = params.get("group") || "all";
   const group = getJobGroup(groupKey);
 
-  const open = (id) => {
-    const next = new URLSearchParams(location.search);
-    next.set("id", id);
-    navigate(`/dashboard/jobs?${next.toString()}`);
-  };
-  const close = () => {
-    const next = new URLSearchParams(location.search);
-    next.delete("id");
-    navigate(`/dashboard/jobs${next.toString() ? `?${next.toString()}` : ""}`);
-    invalidate();
-  };
+  const open = (id) => navigate(`/dashboard/jobs?id=${id}`);
+  const close = () => {navigate(`/dashboard/jobs${groupKey !== "all" ? `?group=${groupKey}` : ""}`);invalidate();};
 
-  const filtered = useMemo(() => (jobs || []).filter((j) => {
+  const filtered = useMemo(() => jobs.filter((j) => {
     if (!jobMatchesGroup(j, groupKey)) return false;
     const q = filters.q.toLowerCase();
     const matchQ = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description].some((v) => v?.toLowerCase().includes(q));
@@ -62,7 +50,7 @@ export default function Jobs() {
             {group.key === "all" ? DEFAULT_APP_SETTINGS.dashboard.nav.jobs : group.label}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {jobsQuery.isLoading ? "—" : filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
+            {filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
           </p>
         </div>
       </div>
@@ -77,16 +65,14 @@ export default function Jobs() {
 
       <JobFilters filters={filters} setFilters={setFilters} staff={staff} />
 
-      <QueryStateBoundary
-        query={jobsQuery}
-        isEmpty={filtered.length === 0}
-        loadingLabel="Loading jobs…"
-        emptyTitle="No jobs to show here"
-        emptyHint="Try adjusting your filters."
-        emptyIcon={SlidersHorizontal}
-      >
-        <JobListTable jobs={filtered} onOpen={open} />
-      </QueryStateBoundary>
+      {filtered.length === 0 ?
+      <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
+          <SlidersHorizontal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No jobs to show here.</p>
+        </div> :
+
+      <JobListTable jobs={filtered} onOpen={open} />
+      }
 
       <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={close} />
       <NewJobFromTemplateModal

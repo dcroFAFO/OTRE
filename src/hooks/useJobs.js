@@ -1,16 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { invokeFn } from "@/lib/serviceClient";
 
 export function useJobs() {
   return useQuery({
     queryKey: ["jobs"],
     queryFn: async () => {
-      // No initialData here — we want isError/isLoading to be real so the UI
-      // can show a retry state instead of a misleading empty list.
-      const data = await invokeFn("listJobs", {});
-      return data || [];
+      const res = await base44.functions.invoke("listJobs", {});
+      return res.data || [];
     },
+    initialData: [],
     staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching
   });
 }

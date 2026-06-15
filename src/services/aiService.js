@@ -6,10 +6,8 @@ export const aiService = {
   async suggestRepairEstimate(/* job */) {
     return { available: false, suggestion: null, message: "AI estimate not yet configured." };
   },
-  async draftQuote(job) {
-    const { invokeFn } = await import("@/lib/serviceClient");
-    const data = await invokeFn("draftQuoteForJob", { jobId: job.id });
-    return { available: true, draft: data?.draft || null };
+  async draftQuote(/* job */) {
+    return { available: false, draft: null, message: "AI quote drafting not yet configured." };
   },
   async sourceParts(/* job */) {
     return { available: false, parts: [], message: "AI parts sourcing not yet configured." };
