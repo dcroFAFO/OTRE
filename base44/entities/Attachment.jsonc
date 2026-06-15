@@ -30,36 +30,5 @@
   "required": [
     "job_id",
     "file_url"
-  ],
-  "rls": {
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        },
-        {
-          "visibility": "customer"
-        }
-      ]
-    },
-    "write": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    }
-  }
+  ]
 }

@@ -126,12 +126,7 @@ export default function FeedbackModal({ open, onClose, user }) {
                 ) : (
                   <label className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground cursor-pointer hover:bg-secondary/50">
                     <Paperclip className="h-4 w-4" /> Attach a file
-                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      setSubmitError("");
-                      if (f && f.size > 10 * 1024 * 1024) { setSubmitError("File must be under 10MB."); return; }
-                      setFile(f);
-                    }} />
+                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
                   </label>
                 )}
               </div>

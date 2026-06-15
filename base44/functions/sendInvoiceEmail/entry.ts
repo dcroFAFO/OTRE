@@ -23,27 +23,8 @@ Deno.serve(async (req) => {
     const { jobId } = await req.json();
     if (!jobId) return Response.json({ error: 'jobId required' }, { status: 400 });
 
-    // .get() throws ("Object not found") on a missing id rather than returning
-    // null — treat that as a clean 404 instead of a generic 500.
-    let job;
-    try {
-      job = await base44.asServiceRole.entities.Job.get(jobId);
-    } catch (lookupErr) {
-      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
-      else throw lookupErr;
-    }
+    const job = await base44.asServiceRole.entities.Job.get(jobId);
     if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
-
-    // Staff may email any job's invoice. A customer may only (re)send a receipt
-    // for a job that belongs to them — never trigger emails on others' jobs.
-    const STAFF_ROLES = ["admin", "employee", "technician"];
-    const isStaffUser = STAFF_ROLES.includes(user.role);
-    if (!isStaffUser) {
-      const ownsJob = job.customer_email && user.email &&
-        job.customer_email.toLowerCase() === user.email.toLowerCase();
-      if (!ownsJob) return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     if (!job.customer_email) return Response.json({ error: 'No customer email on this job' }, { status: 400 });
 
     // Fetch invoice

@@ -11,10 +11,9 @@ async function sendConfirmationEmail({ to, customerName, job }) {
     console.warn("[createBooking] RESEND_API_KEY not set — skipping confirmation email");
     return;
   }
-  const assetLabel = esc(job.asset_label || job.scooter_label || "—");
-  const safeName = esc(customerName);
+  const assetLabel = job.asset_label || job.scooter_label || "—";
   const scheduledLine = job.preferred_time_window
-    ? `<tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Preferred time:</strong> ${esc(job.preferred_time_window)}</td></tr>`
+    ? `<tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Preferred time:</strong> ${job.preferred_time_window}</td></tr>`
     : "";
   const html = `<!DOCTYPE html>
 <html>
@@ -28,11 +27,11 @@ async function sendConfirmationEmail({ to, customerName, job }) {
           <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Booking Confirmed ✓</h1>
         </td></tr>
         <tr><td style="padding:32px;">
-          <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">Hi ${safeName}, thanks for getting in touch! We've received your booking request and will be in touch shortly to confirm a time.</p>
+          <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">Hi ${customerName}, thanks for getting in touch! We've received your booking request and will be in touch shortly to confirm a time.</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-            <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Reference:</strong> ${esc(job.reference)}</td></tr>
+            <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Reference:</strong> ${job.reference}</td></tr>
             <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Scooter:</strong> ${assetLabel}</td></tr>
-            <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Issue:</strong> ${esc(job.issue_description || "—")}</td></tr>
+            <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Issue:</strong> ${job.issue_description || "—"}</td></tr>
             ${scheduledLine}
           </table>
           <p style="margin:0;font-size:14px;color:#64748b;line-height:1.6;">Have questions? Reply to this email or contact us at <a href="mailto:hello@ontherunelectrics.com.au" style="color:#0f172a;">hello@ontherunelectrics.com.au</a>.</p>
@@ -65,19 +64,6 @@ async function sendConfirmationEmail({ to, customerName, job }) {
 const INTAKE_STATUS = "requested";
 const JOB_TYPE = "repair";
 
-// --- Input validation helpers -------------------------------------------------
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const LIMITS = { customer_name: 120, email: 160, phone: 40, asset_label: 160, issue_description: 2000, preferred_time_window: 60 };
-
-// Collapse whitespace, trim, and cap length. Returns "" for nullish input.
-const clean = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
-
-// Escape user text before it goes into the confirmation email HTML, so quotes,
-// angle brackets and ampersands can't inject markup into the message body.
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => (
-  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-));
-
 Deno.serve(async (req) => {
   // requestMeta lets the catch block log a useful, PII-free summary on failure
   // (field names only — never customer details).
@@ -87,29 +73,8 @@ Deno.serve(async (req) => {
     const form = await req.json();
     requestMeta.fields = Object.keys(form || {});
 
-    // Trim + length-cap all free-text fields. Whitespace-only values become ""
-    // and then fail the required-field check below.
-    const customerName = clean(form.customer_name, LIMITS.customer_name);
-    const email = clean(form.email, LIMITS.email).toLowerCase();
-    const phone = clean(form.phone, LIMITS.phone);
-    const assetLabel = clean(form.asset_label || form.scooter_label, LIMITS.asset_label);
-    const issueDescription = clean(form.issue_description, LIMITS.issue_description);
-
-    if (!customerName || !email || !issueDescription) {
-      return Response.json({ error: "Please fill in your name, email and the issue." }, { status: 400 });
-    }
-    if (!EMAIL_RE.test(email)) {
-      return Response.json({ error: "Please enter a valid email address." }, { status: 400 });
-    }
-
-    // Validate optional preferred_date is a real, non-past date (YYYY-MM-DD).
-    let scheduledDate = null;
-    if (!form.asap && form.preferred_date) {
-      const d = new Date(`${form.preferred_date}T00:00:00`);
-      if (isNaN(d.getTime())) {
-        return Response.json({ error: "Please choose a valid preferred date." }, { status: 400 });
-      }
-      scheduledDate = form.preferred_date;
+    if (!form.customer_name || !form.email || !form.issue_description) {
+      return Response.json({ error: "customer_name, email and issue_description are required" }, { status: 400 });
     }
 
     const db = base44.asServiceRole.entities;
@@ -117,31 +82,29 @@ Deno.serve(async (req) => {
 
     const job = await db.Job.create({
       reference,
-      customer_name: customerName,
-      customer_email: email,
-      customer_phone: phone,
-      scooter_label: assetLabel,
-      asset_label: assetLabel,
-      issue_description: issueDescription,
+      customer_name: form.customer_name,
+      customer_email: form.email,
+      customer_phone: form.phone,
+      scooter_label: form.asset_label || form.scooter_label,
+      asset_label: form.asset_label || form.scooter_label,
+      issue_description: form.issue_description,
       job_type: JOB_TYPE,
       status: INTAKE_STATUS,
-      scheduled_date: scheduledDate,
-      preferred_time_window: form.asap ? "ASAP" : clean(form.preferred_time_window, LIMITS.preferred_time_window),
+      scheduled_date: form.asap ? null : (form.preferred_date || null),
+      preferred_time_window: form.asap ? "ASAP" : form.preferred_time_window,
       rideable: form.rideable,
       business_slug: SLUG,
       archived: false,
     });
 
-    // Only attach a photo if the client sent a real uploaded file URL from our
-    // own storage — ignore anything else to avoid storing arbitrary URLs.
-    if (typeof form.photo_url === "string" && form.photo_url.startsWith("http")) {
+    if (form.photo_url) {
       await db.Attachment.create({
         job_id: job.id,
         file_url: form.photo_url,
         file_name: "Customer upload",
         kind: "photo",
         visibility: "customer",
-        uploaded_by_name: customerName,
+        uploaded_by_name: form.customer_name,
       });
     }
 
@@ -150,14 +113,16 @@ Deno.serve(async (req) => {
       job_id: job.id,
       actor_name: "System",
       actor_role: "system",
-      summary: `Booking request received from ${customerName}`,
+      summary: `Booking request received from ${form.customer_name}`,
       visibility: "system",
     });
 
     // Send confirmation email to customer (non-blocking — don't fail the booking if email errors)
-    sendConfirmationEmail({ to: email, customerName, job }).catch((e) => {
-      console.error("[createBooking] Confirmation email error:", e.message);
-    });
+    if (form.email) {
+      sendConfirmationEmail({ to: form.email, customerName: form.customer_name, job }).catch((e) => {
+        console.error("[createBooking] Confirmation email error:", e.message);
+      });
+    }
 
     return Response.json(job);
   } catch (error) {

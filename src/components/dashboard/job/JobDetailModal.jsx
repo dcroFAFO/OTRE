@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import {
   getVisibleJobTabs,
-  filterTabsForRole,
   isQuoteReadOnlyForStatus,
   isInvoiceReadOnlyForStatus,
 } from "@/config/jobDetailsTabConfig";
@@ -55,7 +54,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   const role = actor?.role;
   const canManage = can(role, "job.update") || role === "admin";
 
-  const visibleTabs = job ? filterTabsForRole(getVisibleJobTabs(job.status), role) : ["intake"];
+  const visibleTabs = job ? getVisibleJobTabs(job.status) : ["intake"];
   const quoteReadOnly = job ? isQuoteReadOnlyForStatus(job.status) : false;
   const invoiceReadOnly = job ? isInvoiceReadOnlyForStatus(job.status) : false;
 
