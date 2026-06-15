@@ -206,7 +206,13 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "technician"
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
       }
     },
     "read": {
@@ -233,7 +239,13 @@
     },
     "update": {
       "user_condition": {
-        "role": "technician"
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
       }
     },
     "delete": {
