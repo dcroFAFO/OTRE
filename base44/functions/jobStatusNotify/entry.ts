@@ -15,6 +15,14 @@ async function sendMail({ to, subject, body, from_name }) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Real brand identity — kept in sync with the sending domain so replies,
+// phone and address all point to the same business.
+const BUSINESS = {
+  name: "On The Run Electrics",
+  email: "hello@ontherunelectrics.com.au",
+  footer: "On The Run Electrics · hello@ontherunelectrics.com.au",
+};
+
 const NOTIFY_STATUSES = {
   repair_in_progress: {
     subject: "Your scooter is now being repaired 🔧",
@@ -26,12 +34,13 @@ const NOTIFY_STATUSES = {
     subject: "Your scooter is ready for pickup! 🛴",
     heading: "Ready for Pickup",
     message: "Your scooter has been repaired and is ready to collect. Please come by during our opening hours: Mon–Fri 9am–5:30pm · Sat 10am–3pm.",
+    // (contact details rendered from BUSINESS below)
     color: "#16a34a",
   },
   completed: {
     subject: "Your scooter job is complete ✅",
     heading: "Job Completed",
-    message: "Your scooter job has been marked as completed. Thank you for choosing OTR Scooters — we hope to see you again!",
+    message: "Your scooter job has been marked as completed. Thank you for choosing On The Run Electrics — we hope to see you again!",
     color: "#2563eb",
   },
 };
@@ -83,7 +92,7 @@ Deno.serve(async (req) => {
         <!-- Header -->
         <tr>
           <td style="background:${color};padding:28px 32px;">
-            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">${BUSINESS.name}</p>
             <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">${heading}</h1>
           </td>
         </tr>
@@ -113,13 +122,13 @@ Deno.serve(async (req) => {
               </tr>
             </table>
 
-            <p style="margin:0;font-size:14px;color:#64748b;">Questions? Reply to this email or call us on <strong>(03) 9000 1234</strong>.</p>
+            <p style="margin:0;font-size:14px;color:#64748b;">Questions? Just reply to this email and we'll get back to you.</p>
           </td>
         </tr>
         <!-- Footer -->
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">${BUSINESS.footer}</p>
           </td>
         </tr>
       </table>
@@ -132,7 +141,7 @@ Deno.serve(async (req) => {
       to: email,
       subject: `${subject}${reference}`,
       body: htmlBody,
-      from_name: "OTR Scooters",
+      from_name: BUSINESS.name,
     });
 
     // On completion, also send a short feedback / review request.
@@ -145,20 +154,20 @@ Deno.serve(async (req) => {
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
         <tr><td style="background:#f59e0b;padding:28px 32px;">
-          <p style="margin:0;color:rgba(255,255,255,0.9);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+          <p style="margin:0;color:rgba(255,255,255,0.9);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">${BUSINESS.name}</p>
           <h1 style="margin:8px 0 0;color:#fff;font-size:24px;font-weight:700;">How did we do? ⭐</h1>
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;font-size:16px;color:#1e293b;">Hi ${customerName},</p>
-          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Thanks for choosing OTR Scooters for your repair on <strong>${assetLabel}</strong>. We'd love to hear how it went — your feedback helps us keep improving.</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Thanks for choosing On The Run Electrics for your repair on <strong>${assetLabel}</strong>. We'd love to hear how it went — your feedback helps us keep improving.</p>
           <p style="margin:0 0 8px;font-size:15px;color:#1e293b;font-weight:600;">Rate your experience:</p>
           <p style="margin:0 0 24px;font-size:28px;letter-spacing:6px;">
-            <a href="mailto:hello@otrscooters.com?subject=Review%20${data.reference || ""}%20-%205%20stars" style="text-decoration:none;">⭐⭐⭐⭐⭐</a>
+            <a href="mailto:${BUSINESS.email}?subject=Review%20${data.reference || ""}%20-%205%20stars" style="text-decoration:none;">⭐⭐⭐⭐⭐</a>
           </p>
-          <p style="margin:0;font-size:14px;color:#64748b;">Just reply to this email with any comments, or call us on <strong>(03) 9000 1234</strong>.</p>
+          <p style="margin:0;font-size:14px;color:#64748b;">Just reply to this email with any comments and we'll be in touch.</p>
         </td></tr>
         <tr><td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-          <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
+          <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">${BUSINESS.footer}</p>
         </td></tr>
       </table>
     </td></tr>
@@ -169,7 +178,7 @@ Deno.serve(async (req) => {
         to: email,
         subject: `How did we do?${reference}`,
         body: feedbackHtml,
-        from_name: "OTR Scooters",
+        from_name: BUSINESS.name,
       });
       console.log(`[jobStatusNotify] Feedback request sent to ${email}`);
     }

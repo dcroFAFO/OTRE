@@ -7,16 +7,20 @@ import { addNote } from "@/services/jobService";
 import { cn } from "@/lib/utils";
 
 export default function NotesPanel({ job, actor, canCustomer, onChange }) {
+  const isCustomer = actor?.role === "customer";
   const [notes, setNotes] = useState([]);
   const [body, setBody] = useState("");
-  const [visibility, setVisibility] = useState("internal");
+  // Customers always post customer-visible notes; staff default to internal.
+  const [visibility, setVisibility] = useState(isCustomer ? "customer" : "internal");
 
-  const load = () => base44.entities.JobNote.filter({ job_id: job.id }, "-created_date", 100).then(setNotes);
+  // Customers only ever see customer-visible notes — never internal ones.
+  const load = () => base44.entities.JobNote.filter({ job_id: job.id }, "-created_date", 100)
+    .then((rows) => setNotes(isCustomer ? rows.filter((n) => n.visibility === "customer") : rows));
   useEffect(() => { load(); }, [job.id]);
 
   const submit = async () => {
     if (!body.trim()) return;
-    await addNote(job, { body, visibility }, actor);
+    await addNote(job, { body, visibility: isCustomer ? "customer" : visibility }, actor);
     setBody("");
     load();
     onChange?.();

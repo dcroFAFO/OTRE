@@ -12,16 +12,25 @@ import { CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY, DEFAULT_APP_SETTINGS, DEFAUL
 import { changeStatus, assignTechnician, rescheduleJob, markReadyForPickup, cancelJob, reopenJob, archiveJob } from "@/services/jobService";
 import { useStaff } from "@/hooks/useJobs";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { errorMessage } from "@/lib/errors";
 
 export default function JobActions({ job, actor, onChange }) {
   const { data: staff } = useStaff();
   const [busy, setBusy] = useState(null);
+  const { toast } = useToast();
 
   const run = (key, fn) => async (...a) => {
     setBusy(key);
-    await fn(...a);
-    setBusy(null);
-    onChange?.();
+    try {
+      await fn(...a);
+      onChange?.();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Couldn't update the job", description: errorMessage(err) });
+      onChange?.(); // re-sync UI back to the true server state
+    } finally {
+      setBusy(null);
+    }
   };
 
   const isTerminal = [CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY].includes(job.status);

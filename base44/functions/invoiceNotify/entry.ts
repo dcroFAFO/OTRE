@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const BUSINESS = { name: "OTR Scooters", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com" };
+const BUSINESS = { name: "On The Run Electrics", footer: "On The Run Electrics · hello@ontherunelectrics.com.au" };
 
 async function sendMail({ to, subject, body, from_name }) {
   const apiKey = Deno.env.get("RESEND_API_KEY");
@@ -27,7 +27,7 @@ const STATES = {
   paid: {
     subject: "Payment received — thank you! ✅",
     heading: "Invoice Settled",
-    message: "We've received your payment in full. Thank you for choosing OTR Scooters!",
+    message: "We've received your payment in full. Thank you for choosing On The Run Electrics!",
     color: "#16a34a",
   },
 };

@@ -25,12 +25,38 @@ Deno.serve(async (req) => {
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
-    const job = jobs[0];
+    // Service-role client for DB writes. Authorization is enforced in code
+    // below; the entity-level RLS restricts direct SDK writes to staff, so all
+    // legitimate mutations (including customer note-adds) go through here.
+    const db = base44.asServiceRole.entities;
+
+    // A missing/invalid id makes the SDK throw ("Object not found") rather than
+    // return []. Treat that as a clean 404 instead of a generic 500.
+    let job;
+    try {
+      const jobs = await db.Job.filter({ id: jobId }, "", 1);
+      job = jobs[0];
+    } catch (lookupErr) {
+      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
+      else throw lookupErr;
+    }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
+    // Authorization: staff can do everything. A customer may ONLY add a
+    // customer-visible note, and only on a job that belongs to them (by email).
+    const STAFF_ROLES = ["admin", "employee", "technician"];
+    const isStaffUser = STAFF_ROLES.includes(user.role);
+    if (!isStaffUser) {
+      const ownsJob = job.customer_email && user.email &&
+        job.customer_email.toLowerCase() === user.email.toLowerCase();
+      const isAllowedCustomerAction = action === "add_note" && params.visibility === "customer";
+      if (!ownsJob || !isAllowedCustomerAction) {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
-      base44.entities.AuditEvent.create({
+      db.AuditEvent.create({
         event_type: eventType,
         job_id: job.id,
         actor_id: user.id,
@@ -48,7 +74,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case "change_status": {
         if (job.status === params.newStatus) { result = job; break; }
-        result = await base44.entities.Job.update(job.id, { status: params.newStatus });
+        result = await db.Job.update(job.id, { status: params.newStatus });
         await logAudit({
           eventType: "status_changed",
           previousValue: statusLabel(job.status),
@@ -60,7 +86,7 @@ Deno.serve(async (req) => {
       }
       case "assign_technician": {
         const { techId = null, techName = null } = params;
-        result = await base44.entities.Job.update(job.id, {
+        result = await db.Job.update(job.id, {
           assigned_technician_id: techId,
           assigned_technician_name: techName,
         });
@@ -72,7 +98,7 @@ Deno.serve(async (req) => {
         break;
       }
       case "reschedule": {
-        result = await base44.entities.Job.update(job.id, { scheduled_date: params.newDate });
+        result = await db.Job.update(job.id, { scheduled_date: params.newDate });
         await logAudit({
           eventType: "job_rescheduled",
           previousValue: job.scheduled_date,
@@ -83,29 +109,29 @@ Deno.serve(async (req) => {
         break;
       }
       case "mark_ready": {
-        result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
+        result = await db.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
         break;
       }
       case "cancel": {
-        result = await base44.entities.Job.update(job.id, { status: CANCELLED_STATUS });
+        result = await db.Job.update(job.id, { status: CANCELLED_STATUS });
         await logAudit({ eventType: "job_cancelled", summary: "Job cancelled", visibility: "customer" });
         break;
       }
       case "reopen": {
-        result = await base44.entities.Job.update(job.id, { status: REOPEN_STATUS });
+        result = await db.Job.update(job.id, { status: REOPEN_STATUS });
         await logAudit({ eventType: "job_reopened", summary: "Job reopened" });
         break;
       }
       case "archive": {
-        result = await base44.entities.Job.update(job.id, { archived: true });
+        result = await db.Job.update(job.id, { archived: true });
         await logAudit({ eventType: "job_archived", summary: "Job archived" });
         break;
       }
       case "toggle_checklist": {
         const index = Number(params.index);
         const checklist = (job.checklist || []).map((c, i) => (i === index ? { ...c, done: !c.done } : c));
-        result = await base44.entities.Job.update(job.id, { checklist });
+        result = await db.Job.update(job.id, { checklist });
         const item = checklist[index];
         await logAudit({
           eventType: "checklist_updated",
@@ -114,13 +140,13 @@ Deno.serve(async (req) => {
         break;
       }
       case "save_private_notes": {
-        result = await base44.entities.Job.update(job.id, { private_notes: params.privateNotes });
+        result = await db.Job.update(job.id, { private_notes: params.privateNotes });
         await logAudit({ eventType: "private_notes_updated", summary: "Private notes updated", visibility: "internal" });
         break;
       }
       case "add_note": {
         const { body, visibility } = params;
-        result = await base44.entities.JobNote.create({
+        result = await db.JobNote.create({
           job_id: job.id,
           body,
           visibility,

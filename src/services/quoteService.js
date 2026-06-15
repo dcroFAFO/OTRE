@@ -1,12 +1,11 @@
 import { base44 } from "@/api/base44Client";
+import { invokeFn } from "@/lib/serviceClient";
 
 // Thin frontend wrapper — quote totals, status transitions, job sync and
 // audit logging all run server-side in functions/quoteActions.
+// invokeFn throws a friendly error if the backend returns { error }.
 
-const invoke = async (payload) => {
-  const res = await base44.functions.invoke("quoteActions", payload);
-  return res.data;
-};
+const invoke = (payload) => invokeFn("quoteActions", payload);
 
 export async function saveQuote(job, data) {
   return invoke({ action: "save", jobId: job.id, data });

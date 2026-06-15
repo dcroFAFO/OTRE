@@ -23,8 +23,27 @@ Deno.serve(async (req) => {
     const { jobId } = await req.json();
     if (!jobId) return Response.json({ error: 'jobId required' }, { status: 400 });
 
-    const job = await base44.asServiceRole.entities.Job.get(jobId);
+    // .get() throws ("Object not found") on a missing id rather than returning
+    // null — treat that as a clean 404 instead of a generic 500.
+    let job;
+    try {
+      job = await base44.asServiceRole.entities.Job.get(jobId);
+    } catch (lookupErr) {
+      if (String(lookupErr?.message || "").toLowerCase().includes("not found")) job = null;
+      else throw lookupErr;
+    }
     if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
+
+    // Staff may email any job's invoice. A customer may only (re)send a receipt
+    // for a job that belongs to them — never trigger emails on others' jobs.
+    const STAFF_ROLES = ["admin", "employee", "technician"];
+    const isStaffUser = STAFF_ROLES.includes(user.role);
+    if (!isStaffUser) {
+      const ownsJob = job.customer_email && user.email &&
+        job.customer_email.toLowerCase() === user.email.toLowerCase();
+      if (!ownsJob) return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     if (!job.customer_email) return Response.json({ error: 'No customer email on this job' }, { status: 400 });
 
     // Fetch invoice
@@ -54,7 +73,11 @@ Deno.serve(async (req) => {
     }
 
     const currency = invoice.currency || 'AUD';
-    const total = invoice.amount || 0;
+    // Total is the sum of the rendered line items so the invoice never shows a
+    // figure that disagrees with its own rows. Fall back to the stored invoice
+    // amount only when no line items exist (nothing to sum).
+    const lineItemsTotal = lineItems.reduce((sum, li) => sum + (li.qty * li.unit_price), 0);
+    const total = lineItems.length > 0 ? lineItemsTotal : (invoice.amount || 0);
     const customerName = job.customer_name || 'Customer';
     const reference = job.reference || invoice.number;
     const assetLabel = job.asset_label || job.scooter_label || 'your scooter';
@@ -88,7 +111,7 @@ Deno.serve(async (req) => {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <p style="margin:0;color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+                  <p style="margin:0;color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">On The Run Electrics</p>
                   <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;font-weight:700;">Tax Invoice</h1>
                 </td>
                 <td align="right">
@@ -167,15 +190,15 @@ Deno.serve(async (req) => {
         <!-- CTA -->
         <tr>
           <td style="padding:0 36px 28px;">
-            <p style="margin:0 0 16px;font-size:14px;color:#64748b;">Please arrange payment at your earliest convenience. For questions, reply to this email or contact us directly.</p>
-            <p style="margin:0;font-size:13px;color:#94a3b8;">📞 (03) 9000 1234 &nbsp;·&nbsp; ✉️ hello@otrscooters.com &nbsp;·&nbsp; 📍 12 Workshop Lane, Melbourne VIC</p>
+            <p style="margin:0 0 16px;font-size:14px;color:#64748b;">Please arrange payment at your earliest convenience. For questions, just reply to this email.</p>
+            <p style="margin:0;font-size:13px;color:#94a3b8;">✉️ hello@ontherunelectrics.com.au</p>
           </td>
         </tr>
 
         <!-- Footer -->
         <tr>
           <td style="padding:16px 36px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-            <p style="margin:0;font-size:11px;color:#94a3b8;text-align:center;">OTR Scooters · ABN 00 000 000 000 · This is a tax invoice for GST purposes</p>
+            <p style="margin:0;font-size:11px;color:#94a3b8;text-align:center;">On The Run Electrics · This is a tax invoice for GST purposes</p>
           </td>
         </tr>
 
@@ -187,9 +210,9 @@ Deno.serve(async (req) => {
 
     await sendMail({
       to: job.customer_email,
-      subject: `Invoice ${invoice.number} from OTR Scooters — ${currency} ${total.toFixed(2)}`,
+      subject: `Invoice ${invoice.number} from On The Run Electrics — ${currency} ${total.toFixed(2)}`,
       body: htmlBody,
-      from_name: 'OTR Scooters',
+      from_name: 'On The Run Electrics',
     });
 
     console.log(`[sendInvoiceEmail] Sent invoice ${invoice.number} to ${job.customer_email}`);

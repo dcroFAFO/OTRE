@@ -5,6 +5,10 @@
     "job_id": {
       "type": "string"
     },
+    "customer_email": {
+      "type": "string",
+      "description": "Denormalised owner email for row-level security scoping"
+    },
     "number": {
       "type": "string"
     },
@@ -38,5 +42,36 @@
   },
   "required": [
     "job_id"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "customer_email": "{{user.email}}"
+        }
+      ]
+    },
+    "write": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    }
+  }
 }

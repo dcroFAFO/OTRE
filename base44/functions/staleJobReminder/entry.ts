@@ -3,7 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 // Scheduled: flags jobs with no activity for 7+ days and emails admin + assigned techs.
 // "Activity" = the most recent of the job's updated_date or its latest AuditEvent.
 
-const BUSINESS = { name: "OTR Scooters", dark: "#16223f", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com" };
+const BUSINESS = { name: "On The Run Electrics", dark: "#16223f", footer: "On The Run Electrics · hello@ontherunelectrics.com.au" };
 const STALE_DAYS = 7;
 
 async function sendMail({ to, subject, body, from_name }) {
