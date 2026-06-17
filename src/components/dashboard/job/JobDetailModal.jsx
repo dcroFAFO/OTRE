@@ -33,7 +33,6 @@ const TAB_LABELS = {
   customer: "Customer",
   notes: "Notes",
   private: "Private",
-  parts: "Parts",
   files: "Files",
 };
 
@@ -114,12 +113,17 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                   </TabsContent>
                   <TabsContent value="quote" className="mt-0">
-                    <QuotePanel
-                      job={job}
-                      actor={actor}
-                      canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
-                      onChange={bump}
-                    />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <QuotePanel
+                        job={job}
+                        actor={actor}
+                        canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
+                        onChange={bump}
+                      />
+                      <div className="border-t lg:border-t-0 lg:border-l border-border pt-6 lg:pt-0 lg:pl-6">
+                        <JobPartsPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                      </div>
+                    </div>
                   </TabsContent>
                   <TabsContent value="invoice" className="mt-0">
                     <InvoicePanel
@@ -137,9 +141,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="private" className="mt-0">
                     <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-                  </TabsContent>
-                  <TabsContent value="parts" className="mt-0">
-                    <JobPartsPanel job={job} actor={actor} canEdit={canManage} />
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
                     <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
+  const qc = useQueryClient();
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -180,7 +182,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
             </div>
           </div>
 
-          <PartPickerModal job={job} actor={actor} open={pickerOpen} onOpenChange={setPickerOpen} onAdded={() => { loadQuote(); onChange?.(); }} />
+          <PartPickerModal job={job} actor={actor} open={pickerOpen} onOpenChange={setPickerOpen} onAdded={() => { loadQuote(); onChange?.(); qc.invalidateQueries(["inventoryUsage", job.id]); }} />
 
           {/* ── TOTAL ────────────────────────────────────────────────────────── */}
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">

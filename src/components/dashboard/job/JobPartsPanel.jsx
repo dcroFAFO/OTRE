@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
 
-export default function JobPartsPanel({ job, actor, canEdit }) {
+export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const qc = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [labourHours, setLabourHours] = useState("1");
@@ -141,7 +141,7 @@ export default function JobPartsPanel({ job, actor, canEdit }) {
               })
             ));
           }}
-          onAdded={() => { refetch(); qc.invalidateQueries(["inventoryItems"]); }}
+          onAdded={() => { refetch(); qc.invalidateQueries(["inventoryItems"]); onChange?.(); }}
         />
       )}
     </div>
