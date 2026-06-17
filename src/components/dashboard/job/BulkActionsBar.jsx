@@ -54,12 +54,12 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
         {count} selected
       </span>
 
-      <div className="h-4 w-px bg-border" />
+      <div className="hidden sm:block h-4 w-px bg-border" />
 
       {/* Status change */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-[180px]">
         <Select value={statusValue} onValueChange={setStatusValue}>
-          <SelectTrigger className="h-8 w-44 text-xs">
+          <SelectTrigger className="h-8 flex-1 sm:w-44 text-xs">
             <SelectValue placeholder="Set status…" />
           </SelectTrigger>
           <SelectContent>
@@ -73,7 +73,7 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
         </Button>
       </div>
 
-      <div className="h-4 w-px bg-border" />
+      <div className="hidden sm:block h-4 w-px bg-border" />
 
       {/* Send notifications */}
       <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={loading} onClick={sendNotifications}>

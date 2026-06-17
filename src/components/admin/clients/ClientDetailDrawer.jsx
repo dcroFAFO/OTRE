@@ -118,7 +118,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
               {/* Profile / edit */}
               <TabsContent value="profile" className="space-y-4 mt-4">
                 <Field label="Full name"><Input value={form.full_name || ""} onChange={(e) => set("full_name", e.target.value)} /></Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Email"><Input value={form.email || ""} onChange={(e) => set("email", e.target.value)} /></Field>
                   <Field label="Phone"><Input value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} /></Field>
                 </div>

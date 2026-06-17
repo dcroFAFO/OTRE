@@ -90,6 +90,9 @@ export default function Jobs() {
       />
       }
 
+      {/* Spacer so the floating New Job button never covers the last row */}
+      <div className="h-16" aria-hidden />
+
       <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={close} />
       <NewJobFromTemplateModal
         open={templateModal}
