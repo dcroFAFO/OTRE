@@ -106,16 +106,17 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
       <div className="flex items-center justify-between">
         <h3 className="font-heading font-bold flex items-center gap-2">
           Quote
-          {!canEdit && (
+          {(!canEdit || quote?.status === "approved") && (
             <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
-              <Lock className="h-3 w-3" /> Read-only
+              <Lock className="h-3 w-3" />
+              {quote?.status === "approved" ? "Approved — locked" : "Read-only"}
             </span>
           )}
         </h3>
         {quote && <StatusPill kind="quote" value={quote.status} />}
       </div>
 
-      {canEdit && quote?.status !== "approved" && quote?.status !== "rejected" ? (
+      {canEdit && quote?.status !== "approved" ? (
         // ── Editable view ────────────────────────────────────────────────────
         <>
           {/* ── LINE ITEMS — hero section ─────────────────────────────────── */}

@@ -143,6 +143,20 @@ Deno.serve(async (req) => {
       return quotes[0] || null;
     };
 
+    // ── APPROVED QUOTE GUARD ────────────────────────────────────────────────
+    // Once a quote is approved it is a legal agreement and must not be altered.
+    const MUTATING_ACTIONS = ["save", "send", "add_parts", "add_labour"];
+    if (MUTATING_ACTIONS.includes(action)) {
+      const existingQuote = await getJobQuote();
+      if (existingQuote && existingQuote.status === "approved") {
+        return Response.json(
+          { error: "This quote has been approved and cannot be modified." },
+          { status: 403 }
+        );
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     let result;
 
     switch (action) {
