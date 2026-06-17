@@ -42,7 +42,24 @@
         }
       }
     },
-    "read": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "data.visibility": "customer"
+        }
+      ]
+    },
     "update": {
       "user_condition": {
         "role": {
