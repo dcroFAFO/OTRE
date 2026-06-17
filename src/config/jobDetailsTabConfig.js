@@ -78,7 +78,7 @@ export function getVisibleJobTabs(status) {
         `Falling back to PRE_QUOTE tab set.`
       );
     }
-    return ["intake", "quote", "customer", "notes", "private"];
+    return ["intake", "quote", "invoice", "customer", "notes", "private"];
   }
 
   if (inGroup(norm, PRE_QUOTE_STATUSES)) {
