@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Package, Wrench, Plus, Trash2 } from "lucide-react";
+import { Package, Wrench, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
@@ -29,11 +29,23 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     },
   });
 
+  const LABOUR_RATE = 80;
+
   const addLabour = async () => {
     const hrs = Number(labourHours) || 1;
     if (hrs <= 0) return;
     setAddingLabour(true);
-    await base44.functions.invoke("quoteActions", { action: "add_labour", jobId: job.id, hours: hrs });
+    await base44.entities.InventoryUsage.create({
+      job_id: job.id,
+      item_id: `labour-${Date.now()}`,
+      item_name: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`,
+      qty_used: 1,
+      unit_cost: hrs * LABOUR_RATE,
+      unit_sell: hrs * LABOUR_RATE,
+      source: "inventory",
+    });
+    refetch();
+    onChange?.();
     setAddingLabour(false);
   };
 
@@ -64,7 +76,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
               />
               <span className="text-xs text-muted-foreground">hr</span>
               <Button size="sm" variant="outline" className="h-6 text-xs px-2 gap-1" onClick={addLabour} disabled={addingLabour}>
-                <Plus className="h-3 w-3" />
+                {addingLabour ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
               </Button>
             </div>
           )}
