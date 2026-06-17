@@ -4,6 +4,7 @@ import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
 import JobFilters, { EMPTY_FILTERS } from "@/components/dashboard/JobFilters";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import JobListTable from "@/components/dashboard/job/JobListTable";
+import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { SlidersHorizontal, Plus } from "lucide-react";
@@ -20,6 +21,7 @@ export default function Jobs() {
   const invalidate = useInvalidateJobs();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [templateModal, setTemplateModal] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("id");
@@ -65,13 +67,27 @@ export default function Jobs() {
 
       <JobFilters filters={filters} setFilters={setFilters} staff={staff} />
 
+      {selectedIds.length > 0 && (
+        <BulkActionsBar
+          selectedIds={selectedIds}
+          allJobs={jobs}
+          onClear={() => setSelectedIds([])}
+          onDone={() => { setSelectedIds([]); invalidate(); }}
+        />
+      )}
+
       {filtered.length === 0 ?
       <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
           <SlidersHorizontal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No jobs to show here.</p>
         </div> :
 
-      <JobListTable jobs={filtered} onOpen={open} />
+      <JobListTable
+        jobs={filtered}
+        onOpen={open}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+      />
       }
 
       <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={close} />
