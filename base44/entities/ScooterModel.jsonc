@@ -58,5 +58,33 @@
   "required": [
     "make",
     "model"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee"
+          ]
+        }
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee"
+          ]
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
