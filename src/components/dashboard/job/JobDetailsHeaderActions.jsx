@@ -4,9 +4,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  RotateCcw, Archive, CalendarDays, Loader2, AlertCircle, X
+  RotateCcw, CalendarDays, Loader2, AlertCircle, X
 } from "lucide-react";
-import StatusPill from "@/components/shared/StatusPill";
 import { rescheduleJob } from "@/services/jobService";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 
@@ -144,18 +143,6 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
   return (
     <>
       <div className="bg-card border-b border-border px-5 py-3 flex flex-wrap items-center gap-3 shrink-0">
-        {/* Read-only status badge */}
-        <StatusPill value={job.status} />
-
-        {/* Scheduled date display */}
-        {job.scheduled_date && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5" />
-            {format(new Date(job.scheduled_date + "T12:00:00"), "EEE d MMM yyyy")}
-            {job.preferred_time_window && ` · ${job.preferred_time_window}`}
-          </span>
-        )}
-
         {/* Reschedule */}
         <ReschedulePicker
           job={job}
@@ -185,14 +172,6 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
               onClick={() => runEvent("reopen")}
             />
           )}
-
-          <WorkflowButton
-            label="Archive"
-            icon={Archive}
-            busy={busy === "archive"}
-            variant="muted"
-            onClick={() => runEvent("archive")}
-          />
         </div>
       </div>
 

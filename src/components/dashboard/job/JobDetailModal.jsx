@@ -3,9 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Phone, Mail, Bike, Calendar, User,
-  CreditCard, AlertTriangle, MapPin, Hash
+  Bike, Calendar, User,
+  CreditCard, AlertTriangle, Hash
 } from "lucide-react";
+import StatusPill from "@/components/shared/StatusPill";
 import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
@@ -88,8 +89,8 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
             <div className="flex-1 overflow-y-auto">
               <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-                <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10">
-                  <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap">
+                <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10 overflow-x-auto">
+                  <TabsList className="h-auto gap-0 bg-transparent p-0 flex-nowrap">
                     {visibleTabs.map((tab) => (
                       <ModalTab
                         key={tab}
@@ -179,15 +180,16 @@ function JobModalHeader({ job }) {
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-primary-foreground/70 truncate">
             <Bike className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{job.asset_label || job.scooter_label || "—"}</span>
-            {job.scheduled_date && (
-              <span className="flex items-center gap-1 shrink-0">
-                · <Calendar className="h-3 w-3" />
-                {format(new Date(job.scheduled_date + "T12:00:00"), "d MMM")}
-              </span>
-            )}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <StatusPill value={job.status} className="bg-white/10 text-primary-foreground border-white/20" />
+          {job.scheduled_date && (
+            <span className="flex items-center gap-1 text-xs text-primary-foreground/80 whitespace-nowrap">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(job.scheduled_date + "T12:00:00"), "EEE d MMM")}
+            </span>
+          )}
           {outstanding && (
             <span className="flex items-center gap-1 text-xs bg-rose-500/30 text-rose-100 rounded-full px-2 py-0.5 border border-rose-400/40">
               <CreditCard className="h-3 w-3" /> Outstanding
