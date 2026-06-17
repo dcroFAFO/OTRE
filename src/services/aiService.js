@@ -1,13 +1,12 @@
-// AI assistant STUBS. No real AI calls yet — clean hooks an AI agent can be
-// connected to later without rewriting the job system. Each returns a
-// structured placeholder so UI can be wired up now.
+import { base44 } from "@/api/base44Client";
 
 export const aiService = {
   async suggestRepairEstimate(/* job */) {
     return { available: false, suggestion: null, message: "AI estimate not yet configured." };
   },
-  async draftQuote(/* job */) {
-    return { available: false, draft: null, message: "AI quote drafting not yet configured." };
+  async draftQuote(job) {
+    const res = await base44.functions.invoke("quoteActions", { action: "ai_draft", jobId: job.id });
+    return { available: true, draft: res.data };
   },
   async sourceParts(/* job */) {
     return { available: false, parts: [], message: "AI parts sourcing not yet configured." };

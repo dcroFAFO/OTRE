@@ -83,8 +83,20 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   };
 
   const aiDraft = async () => {
+    setAiMsg("Generating AI draft…");
     const r = await aiService.draftQuote(job);
-    setAiMsg(r.message);
+    if (r.available && r.draft) {
+      setForm((prev) => ({
+        ...prev,
+        diagnosis_notes: r.draft.diagnosis_notes || prev.diagnosis_notes,
+        recommended_repair: r.draft.recommended_repair || prev.recommended_repair,
+      }));
+      if (r.draft.labour_hours) setLabourHours(String(r.draft.labour_hours));
+      setNotesExpanded(true);
+      setAiMsg("AI draft applied — review the notes below and add parts.");
+    } else {
+      setAiMsg("AI draft failed. Please try again.");
+    }
   };
 
   return (

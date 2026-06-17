@@ -243,6 +243,48 @@ Deno.serve(async (req) => {
         await logAudit({ eventType: "quote_generated", summary: `Added labour: ${hrs}hr(s)`, newValue: `${CURRENCY} ${total.toFixed(2)}` });
         break;
       }
+      case "ai_draft": {
+        // Build a rich prompt from all available job context
+        const intake = job.intake || {};
+        const scooterDesc = [intake.make, intake.model, intake.serial_number].filter(Boolean).join(" ") || job.asset_label || job.scooter_label || "scooter";
+        const batteryInfo = intake.battery_condition ? `Battery: ${intake.battery_condition}${intake.battery_voltage ? ` (${intake.battery_voltage}V)` : ""}` : "";
+        const odometer = intake.odometer_km != null ? `Odometer: ${intake.odometer_km} km` : "";
+        const physicalCond = intake.physical_condition ? `Physical condition: ${intake.physical_condition}` : "";
+        const powersOn = intake.powers_on != null ? `Powers on: ${intake.powers_on ? "yes" : "no"}` : "";
+        const initialNotes = intake.initial_issue_notes || job.issue_description || "";
+        const contextLines = [scooterDesc, batteryInfo, odometer, physicalCond, powersOn, initialNotes ? `Issue: ${initialNotes}` : ""].filter(Boolean).join("\n");
+
+        const prompt = `You are a scooter repair technician writing a customer-facing repair quote.
+
+Job context:
+${contextLines}
+
+Based on the above, write:
+1. A concise "diagnosis_notes" (1-3 sentences) explaining what the technician found.
+2. A brief "recommended_repair" (1 sentence) describing the recommended fix.
+3. An estimated "labour_hours" (number, e.g. 1.5) for the repair.
+
+Be professional, clear, and customer-friendly. Do not mention internal codes or jargon.`;
+
+        const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              diagnosis_notes: { type: "string" },
+              recommended_repair: { type: "string" },
+              labour_hours: { type: "number" },
+            },
+          },
+        });
+
+        result = {
+          diagnosis_notes: aiResult.diagnosis_notes || "",
+          recommended_repair: aiResult.recommended_repair || "",
+          labour_hours: aiResult.labour_hours || 1,
+        };
+        break;
+      }
       default:
         return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
