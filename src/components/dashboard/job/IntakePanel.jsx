@@ -130,12 +130,13 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       // If technician wants to update the reference spec database
       if (updateRefDb && editableSpec && spec?.id) {
         await base44.entities.ScooterModel.update(spec.id, editableSpec);
-        setSpec({ ...spec, ...editableSpec });
         toast({ title: "Intake saved & reference specs updated" });
       } else {
         toast({ title: "Intake saved" });
       }
 
+      // Always reflect the edited values in the panel, regardless of which option was chosen
+      if (editableSpec) setSpec((prev) => ({ ...prev, ...editableSpec }));
       setEditingSpec(false);
       setEditableSpec(null);
       onChange?.();
