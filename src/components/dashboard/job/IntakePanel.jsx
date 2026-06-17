@@ -12,7 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { logError } from "@/lib/logger";
 import { format } from "date-fns";
 import ScooterSpecBox from "./ScooterSpecBox";
@@ -26,7 +26,7 @@ const BATTERY_CONDITIONS = [
 ];
 
 export default function IntakePanel({ job, actor, canEdit, onChange }) {
-  const { toast } = useToast();
+
   const [form, setForm] = useState({
     make: "",
     model: "",
@@ -130,9 +130,9 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       // If technician wants to update the reference spec database
       if (updateRefDb && editableSpec && spec?.id) {
         await base44.entities.ScooterModel.update(spec.id, editableSpec);
-        toast({ title: "Intake saved & reference specs updated" });
+        toast.success("Intake saved & reference specs updated");
       } else {
-        toast({ title: "Intake saved" });
+        toast.success("Intake saved");
       }
 
       // Always reflect the edited values in the panel, regardless of which option was chosen
@@ -148,7 +148,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       onChange?.();
     } catch (e) {
       logError("Save intake failed", e, { recordId: job.id });
-      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
+      toast.error("Save failed — please try again.");
     } finally {
       setSaving(false);
     }
