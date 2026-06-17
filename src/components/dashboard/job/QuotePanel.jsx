@@ -113,7 +113,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
         {quote && <StatusPill kind="quote" value={quote.status} />}
       </div>
 
-      {canEdit ? (
+      {canEdit && quote?.status !== "approved" && quote?.status !== "rejected" ? (
         // ── Editable view ────────────────────────────────────────────────────
         <>
           {/* ── LINE ITEMS — hero section ─────────────────────────────────── */}

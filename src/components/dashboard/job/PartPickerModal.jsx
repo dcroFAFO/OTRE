@@ -68,7 +68,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Add part to quote</DialogTitle>
+          <DialogTitle>{onAdd ? "Add parts to invoice" : "Add part to quote"}</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
@@ -142,7 +142,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
 
         <Button onClick={add} disabled={chosen.length === 0 || adding} className="gap-1.5">
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} to quote
+          Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} {onAdd ? "to invoice" : "to quote"}
         </Button>
       </DialogContent>
     </Dialog>
