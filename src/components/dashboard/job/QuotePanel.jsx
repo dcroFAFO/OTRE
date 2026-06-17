@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Plus, Lock, CheckCircle2, XCircle, CalendarDays, Save, Wrench } from "lucide-react";
+import { Sparkles, Send, Plus, Lock, CheckCircle2, XCircle, CalendarDays, Save, Wrench, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
@@ -29,6 +28,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -104,86 +104,79 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
       {canEdit ? (
         // ── Editable view ────────────────────────────────────────────────────
         <>
-          <div className="space-y-1">
-            <Label>{labelFor("diagnosis_notes")}</Label>
-            <Textarea
-              value={form.diagnosis_notes}
-              onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })}
-              className="h-20"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label>{labelFor("recommended_repair")}</Label>
-            <Textarea
-              value={form.recommended_repair}
-              onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })}
-              className="h-12 resize-none"
-            />
-          </div>
-
-          {/* Line items */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Line items</Label>
-              <div className="flex items-center gap-1.5">
-                <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="gap-1">
-                  <Plus className="h-3.5 w-3.5" /> Part
+          {/* ── LINE ITEMS — hero section ─────────────────────────────────── */}
+          <div className="rounded-xl border-2 border-dashed border-border bg-secondary/20 overflow-hidden">
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-3 py-2 bg-secondary/50 border-b border-border">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5" /> Line Items
+              </span>
+              {/* Labour adder inline */}
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <Wrench className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground hidden sm:inline">Labour</span>
+                <Input
+                  type="number" min={0.25} step={0.25}
+                  value={labourHours}
+                  onChange={(e) => setLabourHours(e.target.value)}
+                  className="h-6 w-14 px-1.5 py-0 text-xs"
+                />
+                <span className="text-xs text-muted-foreground">hr</span>
+                <Button size="sm" variant="outline" className="h-6 text-xs px-2 gap-1" onClick={addLabour} disabled={addingLabour}>
+                  <Plus className="h-3 w-3" />
                 </Button>
               </div>
             </div>
 
-            {/* Labour adder */}
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
-              <Wrench className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground flex-1">Labour @ ${LABOUR_RATE}/hr</span>
-              <Input
-                type="number" min={0.25} step={0.25}
-                value={labourHours}
-                onChange={(e) => setLabourHours(e.target.value)}
-                className="h-7 w-16 px-2 py-0 text-xs"
-              />
-              <span className="text-xs text-muted-foreground">hr</span>
-              <Button size="sm" variant="outline" className="h-7 text-xs px-2 gap-1" onClick={addLabour} disabled={addingLabour}>
-                <Plus className="h-3 w-3" /> Add
-              </Button>
+            {/* Clickable body — opens parts picker */}
+            <div
+              className="cursor-pointer group min-h-[120px]"
+              onClick={() => setPickerOpen(true)}
+            >
+              {(labourItems.length > 0 || partItems.length > 0) ? (
+                <div className="divide-y divide-border">
+                  {labourItems.map((li, i) => (
+                    <div key={`l-${i}`} className="flex items-center justify-between px-3 py-2.5 text-sm group-hover:bg-secondary/30 transition-colors">
+                      <span className="flex items-center gap-1.5 text-foreground">
+                        <Wrench className="h-3 w-3 text-muted-foreground shrink-0" />{li.description}
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                  {partItems.map((li, i) => (
+                    <div key={`p-${i}`} className="flex items-center justify-between px-3 py-2.5 text-sm group-hover:bg-secondary/30 transition-colors">
+                      <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
+                      <span className="font-medium tabular-nums">
+                        ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                  {/* Add more hint */}
+                  <div className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-muted-foreground group-hover:text-accent transition-colors border-t border-dashed border-border">
+                    <Plus className="h-3 w-3" /> Add parts / search catalogue
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground group-hover:text-accent transition-colors">
+                  <Package className="h-8 w-8 opacity-30 group-hover:opacity-60 transition-opacity" />
+                  <p className="text-sm font-medium">Click to add parts</p>
+                  <p className="text-xs opacity-60">Search the parts catalogue</p>
+                </div>
+              )}
             </div>
-
-            {(labourItems.length > 0 || partItems.length > 0) ? (
-              <div className="rounded-xl border border-border divide-y divide-border">
-                {labourItems.map((li, i) => (
-                  <div key={`l-${i}`} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="flex items-center gap-1.5 text-foreground">
-                      <Wrench className="h-3 w-3 text-muted-foreground" />{li.description}
-                    </span>
-                    <span className="font-medium tabular-nums">
-                      ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-                {partItems.map((li, i) => (
-                  <div key={`p-${i}`} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
-                    <span className="font-medium tabular-nums">
-                      ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No items added yet.</p>
-            )}
           </div>
 
-          <PartsSourcingPanel job={job} actor={actor} onAdded={() => { loadQuote(); onChange?.(); }} />
           <PartPickerModal job={job} actor={actor} open={pickerOpen} onOpenChange={setPickerOpen} onAdded={() => { loadQuote(); onChange?.(); }} />
 
+          {/* ── TOTAL ────────────────────────────────────────────────────────── */}
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
             <span className="text-sm font-medium">Quote total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
           </div>
 
-
+          {/* ── ACTIONS ──────────────────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
               {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
@@ -202,6 +195,39 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           </div>
 
           {aiMsg && <p className="text-xs text-muted-foreground italic">{aiMsg}</p>}
+
+          {/* ── NOTES FOOTER (collapsible) ────────────────────────────────── */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-secondary/40 transition-colors"
+              onClick={() => setNotesExpanded(!notesExpanded)}
+            >
+              <span>Diagnosis & Notes</span>
+              {notesExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            {notesExpanded && (
+              <div className="px-3 pb-3 space-y-2 border-t border-border bg-secondary/10">
+                <div className="space-y-1 pt-2">
+                  <Label className="text-xs">{labelFor("diagnosis_notes")}</Label>
+                  <Textarea
+                    value={form.diagnosis_notes}
+                    onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })}
+                    className="h-16 text-xs resize-none"
+                    placeholder="Diagnosis findings…"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{labelFor("recommended_repair")}</Label>
+                  <Textarea
+                    value={form.recommended_repair}
+                    onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })}
+                    className="h-10 text-xs resize-none"
+                    placeholder="Recommended fix…"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </>
       ) : (
         // ── Read-only view ───────────────────────────────────────────────────
