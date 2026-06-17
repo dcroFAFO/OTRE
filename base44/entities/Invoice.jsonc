@@ -50,17 +50,7 @@
         }
       }
     },
-    "read": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    },
+    "read": null,
     "update": {
       "user_condition": {
         "role": {
