@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClipboardCheck, Loader2, CheckCircle2, Camera, X, ImageIcon } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { useToast } from "@/components/ui/use-toast";
 import { logError } from "@/lib/logger";
@@ -40,6 +44,9 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   const [spec, setSpec] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [editingSpec, setEditingSpec] = useState(false);
+  const [editableSpec, setEditableSpec] = useState(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   // Load existing intake photos for this job
   useEffect(() => {
@@ -96,8 +103,18 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
     return () => { cancelled = true; };
   }, [form.make, form.model]);
 
-  const save = async () => {
+  const handleSaveClick = () => {
+    // If specs were edited, ask what to do with them
+    if (editingSpec && editableSpec) {
+      setSaveDialogOpen(true);
+    } else {
+      doSave(false);
+    }
+  };
+
+  const doSave = async (updateRefDb) => {
     setSaving(true);
+    setSaveDialogOpen(false);
     try {
       const intake = {
         ...form,
@@ -107,10 +124,20 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       };
       await base44.entities.Job.update(job.id, {
         intake,
-        // keep the visible asset label in sync if make/model captured
         ...(form.make ? { asset_label: [form.make, form.model].filter(Boolean).join(" ") } : {}),
       });
-      toast({ title: "Intake saved" });
+
+      // If technician wants to update the reference spec database
+      if (updateRefDb && editableSpec && spec?.id) {
+        await base44.entities.ScooterModel.update(spec.id, editableSpec);
+        setSpec({ ...spec, ...editableSpec });
+        toast({ title: "Intake saved & reference specs updated" });
+      } else {
+        toast({ title: "Intake saved" });
+      }
+
+      setEditingSpec(false);
+      setEditableSpec(null);
       onChange?.();
     } catch (e) {
       logError("Save intake failed", e, { recordId: job.id });
@@ -153,7 +180,14 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </Field>
       </div>
 
-      <ScooterSpecBox spec={spec} />
+      <ScooterSpecBox
+        spec={spec}
+        editableSpec={editableSpec}
+        isEditing={editingSpec}
+        onEditStart={() => { setEditableSpec({ ...spec }); setEditingSpec(true); }}
+        onEditCancel={() => { setEditingSpec(false); setEditableSpec(null); }}
+        onEditableSpecChange={(key, val) => setEditableSpec((prev) => ({ ...prev, [key]: val }))}
+      />
 
       <Field label="Serial / frame number">
         <Input value={form.serial_number || ""} onChange={(e) => set("serial_number", e.target.value)} placeholder="e.g. SN-12345678" />
@@ -233,9 +267,24 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </p>
       )}
 
-      <Button className="w-full gap-2" disabled={saving} onClick={save}>
+      <Button className="w-full gap-2" disabled={saving} onClick={handleSaveClick}>
         {saving && <Loader2 className="h-4 w-4 animate-spin" />}{saving ? "Saving..." : "Save intake"}
       </Button>
+
+      <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save reference specs?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You've edited the reference specs for <strong>{spec?.make} {spec?.model}</strong>. Would you like to update the reference spec database for all future jobs, or save these values for this job only?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => doSave(false)}>This job only</AlertDialogCancel>
+            <AlertDialogAction onClick={() => doSave(true)}>Update reference database</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
