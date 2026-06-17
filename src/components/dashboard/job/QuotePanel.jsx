@@ -120,9 +120,9 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
         // ── Editable view ────────────────────────────────────────────────────
         <>
           {/* ── LINE ITEMS — hero section ─────────────────────────────────── */}
-          <div className="rounded-xl border-2 border-dashed border-border bg-secondary/20 overflow-hidden">
+          <div className="rounded-2xl border-2 border-dashed border-border/60 bg-secondary/15 overflow-hidden">
             {/* Header bar */}
-            <div className="flex items-center justify-between px-3 py-2 bg-secondary/50 border-b border-border">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-secondary/25 border-b border-border/60">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                 <Package className="h-3.5 w-3.5" /> Line Items
               </span>
@@ -186,7 +186,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           <PartPickerModal job={job} actor={actor} open={pickerOpen} onOpenChange={setPickerOpen} onAdded={() => { loadQuote(); onChange?.(); qc.invalidateQueries(["inventoryUsage", job.id]); }} />
 
           {/* ── TOTAL ────────────────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
+          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-br from-secondary/70 to-secondary px-5 py-4 shadow-sm">
             <span className="text-sm font-medium">Quote total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
           </div>
