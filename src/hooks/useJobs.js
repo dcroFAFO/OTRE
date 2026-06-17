@@ -4,7 +4,10 @@ import { base44 } from "@/api/base44Client";
 export function useJobs(filter = {}) {
   return useQuery({
     queryKey: ["jobs", filter],
-    queryFn: () => base44.entities.Job.filter({ archived: false, ...filter }, "-created_date", 200),
+    queryFn: async () => {
+      const res = await base44.functions.invoke("listDashboardData", { type: "jobs", filter });
+      return res.data?.jobs || [];
+    },
     placeholderData: [],
     staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching
   });
@@ -13,7 +16,10 @@ export function useJobs(filter = {}) {
 export function useStaff() {
   return useQuery({
     queryKey: ["staff"],
-    queryFn: () => base44.entities.StaffProfile.filter({ active: true }, "full_name", 100),
+    queryFn: async () => {
+      const res = await base44.functions.invoke("listDashboardData", { type: "staff" });
+      return res.data?.staff || [];
+    },
     initialData: [],
   });
 }
