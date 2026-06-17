@@ -258,20 +258,22 @@ function QuoteReadOnlyView({ quote }) {
   }
 
   const allLineItems = (quote.line_items || []);
+  const isApproved = quote.status === "approved" || quote.approval_status === "approved";
 
   return (
     <div className="space-y-4">
       {/* Approval status banner */}
-      {quote.approval_status && quote.approval_status !== "pending" && (
-        <div className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border ${
-          quote.approval_status === "approved"
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
-            : "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300"
-        }`}>
-          {quote.approval_status === "approved"
-            ? <CheckCircle2 className="h-4 w-4 shrink-0" />
-            : <XCircle className="h-4 w-4 shrink-0" />}
-          Quote {quote.approval_status}
+      {isApproved && (
+        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span className="font-semibold">Approved quote — locked for editing</span>
+          <span className="ml-auto text-xs opacity-70">This is a legally agreed document</span>
+        </div>
+      )}
+      {quote.approval_status === "rejected" && (
+        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
+          <XCircle className="h-4 w-4 shrink-0" />
+          Quote rejected
         </div>
       )}
 
