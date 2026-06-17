@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Send, Plus, Clock, Lock, CheckCircle2, XCircle, CalendarDays, Save } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
@@ -27,7 +27,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -52,7 +51,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     setQuote(q);
     onChange?.();
     setSaving(false);
-    toast({ title: "Quote saved", description: "Draft quote has been saved successfully." });
+    toast.success("Quote saved as draft.");
   };
 
   const send = async () => {

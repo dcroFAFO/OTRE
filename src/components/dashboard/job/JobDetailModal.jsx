@@ -43,8 +43,12 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("intake");
 
+  const [loadError, setLoadError] = useState(false);
+
   const load = useCallback(() => {
-    if (jobId) base44.entities.Job.get(jobId).then(setJob);
+    if (!jobId) return;
+    setLoadError(false);
+    base44.entities.Job.get(jobId).then(setJob).catch(() => setLoadError(true));
   }, [jobId]);
 
   useEffect(() => { if (open) { load(); setActiveTab("intake"); } }, [jobId, open, load]);
@@ -66,7 +70,12 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0">
-        {!job ? (
+        {loadError ? (
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
+            <p className="text-sm">Failed to load job. Please try again.</p>
+            <button onClick={load} className="text-xs underline hover:text-foreground">Retry</button>
+          </div>
+        ) : !job ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
           </div>
