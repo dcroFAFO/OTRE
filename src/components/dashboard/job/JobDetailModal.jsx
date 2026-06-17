@@ -88,7 +88,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
             <div className="flex-1 overflow-y-auto">
               <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-                <div className="border-b border-border px-5 pt-3 bg-background sticky top-0 z-10">
+                <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10">
                   <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap">
                     {visibleTabs.map((tab) => (
                       <ModalTab
@@ -163,28 +163,34 @@ function JobModalHeader({ job }) {
     : null;
 
   return (
-    <div className="bg-primary text-primary-foreground px-5 pt-5 pb-4 shrink-0">
+    <div className="bg-primary text-primary-foreground px-5 py-3 shrink-0">
       {/* Top row */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          {job.reference && (
-            <p className="text-xs text-primary-foreground/60 flex items-center gap-1 mb-1">
-              <Hash className="h-3 w-3" /> {job.reference}
-            </p>
-          )}
-          <h2 className="font-heading text-xl font-extrabold flex items-center gap-2">
-            <User className="h-5 w-5 text-primary-foreground/70 shrink-0" />
-            {job.customer_name}
+          <h2 className="font-heading text-base font-extrabold flex items-center gap-2 truncate">
+            <User className="h-4 w-4 text-primary-foreground/70 shrink-0" />
+            <span className="truncate">{job.customer_name}</span>
+            {job.reference && (
+              <span className="text-xs font-normal text-primary-foreground/50 flex items-center gap-0.5 shrink-0">
+                <Hash className="h-3 w-3" />{job.reference}
+              </span>
+            )}
           </h2>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-primary-foreground/80">
-            <Bike className="h-4 w-4 shrink-0" />
-            {job.asset_label || job.scooter_label || "—"}
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-primary-foreground/70 truncate">
+            <Bike className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{job.asset_label || job.scooter_label || "—"}</span>
+            {job.scheduled_date && (
+              <span className="flex items-center gap-1 shrink-0">
+                · <Calendar className="h-3 w-3" />
+                {format(new Date(job.scheduled_date + "T12:00:00"), "d MMM")}
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {outstanding && (
             <span className="flex items-center gap-1 text-xs bg-rose-500/30 text-rose-100 rounded-full px-2 py-0.5 border border-rose-400/40">
-              <CreditCard className="h-3 w-3" /> Invoice outstanding
+              <CreditCard className="h-3 w-3" /> Outstanding
             </span>
           )}
           {paid && (
@@ -192,50 +198,13 @@ function JobModalHeader({ job }) {
               <CreditCard className="h-3 w-3" /> Paid
             </span>
           )}
+          {isWaiting && (
+            <span className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-100 rounded-full px-2 py-0.5 border border-amber-400/40">
+              <AlertTriangle className="h-3 w-3" /> Waiting{waitingReason ? ` · ${waitingReason}` : ""}
+            </span>
+          )}
         </div>
       </div>
-
-      {/* Meta row */}
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-primary-foreground/70">
-        {job.customer_phone && (
-          <a href={`tel:${job.customer_phone}`} className="flex items-center gap-1 hover:text-primary-foreground">
-            <Phone className="h-3 w-3" /> {job.customer_phone}
-          </a>
-        )}
-        {job.customer_email && (
-          <a href={`mailto:${job.customer_email}`} className="flex items-center gap-1 hover:text-primary-foreground">
-            <Mail className="h-3 w-3" /> {job.customer_email}
-          </a>
-        )}
-        {job.scheduled_date && (
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {format(new Date(job.scheduled_date + "T12:00:00"), "EEE d MMM yyyy")}
-            {job.preferred_time_window && ` · ${job.preferred_time_window}`}
-          </span>
-        )}
-        {job.location_preference && (
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3 w-3" /> {job.location_preference.replace("_", " ")}
-          </span>
-        )}
-      </div>
-
-      {/* Issue */}
-      {job.issue_description && (
-        <p className="mt-3 text-sm text-primary-foreground/90 border-t border-white/10 pt-3 leading-relaxed">
-          {job.issue_description}
-        </p>
-      )}
-
-      {/* Waiting banner */}
-      {isWaiting && (
-        <div className="mt-2 flex items-center gap-2 bg-amber-500/20 border border-amber-400/40 rounded-lg px-3 py-1.5 text-xs text-amber-100">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          Waiting{waitingReason ? ` for ${waitingReason}` : ""}
-          {job.waiting_reason === "supplier" && " — parts on order"}
-        </div>
-      )}
     </div>
   );
 }
@@ -244,7 +213,7 @@ function ModalTab({ value, label, badge }) {
   return (
     <TabsTrigger
       value={value}
-      className="relative rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-2.5 px-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground transition-colors"
+      className="relative rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-2 px-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground transition-colors"
     >
       {label}
       {badge && (
