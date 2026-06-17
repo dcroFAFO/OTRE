@@ -16,8 +16,8 @@ export async function sendQuote(quote, job) {
   return invoke({ action: "send", jobId: job.id, quoteId: quote.id });
 }
 
-export async function setQuoteApproval(quote, job, approved) {
-  return invoke({ action: "set_approval", jobId: job.id, quoteId: quote.id, approved });
+export async function setQuoteApproval(quote, job, approved, denyReason) {
+  return invoke({ action: "set_approval", jobId: job.id, quoteId: quote.id, approved, deny_reason: denyReason || null });
 }
 
 export async function addPartsToQuote(job, parts) {
