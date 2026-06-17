@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Plus, Clock, Lock, CheckCircle2, XCircle, CalendarDays } from "lucide-react";
+import { Sparkles, Send, Plus, Clock, Lock, CheckCircle2, XCircle, CalendarDays, Save } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
@@ -25,6 +26,8 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   });
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -44,9 +47,12 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const total = labour + (Number(form.parts_estimate) || 0);
 
   const save = async () => {
+    setSaving(true);
     const q = await saveQuote(job, { ...form, id: quote?.id }, actor);
     setQuote(q);
     onChange?.();
+    setSaving(false);
+    toast({ title: "Quote saved", description: "Draft quote has been saved successfully." });
   };
 
   const send = async () => {
@@ -151,7 +157,10 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={save}>Save quote</Button>
+            <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
+              {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
+              {saving ? "Saving…" : "Save quote"}
+            </Button>
             <Button size="sm" onClick={send} className="gap-1.5">
               <Send className="h-4 w-4" /> Send to customer
             </Button>

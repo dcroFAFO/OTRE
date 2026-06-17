@@ -86,7 +86,7 @@ export function getVisibleJobTabs(status) {
   }
 
   if (inGroup(norm, APPROVED_ACTIVE_STATUSES)) {
-    return ["intake", "quote", "customer", "notes", "private", "parts", "files"];
+    return ["intake", "quote", "invoice", "customer", "notes", "private", "parts", "files"];
   }
 
   if (inGroup(norm, PICKUP_INVOICE_STATUSES)) {
