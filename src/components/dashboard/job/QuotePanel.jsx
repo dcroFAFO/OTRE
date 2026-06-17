@@ -28,6 +28,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -65,11 +66,14 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   };
 
   const send = async () => {
+    setSending(true);
     if (!quote) await save();
     const q = await getJobQuote(job.id);
     const s = await sendQuote(q, job, actor);
     setQuote(s);
     onChange?.();
+    setSending(false);
+    toast.success("Quote sent to customer via email.");
   };
 
   const approve = async (ok) => {
@@ -185,8 +189,9 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
               {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
               {saving ? "Saving…" : "Save quote"}
             </Button>
-            <Button size="sm" onClick={send} className="gap-1.5">
-              <Send className="h-4 w-4" /> Send to customer
+            <Button size="sm" onClick={send} disabled={sending} className="gap-1.5">
+              <Send className={`h-4 w-4 ${sending ? "animate-pulse" : ""}`} />
+              {sending ? "Sending…" : "Send to customer"}
             </Button>
             {quote?.status === "sent" && (
               <Button size="sm" variant="outline" onClick={() => approve(true)}>Approve manually</Button>
