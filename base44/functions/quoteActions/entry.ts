@@ -6,6 +6,105 @@ const CURRENCY = "AUD";
 const LABOUR_RATE = 80; // $/hour
 const MIN_HOURS = 1;
 
+async function sendQuoteEmail({ job, quote }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) { console.warn("[quoteActions] RESEND_API_KEY not set, skipping email"); return; }
+  const email = job.customer_email;
+  if (!email) { console.warn("[quoteActions] No customer email on job, skipping email"); return; }
+
+  const customerName = job.customer_name || "Customer";
+  const assetLabel = job.asset_label || job.scooter_label || "your scooter";
+  const reference = job.reference ? ` (${job.reference})` : "";
+  const total = Number(quote.total || 0).toFixed(2);
+  const currency = quote.currency || CURRENCY;
+
+  const lineItemsHtml = (quote.line_items || []).length > 0
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+        ${(quote.line_items || []).map((li) => `
+          <tr>
+            <td style="font-size:14px;color:#475569;padding:4px 0;">${li.qty > 1 ? `${li.qty}× ` : ""}${li.description}</td>
+            <td style="font-size:14px;color:#1e293b;font-weight:500;text-align:right;padding:4px 0;">${currency} ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}</td>
+          </tr>`).join("")}
+        <tr style="border-top:1px solid #e2e8f0;">
+          <td style="font-size:15px;color:#1e293b;font-weight:700;padding:10px 0 4px;">Total</td>
+          <td style="font-size:15px;color:#0f766e;font-weight:700;text-align:right;padding:10px 0 4px;">${currency} ${total}</td>
+        </tr>
+      </table>`
+    : `<p style="margin:0 0 8px;font-size:15px;color:#1e293b;font-weight:700;">Total: ${currency} ${total}</p>`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:#0f766e;padding:28px 32px;">
+            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+            <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Your Repair Quote 🔧</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 16px;font-size:16px;color:#1e293b;">Hi ${customerName},</p>
+            <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
+              We've assessed your scooter and prepared a quote for the recommended repair. Please review the details below.
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+              <tr><td style="padding:4px 0;">
+                <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Scooter</span><br>
+                <span style="font-size:15px;color:#1e293b;font-weight:500;">${assetLabel}</span>
+              </td></tr>
+              ${job.reference ? `<tr><td style="padding:8px 0 4px;">
+                <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Job Reference</span><br>
+                <span style="font-size:15px;color:#1e293b;font-weight:500;">${job.reference}</span>
+              </td></tr>` : ""}
+              ${quote.diagnosis_notes ? `<tr><td style="padding:8px 0 4px;">
+                <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Diagnosis</span><br>
+                <span style="font-size:14px;color:#475569;line-height:1.5;">${quote.diagnosis_notes}</span>
+              </td></tr>` : ""}
+              ${quote.recommended_repair ? `<tr><td style="padding:8px 0 4px;">
+                <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Recommended Repair</span><br>
+                <span style="font-size:14px;color:#475569;line-height:1.5;">${quote.recommended_repair}</span>
+              </td></tr>` : ""}
+            </table>
+
+            <p style="margin:0 0 12px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Quote Breakdown</p>
+            ${lineItemsHtml}
+
+            <p style="margin:24px 0 0;font-size:14px;color:#64748b;">
+              To approve this quote or if you have any questions, please reply to this email or call us on <strong>(03) 9000 1234</strong>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "OTR Scooters <hello@ontherunelectrics.com.au>",
+      to: [email],
+      subject: `Your repair quote is ready${reference}`,
+      html,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  console.log(`[quoteActions] Quote email sent to ${email}`);
+}
+
 const labourFromHours = (hours) => Math.max(MIN_HOURS, Number(hours) || 0) * LABOUR_RATE;
 
 Deno.serve(async (req) => {
@@ -67,6 +166,7 @@ Deno.serve(async (req) => {
         result = await base44.entities.Quote.update(params.quoteId, { status: "sent", sent_date: new Date().toISOString() });
         await base44.entities.Job.update(job.id, { quote_status: "sent", status: "quote_sent" });
         await logAudit({ eventType: "quote_sent", summary: "Quote sent to customer", visibility: "customer" });
+        await sendQuoteEmail({ job, quote: result });
         break;
       }
       case "set_approval": {
