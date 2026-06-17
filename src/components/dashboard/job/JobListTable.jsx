@@ -48,7 +48,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
               <Th>Customer</Th>
               <Th>Booked</Th>
               <Th>Expected</Th>
-              <Th>Invoice</Th>
+              <Th>Status</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -81,7 +81,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
                   <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(j.created_date)}</Td>
                   <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(j.scheduled_date)}</Td>
                   <Td className="whitespace-nowrap">
-                    <StatusPill value={j.payment_status || "unpaid"} kind="payment" />
+                    <StatusPill value={j.status || "requested"} kind="job" />
                   </Td>
                 </tr>
               );
