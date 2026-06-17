@@ -136,7 +136,13 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       }
 
       // Always reflect the edited values in the panel, regardless of which option was chosen
-      if (editableSpec) setSpec((prev) => ({ ...prev, ...editableSpec }));
+      if (editableSpec) {
+        setSpec((prev) => ({ ...prev, ...editableSpec }));
+        // Sync spec fields that map to intake form fields
+        if (editableSpec.battery_voltage) {
+          setForm((f) => ({ ...f, battery_voltage: editableSpec.battery_voltage }));
+        }
+      }
       setEditingSpec(false);
       setEditableSpec(null);
       onChange?.();
