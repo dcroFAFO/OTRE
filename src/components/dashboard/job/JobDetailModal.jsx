@@ -13,7 +13,6 @@ import NotesPanel from "./NotesPanel";
 import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
-import JobStoreProductsPanel from "./JobStoreProductsPanel";
 import IntakePanel from "./IntakePanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
@@ -139,10 +138,8 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   <TabsContent value="private" className="mt-0">
                     <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                   </TabsContent>
-                  <TabsContent value="parts" className="mt-0 space-y-6">
-                    <JobStoreProductsPanel job={job} canEdit={canManage} />
-                    <div className="border-t border-border" />
-                    <JobPartsPanel job={job} canEdit={canManage} />
+                  <TabsContent value="parts" className="mt-0">
+                    <JobPartsPanel job={job} actor={actor} canEdit={canManage} />
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
                     <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
