@@ -128,6 +128,19 @@ export default function JobPartsPanel({ job, actor, canEdit }) {
           actor={actor}
           open={pickerOpen}
           onOpenChange={setPickerOpen}
+          onAdd={async (chosen) => {
+            await Promise.all(chosen.map((p) =>
+              base44.entities.InventoryUsage.create({
+                job_id: job.id,
+                item_id: p.id,
+                item_name: p.name,
+                qty_used: p.qty,
+                unit_cost: 0,
+                unit_sell: Number(p.price) || 0,
+                source: "inventory",
+              })
+            ));
+          }}
           onAdded={() => { refetch(); qc.invalidateQueries(["inventoryItems"]); }}
         />
       )}

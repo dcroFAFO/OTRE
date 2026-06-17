@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 // Lets a technician pick parts from the synced Parts catalogue and add them
 // to the quote as line items. Reuses the existing add_parts quote action.
-export default function PartPickerModal({ job, actor, open, onOpenChange, onAdded }) {
+export default function PartPickerModal({ job, actor, open, onOpenChange, onAdded, onAdd }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState({});
   const [adding, setAdding] = useState(false);
@@ -46,12 +46,18 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
   const add = async () => {
     if (chosen.length === 0) return;
     setAdding(true);
-    const { addPartsToQuote } = await import("@/services/quoteService");
-    await addPartsToQuote(
-      job,
-      chosen.map((p) => ({ name: p.name, typical_price: p.price, qty: p.qty, retailer: "Parts catalogue" })),
-      actor
-    );
+    if (onAdd) {
+      // Caller provides custom add logic (e.g. JobPartsPanel writes to InventoryUsage)
+      await onAdd(chosen);
+    } else {
+      // Default: add to quote line items
+      const { addPartsToQuote } = await import("@/services/quoteService");
+      await addPartsToQuote(
+        job,
+        chosen.map((p) => ({ name: p.name, typical_price: p.price, qty: p.qty, retailer: "Parts catalogue" })),
+        actor
+      );
+    }
     setAdding(false);
     setSelected({});
     onAdded?.();
