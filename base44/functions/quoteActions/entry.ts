@@ -6,7 +6,6 @@ const CURRENCY = "AUD";
 const LABOUR_RATE = 80; // $/hour
 const MIN_HOURS = 1;
 
-// Labour cost derived from time-to-complete: $80/hr, minimum 1 hour.
 const labourFromHours = (hours) => Math.max(MIN_HOURS, Number(hours) || 0) * LABOUR_RATE;
 
 Deno.serve(async (req) => {
@@ -109,14 +108,39 @@ Deno.serve(async (req) => {
         const parts_estimate = line_items
           .filter((li) => li.kind === "part")
           .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
-        const total = (Number(quote.labour_estimate) || 0) + parts_estimate;
+        const labour_estimate = line_items
+          .filter((li) => li.kind === "labour")
+          .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
+        const total = labour_estimate + parts_estimate;
 
-        result = await base44.entities.Quote.update(quote.id, { line_items, parts_estimate, total });
+        result = await base44.entities.Quote.update(quote.id, { line_items, parts_estimate, labour_estimate, total });
         await logAudit({
           eventType: "quote_generated",
           summary: `Added ${parts.length} sourced part(s) to quote`,
           newValue: `${CURRENCY} ${total.toFixed(2)}`,
         });
+        break;
+      }
+      case "add_labour": {
+        const { hours } = params;
+        const hrs = Math.max(0.25, Number(hours) || 1);
+        const unit_price = labourFromHours(hrs) / hrs; // = LABOUR_RATE
+        let quote = await getJobQuote();
+        if (!quote) {
+          quote = await base44.entities.Quote.create({
+            job_id: job.id, currency: CURRENCY, status: "draft",
+            labour_estimate: 0, parts_estimate: 0, total: 0,
+          });
+          await base44.entities.Job.update(job.id, { quote_status: "draft" });
+        }
+        const newItem = { description: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`, qty: 1, unit_price: hrs * LABOUR_RATE, kind: "labour" };
+        const line_items = [...(quote.line_items || []), newItem];
+        const labour_estimate = line_items
+          .filter((li) => li.kind === "labour")
+          .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
+        const total = labour_estimate + (Number(quote.parts_estimate) || 0);
+        result = await base44.entities.Quote.update(quote.id, { line_items, labour_estimate, total });
+        await logAudit({ eventType: "quote_generated", summary: `Added labour: ${hrs}hr(s)`, newValue: `${CURRENCY} ${total.toFixed(2)}` });
         break;
       }
       default:

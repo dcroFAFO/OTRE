@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Plus, Clock, Lock, CheckCircle2, XCircle, CalendarDays, Save } from "lucide-react";
+import { Sparkles, Send, Plus, Lock, CheckCircle2, XCircle, CalendarDays, Save, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
@@ -15,15 +16,15 @@ import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
 import { format } from "date-fns";
 
 const LABOUR_RATE = 80;
-const MIN_HOURS = 1;
-const labourCost = (hours) => Math.max(MIN_HOURS, Number(hours) || 0) * LABOUR_RATE;
 
 export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
   const [form, setForm] = useState({
-    labour_hours: "", labour_estimate: 0, parts_estimate: 0,
+    labour_estimate: 0, parts_estimate: 0,
     diagnosis_notes: "", recommended_repair: "",
   });
+  const [labourHours, setLabourHours] = useState("1");
+  const [addingLabour, setAddingLabour] = useState(false);
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -33,17 +34,26 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const loadQuote = async () => {
     const q = await getJobQuote(job.id);
     setQuote(q);
-    if (q) setForm({ labour_hours: "", ...q });
+    if (q) setForm({ ...q });
   };
 
   useEffect(() => { loadQuote(); }, [job.id]);
 
-  const partItems = (quote?.line_items || []).filter((li) => li.kind === "part");
+  const lineItems = quote?.line_items || [];
+  const partItems = lineItems.filter((li) => li.kind === "part");
+  const labourItems = lineItems.filter((li) => li.kind === "labour");
 
-  const labour = form.labour_hours !== ""
-    ? labourCost(form.labour_hours)
-    : (Number(form.labour_estimate) || 0);
-  const total = labour + (Number(form.parts_estimate) || 0);
+  const total = (Number(quote?.labour_estimate) || 0) + (Number(quote?.parts_estimate) || 0);
+
+  const addLabour = async () => {
+    const hrs = Number(labourHours) || 1;
+    if (hrs <= 0) return;
+    setAddingLabour(true);
+    const res = await base44.functions.invoke("quoteActions", { action: "add_labour", jobId: job.id, hours: hrs });
+    setQuote(res.data);
+    onChange?.();
+    setAddingLabour(false);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -91,21 +101,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
         // ── Editable view ────────────────────────────────────────────────────
         <>
           <div className="space-y-1">
-            <Label className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-accent" /> Time to complete (hours)
-            </Label>
-            <Input
-              type="number" min={0} step="0.25" placeholder="e.g. 1.5"
-              value={form.labour_hours}
-              onChange={(e) => setForm({ ...form, labour_hours: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Labour at ${LABOUR_RATE}/hr (min {MIN_HOURS}hr) ={" "}
-              <span className="font-semibold text-foreground">${labour.toFixed(2)}</span>
-            </p>
-          </div>
-
-          <div className="space-y-1">
             <Label>{labelFor("diagnosis_notes")}</Label>
             <Textarea
               value={form.diagnosis_notes}
@@ -119,33 +114,62 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
             <Textarea
               value={form.recommended_repair}
               onChange={(e) => setForm({ ...form, recommended_repair: e.target.value })}
-              className="h-20"
+              className="h-12 resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label>Parts on quote</Label>
-            <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Add item
-            </Button>
-          </div>
-
-          {partItems.length > 0 ? (
-            <div className="rounded-xl border border-border divide-y divide-border">
-              {partItems.map((li, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                  <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
-                  <span className="font-medium tabular-nums">
-                    ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
-                  </span>
-                </div>
-              ))}
+          {/* Line items */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Line items</Label>
+              <div className="flex items-center gap-1.5">
+                <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="gap-1">
+                  <Plus className="h-3.5 w-3.5" /> Part
+                </Button>
+              </div>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              No parts added yet. Use "Add item" to pick from the parts catalogue.
-            </p>
-          )}
+
+            {/* Labour adder */}
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+              <Wrench className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground flex-1">Labour @ ${LABOUR_RATE}/hr</span>
+              <Input
+                type="number" min={0.25} step={0.25}
+                value={labourHours}
+                onChange={(e) => setLabourHours(e.target.value)}
+                className="h-7 w-16 px-2 py-0 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">hr</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs px-2 gap-1" onClick={addLabour} disabled={addingLabour}>
+                <Plus className="h-3 w-3" /> Add
+              </Button>
+            </div>
+
+            {(labourItems.length > 0 || partItems.length > 0) ? (
+              <div className="rounded-xl border border-border divide-y divide-border">
+                {labourItems.map((li, i) => (
+                  <div key={`l-${i}`} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="flex items-center gap-1.5 text-foreground">
+                      <Wrench className="h-3 w-3 text-muted-foreground" />{li.description}
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+                {partItems.map((li, i) => (
+                  <div key={`p-${i}`} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="text-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
+                    <span className="font-medium tabular-nums">
+                      ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No items added yet.</p>
+            )}
+          </div>
 
           <PartsSourcingPanel job={job} actor={actor} onAdded={() => { loadQuote(); onChange?.(); }} />
           <PartPickerModal job={job} actor={actor} open={pickerOpen} onOpenChange={setPickerOpen} onAdded={() => { loadQuote(); onChange?.(); }} />
@@ -154,6 +178,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
             <span className="text-sm font-medium">Quote total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
           </div>
+
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
@@ -186,7 +211,7 @@ function QuoteReadOnlyView({ quote }) {
     return <p className="text-sm text-muted-foreground py-4">No quote has been created for this job.</p>;
   }
 
-  const partItems = (quote.line_items || []).filter((li) => li.kind === "part");
+  const allLineItems = (quote.line_items || []);
 
   return (
     <div className="space-y-4">
@@ -216,18 +241,11 @@ function QuoteReadOnlyView({ quote }) {
         </ReadOnlyField>
       )}
 
-      {/* Labour */}
-      {(quote.labour_estimate != null && quote.labour_estimate > 0) && (
-        <ReadOnlyField label="Labour">
-          <p className="text-sm font-medium tabular-nums">${Number(quote.labour_estimate).toFixed(2)}</p>
-        </ReadOnlyField>
-      )}
-
-      {/* Parts list */}
-      {partItems.length > 0 && (
-        <ReadOnlyField label="Parts">
+      {/* Line items */}
+      {allLineItems.length > 0 && (
+        <ReadOnlyField label="Line items">
           <div className="rounded-xl border border-border divide-y divide-border">
-            {partItems.map((li, i) => (
+            {allLineItems.map((li, i) => (
               <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
                 <span>{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span>
                 <span className="font-medium tabular-nums">
