@@ -33,6 +33,7 @@ export default function BookingSection() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
+  const [error, setError] = useState(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -54,15 +55,21 @@ export default function BookingSection() {
     e.preventDefault();
     if (!form.consent || !form.asset_label || !modelMatchesBrand || !issueValid) return;
     setSubmitting(true);
-    const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
-    const job = await createBookingRequest({
-      ...form,
-      customer_name: form.customer_name || user.full_name,
-      issue_description,
-      photo_url: photoUrl,
-    });
-    setSubmitting(false);
-    setDone(job);
+    setError(null);
+    try {
+      const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
+      const job = await createBookingRequest({
+        ...form,
+        customer_name: form.customer_name || user.full_name,
+        issue_description,
+        photo_url: photoUrl,
+      });
+      setDone(job);
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message || "Sorry — couldn't submit your booking. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Booking requires a signed-in account so every job is tied to the customer's identity.
@@ -189,6 +196,7 @@ export default function BookingSection() {
             <span>{DEFAULT_BOOKING_COPY.consentText}</span>
           </label>
 
+          {error && <p className="text-sm text-destructive text-center">{error}</p>}
           <Button type="submit" disabled={submitting || !form.consent || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : DEFAULT_BOOKING_COPY.submitLabel}
           </Button>

@@ -62,21 +62,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Audit log is system-written, so it stays on the service role (customers
-    // aren't permitted to write AuditEvent records directly).
-    await base44.asServiceRole.entities.AuditEvent.create({
-      event_type: "booking_created",
-      job_id: job.id,
-      actor_id: user.id,
-      actor_name: user.full_name,
-      actor_role: "customer",
-      summary: `Booking request received from ${user.full_name}`,
-      visibility: "system",
-    });
+    // Attempt audit log — non-critical, failures are swallowed so booking still succeeds
+    try {
+      await base44.asServiceRole.entities.AuditEvent.create({
+        event_type: "booking_created",
+        job_id: job.id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "customer",
+        summary: `Booking request received from ${user.full_name}`,
+        visibility: "system",
+      });
+    } catch (auditErr) {
+      console.warn("[createBooking] audit log skipped:", auditErr.message);
+    }
 
     return Response.json(job);
   } catch (error) {
-    console.error("[createBooking] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    return Response.json({ error: "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });
+    console.error("[createBooking] FAILED:", error.message, error.stack);
+    return Response.json({ error: error.message || "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });
   }
 });
