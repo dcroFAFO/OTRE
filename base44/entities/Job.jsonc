@@ -182,7 +182,18 @@
     "customer_name"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "user_condition": {
+        "$or": [
+          {
+            "role": "admin"
+          },
+          {
+            "role": "employee"
+          }
+        ]
+      }
+    },
     "read": {
       "$or": [
         {
@@ -197,7 +208,16 @@
           }
         },
         {
-          "data.customer_email": "{{user.email}}"
+          "$and": [
+            {
+              "data.customer_email": "{{user.email}}"
+            },
+            {
+              "data.archived": {
+                "$ne": true
+              }
+            }
+          ]
         }
       ]
     },
