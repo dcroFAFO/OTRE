@@ -36,7 +36,7 @@ const BENEFITS = [
 ];
 
 export default function BookAccount() {
-  const signIn = (provider) => base44.auth.loginWithProvider(provider, `${window.location.origin}/`);
+  const signIn = (provider) => base44.auth.loginWithProvider(provider, `${window.location.origin}/portal`);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
