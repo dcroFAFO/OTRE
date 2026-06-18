@@ -122,8 +122,13 @@ Deno.serve(async (req) => {
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
-    const job = jobs[0];
+    let job = null;
+    try {
+      job = await base44.asServiceRole.entities.Job.get(jobId);
+    } catch {
+      const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
+      job = jobs[0] || null;
+    }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const logAudit = ({ eventType, newValue = null, summary = "", visibility = "internal" }) =>
