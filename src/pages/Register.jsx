@@ -10,15 +10,9 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 
-const getPortalUrl = () => `${window.location.origin}/portal`;
+const REDIRECT_AFTER_AUTH = "/portal";
 
 export default function Register() {
-  useEffect(() => {
-    base44.auth.isAuthenticated().then((authed) => {
-      if (authed) window.location.href = getPortalUrl();
-    }).catch(() => {});
-  }, []);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -26,6 +20,16 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+
+  // Already signed in? Skip straight to the portal.
+  useEffect(() => {
+    base44.auth
+      .isAuthenticated()
+      .then((authed) => {
+        if (authed) window.location.href = REDIRECT_AFTER_AUTH;
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,10 +57,9 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
-      window.location.href = getPortalUrl();
+      window.location.href = REDIRECT_AFTER_AUTH;
     } catch (err) {
       setError(err.message || "Invalid verification code");
-    } finally {
       setLoading(false);
     }
   };
@@ -75,7 +78,7 @@ export default function Register() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", getPortalUrl());
+    base44.auth.loginWithProvider("google", REDIRECT_AFTER_AUTH);
   };
 
   if (showOtp) {

@@ -8,19 +8,23 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 
-const getPortalUrl = () => `${window.location.origin}/portal`;
+const REDIRECT_AFTER_AUTH = "/portal";
 
 export default function Login() {
-  useEffect(() => {
-    base44.auth.isAuthenticated().then((authed) => {
-      if (authed) window.location.href = getPortalUrl();
-    }).catch(() => {});
-  }, []);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already signed in? Skip the form.
+  useEffect(() => {
+    base44.auth
+      .isAuthenticated()
+      .then((authed) => {
+        if (authed) window.location.href = REDIRECT_AFTER_AUTH;
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,16 +32,15 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = getPortalUrl();
+      window.location.href = REDIRECT_AFTER_AUTH;
     } catch (err) {
       setError(err.message || "Invalid email or password");
-    } finally {
       setLoading(false);
     }
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", getPortalUrl());
+    base44.auth.loginWithProvider("google", REDIRECT_AFTER_AUTH);
   };
 
   return (
