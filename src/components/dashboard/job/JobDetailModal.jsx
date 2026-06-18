@@ -10,7 +10,7 @@ import StatusPill from "@/components/shared/StatusPill";
 import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
-import NotesPanel from "./NotesPanel";
+import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
