@@ -8,7 +8,6 @@ import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { SlidersHorizontal, Plus } from "lucide-react";
-import { getJobGroup, jobMatchesGroup } from "@/config/jobGroups";
 import NewJobFromTemplateModal from "@/components/dashboard/job/NewJobFromTemplateModal";
 import { Button } from "@/components/ui/button";
 
@@ -25,23 +24,20 @@ export default function Jobs() {
 
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("id");
-  const groupKey = params.get("group") || "all";
-  const group = getJobGroup(groupKey);
 
   const open = (id) => navigate(`/dashboard/jobs?id=${id}`);
-  const close = () => {navigate(`/dashboard/jobs${groupKey !== "all" ? `?group=${groupKey}` : ""}`);invalidate();};
+  const close = () => { navigate("/dashboard/jobs"); invalidate(); };
 
   const filtered = useMemo(() => jobs.filter((j) => {
-    if (!jobMatchesGroup(j, groupKey)) return false;
     const q = filters.q.toLowerCase();
     const matchQ = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description].some((v) => v?.toLowerCase().includes(q));
-    return matchQ && (
-    filters.status === "all" || j.status === filters.status) && (
-    filters.tech === "all" || j.assigned_technician_name === filters.tech) && (
-    filters.payment === "all" || j.payment_status === filters.payment) && (
-    filters.type === "all" || j.job_type === filters.type) && (
-    filters.waiting === "all" || j.waiting_reason === filters.waiting);
-  }), [jobs, filters, groupKey]);
+    return matchQ &&
+      (filters.status === "all" || j.status === filters.status) &&
+      (filters.tech === "all" || j.assigned_technician_name === filters.tech) &&
+      (filters.payment === "all" || j.payment_status === filters.payment) &&
+      (filters.type === "all" || j.job_type === filters.type) &&
+      (filters.waiting === "all" || j.waiting_reason === filters.waiting);
+  }), [jobs, filters]);
 
   return (
     <div className="space-y-5">
@@ -49,7 +45,7 @@ export default function Jobs() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="font-heading text-2xl font-extrabold tracking-tight">
-            {group.key === "all" ? DEFAULT_APP_SETTINGS.dashboard.nav.jobs : group.label}
+            {DEFAULT_APP_SETTINGS.dashboard.nav.jobs}
           </h1>
           <p className="text-muted-foreground text-sm">
             {filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
