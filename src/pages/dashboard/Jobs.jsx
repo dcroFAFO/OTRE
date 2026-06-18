@@ -10,7 +10,7 @@ import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { SlidersHorizontal, Plus } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
-import { can } from "@/config/permissions";
+import { isStaffRole } from "@/config/roles";
 
 export default function Jobs() {
   const user = useDashboardUser();
@@ -54,7 +54,7 @@ export default function Jobs() {
         </div>
       </div>
 
-      {can(user.role, "job.create") || user.role === "admin" ? (
+      {isStaffRole(user.role) ? (
         <button
           onClick={() => setCreateModal(true)}
           className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/20 px-4 py-2.5 font-semibold hover:bg-accent/90 transition-colors text-base">
