@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Inbox, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { logError } from "@/lib/logger";
+import RequireCapability from "@/components/auth/RequireCapability";
+import { hasAtLeastRole } from "@/config/roles";
 
 const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
 const STATUS_ORDER = { "New": 0, "Under Review": 1, "Planned": 2, "In Progress": 3, "Resolved": 4, "Rejected": 5, "Archived": 6 };
@@ -29,7 +31,7 @@ export default function AdminFeedback() {
     queryKey: ["adminFeedback"],
     queryFn: () => base44.entities.Feedback.list("-created_date", 500),
     initialData: [],
-    enabled: user?.role === "admin",
+    enabled: hasAtLeastRole(user?.role, "admin"),
   });
 
   const filtered = useMemo(() => {
@@ -93,19 +95,12 @@ export default function AdminFeedback() {
     return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
   }
 
-  if (user?.role !== "admin") {
-    return (
-      <div className="min-h-screen grid place-items-center bg-secondary/30 px-5">
-        <div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md">
-          <h1 className="font-heading text-2xl font-extrabold">Admin access only</h1>
-          <p className="mt-2 text-muted-foreground">You don't have permission to view feedback management.</p>
-          <Link to="/dashboard" className="mt-5 inline-block rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Back to dashboard</Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <RequireCapability
+      minRole="admin"
+      deniedTitle="Admin access only"
+      deniedMessage="You don't have permission to view feedback management."
+    >
     <DashboardShell user={user}>
       <div className="space-y-5">
         <div>
@@ -154,5 +149,6 @@ export default function AdminFeedback() {
         />
       </div>
     </DashboardShell>
+    </RequireCapability>
   );
 }

@@ -10,6 +10,8 @@ import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
 import { listClients } from "@/services/clientService";
 import { Button } from "@/components/ui/button";
 import { Users, AlertTriangle } from "lucide-react";
+import RequireCapability from "@/components/auth/RequireCapability";
+import { hasAtLeastRole } from "@/config/roles";
 
 export default function AdminClients() {
   const { user, isLoading } = useCurrentUser();
@@ -20,7 +22,7 @@ export default function AdminClients() {
     queryKey: ["adminClients"],
     queryFn: listClients,
     initialData: [],
-    enabled: user?.role === "admin",
+    enabled: hasAtLeastRole(user?.role, "admin"),
   });
 
   const filtered = useMemo(() => {
@@ -44,19 +46,12 @@ export default function AdminClients() {
     return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
   }
 
-  if (user?.role !== "admin") {
-    return (
-      <div className="min-h-screen grid place-items-center bg-secondary/30 px-5">
-        <div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md">
-          <h1 className="font-heading text-2xl font-extrabold">Admin access only</h1>
-          <p className="mt-2 text-muted-foreground">You don't have permission to view client management.</p>
-          <Link to="/dashboard" className="mt-5 inline-block rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Back to dashboard</Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <RequireCapability
+      minRole="admin"
+      deniedTitle="Admin access only"
+      deniedMessage="You don't have permission to view client management."
+    >
     <DashboardShell user={user}>
       <div className="space-y-5">
         <div>
@@ -95,5 +90,6 @@ export default function AdminClients() {
         />
       </div>
     </DashboardShell>
+    </RequireCapability>
   );
 }
