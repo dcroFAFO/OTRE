@@ -33,3 +33,8 @@ export async function listJobAudit(jobId) {
 export async function listRecentAudit(limit = 15) {
   return base44.entities.AuditEvent.list("-created_date", limit);
 }
+
+// Full activity log for the admin viewer.
+export async function listAllAudit(limit = 1000) {
+  return base44.entities.AuditEvent.list("-created_date", limit);
+}

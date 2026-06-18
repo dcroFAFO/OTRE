@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag, Activity } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
-import { hasAtLeastRole, roleLabel, roleBadgeClass } from "@/config/roles";
+import { hasAtLeastRole, roleLabel, roleBadgeClass, hasCapability, CAPABILITIES } from "@/config/roles";
 import PartsNavItem from "./PartsNavItem";
 import JobsNavItem from "./JobsNavItem";
 
@@ -15,6 +15,7 @@ export default function DashboardShell({ user, children }) {
   const { data: { business, app } } = usePlatformConfig();
 
   const isAdmin = hasAtLeastRole(user?.role, "admin");
+  const canViewLog = hasCapability(user?.role, CAPABILITIES.LOG_VIEW);
 
   const nav = [
   { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
@@ -25,10 +26,12 @@ export default function DashboardShell({ user, children }) {
   { to: "/admin/clients", label: "Clients", icon: Contact }] :
   [])];
 
-  const adminNav = isAdmin ? [
+  const adminNav = [
+  ...(canViewLog ? [{ to: "/admin/activity", label: "Activity Log", icon: Activity }] : []),
+  ...(isAdmin ? [
   { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { to: "/admin/feedback", label: "Feedback", icon: MessageSquare }] :
-  [];
+  [])];
 
   const Sidebar = () =>
   <div className="flex h-full flex-col">

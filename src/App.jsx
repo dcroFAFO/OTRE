@@ -25,6 +25,7 @@ import Notifications from '@/pages/dashboard/Notifications';
 import Parts from '@/pages/dashboard/Parts';
 import AdminFeedback from '@/pages/admin/AdminFeedback';
 import AdminClients from '@/pages/admin/AdminClients';
+import AdminActivityLog from '@/pages/admin/AdminActivityLog';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
 
 const AuthenticatedApp = () => {
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
       </Route>
       <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="/admin/clients" element={<AdminClients />} />
+      <Route path="/admin/activity" element={<AdminActivityLog />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
