@@ -5,13 +5,16 @@
     "role": {
       "type": "string",
       "enum": [
+        "owner",
         "admin",
+        "manager",
+        "support_staff",
         "employee",
         "technician",
         "customer"
       ],
       "default": "customer",
-      "description": "Platform role for access control"
+      "description": "Platform role for access control. Hierarchy: owner > admin > manager > support_staff > customer. (employee/technician are legacy and map to manager/support_staff.)"
     },
     "phone": {
       "type": "string",
