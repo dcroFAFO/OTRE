@@ -100,12 +100,22 @@
   "rls": {
     "read": {
       "user_condition": {
-        "role": "admin"
+        "role": {
+          "$in": [
+            "admin",
+            "technician"
+          ]
+        }
       }
     },
     "write": {
       "user_condition": {
-        "role": "admin"
+        "role": {
+          "$in": [
+            "admin",
+            "technician"
+          ]
+        }
       }
     }
   }
