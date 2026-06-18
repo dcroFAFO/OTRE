@@ -8,11 +8,13 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 
+const getPortalUrl = () => `${window.location.origin}/portal`;
+
 export default function Login() {
   useEffect(() => {
     base44.auth.isAuthenticated().then((authed) => {
-      if (authed) window.location.href = "/portal";
-    });
+      if (authed) window.location.href = getPortalUrl();
+    }).catch(() => {});
   }, []);
 
   const [email, setEmail] = useState("");
@@ -26,7 +28,7 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = "/portal";
+      window.location.href = getPortalUrl();
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {
@@ -35,7 +37,7 @@ export default function Login() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/portal");
+    base44.auth.loginWithProvider("google", getPortalUrl());
   };
 
   return (

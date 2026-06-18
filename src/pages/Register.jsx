@@ -10,11 +10,13 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 
+const getPortalUrl = () => `${window.location.origin}/portal`;
+
 export default function Register() {
   useEffect(() => {
     base44.auth.isAuthenticated().then((authed) => {
-      if (authed) window.location.href = "/portal";
-    });
+      if (authed) window.location.href = getPortalUrl();
+    }).catch(() => {});
   }, []);
 
   const [email, setEmail] = useState("");
@@ -51,7 +53,7 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
-      window.location.href = "/portal";
+      window.location.href = getPortalUrl();
     } catch (err) {
       setError(err.message || "Invalid verification code");
     } finally {
@@ -73,7 +75,7 @@ export default function Register() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/portal");
+    base44.auth.loginWithProvider("google", getPortalUrl());
   };
 
   if (showOtp) {
