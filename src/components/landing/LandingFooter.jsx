@@ -30,7 +30,7 @@ export default function LandingFooter() {
           <p className="text-sm font-semibold mb-3">Opening hours</p>
           <ul className="space-y-2 text-sm text-muted-foreground">
             {business.openingHours.map((o) => (
-              <li key={o.day} className="flex justify-between gap-4"><span>{o.day}</span><span>{o.hours}</span></li>
+              <li key={o.day} className="flex justify-between gap-2 flex-wrap"><span>{o.day}</span><span className="text-right">{o.hours}</span></li>
             ))}
           </ul>
           <Link to="/portal" className="mt-4 inline-block text-sm font-medium text-accent">{app.landing.portalLabel} →</Link>

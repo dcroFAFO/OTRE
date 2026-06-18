@@ -110,7 +110,7 @@ export default function BookingSection() {
 
         <form
           onSubmit={submit}
-          className="mt-10 rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl space-y-5"
+          className="mt-10 rounded-3xl border border-border bg-card p-4 sm:p-8 shadow-xl space-y-5"
         >
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label={field("customer_name").label} required>

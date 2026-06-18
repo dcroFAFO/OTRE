@@ -72,7 +72,7 @@ export default function JourneySection() {
         </div>
 
         <ScrollReveal delay={0.2} className="mt-14">
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted-foreground border-t border-border pt-10">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted-foreground border-t border-border pt-10">
             {["All major brands serviced", "Transparent fixed-price quotes", "Genuine & compatible parts", "Work guaranteed"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />

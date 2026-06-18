@@ -46,7 +46,7 @@ export default function HeroSection() {
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-5 sm:px-8 w-full grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="relative mx-auto max-w-7xl px-5 sm:px-8 w-full grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         {/* Left: Copy */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -58,7 +58,7 @@ export default function HeroSection() {
             {app.landing.heroEyebrow}
           </span>
 
-          <h1 className="mt-5 font-heading text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.06] tracking-tight text-foreground">
+          <h1 className="mt-5 font-heading text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
             {business.tagline}
           </h1>
 
@@ -66,14 +66,14 @@ export default function HeroSection() {
             {business.subheading}
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#services">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl shadow-lg shadow-accent/20">
+          <div className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
+            <a href="#services" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl shadow-lg shadow-accent/20">
                 {business.primaryCta.label} <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
-            <Link to="/book">
-              <Button size="lg" variant="outline" className="rounded-xl">
+            <Link to="/book" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-xl">
                 {business.secondaryCta.label}
               </Button>
             </Link>
@@ -88,8 +88,8 @@ export default function HeroSection() {
           </div>
         </motion.div>
 
-        {/* Right: services grid */}
-        <div className="hidden sm:block">
+        {/* Right: services grid — shown on sm+ only */}
+        <div className="hidden lg:block">
           <ServicesVisual services={services} />
         </div>
       </div>
