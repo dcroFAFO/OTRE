@@ -2,18 +2,21 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Zap, ArrowLeft, Bike } from "lucide-react";
+import { Zap, ArrowLeft, Bike, Plus } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import JobCard from "@/components/shared/JobCard";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import SupportChat from "@/components/portal/SupportChat";
+import CustomerBookingModal from "@/components/portal/CustomerBookingModal";
+import { Button } from "@/components/ui/button";
 
 export default function Portal() {
   const { user, isLoading } = useCurrentUser();
   const { data: { business, app } } = usePlatformConfig();
   const [selectedId, setSelectedId] = useState(null);
+  const [showBooking, setShowBooking] = useState(false);
   const qc = useQueryClient();
 
   const { data: jobs = [] } = useQuery({
@@ -55,21 +58,30 @@ export default function Portal() {
 
       <main className="mx-auto max-w-4xl px-5 py-8">
         <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4" /> Back to site</Link>
-        <h1 className="font-heading text-2xl font-extrabold tracking-tight">Your {app.terminology.jobPlural}</h1>
-        <p className="text-muted-foreground text-sm">Track progress and approve quotes online.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-heading text-2xl font-extrabold tracking-tight">Your {app.terminology.jobPlural}</h1>
+            <p className="text-muted-foreground text-sm">Track progress and approve quotes online.</p>
+          </div>
+          <Button onClick={() => setShowBooking(true)} className="gap-2 rounded-xl">
+            <Plus className="h-4 w-4" /> New booking
+          </Button>
+        </div>
 
         <div className="mt-6 grid sm:grid-cols-2 gap-3">
           {jobs.map((j) => <JobCard key={j.id} job={j} onClick={() => setSelectedId(j.id)} />)}
           {jobs.length === 0 && (
             <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
               <Bike className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No {app.terminology.jobPlural} yet. <Link to="/book" className="text-accent font-medium">Book one →</Link>
+              No {app.terminology.jobPlural} yet.{" "}
+              <button onClick={() => setShowBooking(true)} className="text-accent font-medium hover:underline">Book one →</button>
             </div>
           )}
         </div>
       </main>
 
       <JobDetailModal jobId={selectedId} actor={{ ...user, role: "customer" }} open={!!selectedId} onClose={() => setSelectedId(null)} onChange={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
+      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
 
       <SupportChat user={user} />
     </div>
