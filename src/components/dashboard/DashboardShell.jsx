@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
-import { ROLES } from "@/config/jobConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import { hasAtLeastRole, roleLabel, roleBadgeClass } from "@/config/roles";
 import PartsNavItem from "./PartsNavItem";
 import JobsNavItem from "./JobsNavItem";
 
@@ -13,16 +13,19 @@ export default function DashboardShell({ user, children }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const { data: { business, app } } = usePlatformConfig();
+
+  const isAdmin = hasAtLeastRole(user?.role, "admin");
+
   const nav = [
   { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
   { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
   { to: "/dashboard/inventory", label: "Inventory", icon: Package },
   { to: "/dashboard/templates", label: "Templates", icon: FileText },
-  ...(user?.role === "admin" ? [
+  ...(isAdmin ? [
   { to: "/admin/clients", label: "Clients", icon: Contact }] :
   [])];
 
-  const adminNav = user?.role === "admin" ? [
+  const adminNav = isAdmin ? [
   { to: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { to: "/admin/feedback", label: "Feedback", icon: MessageSquare }] :
   [];
@@ -50,7 +53,7 @@ export default function DashboardShell({ user, children }) {
             </React.Fragment>);
 
       })}
-        {user?.role === "admin" && <PartsNavItem onNavigate={() => setOpen(false)} />}
+        {isAdmin && <PartsNavItem onNavigate={() => setOpen(false)} />}
         {adminNav.map((n) => {
         const active = pathname === n.to;
         return (
@@ -67,7 +70,9 @@ export default function DashboardShell({ user, children }) {
           <UserCircle className="h-8 w-8 text-muted-foreground" />
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{user?.full_name || "User"}</p>
-            <p className="text-[11px] text-muted-foreground capitalize">{ROLES[user?.role]?.label || user?.role}</p>
+            <span className={cn("mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold", roleBadgeClass(user?.role))}>
+              {roleLabel(user?.role)}
+            </span>
           </div>
         </div>
         <button onClick={() => base44.auth.logout(window.location.origin)}
