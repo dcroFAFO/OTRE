@@ -191,10 +191,6 @@
         }
       }
     },
-    "archived": {
-      "type": "boolean",
-      "default": false
-    },
     "business_slug": {
       "type": "string",
       "default": "otr-scooters"
@@ -235,16 +231,7 @@
           }
         },
         {
-          "$and": [
-            {
-              "data.customer_email": "{{user.email}}"
-            },
-            {
-              "data.archived": {
-                "$ne": true
-              }
-            }
-          ]
+          "data.customer_email": "{{user.email}}"
         }
       ]
     },
