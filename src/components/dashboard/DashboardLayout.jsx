@@ -1,30 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Outlet, Link, useOutletContext } from "react-router-dom";
 import DashboardShell from "./DashboardShell";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
-import { isSeedCached } from "@/services/seedService";
 import { setUserContext } from "@/lib/logger";
-import SeedLoadingScreen from "./SeedLoadingScreen";
 
 export default function DashboardLayout() {
   const { user, isLoading } = useCurrentUser();
-  const [seedDone, setSeedDone] = useState(false);
-
-  // Attach the signed-in user (id + role only) to every log entry — makes
-  // errors in the Debug Panel traceable to a specific user. See lib/logger.js.
   useEffect(() => {
     setUserContext(user);
   }, [user]);
 
   if (isLoading) {
     return <div className="fixed inset-0 grid place-items-center bg-background"><div className="h-8 w-8 rounded-full border-4 border-border border-t-accent animate-spin" /></div>;
-  }
-
-  // First-time setup is admin-only and cached locally once complete, so
-  // returning users go straight to the dashboard without any seed check.
-  if (user?.role === "admin" && !isSeedCached() && !seedDone) {
-    return <SeedLoadingScreen onDone={() => setSeedDone(true)} />;
   }
 
   if (!isStaff(user?.role)) {
