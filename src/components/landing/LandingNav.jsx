@@ -31,13 +31,13 @@ export default function LandingNav() {
     <header
       className={cn(
         "fixed top-0 inset-x-0 z-50 transition-all duration-300",
-        scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border" : "bg-transparent"
+        scrolled ? "bg-background/90 backdrop-blur-xl border-b border-border shadow-sm" : "bg-background/70 backdrop-blur-md"
       )}
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground">
-            <Zap className="h-5 w-5 text-accent" />
+          <span className="grid place-items-center h-9 w-9 rounded-xl bg-accent/15 text-accent">
+            <Zap className="h-5 w-5" />
           </span>
           <span className="font-heading font-extrabold text-lg tracking-tight">{business.name}</span>
         </Link>

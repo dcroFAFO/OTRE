@@ -42,7 +42,7 @@ export default function HeroSection() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 otr-grid-bg opacity-[0.18]" />
         <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[90px]" />
-        <div className="absolute top-60 -left-48 h-[400px] w-[400px] rounded-full bg-accent/8 blur-[80px]" />
+        <div className="absolute top-60 -left-48 h-[400px] w-[400px] rounded-full bg-accent/10 blur-[80px]" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
 
