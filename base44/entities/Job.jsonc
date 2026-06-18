@@ -183,6 +183,20 @@
   ],
   "rls": {
     "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician",
+            "manager",
+            "support_staff",
+            "owner"
+          ]
+        }
+      }
+    },
+    "read": {
       "$or": [
         {
           "user_condition": {
@@ -203,36 +217,6 @@
         }
       ]
     },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician",
-                "manager",
-                "support_staff",
-                "owner"
-              ]
-            }
-          }
-        },
-        {
-          "$and": [
-            {
-              "data.customer_email": "{{user.email}}"
-            },
-            {
-              "data.archived": {
-                "$ne": true
-              }
-            }
-          ]
-        }
-      ]
-    },
     "update": {
       "$or": [
         {
@@ -250,14 +234,7 @@
           }
         },
         {
-          "$and": [
-            {
-              "data.customer_email": "{{user.email}}"
-            },
-            {
-              "data.status": "requested"
-            }
-          ]
+          "data.customer_email": "{{user.email}}"
         }
       ]
     },
