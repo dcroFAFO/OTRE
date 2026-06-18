@@ -7,7 +7,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import JobCard from "@/components/shared/JobCard";
-import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
+import CustomerJobModal from "@/components/portal/CustomerJobModal";
 import SupportChat from "@/components/portal/SupportChat";
 import CustomerBookingModal from "@/components/portal/CustomerBookingModal";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 export default function Portal() {
   const { user, isLoading } = useCurrentUser();
   const { data: { business, app } } = usePlatformConfig();
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [showBooking, setShowBooking] = useState(false);
   const qc = useQueryClient();
 
@@ -69,7 +69,7 @@ export default function Portal() {
         </div>
 
         <div className="mt-6 grid sm:grid-cols-2 gap-3">
-          {jobs.map((j) => <JobCard key={j.id} job={j} onClick={() => setSelectedId(j.id)} />)}
+          {jobs.map((j) => <JobCard key={j.id} job={j} onClick={() => setSelectedJob(j)} />)}
           {jobs.length === 0 && (
             <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
               <Bike className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -80,7 +80,7 @@ export default function Portal() {
         </div>
       </main>
 
-      <JobDetailModal jobId={selectedId} actor={{ ...user, role: "customer" }} open={!!selectedId} onClose={() => setSelectedId(null)} onChange={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
+      <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} userEmail={user?.email} />
       <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
 
       <SupportChat user={user} />
