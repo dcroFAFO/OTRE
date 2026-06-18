@@ -56,6 +56,7 @@ export default function Register() {
       const result = await base44.auth.verifyOtp({ email, otpCode });
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
+        await base44.auth.updateMe({ role: "customer" });
       }
       window.location.href = REDIRECT_AFTER_AUTH;
     } catch (err) {
