@@ -1,35 +1,47 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-// Public booking intake. Runs with service role because customers submitting
-// the landing-page form are not authenticated. Validates input server-side.
+// Authenticated booking intake. The customer must be signed in (Google / Microsoft /
+// Facebook / Apple / email) — the job is linked to their authenticated identity
+// (email + created_by_id) so they can track and manage only their own jobs.
 
 const SLUG = "otr-scooters";
 const INTAKE_STATUS = "requested";
 const JOB_TYPE = "repair";
 
 Deno.serve(async (req) => {
-  // requestMeta lets the catch block log a useful, PII-free summary on failure
-  // (field names only — never customer details).
   const requestMeta = { fn: "createBooking" };
   try {
     const base44 = createClientFromRequest(req);
+
+    // Require a signed-in user — bookings can no longer be made anonymously.
+    let user;
+    try {
+      user = await base44.auth.me();
+    } catch {
+      user = null;
+    }
+    if (!user) {
+      return Response.json({ error: "You must be signed in to make a booking." }, { status: 401 });
+    }
+
     const form = await req.json();
     requestMeta.fields = Object.keys(form || {});
 
-    if (!form.customer_name || !form.email || !form.issue_description) {
-      return Response.json({ error: "customer_name, email and issue_description are required" }, { status: 400 });
+    if (!form.asset_label || !form.issue_description) {
+      return Response.json({ error: "asset_label and issue_description are required" }, { status: 400 });
     }
 
     const db = base44.asServiceRole.entities;
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
 
+    // Identity comes from the authenticated account, not from form input.
     const job = await db.Job.create({
       reference,
-      customer_name: form.customer_name,
-      customer_email: form.email,
+      customer_name: form.customer_name || user.full_name,
+      customer_email: user.email,
       customer_phone: form.phone,
-      scooter_label: form.asset_label || form.scooter_label,
-      asset_label: form.asset_label || form.scooter_label,
+      scooter_label: form.asset_label,
+      asset_label: form.asset_label,
       issue_description: form.issue_description,
       job_type: JOB_TYPE,
       status: INTAKE_STATUS,
@@ -37,6 +49,7 @@ Deno.serve(async (req) => {
       preferred_time_window: form.asap ? "ASAP" : form.preferred_time_window,
       rideable: form.rideable,
       business_slug: SLUG,
+      created_by_id: user.id,
     });
 
     if (form.photo_url) {
@@ -46,24 +59,25 @@ Deno.serve(async (req) => {
         file_name: "Customer upload",
         kind: "photo",
         visibility: "customer",
-        uploaded_by_name: form.customer_name,
+        uploaded_by_name: user.full_name,
+        created_by_id: user.id,
       });
     }
 
     await db.AuditEvent.create({
       event_type: "booking_created",
       job_id: job.id,
-      actor_name: "System",
-      actor_role: "system",
-      summary: `Booking request received from ${form.customer_name}`,
+      actor_id: user.id,
+      actor_name: user.full_name,
+      actor_role: "customer",
+      summary: `Booking request received from ${user.full_name}`,
       visibility: "system",
     });
 
     return Response.json(job);
   } catch (error) {
-    // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
+    console.error("CREATEBOOKING_FAIL message=" + error.message);
     console.error("[createBooking] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    // Public endpoint — never expose internal error details to visitors.
     return Response.json({ error: "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });
   }
 });

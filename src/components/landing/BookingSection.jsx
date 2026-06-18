@@ -12,12 +12,14 @@ import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformC
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import BookingSignInGate from "@/components/landing/BookingSignInGate";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 const options = (key) => field(key).options || [];
 
 const EMPTY = {
-  customer_name: "", phone: "", email: "", asset_label: "", issue_type: "", issue_description: "",
+  customer_name: "", phone: "", asset_label: "", issue_type: "", issue_description: "",
   asset_make: "", asset_model: "", asset_custom_make: "", asset_custom_model: "",
   preferred_date: "", preferred_time_window: "Anytime", rideable: true,
   asap: false, consent: false,
@@ -25,6 +27,7 @@ const EMPTY = {
 
 export default function BookingSection() {
   const { data: { services } } = usePlatformConfig();
+  const { user, isLoading } = useCurrentUser();
   const [form, setForm] = useState(EMPTY);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -52,10 +55,27 @@ export default function BookingSection() {
     if (!form.consent || !form.asset_label || !modelMatchesBrand || !issueValid) return;
     setSubmitting(true);
     const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
-    const job = await createBookingRequest({ ...form, issue_description, photo_url: photoUrl });
+    const job = await createBookingRequest({
+      ...form,
+      customer_name: form.customer_name || user.full_name,
+      issue_description,
+      photo_url: photoUrl,
+    });
     setSubmitting(false);
     setDone(job);
   };
+
+  // Booking requires a signed-in account so every job is tied to the customer's identity.
+  if (isLoading) {
+    return (
+      <section id="book" className="py-20 sm:py-28">
+        <div className="mx-auto max-w-md px-5 flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </section>
+    );
+  }
+  if (!user) return <BookingSignInGate />;
 
   if (done) {
     return (
@@ -94,14 +114,15 @@ export default function BookingSection() {
         >
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label={field("customer_name").label} required>
-              <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} placeholder={field("customer_name").placeholder} required />
+              <Input value={form.customer_name || user.full_name || ""} onChange={(e) => set("customer_name", e.target.value)} placeholder={field("customer_name").placeholder} required />
             </Field>
             <Field label={field("phone").label} required>
               <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder={field("phone").placeholder} required />
             </Field>
           </div>
-          <Field label={field("email").label} required>
-            <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder={field("email").placeholder} required />
+          <Field label={field("email").label}>
+            <Input type="email" value={user.email} disabled className="opacity-70" />
+            <p className="text-xs text-muted-foreground">Bookings are linked to your signed-in account.</p>
           </Field>
           <Field label={field("asset_label").label} required>
             <AssetBrandPicker
