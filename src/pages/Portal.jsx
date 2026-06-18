@@ -45,10 +45,10 @@ export default function Portal() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30">
+    <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-4xl px-5 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2"><span className="grid place-items-center h-8 w-8 rounded-lg bg-primary text-primary-foreground"><Zap className="h-4 w-4 text-accent" /></span><span className="font-heading font-extrabold">{business.name}</span></Link>
+          <Link to="/" className="flex items-center gap-2"><span className="grid place-items-center h-8 w-8 rounded-lg bg-accent/15 text-accent"><Zap className="h-4 w-4" /></span><span className="font-heading font-extrabold">{business.name}</span></Link>
           <button onClick={() => base44.auth.logout(window.location.origin)} className="text-sm text-muted-foreground hover:text-foreground">Sign out</button>
         </div>
       </header>
@@ -63,7 +63,7 @@ export default function Portal() {
           {jobs.length === 0 && (
             <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
               <Bike className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No {app.terminology.jobPlural} yet. <Link to="/#book" className="text-accent font-medium">Book one →</Link>
+              No {app.terminology.jobPlural} yet. <Link to="/book" className="text-accent font-medium">Book one →</Link>
             </div>
           )}
         </div>
@@ -77,8 +77,8 @@ export default function Portal() {
 }
 
 function Spinner() {
-  return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
+  return <div className="fixed inset-0 grid place-items-center bg-background"><div className="h-8 w-8 rounded-full border-4 border-border border-t-accent animate-spin" /></div>;
 }
 function Centered({ children }) {
-  return <div className="min-h-screen grid place-items-center bg-secondary/30 px-5"><div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md">{children}</div></div>;
+  return <div className="min-h-screen grid place-items-center bg-background px-5"><div className="rounded-3xl border border-border bg-card p-10 text-center max-w-md shadow-xl">{children}</div></div>;
 }

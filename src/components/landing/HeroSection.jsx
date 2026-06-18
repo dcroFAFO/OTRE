@@ -20,7 +20,7 @@ function ServicesVisual({ services }) {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 + i * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm hover:bg-white/[0.06] hover:border-accent/30 transition-all duration-200"
+            className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-gentle hover:border-accent/30 transition-all duration-200"
           >
             <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors duration-200">
               <Icon className="h-5 w-5" />
@@ -73,7 +73,7 @@ export default function HeroSection() {
               </Button>
             </a>
             <Link to="/book">
-              <Button size="lg" variant="outline" className="rounded-xl border-white/15 hover:bg-white/5">
+              <Button size="lg" variant="outline" className="rounded-xl">
                 {business.secondaryCta.label}
               </Button>
             </Link>

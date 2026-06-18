@@ -44,9 +44,15 @@ export default function LandingNav() {
 
         <nav className="hidden md:flex items-center gap-8">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              {l.label}
-            </a>
+            l.href.startsWith("/") ? (
+              <Link key={l.href} to={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                {l.label}
+              </Link>
+            ) : (
+              <a key={l.href} href={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                {l.label}
+              </a>
+            )
           ))}
         </nav>
 
@@ -63,9 +69,15 @@ export default function LandingNav() {
       {open && (
         <div className="md:hidden bg-background border-b border-border px-5 py-4 space-y-3">
           {links.map((l) => (
-            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-muted-foreground">
-              {l.label}
-            </a>
+            l.href.startsWith("/") ? (
+              <Link key={l.href} to={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-muted-foreground">
+                {l.label}
+              </Link>
+            ) : (
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-muted-foreground">
+                {l.label}
+              </a>
+            )
           ))}
           <div className="flex gap-2 pt-2">
             <Link to="/portal" className="flex-1"><Button variant="outline" size="sm" className="w-full">Login</Button></Link>

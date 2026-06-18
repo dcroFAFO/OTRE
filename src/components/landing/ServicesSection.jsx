@@ -7,20 +7,20 @@ import ScrollReveal from "./ScrollReveal";
 const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag };
 
 const CATEGORY_ACCENTS = {
-  Diagnostics: "from-violet-500/10 to-transparent hover:from-violet-500/20",
-  Repairs:     "from-rose-500/10 to-transparent hover:from-rose-500/20",
-  Power:       "from-amber-500/10 to-transparent hover:from-amber-500/20",
-  Maintenance: "from-teal-500/10 to-transparent hover:from-teal-500/20",
-  Parts:       "from-indigo-500/10 to-transparent hover:from-indigo-500/20",
-  Sales:       "from-emerald-500/10 to-transparent hover:from-emerald-500/20",
+  Diagnostics: "from-accent/10 to-transparent hover:from-accent/20",
+  Repairs:     "from-accent/10 to-transparent hover:from-accent/20",
+  Power:       "from-accent/10 to-transparent hover:from-accent/20",
+  Maintenance: "from-accent/10 to-transparent hover:from-accent/20",
+  Parts:       "from-accent/10 to-transparent hover:from-accent/20",
+  Sales:       "from-accent/10 to-transparent hover:from-accent/20",
 };
 const CATEGORY_ICON_COLORS = {
-  Diagnostics: "bg-violet-500/15 text-violet-300 group-hover:bg-violet-500 group-hover:text-white",
-  Repairs:     "bg-rose-500/15 text-rose-300 group-hover:bg-rose-500 group-hover:text-white",
-  Power:       "bg-amber-500/15 text-amber-300 group-hover:bg-amber-500 group-hover:text-white",
-  Maintenance: "bg-teal-500/15 text-teal-300 group-hover:bg-teal-500 group-hover:text-white",
-  Parts:       "bg-indigo-500/15 text-indigo-300 group-hover:bg-indigo-500 group-hover:text-white",
-  Sales:       "bg-emerald-500/15 text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white",
+  Diagnostics: "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+  Repairs:     "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+  Power:       "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+  Maintenance: "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+  Parts:       "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+  Sales:       "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
 };
 
 export default function ServicesSection() {
@@ -54,7 +54,7 @@ export default function ServicesSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.45, delay: (i % 3) * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                className="group relative rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden shadow-sm hover:border-white/20 hover:-translate-y-1 transition-all duration-200"
+                className="group relative rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:border-accent/30 hover:shadow-gentle hover:-translate-y-1 transition-all duration-200"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${accentGrad} transition-all duration-300 pointer-events-none`} />
                 <div className="relative p-6">

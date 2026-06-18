@@ -18,7 +18,7 @@ export default function JourneySection() {
 
   return (
     <section id="journey" className="relative py-20 sm:py-28 overflow-hidden">
-      <div className="absolute inset-0 bg-white/[0.02]" />
+      <div className="absolute inset-0 bg-card/40" />
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
@@ -51,7 +51,7 @@ export default function JourneySection() {
                   </div>
                 )}
 
-                <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:bg-white/[0.06] hover:-translate-y-1 transition-all duration-200">
+                <div className="h-full rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-accent/30 hover:shadow-gentle hover:-translate-y-1 transition-all duration-200">
                   <div className="flex items-center gap-3">
                     <span className="grid place-items-center h-11 w-11 rounded-2xl bg-accent/15 text-accent shrink-0">
                       <Icon className="h-5 w-5" />

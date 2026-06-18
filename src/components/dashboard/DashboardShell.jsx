@@ -30,7 +30,7 @@ export default function DashboardShell({ user, children }) {
   const Sidebar = () =>
   <div className="flex h-full flex-col">
       <Link to="/" className="flex items-center gap-2 px-5 h-16 border-b border-border hover:bg-secondary/40 transition-colors">
-        <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground"><Zap className="h-5 w-5 text-accent" /></span>
+        <span className="grid place-items-center h-9 w-9 rounded-xl bg-accent/15 text-accent"><Zap className="h-5 w-5" /></span>
         <div>
           <p className="font-heading font-extrabold text-sm leading-tight">{business.name}</p>
           <p className="text-[11px] text-muted-foreground">{app.terminology.platformLabel}</p>
@@ -43,7 +43,7 @@ export default function DashboardShell({ user, children }) {
           <React.Fragment key={n.to}>
               <Link to={n.to} onClick={() => setOpen(false)}
             className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-            active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}>
+            active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary")}>
                 <n.icon className="h-4.5 w-4.5" /> {n.label}
               </Link>
               {idx === 0 && <JobsNavItem label={app.dashboard.nav.jobs} onNavigate={() => setOpen(false)} />}
@@ -79,8 +79,8 @@ export default function DashboardShell({ user, children }) {
 
 
   return (
-    <div className="dark min-h-screen bg-background text-[hsl(var(--foreground))]">
-      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-card border-r border-border z-30"><Sidebar /></aside>
+    <div className="min-h-screen bg-background text-foreground">
+      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-card/95 backdrop-blur-xl border-r border-border z-30"><Sidebar /></aside>
 
       {/* Mobile top bar */}
       <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-card border-b border-border">
