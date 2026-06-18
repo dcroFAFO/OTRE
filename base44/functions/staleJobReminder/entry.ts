@@ -88,10 +88,7 @@ Deno.serve(async (req) => {
 
     if (stale.length === 0) return Response.json({ sent: 0, stale: 0, note: "no stale jobs" });
 
-    // Build recipient -> jobs map. Admin inbox gets ALL stale jobs; each tech gets their own.
-    const settingsRows = await base44.asServiceRole.entities.NotificationSetting.list("-created_date", 1);
-    const settings = settingsRows[0] || null;
-
+    // All active technicians and admins receive every stale-job reminder.
     const recipientJobs = new Map(); // email -> { name, items: [] }
     const addFor = (email, name, item) => {
       if (!email) return;
@@ -99,21 +96,11 @@ Deno.serve(async (req) => {
       recipientJobs.get(email).items.push(item);
     };
 
-    const adminInbox = (settings?.admin_inbox || "").split(",").map((e) => e.trim()).filter(Boolean);
-    for (const email of adminInbox) {
-      for (const item of stale) addFor(email, "team", item);
-    }
-
-    // Cache staff lookups
-    const staffCache = new Map();
-    for (const item of stale) {
-      const techId = item.job.assigned_technician_id;
-      if (!techId) continue;
-      if (!staffCache.has(techId)) {
-        staffCache.set(techId, await base44.asServiceRole.entities.StaffProfile.get(techId).catch(() => null));
-      }
-      const staff = staffCache.get(techId);
-      if (staff?.email) addFor(staff.email, (staff.short_name || staff.full_name || "there").split(" ")[0], item);
+    const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+    const recipients = staff.filter((s) => s.email && ["admin", "technician"].includes(s.role));
+    for (const person of recipients) {
+      const name = (person.short_name || person.full_name || "team").split(" ")[0];
+      for (const item of stale) addFor(person.email, name, item);
     }
 
     const results = [];

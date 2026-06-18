@@ -71,16 +71,11 @@ async function getSettings(base44) {
   return rows[0] || null;
 }
 
-async function staffRecipients(base44, settings, job) {
-  const recipients = new Set();
-  if (settings?.admin_inbox) {
-    settings.admin_inbox.split(",").map((e) => e.trim()).filter(Boolean).forEach((e) => recipients.add(e));
-  }
-  if (job?.assigned_technician_id) {
-    const staff = await base44.asServiceRole.entities.StaffProfile.get(job.assigned_technician_id).catch(() => null);
-    if (staff?.email) recipients.add(staff.email);
-  }
-  return [...recipients];
+async function staffRecipients(base44) {
+  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  return staff
+    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .map((s) => s.email);
 }
 
 Deno.serve(async (req) => {
@@ -107,10 +102,10 @@ Deno.serve(async (req) => {
     const job = await base44.asServiceRole.entities.Job.get(data.job_id).catch(() => null);
     if (!job) return Response.json({ skipped: "job not found" });
 
-    let recipients = [];
+    const recipients = new Set(await staffRecipients(base44));
     let extra = "";
     if (cfg.audience === "customer") {
-      if (job.customer_email) recipients = [job.customer_email];
+      if (job.customer_email) recipients.add(job.customer_email);
       if (data.event_type === "customer_note_added" && data.summary) {
         // Pull the latest customer-visible note body for richer content.
         const notes = await base44.asServiceRole.entities.JobNote
@@ -119,11 +114,9 @@ Deno.serve(async (req) => {
           extra = `<table width="100%" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;"><tr><td style="font-size:14px;color:#475569;line-height:1.6;">${notes[0].body}</td></tr></table>`;
         }
       }
-    } else {
-      recipients = await staffRecipients(base44, settings, job);
     }
 
-    if (recipients.length === 0) return Response.json({ skipped: "no recipients" });
+    if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const html = emailHtml(cfg, job, extra);
     const ref = job.reference ? ` (${job.reference})` : "";
@@ -133,8 +126,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[auditNotify] ${data.event_type} -> ${recipients.join(", ")}`);
-    return Response.json({ sent: true, event_type: data.event_type, recipients });
+    console.log(`[auditNotify] ${data.event_type} -> ${[...recipients].join(", ")}`);
+    return Response.json({ sent: true, event_type: data.event_type, recipients: [...recipients] });
   } catch (error) {
     console.error("[auditNotify] Error:", error.message);
     return Response.json({ error: error.message }, { status: 500 });

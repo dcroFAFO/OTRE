@@ -13,6 +13,14 @@ async function sendMail({ to, subject, body, from_name }) {
   if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
   return res.json();
 }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function getStaffRecipients(base44) {
+  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  return staff
+    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .map((s) => s.email);
+}
 
 const isFull = (list) => Array.isArray(list) && list.length > 0 && list.every((c) => c.done);
 
@@ -42,7 +50,9 @@ Deno.serve(async (req) => {
     }
 
     const email = data.customer_email;
-    if (!email) return Response.json({ skipped: "no customer email on job" });
+    const recipients = new Set(await getStaffRecipients(base44));
+    if (email) recipients.add(email);
+    if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const customerName = data.customer_name || "Customer";
     const reference = data.reference ? ` (${data.reference})` : "";
@@ -104,15 +114,20 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await sendMail({
-      to: email,
-      subject: `Repair checklist completed${reference}`,
-      body: htmlBody,
-      from_name: "OTR Scooters",
-    });
+    let first = true;
+    for (const to of recipients) {
+      if (!first) await sleep(600);
+      first = false;
+      await sendMail({
+        to,
+        subject: `Repair checklist completed${reference}`,
+        body: htmlBody,
+        from_name: "OTR Scooters",
+      });
+    }
 
-    console.log(`[checklistCompleteNotify] Summary sent to ${email}`);
-    return Response.json({ sent: true, to: email, steps: checklist.length });
+    console.log(`[checklistCompleteNotify] Summary sent to ${[...recipients].join(", ")}`);
+    return Response.json({ sent: true, recipients: [...recipients], steps: checklist.length });
 
   } catch (error) {
     console.error("[checklistCompleteNotify] Error:", error.message);

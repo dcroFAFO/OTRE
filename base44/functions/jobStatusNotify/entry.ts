@@ -15,6 +15,13 @@ async function sendMail({ to, subject, body, from_name }) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+async function getStaffRecipients(base44) {
+  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  return staff
+    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .map((s) => s.email);
+}
+
 const NOTIFY_STATUSES = {
   repair_in_progress: {
     subject: "Your scooter is now being repaired 🔧",
@@ -63,8 +70,10 @@ Deno.serve(async (req) => {
     }
 
     const email = data.customer_email;
-    if (!email) {
-      return Response.json({ skipped: "no customer email on job" });
+    const recipients = new Set(await getStaffRecipients(base44));
+    if (email) recipients.add(email);
+    if (recipients.size === 0) {
+      return Response.json({ skipped: "no recipients" });
     }
 
     const customerName = data.customer_name || "Customer";
@@ -128,12 +137,17 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-    await sendMail({
-      to: email,
-      subject: `${subject}${reference}`,
-      body: htmlBody,
-      from_name: "OTR Scooters",
-    });
+    let first = true;
+    for (const to of recipients) {
+      if (!first) await sleep(600);
+      first = false;
+      await sendMail({
+        to,
+        subject: `${subject}${reference}`,
+        body: htmlBody,
+        from_name: "OTR Scooters",
+      });
+    }
 
     // On completion, also send a short feedback / review request.
     if (newStatus === "completed") {
@@ -174,8 +188,8 @@ Deno.serve(async (req) => {
       console.log(`[jobStatusNotify] Feedback request sent to ${email}`);
     }
 
-    console.log(`[jobStatusNotify] Email sent to ${email} for status: ${newStatus}`);
-    return Response.json({ sent: true, to: email, status: newStatus });
+    console.log(`[jobStatusNotify] Email sent to ${[...recipients].join(", ")} for status: ${newStatus}`);
+    return Response.json({ sent: true, recipients: [...recipients], status: newStatus });
 
   } catch (error) {
     console.error("[jobStatusNotify] Error:", error.message);

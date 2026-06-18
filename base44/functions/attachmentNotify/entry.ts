@@ -4,6 +4,28 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const BUSINESS = { name: "OTR Scooters", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com", phone: "(03) 9000 1234" };
 
+async function sendMail({ to, subject, body, from_name }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
+  const from = `${from_name || "On The Run Electrics"} <hello@ontherunelectrics.com.au>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: recipients, subject, html: body }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+  return res.json();
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function getStaffRecipients(base44) {
+  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  return staff
+    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .map((s) => s.email);
+}
+
 function html(job, attachment) {
   const assetLabel = job?.asset_label || job?.scooter_label || "your scooter";
   const isPhoto = attachment.kind === "photo";
@@ -54,18 +76,28 @@ Deno.serve(async (req) => {
     }
 
     const job = await base44.asServiceRole.entities.Job.get(data.job_id).catch(() => null);
-    if (!job?.customer_email) return Response.json({ skipped: "no customer email" });
+    if (!job) return Response.json({ skipped: "job not found" });
+
+    const recipients = new Set(await getStaffRecipients(base44));
+    if (job.customer_email) recipients.add(job.customer_email);
+    if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const ref = job.reference ? ` (${job.reference})` : "";
-    await base44.asServiceRole.functions.invoke('sendMail', {
-      to: job.customer_email,
-      subject: `New ${data.kind === "photo" ? "photo" : "file"} on your scooter job${ref}`,
-      body: html(job, data),
-      from_name: BUSINESS.name,
-    });
+    const emailBody = html(job, data);
+    let first = true;
+    for (const to of recipients) {
+      if (!first) await sleep(600);
+      first = false;
+      await sendMail({
+        to,
+        subject: `New ${data.kind === "photo" ? "photo" : "file"} on your scooter job${ref}`,
+        body: emailBody,
+        from_name: BUSINESS.name,
+      });
+    }
 
-    console.log(`[attachmentNotify] sent to ${job.customer_email}`);
-    return Response.json({ sent: true, to: job.customer_email });
+    console.log(`[attachmentNotify] sent to ${[...recipients].join(", ")}`);
+    return Response.json({ sent: true, recipients: [...recipients] });
   } catch (error) {
     console.error("[attachmentNotify] Error:", error.message);
     return Response.json({ error: error.message }, { status: 500 });

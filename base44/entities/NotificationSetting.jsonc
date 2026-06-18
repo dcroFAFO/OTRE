@@ -6,29 +6,20 @@
       "type": "string",
       "default": "otr-scooters"
     },
-    "admin_inbox": {
-      "type": "string",
-      "description": "Business / admin email address that receives internal notifications"
-    },
     "notify_status_change": {
       "type": "boolean",
       "default": true,
-      "description": "Email customers when their job status changes"
+      "description": "Email customers and staff when job status changes"
     },
     "notify_new_booking": {
       "type": "boolean",
       "default": true,
-      "description": "Email staff/admin when a new booking is created"
+      "description": "Email customers and staff when a new booking is created"
     },
     "notify_invoice": {
       "type": "boolean",
       "default": true,
-      "description": "Email on invoice received / settled"
-    },
-    "notify_staff_on_booking": {
-      "type": "boolean",
-      "default": true,
-      "description": "Also email the assigned technician on new bookings"
+      "description": "Email customers and staff on invoice received / settled"
     },
     "active": {
       "type": "boolean",

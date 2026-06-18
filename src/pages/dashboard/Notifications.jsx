@@ -3,41 +3,29 @@ import { base44 } from "@/api/base44Client";
 import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Bell, Mail, Save, ShieldAlert } from "lucide-react";
+import { Bell, Save, ShieldAlert, Users } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_BUSINESS_SLUG } from "@/config/platformConfig";
-import InboxMultiSelect from "@/components/dashboard/notifications/InboxMultiSelect";
 
 const TOGGLES = [
   { key: "notify_status_change", label: "Job status changes", desc: "Email customers when their job moves to In Progress, Ready for Pickup or Completed." },
-  { key: "notify_new_booking", label: "New booking requests", desc: "Email the admin inbox (and assigned technician) when a new booking comes in." },
-  { key: "notify_staff_on_booking", label: "Notify assigned technician", desc: "Also email the assigned technician on new bookings." },
-  { key: "notify_invoice", label: "Invoices", desc: "Email when an invoice is received (outstanding) or settled (paid)." },
+  { key: "notify_new_booking", label: "New booking requests", desc: "Email all technicians/admins and the customer when a new booking comes in." },
+  { key: "notify_invoice", label: "Invoices", desc: "Email all technicians/admins and the customer when an invoice is received or settled." },
 ];
 
 export default function Notifications() {
   const { user } = useOutletContext();
   const { toast } = useToast();
   const [setting, setSetting] = useState(null);
-  const [accounts, setAccounts] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    base44.entities.StaffProfile.filter({ active: true }).then((staff) => {
-      const list = (staff || [])
-        .filter((s) => s.email && ["admin", "technician"].includes(s.role))
-        .map((s) => ({ email: s.email, label: s.short_name || s.full_name || s.email, role: s.role }));
-      setAccounts(list);
-    });
     base44.entities.NotificationSetting.list("-created_date", 1).then((rows) => {
       setSetting(rows[0] || {
         business_slug: DEFAULT_BUSINESS_SLUG,
-        admin_inbox: "",
         notify_status_change: true,
         notify_new_booking: true,
-        notify_staff_on_booking: true,
         notify_invoice: true,
         active: true,
       });
@@ -85,16 +73,10 @@ export default function Notifications() {
 
       <Card className="rounded-3xl shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Mail className="h-4 w-4" /> Business inbox</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Default recipients</CardTitle>
         </CardHeader>
         <CardContent>
-          <Label className="text-sm">Recipients</Label>
-          <InboxMultiSelect
-            accounts={accounts}
-            value={setting.admin_inbox || ""}
-            onChange={(v) => update("admin_inbox", v)}
-          />
-          <p className="text-xs text-muted-foreground mt-1.5">New bookings and invoice notifications are sent to these recipients. Pick from staff accounts or add another email.</p>
+          <p className="text-sm text-muted-foreground">All active technicians and admins receive notifications for every job. Customers receive notifications for their own jobs automatically.</p>
         </CardContent>
       </Card>
 

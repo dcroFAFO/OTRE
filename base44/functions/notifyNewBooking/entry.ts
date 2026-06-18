@@ -24,6 +24,13 @@ async function getSettings(base44) {
   return rows[0] || null;
 }
 
+async function getStaffRecipients(base44) {
+  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  return staff
+    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .map((s) => s.email);
+}
+
 function bookingHtml(job) {
   const assetLabel = job.asset_label || job.scooter_label || "—";
   return `
@@ -76,15 +83,9 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: "new booking notifications disabled" });
     }
 
-    const recipients = new Set();
-    if (settings?.admin_inbox) {
-      settings.admin_inbox.split(",").map((e) => e.trim()).filter(Boolean).forEach((e) => recipients.add(e));
-    }
-    if (settings?.notify_staff_on_booking !== false && data.assigned_technician_id) {
-      const staff = await base44.asServiceRole.entities.StaffProfile.get(data.assigned_technician_id).catch(() => null);
-      if (staff?.email) recipients.add(staff.email);
-    }
-    if (recipients.size === 0) return Response.json({ skipped: "no recipients configured" });
+    const recipients = new Set(await getStaffRecipients(base44));
+    if (data.customer_email) recipients.add(data.customer_email);
+    if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const html = bookingHtml(data);
     const reference = data.reference ? ` (${data.reference})` : "";

@@ -37,6 +37,13 @@ async function getSettings(base44) {
   return rows[0] || null;
 }
 
+async function getStaffRecipients(base44) {
+  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  return staff
+    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .map((s) => s.email);
+}
+
 function invoiceHtml({ heading, message, color }, invoice, currency, amount) {
   return `
 <!DOCTYPE html>
@@ -98,11 +105,8 @@ Deno.serve(async (req) => {
     const amount = data.amount || 0;
     const state = STATES[newStatus];
 
-    const recipients = new Set();
+    const recipients = new Set(await getStaffRecipients(base44));
     if (job?.customer_email) recipients.add(job.customer_email);
-    if (settings?.admin_inbox) {
-      settings.admin_inbox.split(",").map((e) => e.trim()).filter(Boolean).forEach((e) => recipients.add(e));
-    }
     if (recipients.size === 0) return Response.json({ skipped: "no recipients" });
 
     const html = invoiceHtml(state, data, currency, amount);
