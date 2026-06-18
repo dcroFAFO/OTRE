@@ -50,15 +50,22 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
     e.preventDefault();
     if (!form.consent || !form.asset_label || !modelMatchesBrand || !issueValid) return;
     setSubmitting(true);
-    const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
-    const job = await createBookingRequest({
-      ...form,
-      customer_name: form.customer_name || user.full_name,
-      issue_description,
-      photo_url: photoUrl,
-    });
-    setSubmitting(false);
-    setDone(job);
+    try {
+      const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
+      const job = await createBookingRequest({
+        ...form,
+        customer_name: form.customer_name || user?.full_name,
+        customer_email: user?.email,
+        issue_description,
+        photo_url: photoUrl,
+      });
+      setDone(job);
+    } catch (err) {
+      console.error("Booking failed:", err);
+      alert("Sorry — couldn't submit your booking. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
