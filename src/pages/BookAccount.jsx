@@ -36,7 +36,7 @@ const BENEFITS = [
 ];
 
 export default function BookAccount() {
-  const signIn = (provider) => base44.auth.loginWithProvider(provider, `${window.location.origin}/#book`);
+  const signIn = (provider) => base44.auth.loginWithProvider(provider, `${window.location.origin}/`);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -61,7 +61,7 @@ export default function BookAccount() {
               Bookings are now connected to a secure customer account, giving you quote approvals, job tracking, updates, and payment handling in one place.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/#book">
+              <Link to="/">
                 <Button size="lg" className="rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
                   I already have an account <ArrowRight className="h-4 w-4" />
                 </Button>
