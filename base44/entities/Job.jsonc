@@ -53,16 +53,13 @@
       "description": "Standardised technician intake details captured when a scooter is received",
       "properties": {
         "make": {
-          "type": "string",
-          "description": "Scooter make / brand"
+          "type": "string"
         },
         "model": {
-          "type": "string",
-          "description": "Scooter model"
+          "type": "string"
         },
         "serial_number": {
-          "type": "string",
-          "description": "Frame / serial number (VIN)"
+          "type": "string"
         },
         "battery_condition": {
           "type": "string",
@@ -72,41 +69,32 @@
             "poor",
             "faulty",
             "unknown"
-          ],
-          "description": "Assessed battery condition on intake"
+          ]
         },
         "battery_voltage": {
-          "type": "string",
-          "description": "Measured battery voltage at intake"
+          "type": "string"
         },
         "odometer_km": {
-          "type": "number",
-          "description": "Odometer reading in km, if available"
+          "type": "number"
         },
         "physical_condition": {
-          "type": "string",
-          "description": "Notes on physical condition / existing damage"
+          "type": "string"
         },
         "accessories_received": {
-          "type": "string",
-          "description": "Items received with the scooter e.g. charger, key"
+          "type": "string"
         },
         "powers_on": {
-          "type": "boolean",
-          "description": "Whether the scooter powers on at intake"
+          "type": "boolean"
         },
         "initial_issue_notes": {
-          "type": "string",
-          "description": "Technician's initial assessment of the reported issue"
+          "type": "string"
         },
         "intake_by_name": {
-          "type": "string",
-          "description": "Name of the technician who completed intake"
+          "type": "string"
         },
         "intake_date": {
           "type": "string",
-          "format": "date-time",
-          "description": "When intake was completed"
+          "format": "date-time"
         }
       }
     },
@@ -119,33 +107,27 @@
       "default": "requested"
     },
     "waiting_reason": {
-      "type": "string",
-      "description": "Configurable wait reason key"
+      "type": "string"
     },
     "scheduled_date": {
       "type": "string",
-      "format": "date",
-      "description": "Day the job is scheduled on the calendar"
+      "format": "date"
     },
     "preferred_time_window": {
       "type": "string"
     },
     "rideable": {
       "type": "boolean",
-      "default": true,
-      "description": "Legacy OTR-specific intake flag"
+      "default": true
     },
     "location_preference": {
-      "type": "string",
-      "description": "Configurable booking location/preference key"
+      "type": "string"
     },
     "assigned_technician_id": {
-      "type": "string",
-      "description": "Assigned staff member id"
+      "type": "string"
     },
     "assigned_technician_name": {
-      "type": "string",
-      "description": "Assigned staff display name"
+      "type": "string"
     },
     "payment_status": {
       "type": "string",
@@ -200,26 +182,7 @@
     "customer_name"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee"
-              ]
-            }
-          }
-        },
-        {
-          "data.customer_email": "{{user.email}}"
-        },
-        {
-          "service_role": true
-        }
-      ]
-    },
+    "create": null,
     "read": {
       "$or": [
         {
@@ -235,9 +198,6 @@
         },
         {
           "data.customer_email": "{{user.email}}"
-        },
-        {
-          "service_role": true
         }
       ]
     },
@@ -263,23 +223,13 @@
               "data.status": "requested"
             }
           ]
-        },
-        {
-          "service_role": true
         }
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "service_role": true
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
