@@ -183,16 +183,23 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "$or": [
-          {
-            "role": "admin"
-          },
-          {
-            "role": "employee"
+      "$or": [
+        {
+          "user_condition": {
+            "$or": [
+              {
+                "role": "admin"
+              },
+              {
+                "role": "employee"
+              }
+            ]
           }
-        ]
-      }
+        },
+        {
+          "data.customer_email": "{{user.email}}"
+        }
+      ]
     },
     "read": {
       "$or": [
