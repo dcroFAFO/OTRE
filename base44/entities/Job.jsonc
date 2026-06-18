@@ -214,6 +214,9 @@
         },
         {
           "data.customer_email": "{{user.email}}"
+        },
+        {
+          "service_role": true
         }
       ]
     },
@@ -232,6 +235,9 @@
         },
         {
           "data.customer_email": "{{user.email}}"
+        },
+        {
+          "service_role": true
         }
       ]
     },
@@ -257,13 +263,23 @@
               "data.status": "requested"
             }
           ]
+        },
+        {
+          "service_role": true
         }
       ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "service_role": true
+        }
+      ]
     }
   }
 }
