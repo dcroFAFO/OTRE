@@ -8,8 +8,9 @@ import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { SlidersHorizontal, Plus } from "lucide-react";
-import NewJobFromTemplateModal from "@/components/dashboard/job/NewJobFromTemplateModal";
+import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
+import { can } from "@/config/permissions";
 
 export default function Jobs() {
   const user = useDashboardUser();
@@ -19,7 +20,7 @@ export default function Jobs() {
   const { data: staff } = useStaff();
   const invalidate = useInvalidateJobs();
   const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [templateModal, setTemplateModal] = useState(false);
+  const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
   const params = new URLSearchParams(location.search);
@@ -53,13 +54,15 @@ export default function Jobs() {
         </div>
       </div>
 
-      <button
-        onClick={() => setTemplateModal(true)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/20 px-4 py-2.5 font-semibold hover:bg-accent/90 transition-colors text-base">
-        
-        <Plus className="h-4 w-4" />
-        New Job
-      </button>
+      {can(user.role, "job.create") || user.role === "admin" ? (
+        <button
+          onClick={() => setCreateModal(true)}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/20 px-4 py-2.5 font-semibold hover:bg-accent/90 transition-colors text-base">
+          
+          <Plus className="h-4 w-4" />
+          New Job
+        </button>
+      ) : null}
 
       <JobFilters filters={filters} setFilters={setFilters} staff={staff} />
 
@@ -90,9 +93,9 @@ export default function Jobs() {
       <div className="h-16" aria-hidden />
 
       <JobDetailModal jobId={selectedId} actor={user} open={!!selectedId} onClose={close} />
-      <NewJobFromTemplateModal
-        open={templateModal}
-        onClose={() => setTemplateModal(false)}
+      <CreateJobModal
+        open={createModal}
+        onClose={() => setCreateModal(false)}
         onCreated={(job) => {invalidate();open(job.id);}} />
       
     </div>);
