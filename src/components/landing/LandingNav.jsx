@@ -52,7 +52,7 @@ export default function LandingNav() {
 
         <div className="hidden md:flex items-center gap-2">
           <Link to="/portal"><Button variant="ghost" size="sm">{app.landing.portalLabel}</Button></Link>
-          <a href="#book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book Now</Button></a>
+          <Link to="/book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book Now</Button></Link>
         </div>
 
         <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
@@ -69,7 +69,7 @@ export default function LandingNav() {
           ))}
           <div className="flex gap-2 pt-2">
             <Link to="/portal" className="flex-1"><Button variant="outline" size="sm" className="w-full">Login</Button></Link>
-            <a href="#book" className="flex-1"><Button size="sm" className="w-full bg-accent text-accent-foreground">Book</Button></a>
+            <Link to="/book" className="flex-1"><Button size="sm" className="w-full bg-accent text-accent-foreground">Book</Button></Link>
           </div>
         </div>
       )}

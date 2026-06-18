@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import Landing from '@/pages/Landing';
+import BookAccount from '@/pages/BookAccount';
 import Portal from '@/pages/Portal';
 import Store from '@/pages/Store';
 import Login from '@/pages/Login';
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/book" element={<BookAccount />} />
       <Route path="/portal" element={<Portal />} />
       <Route path="/store" element={<Store />} />
       <Route path="/login" element={<Login />} />

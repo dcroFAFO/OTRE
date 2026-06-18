@@ -41,7 +41,7 @@ export const DEFAULT_APP_SETTINGS = {
     navLinks: [
       { label: "Services", href: "#services" },
       { label: "How it works", href: "#journey" },
-      { label: "Book a repair", href: "#book" },
+      { label: "Book a repair", href: "/book" },
     ],
     heroEyebrow: "Repairs · Servicing · Sales",
     heroBenefits: ["All major brands serviced", "Genuine & compatible parts", "Transparent fixed-price quotes"],

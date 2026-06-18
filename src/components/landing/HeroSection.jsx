@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, CheckCircle2, Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag } from "lucide-react";
@@ -66,16 +67,16 @@ export default function HeroSection() {
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#book">
+            <a href="#services">
               <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl shadow-lg shadow-accent/20">
                 {business.primaryCta.label} <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
-            <a href="#services">
+            <Link to="/book">
               <Button size="lg" variant="outline" className="rounded-xl border-white/15 hover:bg-white/5">
                 {business.secondaryCta.label}
               </Button>
-            </a>
+            </Link>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">
