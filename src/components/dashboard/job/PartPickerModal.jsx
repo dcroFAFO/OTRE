@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Package, Plus, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // Lets a technician pick parts from the synced Parts catalogue and add them
@@ -46,22 +47,28 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
   const add = async () => {
     if (chosen.length === 0) return;
     setAdding(true);
-    if (onAdd) {
-      // Caller provides custom add logic (e.g. JobPartsPanel writes to InventoryUsage)
-      await onAdd(chosen);
-    } else {
-      // Default: add to quote line items
-      const { addPartsToQuote } = await import("@/services/quoteService");
-      await addPartsToQuote(
-        job,
-        chosen.map((p) => ({ name: p.name, typical_price: p.price, qty: p.qty, retailer: "Parts catalogue" })),
-        actor
-      );
+    try {
+      if (onAdd) {
+        // Caller provides custom add logic (e.g. JobPartsPanel writes to InventoryUsage)
+        await onAdd(chosen);
+      } else {
+        // Default: add to quote line items
+        const { addPartsToQuote } = await import("@/services/quoteService");
+        await addPartsToQuote(
+          job,
+          chosen.map((p) => ({ name: p.name, typical_price: p.price, qty: p.qty, retailer: "Parts catalogue" })),
+          actor
+        );
+      }
+      setSelected({});
+      onAdded?.();
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Add parts failed:", err);
+      toast.error("Couldn't add parts. Please try again.");
+    } finally {
+      setAdding(false);
     }
-    setAdding(false);
-    setSelected({});
-    onAdded?.();
-    onOpenChange(false);
   };
 
   return (

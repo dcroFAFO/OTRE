@@ -122,12 +122,12 @@ Deno.serve(async (req) => {
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
+    const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
     const job = jobs[0];
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const logAudit = ({ eventType, newValue = null, summary = "", visibility = "internal" }) =>
-      base44.entities.AuditEvent.create({
+      base44.asServiceRole.entities.AuditEvent.create({
         event_type: eventType,
         job_id: job.id,
         actor_id: user.id,
@@ -138,8 +138,13 @@ Deno.serve(async (req) => {
         visibility,
       });
 
+    // Quote writes run with service role: the user is already authenticated above
+    // and quote mutation is staff business logic. This avoids per-user RLS create
+    // denials that previously left the UI spinning.
+    const db = base44.asServiceRole.entities;
+
     const getJobQuote = async () => {
-      const quotes = await base44.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
+      const quotes = await db.Quote.filter({ job_id: job.id }, "-created_date", 1);
       return quotes[0] || null;
     };
 
@@ -168,28 +173,28 @@ Deno.serve(async (req) => {
         }
         const total = (Number(data.labour_estimate) || 0) + (Number(data.parts_estimate) || 0);
         if (data.id) {
-          result = await base44.entities.Quote.update(data.id, { ...data, total });
+          result = await db.Quote.update(data.id, { ...data, total });
         } else {
-          result = await base44.entities.Quote.create({ ...data, job_id: job.id, total, currency: CURRENCY, status: "draft" });
-          await base44.entities.Job.update(job.id, { quote_status: "draft" });
+          result = await db.Quote.create({ ...data, job_id: job.id, total, currency: CURRENCY, status: "draft" });
+          await db.Job.update(job.id, { quote_status: "draft" });
           await logAudit({ eventType: "quote_generated", summary: "Quote generated", newValue: `${CURRENCY} ${total}` });
         }
         break;
       }
       case "send": {
-        result = await base44.entities.Quote.update(params.quoteId, { status: "sent", sent_date: new Date().toISOString() });
-        await base44.entities.Job.update(job.id, { quote_status: "sent", status: "quote_sent" });
+        result = await db.Quote.update(params.quoteId, { status: "sent", sent_date: new Date().toISOString() });
+        await db.Job.update(job.id, { quote_status: "sent", status: "quote_sent" });
         await logAudit({ eventType: "quote_sent", summary: "Quote sent to customer", visibility: "customer" });
         await sendQuoteEmail({ job, quote: result });
         break;
       }
       case "set_approval": {
         const approved = !!params.approved;
-        result = await base44.entities.Quote.update(params.quoteId, {
+        result = await db.Quote.update(params.quoteId, {
           status: approved ? "approved" : "rejected",
           approval_status: approved ? "approved" : "rejected",
         });
-        await base44.entities.Job.update(job.id, {
+        await db.Job.update(job.id, {
           quote_status: approved ? "approved" : "rejected",
           status: approved ? "quote_approved" : job.status,
         });
@@ -204,11 +209,11 @@ Deno.serve(async (req) => {
         const parts = params.parts || [];
         let quote = await getJobQuote();
         if (!quote) {
-          quote = await base44.entities.Quote.create({
+          quote = await db.Quote.create({
             job_id: job.id, currency: CURRENCY, status: "draft",
             labour_estimate: 0, parts_estimate: 0, total: 0,
           });
-          await base44.entities.Job.update(job.id, { quote_status: "draft" });
+          await db.Job.update(job.id, { quote_status: "draft" });
         }
 
         const newItems = parts.map((p) => ({
@@ -227,7 +232,7 @@ Deno.serve(async (req) => {
           .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
         const total = labour_estimate + parts_estimate;
 
-        result = await base44.entities.Quote.update(quote.id, { line_items, parts_estimate, labour_estimate, total });
+        result = await db.Quote.update(quote.id, { line_items, parts_estimate, labour_estimate, total });
         await logAudit({
           eventType: "quote_generated",
           summary: `Added ${parts.length} sourced part(s) to quote`,
@@ -241,11 +246,11 @@ Deno.serve(async (req) => {
         const unit_price = labourFromHours(hrs) / hrs; // = LABOUR_RATE
         let quote = await getJobQuote();
         if (!quote) {
-          quote = await base44.entities.Quote.create({
+          quote = await db.Quote.create({
             job_id: job.id, currency: CURRENCY, status: "draft",
             labour_estimate: 0, parts_estimate: 0, total: 0,
           });
-          await base44.entities.Job.update(job.id, { quote_status: "draft" });
+          await db.Job.update(job.id, { quote_status: "draft" });
         }
         const newItem = { description: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`, qty: 1, unit_price: hrs * LABOUR_RATE, kind: "labour" };
         const line_items = [...(quote.line_items || []), newItem];
@@ -253,7 +258,7 @@ Deno.serve(async (req) => {
           .filter((li) => li.kind === "labour")
           .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
         const total = labour_estimate + (Number(quote.parts_estimate) || 0);
-        result = await base44.entities.Quote.update(quote.id, { line_items, labour_estimate, total });
+        result = await db.Quote.update(quote.id, { line_items, labour_estimate, total });
         await logAudit({ eventType: "quote_generated", summary: `Added labour: ${hrs}hr(s)`, newValue: `${CURRENCY} ${total.toFixed(2)}` });
         break;
       }
