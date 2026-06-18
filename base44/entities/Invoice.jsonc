@@ -51,16 +51,22 @@
       }
     },
     "read": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician",
-            "user"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "data.customer_email": "{{user.email}}"
         }
-      }
+      ]
     },
     "update": {
       "user_condition": {
