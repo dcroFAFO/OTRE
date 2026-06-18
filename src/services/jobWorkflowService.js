@@ -6,7 +6,7 @@
  * raw status dropdown or direct field edit.
  */
 
-import { changeStatus, archiveJob, reopenJob } from "./jobService";
+import { changeStatus, reopenJob } from "./jobService";
 
 // ---------------------------------------------------------------------------
 // Transition guard rules

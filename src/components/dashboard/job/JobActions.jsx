@@ -4,12 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  PackageCheck, XCircle, RotateCcw, Archive, UserCheck,
+  PackageCheck, XCircle, RotateCcw, UserCheck,
   Calendar, CheckCircle2, AlertCircle, Loader2
 } from "lucide-react";
 import { JOB_STATUSES } from "@/config/jobConfig";
 import { CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY, DEFAULT_APP_SETTINGS, DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
-import { changeStatus, assignTechnician, rescheduleJob, markReadyForPickup, cancelJob, reopenJob, archiveJob } from "@/services/jobService";
+import { changeStatus, assignTechnician, rescheduleJob, markReadyForPickup, cancelJob, reopenJob } from "@/services/jobService";
 import { useStaff } from "@/hooks/useJobs";
 import { cn } from "@/lib/utils";
 
@@ -148,13 +148,7 @@ export default function JobActions({ job, actor, onChange }) {
               busy={busy === "reopen"}
             />
           )}
-          <ActionButton
-            label="Archive"
-            icon={Archive}
-            onClick={run("archive", () => archiveJob(job, actor))}
-            busy={busy === "archive"}
-            variant="muted"
-          />
+
         </div>
       </div>
     </div>

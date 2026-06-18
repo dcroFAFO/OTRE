@@ -37,10 +37,6 @@ export async function reopenJob(job) {
   return invoke({ action: "reopen", jobId: job.id });
 }
 
-export async function archiveJob(job) {
-  return invoke({ action: "archive", jobId: job.id });
-}
-
 export async function toggleChecklistItem(job, index) {
   return invoke({ action: "toggle_checklist", jobId: job.id, index });
 }

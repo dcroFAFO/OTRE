@@ -6,10 +6,9 @@ export function useJobs(filter = {}) {
     queryKey: ["jobs", filter],
     queryFn: async () => {
       const jobs = await base44.entities.Job.list("-created_date", 200);
-      return jobs.filter((job) => {
-        if (job.archived === true) return false;
-        return Object.entries(filter).every(([key, value]) => job[key] === value);
-      });
+      return jobs.filter((job) =>
+        Object.entries(filter).every(([key, value]) => job[key] === value)
+      );
     },
     placeholderData: [],
     staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching

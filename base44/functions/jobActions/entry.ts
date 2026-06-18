@@ -97,11 +97,6 @@ Deno.serve(async (req) => {
         await logAudit({ eventType: "job_reopened", summary: "Job reopened" });
         break;
       }
-      case "archive": {
-        result = await base44.entities.Job.update(job.id, { archived: true });
-        await logAudit({ eventType: "job_archived", summary: "Job archived" });
-        break;
-      }
       case "toggle_checklist": {
         const index = Number(params.index);
         const checklist = (job.checklist || []).map((c, i) => (i === index ? { ...c, done: !c.done } : c));
