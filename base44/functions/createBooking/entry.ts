@@ -76,7 +76,6 @@ Deno.serve(async (req) => {
 
     return Response.json(job);
   } catch (error) {
-    console.error("CREATEBOOKING_FAIL message=" + error.message);
     console.error("[createBooking] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
     return Response.json({ error: "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });
   }
