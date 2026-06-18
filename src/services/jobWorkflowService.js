@@ -158,12 +158,6 @@ const TRANSITION_RULES = {
 // message when the transition is blocked.
 // ---------------------------------------------------------------------------
 export async function updateJobStatusFromEvent(job, eventType, payload = {}) {
-  // Special case: archive is not a status change
-  if (eventType === "archive") {
-    await archiveJob(job);
-    return { ok: true };
-  }
-
   const rule = TRANSITION_RULES[eventType];
   if (!rule) {
     throw new Error(`Unknown workflow event: "${eventType}".`);

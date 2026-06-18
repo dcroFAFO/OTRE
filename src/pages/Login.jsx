@@ -39,9 +39,12 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", REDIRECT_AFTER_AUTH);
-  };
+  const PROVIDERS = [
+    { key: "google", label: "Continue with Google" },
+    { key: "microsoft", label: "Continue with Microsoft" },
+    { key: "facebook", label: "Continue with Facebook" },
+    { key: "apple", label: "Continue with Apple" },
+  ];
 
   return (
     <AuthLayout
@@ -57,14 +60,19 @@ export default function Login() {
         </>
       }
     >
-      <Button
-        variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
-        onClick={handleGoogle}
-      >
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continue with Google
-      </Button>
+      <div className="space-y-3 mb-6">
+        {PROVIDERS.map((provider) => (
+          <Button
+            key={provider.key}
+            variant="outline"
+            className="w-full h-12 text-sm font-medium"
+            onClick={() => base44.auth.loginWithProvider(provider.key, REDIRECT_AFTER_AUTH)}
+          >
+            {provider.key === "google" && <GoogleIcon className="w-5 h-5 mr-2" />}
+            {provider.label}
+          </Button>
+        ))}
+      </div>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
