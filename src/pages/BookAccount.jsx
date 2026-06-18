@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import GoogleIcon from "@/components/GoogleIcon";
-import { ArrowRight, CheckCircle2, CreditCard, FileCheck2, ShieldCheck, ClipboardList } from "lucide-react";
+import { CheckCircle2, CreditCard, FileCheck2, ShieldCheck, ClipboardList, Mail } from "lucide-react";
 
 const PROVIDERS = [
   { key: "google", label: "Continue with Google" },
   { key: "microsoft", label: "Continue with Microsoft" },
   { key: "facebook", label: "Continue with Facebook" },
   { key: "apple", label: "Continue with Apple" },
+  { key: "email", label: "Continue with Email" },
 ];
 
 const BENEFITS = [
@@ -36,7 +37,13 @@ const BENEFITS = [
 ];
 
 export default function BookAccount() {
-  const signIn = (provider) => base44.auth.loginWithProvider(provider, `${window.location.origin}/portal`);
+  const signIn = (provider) => {
+    if (provider === "email") {
+      window.location.href = "/login";
+    } else {
+      base44.auth.loginWithProvider(provider, `${window.location.origin}/portal`);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -60,16 +67,7 @@ export default function BookAccount() {
             <p className="mt-5 text-lg text-muted-foreground leading-relaxed max-w-2xl">
               Bookings are now connected to a secure customer account, giving you quote approvals, job tracking, updates, and payment handling in one place.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/login">
-                <Button size="lg" className="rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
-                  I already have an account <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/portal">
-                <Button size="lg" variant="outline" className="rounded-xl">Open customer portal</Button>
-              </Link>
-            </div>
+
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl">
@@ -86,6 +84,7 @@ export default function BookAccount() {
                   onClick={() => signIn(provider.key)}
                 >
                   {provider.key === "google" && <GoogleIcon className="w-5 h-5 mr-2" />}
+                  {provider.key === "email" && <Mail className="w-5 h-5 mr-2" />}
                   {provider.label}
                 </Button>
               ))}
