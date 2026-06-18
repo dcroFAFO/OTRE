@@ -83,7 +83,7 @@ export default function Parts() {
             eScootNow parts catalogue — synced from Ecwid.
           </p>
         </div>
-        <Button onClick={handleSync} disabled={syncing} className="gap-2 rounded-xl">
+        <Button onClick={handleSync} disabled={syncing} className="gap-2 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm shadow-accent/20">
           <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
           {syncing
             ? syncProgress
@@ -124,7 +124,7 @@ export default function Parts() {
       {/* Product table */}
       {isLoading ? (
         <div className="py-16 flex justify-center">
-          <div className="h-7 w-7 border-4 border-border border-t-primary rounded-full animate-spin" />
+          <div className="h-7 w-7 border-4 border-border border-t-accent rounded-full animate-spin" />
         </div>
       ) : products.length === 0 ? (
         <div className="py-20 text-center text-muted-foreground">
@@ -139,7 +139,7 @@ export default function Parts() {
           <p className="text-sm mt-1">Try a different search or category.</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">

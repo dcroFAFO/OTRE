@@ -27,7 +27,7 @@ export default function CalendarColumn({ date, jobs, onOpen }) {
         </p>
         <p className="text-[10px] text-muted-foreground mt-0.5">{format(date, "MMM")}</p>
         {jobs.length > 0 && (
-          <span className="mt-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+          <span className="mt-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold">
             {jobs.length}
           </span>
         )}
@@ -44,7 +44,7 @@ export default function CalendarColumn({ date, jobs, onOpen }) {
               snapshot.isDraggingOver
                 ? "bg-accent/15 ring-2 ring-accent/50 ring-dashed"
                 : jobs.length === 0
-                ? "border border-dashed border-border/50"
+                ? "border border-dashed border-border bg-background/60"
                 : ""
             )}
           >

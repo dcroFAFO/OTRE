@@ -55,7 +55,7 @@ export default function Notifications() {
   }
 
   if (!setting) {
-    return <div className="flex justify-center py-24"><div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" /></div>;
+    return <div className="flex justify-center py-24"><div className="w-7 h-7 border-4 border-border border-t-accent rounded-full animate-spin" /></div>;
   }
 
   const update = (key, value) => setSetting((s) => ({ ...s, [key]: value }));
@@ -76,14 +76,14 @@ export default function Notifications() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary text-primary-foreground"><Bell className="h-5 w-5" /></span>
+        <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/15 text-accent"><Bell className="h-5 w-5" /></span>
         <div>
           <h1 className="font-heading text-2xl font-extrabold">Email Notifications</h1>
           <p className="text-sm text-muted-foreground">Control which automated emails are sent.</p>
         </div>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Mail className="h-4 w-4" /> Business inbox</CardTitle>
         </CardHeader>
@@ -98,7 +98,7 @@ export default function Notifications() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-3xl shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Notification types</CardTitle>
         </CardHeader>
@@ -116,7 +116,7 @@ export default function Notifications() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={save} disabled={saving} className="gap-2">
+        <Button onClick={save} disabled={saving} className="gap-2 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm shadow-accent/20">
           <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save settings"}
         </Button>
       </div>

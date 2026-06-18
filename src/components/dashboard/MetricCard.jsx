@@ -18,7 +18,7 @@ export default function MetricCard({ label, value, icon: Icon, tone = "default",
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "text-left rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:ring-2",
+        "text-left rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-gentle hover:border-accent/30 hover:ring-2",
         t.ring,
         onClick ? "cursor-pointer" : "cursor-default"
       )}

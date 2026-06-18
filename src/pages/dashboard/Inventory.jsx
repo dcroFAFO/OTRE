@@ -65,7 +65,7 @@ export default function Inventory() {
           <h1 className="font-heading text-2xl font-extrabold text-foreground">Inventory</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Parts &amp; consumables — track stock and link to repair jobs.</p>
         </div>
-        <Button onClick={openNew} className="gap-2 rounded-xl"><Plus className="h-4 w-4" /> Add Item</Button>
+        <Button onClick={openNew} className="gap-2 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm shadow-accent/20"><Plus className="h-4 w-4" /> Add Item</Button>
       </div>
 
       {/* Low stock alert */}
@@ -86,7 +86,7 @@ export default function Inventory() {
           {["all", ...CATEGORIES].map(c => (
             <button key={c} onClick={() => setCatFilter(c)}
               className={cn("px-3 py-1 rounded-full text-xs font-semibold border transition-colors capitalize",
-                catFilter === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/40")}>
+                catFilter === c ? "bg-accent text-accent-foreground border-accent" : "bg-card border-border text-muted-foreground hover:border-accent/40")}>
               {c}
             </button>
           ))}
@@ -95,7 +95,7 @@ export default function Inventory() {
 
       {/* Add / Edit form */}
       {editingId && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-gentle">
           <p className="font-heading font-bold text-sm mb-4">{editingId === "new" ? "Add new item" : "Edit item"}</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <LabeledField label="Name *">
@@ -143,7 +143,7 @@ export default function Inventory() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="py-16 flex justify-center"><div className="h-7 w-7 border-4 border-border border-t-primary rounded-full animate-spin" /></div>
+        <div className="py-16 flex justify-center"><div className="h-7 w-7 border-4 border-border border-t-accent rounded-full animate-spin" /></div>
       ) : filtered.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
@@ -151,7 +151,7 @@ export default function Inventory() {
           <p className="text-sm mt-1">Add your first part to get started.</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">

@@ -17,7 +17,7 @@ export default function JobsNavItem({ label = "Jobs", onNavigate }) {
         onClick={() => setExpanded((e) => !e)}
         className={cn(
           "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-          onJobs ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"
+          onJobs ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary"
         )}
       >
         <ListChecks className="h-4.5 w-4.5" /> {label}

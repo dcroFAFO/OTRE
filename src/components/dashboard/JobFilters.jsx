@@ -22,7 +22,7 @@ export default function JobFilters({ filters, setFilters, staff }) {
   }, [localQ]);
 
   return (
-    <div className="space-y-2">
+    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap gap-2">
         {/* Search */}
         <div className="relative flex-1 min-w-full sm:min-w-[200px]">
@@ -31,7 +31,7 @@ export default function JobFilters({ filters, setFilters, staff }) {
             value={localQ}
             onChange={(e) => setLocalQ(e.target.value)}
             placeholder={`Search ${DEFAULT_APP_SETTINGS.terminology.customerSingular}, ${DEFAULT_APP_SETTINGS.terminology.assetSingular}, ref...`}
-            className="pl-9"
+            className="pl-9 rounded-xl bg-background"
           />
           {localQ && (
             <button onClick={() => { setLocalQ(""); set("q", ""); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -65,7 +65,7 @@ export default function JobFilters({ filters, setFilters, staff }) {
 function FilterSelect({ value, onChange, placeholder, options }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="flex-1 min-w-[140px] sm:flex-none sm:w-[145px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectTrigger className="flex-1 min-w-[140px] sm:flex-none sm:w-[145px] rounded-xl bg-background"><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>
         <SelectItem value="all">All {placeholder.toLowerCase()}</SelectItem>
         {options.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}

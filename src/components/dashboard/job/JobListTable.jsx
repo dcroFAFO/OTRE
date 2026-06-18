@@ -30,11 +30,11 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
   };
 
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-secondary/50 text-muted-foreground text-xs uppercase tracking-wide">
+            <tr className="bg-secondary/40 text-muted-foreground text-xs uppercase tracking-wide">
               <th className="px-4 py-2.5 w-10">
                 <Checkbox
                   checked={allSelected}
@@ -61,7 +61,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
                   className={cn(
                     "cursor-pointer hover:bg-secondary/40 transition-colors",
                     j.payment_status === "outstanding" && "border-l-2 border-l-rose-400",
-                    isSelected && "bg-primary/5"
+                    isSelected && "bg-accent/10"
                   )}
                 >
                   <Td onClick={(e) => e.stopPropagation()} className="w-10">

@@ -36,7 +36,7 @@ export default function TurnaroundTracker({ jobs = [], targetDays = DEFAULT_TURN
   const maxAvg = Math.max(targetDays, ...categories.map((c) => c.avg), 1);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-bold flex items-center gap-2">
           <Timer className="h-4 w-4 text-accent" />

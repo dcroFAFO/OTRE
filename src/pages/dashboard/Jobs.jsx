@@ -59,9 +59,9 @@ export default function Jobs() {
 
       <button
         onClick={() => setTemplateModal(true)}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg px-4 py-2.5 font-semibold hover:opacity-90 transition-opacity text-base">
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/20 px-4 py-2.5 font-semibold hover:bg-accent/90 transition-colors text-base">
         
-        <Plus className="h-4 w-4 text-accent" />
+        <Plus className="h-4 w-4" />
         New Job
       </button>
 
@@ -77,7 +77,7 @@ export default function Jobs() {
       )}
 
       {filtered.length === 0 ?
-      <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
+      <div className="rounded-2xl border border-dashed border-border bg-card py-16 text-center shadow-sm">
           <SlidersHorizontal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No jobs to show here.</p>
         </div> :

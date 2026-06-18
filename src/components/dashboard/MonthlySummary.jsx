@@ -48,7 +48,7 @@ export default function MonthlySummary({ jobs = [] }) {
   return (
     <div className="grid lg:grid-cols-3 gap-4">
       {/* Completed this month */}
-      <div className="rounded-2xl border border-border bg-card p-5 flex flex-col justify-between">
+      <div className="rounded-3xl border border-border bg-card p-5 flex flex-col justify-between shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Repairs completed</p>
           <span className="grid place-items-center h-8 w-8 rounded-xl bg-emerald-100 text-emerald-600">
@@ -86,7 +86,7 @@ export default function MonthlySummary({ jobs = [] }) {
 
 function RankList({ title, icon: Icon, items, max, barClass, emptyText }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <span className="grid place-items-center h-8 w-8 rounded-xl bg-secondary text-foreground">
           <Icon className="h-4 w-4" />

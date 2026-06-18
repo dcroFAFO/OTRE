@@ -15,7 +15,7 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
     <div
       onClick={onClick}
       className={cn(
-        "group cursor-pointer rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md hover:border-primary/30 select-none",
+        "group cursor-pointer rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-gentle hover:border-accent/30 select-none",
         outstanding && "border-l-2 border-l-rose-400",
         isWaiting && "border-l-2 border-l-amber-400",
         className

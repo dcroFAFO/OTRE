@@ -66,17 +66,17 @@ export default function Templates() {
           <h1 className="font-heading text-2xl font-extrabold tracking-tight">Job Templates</h1>
           <p className="text-muted-foreground text-sm">Pre-fill common repairs to speed up job creation.</p>
         </div>
-        <Button size="sm" onClick={() => setEditing({ ...EMPTY })} className="gap-1.5">
+        <Button size="sm" onClick={() => setEditing({ ...EMPTY })} className="gap-1.5 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm shadow-accent/20">
           <Plus className="h-4 w-4" /> New Template
         </Button>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-border border-t-accent rounded-full animate-spin" />
         </div>
       ) : templates.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/60 py-16 text-center space-y-3">
+        <div className="rounded-2xl border border-dashed border-border bg-card py-16 text-center space-y-3 shadow-sm">
           <Wrench className="h-9 w-9 text-muted-foreground/30 mx-auto" />
           <p className="text-sm text-muted-foreground">No templates yet.</p>
           <Button size="sm" variant="outline" onClick={() => setEditing({ ...EMPTY })}>
@@ -122,7 +122,7 @@ export default function Templates() {
 
 function TemplateCard({ template: t, onEdit, onDelete, onToggle }) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-4 flex flex-col gap-3 transition-opacity", !t.active && "opacity-50")}>
+    <div className={cn("rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 shadow-sm hover:shadow-gentle hover:border-accent/30 transition-all", !t.active && "opacity-50")}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -239,7 +239,7 @@ function TemplateEditor({ template, onSave, onClose }) {
             </Label>
             <div className="space-y-1.5">
               {(data.parts_required || []).map((p, i) => (
-                <div key={i} className="flex items-center gap-2 bg-secondary/50 rounded-lg px-3 py-2 text-sm">
+                <div key={i} className="flex items-center gap-2 bg-secondary/60 rounded-xl px-3 py-2 text-sm">
                   <span className="flex-1">{p.name}</span>
                   <span className="text-muted-foreground text-xs">×{p.qty}</span>
                   <button onClick={() => removePart(i)} className="text-muted-foreground hover:text-destructive">
@@ -276,7 +276,7 @@ function TemplateEditor({ template, onSave, onClose }) {
             </Label>
             <div className="space-y-1.5">
               {(data.checklist || []).map((c, i) => (
-                <div key={i} className="flex items-center gap-2 bg-secondary/50 rounded-lg px-3 py-2 text-sm">
+                <div key={i} className="flex items-center gap-2 bg-secondary/60 rounded-xl px-3 py-2 text-sm">
                   <span className="flex-1">{c.label}</span>
                   <button onClick={() => removeCheck(i)} className="text-muted-foreground hover:text-destructive">
                     <X className="h-3.5 w-3.5" />
@@ -300,7 +300,7 @@ function TemplateEditor({ template, onSave, onClose }) {
 
           <div className="flex gap-2 justify-end pt-2 border-t border-border">
             <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-            <Button size="sm" disabled={!data.name.trim() || saving} onClick={handleSave}>
+            <Button size="sm" disabled={!data.name.trim() || saving} onClick={handleSave} className="bg-accent hover:bg-accent/90 text-accent-foreground">
               {saving ? "Saving…" : "Save Template"}
             </Button>
           </div>

@@ -49,8 +49,8 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
   };
 
   return (
-    <div className="flex items-center gap-3 flex-wrap rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5">
-      <span className="text-sm font-semibold text-primary whitespace-nowrap">
+    <div className="flex items-center gap-3 flex-wrap rounded-2xl border border-accent/30 bg-accent/10 px-4 py-2.5 shadow-sm">
+      <span className="text-sm font-semibold text-accent whitespace-nowrap">
         {count} selected
       </span>
 

@@ -87,10 +87,10 @@ export default function Overview() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Quick search jobs..."
-            className="pl-9"
+            className="pl-9 rounded-xl bg-card shadow-sm"
           />
           {quickSearch.length > 0 && (
-            <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-2xl shadow-gentle overflow-hidden">
               {quickSearch.map((j) => (
                 <button key={j.id} onClick={() => { goJob(j); setQ(""); }}
                   className="w-full text-left px-3 py-2.5 hover:bg-secondary text-sm flex items-center justify-between border-b border-border last:border-0">
@@ -162,7 +162,7 @@ export default function Overview() {
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold flex items-center gap-2"><Activity className="h-4 w-4 text-accent" /> Recent activity</h2>
           </div>
-          <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+          <div className="rounded-3xl border border-border bg-card divide-y divide-border overflow-hidden shadow-sm">
             {recentAudit.map((a) => (
               <div key={a.id} className="px-3.5 py-2.5 hover:bg-secondary/40 transition-colors cursor-default">
                 <p className="text-sm text-foreground leading-snug">{a.summary}</p>
@@ -179,7 +179,7 @@ export default function Overview() {
 
 function EmptyState({ message }) {
   return (
-    <div className="rounded-xl border border-dashed border-border/60 py-10 text-center">
+    <div className="rounded-2xl border border-dashed border-border bg-card/70 py-10 text-center shadow-sm">
       <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );

@@ -64,14 +64,14 @@ export default function Calendar() {
             <button
               onClick={() => setViewMode("week")}
               className={cn("px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors",
-                viewMode === "week" ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}
+                viewMode === "week" ? "bg-accent text-accent-foreground" : "hover:bg-secondary")}
             >
               <CalendarDays className="h-3.5 w-3.5" /> Weekly
             </button>
             <button
               onClick={() => setViewMode("day")}
               className={cn("px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors border-l border-border",
-                viewMode === "day" ? "bg-primary text-primary-foreground" : "hover:bg-secondary")}
+                viewMode === "day" ? "bg-accent text-accent-foreground" : "hover:bg-secondary")}
             >
               <List className="h-3.5 w-3.5" /> Daily
             </button>
@@ -92,7 +92,7 @@ export default function Calendar() {
 
       {viewMode === "week" ? (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pb-3 min-h-[400px]">
+          <div className="rounded-3xl border border-border bg-card/70 p-3 shadow-sm grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 pb-3 min-h-[400px]">
             {days.map((d) => (
               <CalendarColumn
                 key={format(d, "yyyy-MM-dd")}
@@ -118,7 +118,7 @@ export default function Calendar() {
                   className={cn(
                     "flex flex-col items-center px-3 py-2 rounded-xl border text-xs font-medium transition-all min-w-[60px] shrink-0",
                     selectedDay === key
-                      ? "bg-primary text-primary-foreground border-primary"
+                      ? "bg-accent text-accent-foreground border-accent shadow-sm"
                       : today
                       ? "border-accent text-accent"
                       : "border-border hover:bg-secondary"
@@ -128,7 +128,7 @@ export default function Calendar() {
                   <span className="text-lg font-extrabold font-heading leading-none">{format(d, "d")}</span>
                   {count > 0 && (
                     <span className={cn("mt-0.5 rounded-full text-[10px] font-bold px-1",
-                      selectedDay === key ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary")}>
+                      selectedDay === key ? "bg-accent-foreground/20 text-accent-foreground" : "bg-accent/10 text-accent")}>
                       {count}
                     </span>
                   )}

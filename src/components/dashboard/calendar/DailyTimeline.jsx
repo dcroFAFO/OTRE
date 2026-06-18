@@ -26,7 +26,7 @@ export default function DailyTimeline({ date, jobs, onOpen }) {
   })).filter((g) => g.jobs.length > 0 || g.key !== null);
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-3xl border border-border bg-card/70 p-4 shadow-sm space-y-4">
       <div className="flex items-center gap-2 pb-2 border-b border-border">
         <Calendar className="h-4 w-4 text-accent" />
         <h2 className={cn("font-heading font-bold text-lg", today && "text-accent")}>
@@ -37,7 +37,7 @@ export default function DailyTimeline({ date, jobs, onOpen }) {
       </div>
 
       {jobs.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
+        <div className="rounded-2xl border border-dashed border-border bg-background/70 py-16 text-center">
           <Calendar className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No jobs scheduled for this day.</p>
         </div>
