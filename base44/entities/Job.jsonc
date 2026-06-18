@@ -187,11 +187,11 @@
         "role": {
           "$in": [
             "admin",
+            "owner",
             "employee",
             "technician",
             "manager",
-            "support_staff",
-            "owner"
+            "support_staff"
           ]
         }
       }
@@ -203,11 +203,11 @@
             "role": {
               "$in": [
                 "admin",
+                "owner",
                 "employee",
                 "technician",
                 "manager",
-                "support_staff",
-                "owner"
+                "support_staff"
               ]
             }
           }
@@ -224,11 +224,11 @@
             "role": {
               "$in": [
                 "admin",
+                "owner",
                 "employee",
                 "technician",
                 "manager",
-                "support_staff",
-                "owner"
+                "support_staff"
               ]
             }
           }
