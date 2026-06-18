@@ -31,11 +31,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: "asset_label and issue_description are required" }, { status: 400 });
     }
 
-    const db = base44.asServiceRole.entities;
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
 
-    // Identity comes from the authenticated account, not from form input.
-    const job = await db.Job.create({
+    // Create the job and attachment as the authenticated customer — RLS allows a
+    // user to create their own job (data.customer_email === their email).
+    const job = await base44.entities.Job.create({
       reference,
       customer_name: form.customer_name || user.full_name,
       customer_email: user.email,
@@ -49,22 +49,22 @@ Deno.serve(async (req) => {
       preferred_time_window: form.asap ? "ASAP" : form.preferred_time_window,
       rideable: form.rideable,
       business_slug: SLUG,
-      created_by_id: user.id,
     });
 
     if (form.photo_url) {
-      await db.Attachment.create({
+      await base44.entities.Attachment.create({
         job_id: job.id,
         file_url: form.photo_url,
         file_name: "Customer upload",
         kind: "photo",
         visibility: "customer",
         uploaded_by_name: user.full_name,
-        created_by_id: user.id,
       });
     }
 
-    await db.AuditEvent.create({
+    // Audit log is system-written, so it stays on the service role (customers
+    // aren't permitted to write AuditEvent records directly).
+    await base44.asServiceRole.entities.AuditEvent.create({
       event_type: "booking_created",
       job_id: job.id,
       actor_id: user.id,
