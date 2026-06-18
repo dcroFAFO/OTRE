@@ -186,14 +186,16 @@
       "$or": [
         {
           "user_condition": {
-            "$or": [
-              {
-                "role": "admin"
-              },
-              {
-                "role": "employee"
-              }
-            ]
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician",
+                "manager",
+                "support_staff",
+                "owner"
+              ]
+            }
           }
         },
         {
@@ -209,7 +211,10 @@
               "$in": [
                 "admin",
                 "employee",
-                "technician"
+                "technician",
+                "manager",
+                "support_staff",
+                "owner"
               ]
             }
           }
@@ -236,7 +241,10 @@
               "$in": [
                 "admin",
                 "employee",
-                "technician"
+                "technician",
+                "manager",
+                "support_staff",
+                "owner"
               ]
             }
           }
@@ -255,7 +263,12 @@
     },
     "delete": {
       "user_condition": {
-        "role": "admin"
+        "role": {
+          "$in": [
+            "admin",
+            "owner"
+          ]
+        }
       }
     }
   }
