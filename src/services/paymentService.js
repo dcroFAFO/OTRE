@@ -20,6 +20,28 @@ export async function setPaymentStatus(invoice, job, status) {
   return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
 }
 
+export async function generateInvoicePdf(job, invoice, notes = "", regenerateCount = 0) {
+  const res = await base44.functions.invoke("invoicePdfActions", {
+    action: regenerateCount > 0 ? "regenerate" : "generate",
+    jobId: job.id,
+    invoiceId: invoice.id,
+    notes,
+    regenerateCount,
+  });
+  return res.data;
+}
+
+export async function emailInvoicePdf(job, invoice, notes = "", regenerateCount = 0) {
+  const res = await base44.functions.invoke("invoicePdfActions", {
+    action: "email",
+    jobId: job.id,
+    invoiceId: invoice.id,
+    notes,
+    regenerateCount,
+  });
+  return res.data;
+}
+
 // Read-only display helper — stays client-side.
 export async function getJobInvoice(jobId) {
   const invoices = await base44.entities.Invoice.filter({ job_id: jobId }, "-created_date", 1);

@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus } from "@/services/paymentService";
+import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
+import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
 import { Send, Loader2, FileText, Package, Wrench, Lock, CalendarDays, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +19,11 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const [usageRecords, setUsageRecords] = useState([]);
   const [sending, setSending] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [pdfDocument, setPdfDocument] = useState(null);
+  const [pdfRevision, setPdfRevision] = useState(0);
+  const [emailingPdf, setEmailingPdf] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadInvoiceData = () => {
@@ -55,11 +61,61 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   }
   const lineTotal = lineItems.reduce((s, li) => s + (Number(li.qty) || 1) * (Number(li.unit_price) || 0), 0);
 
+  const invoiceNotes = job.issue_description || "";
+
+  const downloadPdf = () => {
+    if (!pdfDocument?.pdfBase64) return;
+    const link = document.createElement("a");
+    link.href = `data:application/pdf;base64,${pdfDocument.pdfBase64}`;
+    link.download = pdfDocument.fileName || "tax-invoice.pdf";
+    link.click();
+  };
+
+  const generatePdfPreview = async (inv, revision = 0) => {
+    const doc = await generateInvoicePdf(job, inv, invoiceNotes, revision);
+    setPdfDocument(doc);
+    setPdfRevision(revision);
+    setPreviewOpen(true);
+  };
+
   const create = async () => {
-    const finalAmount = lineTotal > 0 ? lineTotal : amount;
-    const inv = await createInvoice(job, finalAmount, actor);
-    setInvoice(inv);
-    onChange?.();
+    setCreating(true);
+    try {
+      const finalAmount = lineTotal > 0 ? lineTotal : amount;
+      const inv = await createInvoice(job, finalAmount, actor);
+      setInvoice(inv);
+      await generatePdfPreview(inv, 0);
+      onChange?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to create invoice preview.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const regeneratePdf = async () => {
+    if (!invoice) return;
+    setCreating(true);
+    try {
+      await generatePdfPreview(invoice, pdfRevision + 1);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to regenerate invoice PDF.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const emailPdf = async () => {
+    if (!invoice) return;
+    setEmailingPdf(true);
+    try {
+      await emailInvoicePdf(job, invoice, invoiceNotes, pdfRevision);
+      toast.success("Tax invoice PDF emailed to customer.");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to email invoice PDF.");
+    } finally {
+      setEmailingPdf(false);
+    }
   };
 
   const copyQuote = async () => {
@@ -241,7 +297,8 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
                 Copy quote
               </Button>
             )}
-            <Button size="sm" onClick={create}>
+            <Button size="sm" onClick={create} disabled={creating}>
+              {creating && <Loader2 className="h-4 w-4 animate-spin" />}
               {lineTotal > 0 ? `Create invoice · ${currency} ${lineTotal.toFixed(2)}` : "Create invoice"}
             </Button>
           </div>
@@ -252,6 +309,17 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
       ) : (
         <p className="text-sm text-muted-foreground">No invoice has been created for this job.</p>
       )}
+
+      <InvoicePdfPreviewDialog
+        open={previewOpen}
+        document={pdfDocument}
+        generating={creating}
+        emailing={emailingPdf}
+        onClose={() => setPreviewOpen(false)}
+        onDownload={downloadPdf}
+        onEmail={emailPdf}
+        onRegenerate={regeneratePdf}
+      />
     </div>
   );
 }
