@@ -172,44 +172,70 @@
           }
         }
       }
-    },
-    "business_slug": {
-      "type": "string",
-      "default": "otr-scooters"
     }
   },
   "required": [
     "customer_name"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "owner",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    },
     "read": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "owner",
+                "employee",
+                "technician"
+              ]
+            }
+          }
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.customer_email": "{{user.email}}"
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "owner",
+                "employee",
+                "technician"
+              ]
+            }
+          }
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.customer_email": "{{user.email}}"
         }
       ]
     },
     "delete": {
       "user_condition": {
-        "role": "admin"
+        "role": {
+          "$in": [
+            "admin",
+            "owner"
+          ]
+        }
       }
     }
   }
