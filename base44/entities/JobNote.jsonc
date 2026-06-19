@@ -35,56 +35,63 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": "false"
+          }
         }
-      }
+      ]
     },
     "read": {
       "$or": [
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "admin"
           }
         },
         {
-          "$and": [
-            {
-              "data.visibility": "customer"
-            },
-            {
-              "data.customer_id": "{{user.data.customer_id}}"
-            }
-          ]
+          "user_condition": {
+            "data.is_customer": "false"
+          }
+        },
+        {
+          "data.job_id": "{{user.data.job_id}}"
         }
       ]
     },
     "update": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": "false"
+          }
         }
-      }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": "false"
+          }
+        }
+      ]
     }
   }
 }
