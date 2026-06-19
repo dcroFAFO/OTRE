@@ -37,9 +37,10 @@ Deno.serve(async (req) => {
     const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || (user.is_customer === false || user.data?.is_customer === false);
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
-      base44.entities.AuditEvent.create({
+      base44.asServiceRole.entities.AuditEvent.create({
         event_type: eventType,
-        job_id: job.id,
+        job_id: job.job_id || job.id,
+        customer_id: job.customer_id || "",
         actor_id: user.id,
         actor_name: user.full_name || "System",
         actor_role: user.role || "system",
@@ -107,16 +108,16 @@ Deno.serve(async (req) => {
         break;
       }
       case "set_payment_status": {
+        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const { invoiceId, status } = params;
-        const invoices = await base44.entities.Invoice.filter({ id: invoiceId }, "", 1);
-        const invoice = invoices[0];
+        const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
 
-        result = await base44.entities.Invoice.update(invoice.id, {
+        result = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
           status,
           paid_date: status === "paid" ? new Date().toISOString() : null,
         });
-        await base44.entities.Job.update(job.id, {
+        await base44.asServiceRole.entities.Job.update(job.id, {
           payment_status: status,
           status: status === "paid" ? "paid" : job.status,
         });
