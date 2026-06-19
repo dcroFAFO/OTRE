@@ -107,6 +107,22 @@ export default function Overview() {
         </div>
       </div>
 
+      {/* Pending requests alert */}
+      {m.requested > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+            <p className="text-sm font-medium text-amber-800">
+              {m.requested} pending booking {m.requested === 1 ? "request" : "requests"} need reviewing
+            </p>
+          </div>
+          <Button size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0"
+            onClick={() => navigate("/dashboard/jobs")}>
+            Review <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
       {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {metrics.map((m) => (
@@ -123,22 +139,6 @@ export default function Overview() {
 
       {/* Turnaround tracker */}
       <TurnaroundTracker jobs={jobs} />
-
-      {/* Pending requests alert */}
-      {m.requested > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-            <p className="text-sm font-medium text-amber-800">
-              {m.requested} pending booking {m.requested === 1 ? "request" : "requests"} need reviewing
-            </p>
-          </div>
-          <Button size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0"
-            onClick={() => navigate("/dashboard/jobs")}>
-            Review <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Button>
-        </div>
-      )}
 
       {/* Body: upcoming + activity */}
       <div className="grid lg:grid-cols-3 gap-6">
