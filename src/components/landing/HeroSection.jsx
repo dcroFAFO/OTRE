@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, CheckCircle2, Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
-import LandingLogo from "@/components/landing/LandingLogo";
+import { LANDING_LOGO_URL } from "@/components/landing/LandingLogo";
 
 const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag };
 
@@ -42,6 +42,12 @@ export default function HeroSection() {
       {/* Static background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 otr-grid-bg opacity-[0.18]" />
+        <img
+          src={LANDING_LOGO_URL}
+          alt=""
+          aria-hidden="true"
+          className="absolute left-1/2 top-16 w-[680px] -translate-x-1/2 opacity-[0.16] blur-[0.3px] saturate-150 sm:top-12 sm:w-[860px] lg:left-[30%] lg:top-20 lg:w-[820px]"
+        />
         <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[90px]" />
         <div className="absolute top-60 -left-48 h-[400px] w-[400px] rounded-full bg-accent/10 blur-[80px]" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-border to-transparent" />
@@ -54,8 +60,6 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          <LandingLogo imageClassName="h-28 sm:h-36 lg:h-44" className="mb-5 -ml-2" />
-
           <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1 text-xs font-semibold text-accent">
             <Zap className="h-3.5 w-3.5" />
             {app.landing.heroEyebrow}
