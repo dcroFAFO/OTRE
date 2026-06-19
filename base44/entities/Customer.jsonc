@@ -2,6 +2,14 @@
   "name": "Customer",
   "type": "object",
   "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Shared customer account identifier used to link users, jobs, quotes, invoices, attachments, and notes."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Comma-separated list of Job entity IDs associated with this customer."
+    },
     "full_name": {
       "type": "string"
     },
