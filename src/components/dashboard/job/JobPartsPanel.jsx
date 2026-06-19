@@ -13,8 +13,18 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const [addingLabour, setAddingLabour] = useState(false);
 
   const { data: usages = [], refetch } = useQuery({
-    queryKey: ["inventoryUsage", job.job_id || job.id],
-    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.job_id || job.id, source: "inventory" }, "-created_date", 50),
+    queryKey: ["inventoryUsage", job.id, job.job_id],
+    queryFn: async () => {
+      const primary = await base44.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 50);
+      if (!job.job_id || job.job_id === job.id) return primary;
+      const legacy = await base44.entities.InventoryUsage.filter({ job_id: job.job_id, source: "inventory" }, "-created_date", 50);
+      const seen = new Set();
+      return [...primary, ...legacy].filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    },
   });
 
   const removeUsage = useMutation({
@@ -24,8 +34,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
       await base44.entities.InventoryUsage.delete(usage.id);
     },
     onSuccess: () => {
-      qc.invalidateQueries(["inventoryUsage", job.id]);
-      qc.invalidateQueries(["inventoryItems"]);
+      qc.invalidateQueries({ queryKey: ["inventoryUsage"] });
+      qc.invalidateQueries({ queryKey: ["inventoryItems"] });
     },
   });
 
@@ -36,7 +46,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     if (hrs <= 0) return;
     setAddingLabour(true);
     await base44.entities.InventoryUsage.create({
-      job_id: job.job_id || job.id,
+      job_id: job.id,
+      quote_id: job.quote_id || "",
       customer_id: job.customer_id,
       item_id: `labour-${Date.now()}`,
       item_name: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`,
@@ -144,7 +155,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
           onAdd={async (chosen) => {
             await Promise.all(chosen.map((p) =>
               base44.entities.InventoryUsage.create({
-                job_id: job.job_id || job.id,
+                job_id: job.id,
+                quote_id: job.quote_id || "",
                 customer_id: job.customer_id,
                 item_id: p.id,
                 item_name: p.name,
@@ -152,10 +164,12 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
                 unit_cost: 0,
                 unit_sell: Number(p.price) || 0,
                 source: "inventory",
+                product_id: p.id,
+                product_sku: p.sku || "",
               })
             ));
           }}
-          onAdded={() => { refetch(); qc.invalidateQueries(["inventoryItems"]); onChange?.(); }}
+          onAdded={() => { refetch(); qc.invalidateQueries({ queryKey: ["inventoryItems"] }); onChange?.(); }}
         />
       )}
     </div>
