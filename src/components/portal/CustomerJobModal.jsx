@@ -219,12 +219,8 @@ function QuotesTab({ job, onUpdate }) {
   );
 }
 
-function InvoiceTab({ job }) {
+function InvoiceTab({ invoices = [], isLoading }) {
   const [paying, setPaying] = useState(null);
-  const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["portalInvoices", job.id],
-    queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }, "-created_date", 10),
-  });
 
   const visible = invoices.filter(i => i.status && i.status !== "draft");
 
@@ -287,9 +283,9 @@ export default function CustomerJobModal({ job, open, onClose, onUpdate, userEma
   const [tab, setTab] = useState("status");
 
   // Check if invoice tab should be visible
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ["portalInvoiceCheck", job?.id],
-    queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1),
+    queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }, "-created_date", 10),
     enabled: !!job?.id,
   });
   const hasInvoice = invoices.some(i => i.status && i.status !== "draft");
@@ -314,18 +310,18 @@ export default function CustomerJobModal({ job, open, onClose, onUpdate, userEma
           </TabsList>
           <div className="overflow-y-auto flex-1 pr-1">
             <TabsContent value="status" className="mt-0">
-              <StatusTab job={job} />
+              {tab === "status" && <StatusTab job={job} />}
             </TabsContent>
             <TabsContent value="quotes" className="mt-0">
-              <QuotesTab job={job} onUpdate={onUpdate} />
+              {tab === "quotes" && <QuotesTab job={job} onUpdate={onUpdate} />}
             </TabsContent>
             {hasInvoice && (
               <TabsContent value="invoice" className="mt-0">
-                <InvoiceTab job={job} />
+                {tab === "invoice" && <InvoiceTab invoices={invoices} isLoading={invoicesLoading} />}
               </TabsContent>
             )}
             <TabsContent value="history" className="mt-0">
-              <HistoryTab userEmail={userEmail} />
+              {tab === "history" && <HistoryTab userEmail={userEmail} />}
             </TabsContent>
           </div>
         </Tabs>

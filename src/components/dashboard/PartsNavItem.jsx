@@ -15,6 +15,8 @@ export default function PartsNavItem({ onNavigate }) {
   const { data: products = [] } = useQuery({
     queryKey: ["estore-products"],
     queryFn: () => base44.entities.Product.filter({ supplier: "eScootNow" }, "name", 500),
+    enabled: expanded,
+    staleTime: 5 * 60 * 1000,
   });
 
   const categories = [...new Set(products.map((p) => p.category_label).filter(Boolean))]

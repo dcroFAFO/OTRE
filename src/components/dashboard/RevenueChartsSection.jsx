@@ -42,11 +42,13 @@ export default function RevenueChartsSection() {
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ["overviewFinancialInvoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: usages = [], isLoading: usagesLoading } = useQuery({
     queryKey: ["overviewFinancialPartsSpend"],
     queryFn: () => base44.entities.InventoryUsage.list("-created_date", 500),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { chartData, totals } = useMemo(() => {

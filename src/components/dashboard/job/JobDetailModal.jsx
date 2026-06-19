@@ -112,38 +112,42 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
                 <div className="p-5 flex-1">
                   <TabsContent value="intake" className="mt-0">
-                    <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                    {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="quote" className="mt-0">
-                    <QuotePanel
-                      job={job}
-                      actor={actor}
-                      canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
-                      onChange={bump}
-                    />
+                    {safeTab === "quote" && (
+                      <QuotePanel
+                        job={job}
+                        actor={actor}
+                        canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
+                        onChange={bump}
+                      />
+                    )}
                   </TabsContent>
                   <TabsContent value="parts" className="mt-0">
-                    <JobPartsPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                    {safeTab === "parts" && <JobPartsPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="invoice" className="mt-0">
-                    <InvoicePanel
-                      job={job}
-                      actor={actor}
-                      canEdit={!invoiceReadOnly && (can(role, "job.invoice.manage") || role === "admin")}
-                      onChange={bump}
-                    />
+                    {safeTab === "invoice" && (
+                      <InvoicePanel
+                        job={job}
+                        actor={actor}
+                        canEdit={!invoiceReadOnly && (can(role, "job.invoice.manage") || role === "admin")}
+                        onChange={bump}
+                      />
+                    )}
                   </TabsContent>
                   <TabsContent value="customer" className="mt-0">
-                    <CustomerHistoryPanel job={job} />
+                    {safeTab === "customer" && <CustomerHistoryPanel job={job} />}
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
-                    <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
+                    {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="private" className="mt-0">
-                    <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                    {safeTab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
-                    <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
+                    {safeTab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
                   </TabsContent>
                 </div>
               </Tabs>

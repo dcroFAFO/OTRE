@@ -1,20 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 
-// Returns the current authenticated user or null.
+// Returns the current authenticated user from the shared auth provider.
 export function useCurrentUser() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["currentUser"],
-    queryFn: async () => {
-      try {
-        return await base44.auth.me();
-      } catch {
-        return null;
-      }
-    },
-    staleTime: 60_000,
-    retry: false,
-  });
-
-  return { user: data, role: data?.role, isLoading };
+  const { user, isLoadingAuth, isLoadingPublicSettings } = useAuth();
+  return { user, role: user?.role, isLoading: isLoadingAuth || isLoadingPublicSettings };
 }
