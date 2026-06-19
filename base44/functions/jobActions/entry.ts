@@ -10,6 +10,59 @@ const REOPEN_STATUS = "active";
 const statusLabel = (key) =>
   String(key || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
+const findJobInvoice = async (base44, job) => {
+  if (job.invoice_id) {
+    try {
+      return await base44.asServiceRole.entities.Invoice.get(job.invoice_id);
+    } catch {
+      // Fall through to latest invoice lookup if the stored link is stale.
+    }
+  }
+  const invoices = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
+  return invoices[0] || null;
+};
+
+const listJobPartUsages = async (base44, job) => {
+  const primary = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 100);
+  if (!job.job_id || job.job_id === job.id) return primary;
+  const legacy = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.job_id, source: "inventory" }, "-created_date", 100);
+  const seen = new Set();
+  return [...primary, ...legacy].filter((usage) => {
+    if (seen.has(usage.id)) return false;
+    seen.add(usage.id);
+    return true;
+  });
+};
+
+const addUninvoicedPartsToInvoice = async (base44, job) => {
+  const invoice = await findJobInvoice(base44, job);
+  if (!invoice) return { addedCount: 0, invoice: null };
+
+  const usages = await listJobPartUsages(base44, job);
+  const existingItems = invoice.line_items || [];
+  const existingUsageIds = new Set(existingItems.map((item) => item.source_usage_id).filter(Boolean));
+  const newItems = usages
+    .filter((usage) => usage.id && usage.invoice_id !== invoice.id && !existingUsageIds.has(usage.id))
+    .map((usage) => ({
+      description: usage.item_name || "Part",
+      qty: Number(usage.qty_used) || 1,
+      unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
+      kind: String(usage.item_id || "").startsWith("labour-") ? "labour" : "part",
+      sku: usage.product_sku || usage.item_id || "",
+      source_usage_id: usage.id,
+    }));
+
+  if (newItems.length === 0) return { addedCount: 0, invoice };
+
+  const line_items = [...existingItems, ...newItems];
+  const amount = line_items.reduce((sum, item) => sum + (Number(item.qty) || 1) * (Number(item.unit_price) || 0), 0);
+  const updatedInvoice = await base44.asServiceRole.entities.Invoice.update(invoice.id, { line_items, amount });
+  await Promise.all(newItems.map((item) =>
+    base44.asServiceRole.entities.InventoryUsage.update(item.source_usage_id, { invoice_id: invoice.id })
+  ));
+  return { addedCount: newItems.length, invoice: updatedInvoice };
+};
+
 Deno.serve(async (req) => {
   // requestMeta is filled in as parsing progresses so the catch block can log
   // a useful summary (who, which action, which record) when something fails.
@@ -29,8 +82,12 @@ Deno.serve(async (req) => {
     try {
       job = await base44.asServiceRole.entities.Job.get(jobId);
     } catch {
-      const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
-      job = jobs[0] || null;
+      try {
+        const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
+        job = jobs[0] || null;
+      } catch {
+        job = null;
+      }
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
@@ -64,6 +121,16 @@ Deno.serve(async (req) => {
           summary: `Status changed to "${statusLabel(params.newStatus)}"`,
           visibility: "customer",
         });
+        if (params.newStatus === READY_STATUS) {
+          const invoiceSync = await addUninvoicedPartsToInvoice(base44, { ...job, ...result });
+          if (invoiceSync.addedCount > 0) {
+            await logAudit({
+              eventType: "parts_added_to_invoice",
+              summary: `Automatically added ${invoiceSync.addedCount} part(s) to invoice`,
+              visibility: "customer",
+            });
+          }
+        }
         break;
       }
       case "reschedule": {
@@ -80,6 +147,14 @@ Deno.serve(async (req) => {
       case "mark_ready": {
         result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
+        const invoiceSync = await addUninvoicedPartsToInvoice(base44, { ...job, ...result });
+        if (invoiceSync.addedCount > 0) {
+          await logAudit({
+            eventType: "parts_added_to_invoice",
+            summary: `Automatically added ${invoiceSync.addedCount} part(s) to invoice`,
+            visibility: "customer",
+          });
+        }
         break;
       }
       case "cancel": {
