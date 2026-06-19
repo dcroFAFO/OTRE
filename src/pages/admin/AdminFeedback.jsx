@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { logError } from "@/lib/logger";
 import RequireCapability from "@/components/auth/RequireCapability";
 import { hasAtLeastRole } from "@/config/roles";
+import SEO from "@/components/SEO";
 
 const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
 const STATUS_ORDER = { "New": 0, "Under Review": 1, "Planned": 2, "In Progress": 3, "Resolved": 4, "Rejected": 5, "Archived": 6 };
@@ -91,11 +92,15 @@ export default function AdminFeedback() {
     }
   };
 
+  const seo = <SEO title="Feedback Admin | OTR Scooters" description="Private admin area for reviewing and managing app and customer feedback." canonical="/admin/feedback" noindex />;
+
   if (isLoading) {
-    return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
+    return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;
   }
 
   return (
+    <>
+    {seo}
     <RequireCapability
       minRole="admin"
       deniedTitle="Admin access only"
@@ -150,5 +155,6 @@ export default function AdminFeedback() {
       </div>
     </DashboardShell>
     </RequireCapability>
+    </>
   );
 }

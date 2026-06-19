@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+import SEO from "@/components/SEO";
 
 const REDIRECT_AFTER_AUTH = "/portal";
 
@@ -47,6 +48,8 @@ export default function Login() {
   ];
 
   return (
+    <>
+    <SEO title="Log In | OTR Scooters" description="Log in to your OTR Scooters customer portal to track repairs, approve quotes and manage invoices." canonical="/login" noindex />
     <AuthLayout
       icon={LogIn}
       title="Welcome back"
@@ -140,5 +143,6 @@ export default function Login() {
         </Button>
       </form>
     </AuthLayout>
+    </>
   );
 }

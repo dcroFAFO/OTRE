@@ -10,6 +10,7 @@ import { CAPABILITIES } from "@/config/roles";
 import { Button } from "@/components/ui/button";
 import { Activity, AlertTriangle } from "lucide-react";
 import { subDays, startOfDay, isAfter } from "date-fns";
+import SEO from "@/components/SEO";
 
 export default function AdminActivityLog() {
   const { user, isLoading } = useCurrentUser();
@@ -48,11 +49,15 @@ export default function AdminActivityLog() {
     });
   }, [events, filters]);
 
+  const seo = <SEO title="Activity Log | OTR Scooters" description="Private admin activity log for reviewing operational actions across the OTR Scooters platform." canonical="/admin/activity" noindex />;
+
   if (isLoading) {
-    return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
+    return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;
   }
 
   return (
+    <>
+    {seo}
     <RequireCapability
       capability={CAPABILITIES.LOG_VIEW}
       deniedTitle="Activity log restricted"
@@ -93,5 +98,6 @@ export default function AdminActivityLog() {
         </div>
       </DashboardShell>
     </RequireCapability>
+    </>
   );
 }

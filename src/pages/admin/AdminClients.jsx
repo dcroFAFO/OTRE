@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Users, AlertTriangle } from "lucide-react";
 import RequireCapability from "@/components/auth/RequireCapability";
 import { hasAtLeastRole } from "@/config/roles";
+import SEO from "@/components/SEO";
 
 export default function AdminClients() {
   const { user, isLoading } = useCurrentUser();
@@ -42,11 +43,15 @@ export default function AdminClients() {
     return [...list].sort(sorters[filters.sort] || sorters.newest);
   }, [clients, filters]);
 
+  const seo = <SEO title="Client Admin | OTR Scooters" description="Private admin area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
+
   if (isLoading) {
-    return <div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>;
+    return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;
   }
 
   return (
+    <>
+    {seo}
     <RequireCapability
       minRole="admin"
       deniedTitle="Admin access only"
@@ -91,5 +96,6 @@ export default function AdminClients() {
       </div>
     </DashboardShell>
     </RequireCapability>
+    </>
   );
 }

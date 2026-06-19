@@ -11,6 +11,7 @@ import CustomerJobModal from "@/components/portal/CustomerJobModal";
 import SupportChat from "@/components/portal/SupportChat";
 import CustomerBookingModal from "@/components/portal/CustomerBookingModal";
 import { Button } from "@/components/ui/button";
+import SEO from "@/components/SEO";
 
 export default function Portal() {
   const { user, isLoading } = useCurrentUser();
@@ -25,29 +26,39 @@ export default function Portal() {
     enabled: !!user && !isStaff(user.role),
   });
 
-  if (isLoading) return <Spinner />;
+  const portalSeo = <SEO title="Customer Portal | OTR Scooters" description="Secure customer portal for tracking scooter repairs, approving quotes, checking invoices and managing repair bookings." canonical="/portal" noindex />;
+
+  if (isLoading) return <>{portalSeo}<Spinner /></>;
 
   if (!user) {
     return (
+      <>
+      {portalSeo}
       <Centered>
         <h1 className="font-heading text-2xl font-extrabold">{app.landing.portalLabel}</h1>
         <p className="mt-2 text-muted-foreground">Sign in to view and track your {app.terminology.jobPlural}.</p>
         <button onClick={() => base44.auth.redirectToLogin(window.location.href)} className="mt-5 rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-foreground">Sign in</button>
       </Centered>
+      </>
     );
   }
 
   if (isStaff(user.role)) {
     return (
+      <>
+      {portalSeo}
       <Centered>
         <h1 className="font-heading text-2xl font-extrabold">Welcome back, {user.full_name?.split(" ")[0]}</h1>
         <p className="mt-2 text-muted-foreground">You're a staff member — head to the dashboard.</p>
         <Link to="/dashboard" className="mt-5 inline-block rounded-xl bg-primary px-5 py-2.5 font-semibold text-primary-foreground">Go to dashboard</Link>
       </Centered>
+      </>
     );
   }
 
   return (
+    <>
+    {portalSeo}
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-4xl px-5 py-4 flex items-center justify-between">
@@ -85,6 +96,7 @@ export default function Portal() {
 
       <SupportChat user={user} />
     </div>
+    </>
   );
 }
 

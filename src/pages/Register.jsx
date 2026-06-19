@@ -9,6 +9,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
+import SEO from "@/components/SEO";
 
 const REDIRECT_AFTER_AUTH = "/portal";
 
@@ -84,6 +85,8 @@ export default function Register() {
 
   if (showOtp) {
     return (
+      <>
+      <SEO title="Verify Email | OTR Scooters" description="Verify your email address to finish setting up your OTR Scooters customer portal account." canonical="/register" noindex />
       <AuthLayout
         icon={Mail}
         title="Verify your email"
@@ -133,10 +136,13 @@ export default function Register() {
           </button>
         </p>
       </AuthLayout>
+      </>
     );
   }
 
   return (
+    <>
+    <SEO title="Create Account | OTR Scooters" description="Create an OTR Scooters customer account to book repairs, approve quotes, track jobs and manage invoices online." canonical="/register" noindex />
     <AuthLayout
       icon={UserPlus}
       title="Create your account"
@@ -236,5 +242,6 @@ export default function Register() {
         </Button>
       </form>
     </AuthLayout>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import SEO from '@/components/SEO';
 
 
 export default function PageNotFound({}) {
@@ -20,6 +21,8 @@ export default function PageNotFound({}) {
     });
     
     return (
+        <>
+        <SEO title="Page Not Found | OTR Scooters" description="The requested OTR Scooters page could not be found." canonical={location.pathname} noindex />
         <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
             <div className="max-w-md w-full">
                 <div className="text-center space-y-6">
@@ -71,5 +74,6 @@ export default function PageNotFound({}) {
                 </div>
             </div>
         </div>
+        </>
     )
 }

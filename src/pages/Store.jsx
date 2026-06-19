@@ -12,6 +12,7 @@ import ProductCard from "@/components/store/ProductCard";
 import StoreCategoryNav from "@/components/store/StoreCategoryNav";
 import CartDrawer from "@/components/store/CartDrawer";
 import CheckoutDialog from "@/components/store/CheckoutDialog";
+import SEO from "@/components/SEO";
 
 function StoreInner() {
   const { data: { business } } = usePlatformConfig();
@@ -40,7 +41,19 @@ function StoreInner() {
     ? ALL_CATEGORIES.find((c) => c.key === activeCategory)?.label || "Products"
     : "All products";
 
+  const storeTitle = activeCategory ? `${activeLabel} | OTR Scooter Store` : "Scooter Parts & Accessories | OTR Scooters";
+  const storeDescription = activeCategory
+    ? `Browse ${activeLabel.toLowerCase()} for electric scooter repairs, maintenance and upgrades from OTR Scooters.`
+    : "Shop electric scooter parts, accessories and service items from OTR Scooters, with products selected for reliable repairs and maintenance.";
+
   return (
+    <>
+      <SEO
+        title={storeTitle}
+        description={storeDescription}
+        canonical="/store"
+        ogType="website"
+      />
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center gap-4">
@@ -96,6 +109,7 @@ function StoreInner() {
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} />
       <CheckoutDialog open={checkoutOpen} onOpenChange={setCheckoutOpen} />
     </div>
+    </>
   );
 }
 

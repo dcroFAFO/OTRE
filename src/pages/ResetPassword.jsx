@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import SEO from "@/components/SEO";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -36,6 +37,8 @@ export default function ResetPassword() {
 
   if (!resetToken) {
     return (
+      <>
+      <SEO title="Invalid Reset Link | OTR Scooters" description="This password reset link is invalid or incomplete. Request a new secure reset link for your account." canonical="/reset-password" noindex />
       <AuthLayout
         icon={AlertTriangle}
         title="Invalid reset link"
@@ -50,10 +53,13 @@ export default function ResetPassword() {
           The link you used appears to be incomplete. Please request a new password reset email.
         </p>
       </AuthLayout>
+      </>
     );
   }
 
   return (
+    <>
+    <SEO title="Set New Password | OTR Scooters" description="Set a new password for your secure OTR Scooters customer portal account." canonical="/reset-password" noindex />
     <AuthLayout
       icon={Lock}
       title="New password"
@@ -110,5 +116,6 @@ export default function ResetPassword() {
         </Button>
       </form>
     </AuthLayout>
+    </>
   );
 }

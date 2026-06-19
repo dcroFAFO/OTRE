@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, ArrowLeft, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import SEO from "@/components/SEO";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -26,6 +27,8 @@ export default function ForgotPassword() {
   };
 
   return (
+    <>
+    <SEO title="Reset Password | OTR Scooters" description="Request a secure password reset link for your OTR Scooters customer portal account." canonical="/forgot-password" noindex />
     <AuthLayout
       icon={Mail}
       title="Reset password"
@@ -72,5 +75,6 @@ export default function ForgotPassword() {
         </form>
       )}
     </AuthLayout>
+    </>
   );
 }

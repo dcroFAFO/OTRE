@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import GoogleIcon from "@/components/GoogleIcon";
 import { CheckCircle2, CreditCard, FileCheck2, ShieldCheck, ClipboardList, Mail } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const PROVIDERS = [
   { key: "google", label: "Continue with Google" },
@@ -46,6 +47,13 @@ export default function BookAccount() {
   };
 
   return (
+    <>
+      <SEO
+        title="Book Scooter Repair | OTR Scooters"
+        description="Sign in or create an account to book a scooter repair, approve quotes online, track job updates and manage invoices securely."
+        canonical="/book"
+        noindex
+      />
     <main className="min-h-screen bg-background text-foreground">
       <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
         <div className="absolute inset-0 pointer-events-none">
@@ -110,5 +118,6 @@ export default function BookAccount() {
         </div>
       </section>
     </main>
+    </>
   );
 }

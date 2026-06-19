@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, CheckCircle2, Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function FeedbackRating() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -38,6 +39,8 @@ export default function FeedbackRating() {
   };
 
   return (
+    <>
+    <SEO title="Customer Feedback | OTR Scooters" description="Share private feedback about your completed OTR Scooters repair experience." canonical="/feedback" noindex />
     <main className="min-h-screen bg-background px-4 py-10 flex items-center justify-center">
       <Card className="w-full max-w-lg shadow-gentle border-border/70">
         <CardContent className="p-8">
@@ -93,5 +96,6 @@ export default function FeedbackRating() {
         </CardContent>
       </Card>
     </main>
+    </>
   );
 }
