@@ -3,7 +3,6 @@
 // so components never hardcode role strings.
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
-  normalizeRole,
   hasCapability,
   hasAtLeastRole,
   isStaffRole,
@@ -12,6 +11,7 @@ import {
   roleBadgeClass,
   capabilitiesFor,
   assignableRoles,
+  normalizeRole,
 } from "@/config/roles";
 
 export function usePermissions() {
