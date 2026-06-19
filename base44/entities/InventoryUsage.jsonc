@@ -5,6 +5,10 @@
     "job_id": {
       "type": "string"
     },
+    "quote_id": {
+      "type": "string",
+      "description": "Linked Quote entity ID for this inventory usage record."
+    },
     "customer_id": {
       "type": "string"
     },

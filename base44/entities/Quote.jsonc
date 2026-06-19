@@ -2,6 +2,10 @@
   "name": "Quote",
   "type": "object",
   "properties": {
+    "quote_id": {
+      "type": "string",
+      "description": "Stable quote identifier used to link jobs, invoices, and inventory usage."
+    },
     "job_id": {
       "type": "string"
     },

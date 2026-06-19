@@ -6,6 +6,14 @@
       "type": "string",
       "description": "Stable job identifier used to link users, customers, quotes, invoices, attachments, and notes. Defaults to the Job record id when synced."
     },
+    "quote_id": {
+      "type": "string",
+      "description": "Linked Quote entity ID for this job."
+    },
+    "invoice_id": {
+      "type": "string",
+      "description": "Linked Invoice entity ID for this job."
+    },
     "reference": {
       "type": "string",
       "description": "Human-readable job reference e.g. OTR-1042"

@@ -2,6 +2,14 @@
   "name": "Invoice",
   "type": "object",
   "properties": {
+    "invoice_id": {
+      "type": "string",
+      "description": "Stable invoice identifier used to link jobs and customers."
+    },
+    "quote_id": {
+      "type": "string",
+      "description": "Linked Quote entity ID for this invoice."
+    },
     "job_id": {
       "type": "string"
     },
