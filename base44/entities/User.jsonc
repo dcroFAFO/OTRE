@@ -28,6 +28,11 @@
     "job_id": {
       "type": "string",
       "description": "Comma-separated list of Job entity IDs associated with this user."
+    },
+    "is_customer": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this user should be treated as a customer account."
     }
   },
   "required": []

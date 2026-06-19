@@ -1,0 +1,88 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function buildCustomerId(user) {
+  if (user.customer_id) return user.customer_id;
+  return `CUST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+async function syncCustomerForUser(base44, user) {
+  if (!user?.id || user.is_customer !== true) {
+    return { created: false, skipped: true, reason: 'User is not marked as a customer' };
+  }
+
+  const email = normalizeEmail(user.email);
+  if (!email) {
+    return { created: false, skipped: true, reason: 'User has no email' };
+  }
+
+  const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ email });
+  if (existingCustomers.length > 0) {
+    const existingCustomer = existingCustomers[0];
+    const customerId = existingCustomer.customer_id || user.customer_id || buildCustomerId(user);
+    const updates = {};
+
+    if (!existingCustomer.user_id) updates.user_id = user.id;
+    if (!existingCustomer.customer_id) updates.customer_id = customerId;
+
+    if (Object.keys(updates).length > 0) {
+      await base44.asServiceRole.entities.Customer.update(existingCustomer.id, updates);
+    }
+
+    if (!user.customer_id) {
+      await base44.asServiceRole.entities.User.update(user.id, { customer_id: customerId });
+    }
+
+    return { created: false, linked: true, customer_id: customerId };
+  }
+
+  const customerId = buildCustomerId(user);
+  const customer = await base44.asServiceRole.entities.Customer.create({
+    customer_id: customerId,
+    full_name: user.full_name || email,
+    email,
+    phone: user.phone || '',
+    user_id: user.id,
+    status: 'active',
+    tags: ['customer'],
+    last_activity_date: new Date().toISOString(),
+  });
+
+  if (!user.customer_id) {
+    await base44.asServiceRole.entities.User.update(user.id, { customer_id: customerId });
+  }
+
+  return { created: true, customer_id: customerId, customer_record_id: customer.id };
+}
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const payload = await req.json().catch(() => ({}));
+
+    if (payload?.data) {
+      const result = await syncCustomerForUser(base44, payload.data);
+      return Response.json(result);
+    }
+
+    const users = await base44.asServiceRole.entities.User.list('-created_date', 1000);
+    const customerUsers = users.filter((user) => user.is_customer === true);
+    const results = [];
+
+    for (const user of customerUsers) {
+      results.push(await syncCustomerForUser(base44, user));
+    }
+
+    return Response.json({
+      scanned: users.length,
+      customer_users: customerUsers.length,
+      created: results.filter((result) => result.created).length,
+      linked: results.filter((result) => result.linked).length,
+    });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});
