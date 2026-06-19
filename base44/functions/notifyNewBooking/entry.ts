@@ -27,7 +27,7 @@ async function getSettings(base44) {
 async function getStaffRecipients(base44) {
   const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
   return staff
-    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
+    .filter((s) => s.email && ["admin", "employee", "technician"].includes(s.role))
     .map((s) => s.email);
 }
 
