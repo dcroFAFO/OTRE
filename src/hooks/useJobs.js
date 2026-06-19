@@ -4,11 +4,11 @@ import { base44 } from "@/api/base44Client";
 export function useJobs(filter = {}) {
   return useQuery({
     queryKey: ["jobs", filter],
-    queryFn: async () => {
-      const jobs = await base44.entities.Job.list("-created_date", 200);
-      return jobs.filter((job) =>
-        Object.entries(filter).every(([key, value]) => job[key] === value)
-      );
+    queryFn: () => {
+      const hasFilter = Object.keys(filter).length > 0;
+      return hasFilter
+        ? base44.entities.Job.filter(filter, "-created_date", 200)
+        : base44.entities.Job.list("-created_date", 200);
     },
     placeholderData: [],
     staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching

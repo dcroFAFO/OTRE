@@ -16,10 +16,17 @@ export default function Jobs() {
   const user = useDashboardUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: jobs } = useJobs();
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const queryFilter = useMemo(() => ({
+    ...(filters.status !== "all" ? { status: filters.status } : {}),
+    ...(filters.tech !== "all" ? { assigned_technician_name: filters.tech } : {}),
+    ...(filters.payment !== "all" ? { payment_status: filters.payment } : {}),
+    ...(filters.type !== "all" ? { job_type: filters.type } : {}),
+    ...(filters.waiting !== "all" ? { waiting_reason: filters.waiting } : {}),
+  }), [filters.status, filters.tech, filters.payment, filters.type, filters.waiting]);
+  const { data: jobs } = useJobs(queryFilter);
   const { data: staff } = useStaff();
   const invalidate = useInvalidateJobs();
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -29,16 +36,14 @@ export default function Jobs() {
   const open = (id) => navigate(`/dashboard/jobs?id=${id}`);
   const close = () => { navigate("/dashboard/jobs"); invalidate(); };
 
-  const filtered = useMemo(() => jobs.filter((j) => {
+  const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
-    const matchQ = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description].some((v) => v?.toLowerCase().includes(q));
-    return matchQ &&
-      (filters.status === "all" || j.status === filters.status) &&
-      (filters.tech === "all" || j.assigned_technician_name === filters.tech) &&
-      (filters.payment === "all" || j.payment_status === filters.payment) &&
-      (filters.type === "all" || j.job_type === filters.type) &&
-      (filters.waiting === "all" || j.waiting_reason === filters.waiting);
-  }), [jobs, filters]);
+    if (!q) return jobs;
+    return jobs.filter((j) =>
+      [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
+        .some((v) => v?.toLowerCase().includes(q))
+    );
+  }, [jobs, filters.q]);
 
   return (
     <div className="space-y-5">
