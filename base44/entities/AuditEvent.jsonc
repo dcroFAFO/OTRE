@@ -49,27 +49,18 @@
     "event_type"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    },
+    "create": null,
     "read": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
         }
-      }
+      ]
     },
     "update": {
       "user_condition": {
