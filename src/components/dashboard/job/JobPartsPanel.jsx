@@ -5,7 +5,7 @@ import { Package, Wrench, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
-import { addInventoryParts } from "@/services/jobService";
+import { addInventoryParts, removeInventoryPart } from "@/services/jobService";
 
 export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const qc = useQueryClient();
@@ -29,14 +29,12 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   });
 
   const removeUsage = useMutation({
-    mutationFn: async (usage) => {
-      const item = await base44.entities.InventoryItem.get(usage.item_id);
-      await base44.entities.InventoryItem.update(usage.item_id, { qty_on_hand: (item.qty_on_hand || 0) + usage.qty_used });
-      await base44.entities.InventoryUsage.delete(usage.id);
-    },
+    mutationFn: (usage) => removeInventoryPart(job, usage),
     onSuccess: () => {
+      refetch();
       qc.invalidateQueries({ queryKey: ["inventoryUsage"] });
       qc.invalidateQueries({ queryKey: ["inventoryItems"] });
+      onChange?.();
     },
   });
 

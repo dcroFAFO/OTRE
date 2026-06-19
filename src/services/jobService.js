@@ -43,3 +43,7 @@ export async function addNote(job, { body, visibility }) {
 export async function addInventoryParts(job, parts) {
   return invoke({ action: "add_inventory_parts", jobId: job.id, parts });
 }
+
+export async function removeInventoryPart(job, usage) {
+  return invoke({ action: "remove_inventory_part", jobId: job.id, usageId: usage.id });
+}
