@@ -72,8 +72,9 @@ Deno.serve(async (req) => {
       status: "outstanding",
     });
 
-    // Update the job payment_status to outstanding
+    // Link the invoice back to the job and mark payment as outstanding
     await base44.asServiceRole.entities.Job.update(jobId, {
+      invoice_id: invoice.id,
       payment_status: "outstanding",
     });
 

@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
         result = await Promise.all(parts.map((part) =>
           base44.asServiceRole.entities.InventoryUsage.create({
             job_id: job.id,
-            quote_id: job.quote_id || "",
+            invoice_id: job.invoice_id || "",
             customer_id: job.customer_id || "",
             item_id: part.id,
             item_name: part.name,

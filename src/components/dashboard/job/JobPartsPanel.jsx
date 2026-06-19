@@ -48,7 +48,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     setAddingLabour(true);
     await base44.entities.InventoryUsage.create({
       job_id: job.id,
-      quote_id: job.quote_id || "",
+      invoice_id: job.invoice_id || "",
       customer_id: job.customer_id,
       item_id: `labour-${Date.now()}`,
       item_name: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`,

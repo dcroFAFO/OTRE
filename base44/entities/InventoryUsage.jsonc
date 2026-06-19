@@ -5,9 +5,9 @@
     "job_id": {
       "type": "string"
     },
-    "quote_id": {
+    "invoice_id": {
       "type": "string",
-      "description": "Linked Quote entity ID for this inventory usage record."
+      "description": "Linked Invoice entity ID for this inventory usage record, matching the invoice_id field on the related Job."
     },
     "customer_id": {
       "type": "string"
