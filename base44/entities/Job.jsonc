@@ -174,48 +174,45 @@
     "read": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "data.technician": "{{user.data.display_role_title}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.technician": "{{user.role}}"
         },
         {
           "data.admin": "{{user.role}}"
         },
         {
-          "data.customer_email": "{{user.email}}"
+          "data.job_id": "{{user.data.job_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "data.technician": "{{user.data.display_role_title}}"
+          "data.technician": "{{user.role}}"
+        },
+        {
+          "data.admin": "{{user.role}}"
         },
         {
           "user_condition": {
             "role": "admin"
           }
-        },
-        {
-          "data.admin": "{{user.role}}"
         }
       ]
     },
     "delete": {
       "$or": [
         {
+          "data.admin": "{{user.role}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }
-        },
-        {
-          "data.admin": "{{user.role}}"
         }
       ]
     }
