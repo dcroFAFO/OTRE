@@ -74,6 +74,16 @@
     "paid_date": {
       "type": "string",
       "format": "date-time"
+    },
+    "last_payment_reminder_sent_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time an unpaid invoice reminder email was sent."
+    },
+    "payment_reminder_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of unpaid invoice reminder emails sent."
     }
   },
   "required": [
