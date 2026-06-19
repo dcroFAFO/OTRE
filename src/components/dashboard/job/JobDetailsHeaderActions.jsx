@@ -35,20 +35,20 @@ const WORKFLOW_EVENTS = [
     key: "repair_in_progress",
     label: "Start repair",
     variant: "default",
-    applicableStatuses: ["quote_approved", "active", "booked", "technician_assigned", "waiting_parts", "waiting_supplier", "waiting_customer", "on_hold"],
+    applicableStatuses: ["quote_approved", "active", "booked", "waiting_parts", "waiting_supplier", "waiting_customer", "on_hold"],
   },
   {
     key: "waiting_parts",
     label: "Mark waiting for parts",
     variant: "amber",
-    applicableStatuses: ["quote_approved", "active", "booked", "technician_assigned", "repair_in_progress"],
+    applicableStatuses: ["quote_approved", "active", "booked", "repair_in_progress"],
     requiresReason: true,
   },
   {
     key: "ready_for_pickup",
     label: "Ready for pickup",
     variant: "emerald",
-    applicableStatuses: ["quote_approved", "active", "repair_in_progress", "waiting_parts", "waiting_supplier", "waiting_customer", "technician_assigned"],
+    applicableStatuses: ["quote_approved", "active", "repair_in_progress", "waiting_parts", "waiting_supplier", "waiting_customer"],
   },
   {
     key: "invoice_outstanding",
@@ -72,7 +72,7 @@ const WORKFLOW_EVENTS = [
     key: "on_hold",
     label: "Put on hold",
     variant: "rose",
-    applicableStatuses: ["requested", "quote_sent", "quote_approved", "active", "booked", "technician_assigned", "repair_in_progress", "waiting_parts"],
+    applicableStatuses: ["requested", "quote_sent", "quote_approved", "active", "booked", "repair_in_progress", "waiting_parts"],
   },
   {
     key: "cancelled",

@@ -81,17 +81,17 @@ Deno.serve(async (req) => {
     const todayStr = `${yyyy}-${mm}-${dd}`;
     const todayLabel = today.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" });
 
-    // Active technicians with an email
+    // Active technicians/admins with an email receive the daily job list.
     const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
-    const techs = staff.filter((s) => s.email && s.user_id);
+    const recipients = staff.filter((s) => s.email && ["admin", "technician"].includes(s.role));
 
     // All non-archived jobs scheduled for today
     const jobs = await base44.asServiceRole.entities.Job.filter({ archived: false, scheduled_date: todayStr });
 
     const results = [];
     let first = true;
-    for (const tech of techs) {
-      const theirJobs = jobs.filter((j) => j.assigned_technician_id === tech.user_id);
+    for (const tech of recipients) {
+      const theirJobs = jobs;
       if (theirJobs.length === 0) continue;
 
       const name = (tech.short_name || tech.full_name || "there").split(" ")[0];

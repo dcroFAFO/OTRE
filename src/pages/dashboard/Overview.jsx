@@ -30,7 +30,7 @@ export default function Overview() {
   }, [q]);
 
   const m = useMemo(() => ({
-    active: jobs.filter((j) => ["active", "booked", "technician_assigned", "repair_in_progress"].includes(j.status)).length,
+    active: jobs.filter((j) => ["active", "booked", "repair_in_progress"].includes(j.status)).length,
     awaitingCustomer: jobs.filter((j) => j.status === "waiting_customer").length,
     waitingParts: jobs.filter((j) => ["waiting_parts", "waiting_supplier"].includes(j.status)).length,
     readyPickup: jobs.filter((j) => j.ready_for_pickup || j.status === "ready_for_pickup").length,

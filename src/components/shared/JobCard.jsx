@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Wrench, CreditCard, Clock, GripVertical, Calendar, AlertTriangle, UserCheck } from "lucide-react";
+import { User, Wrench, CreditCard, Clock, GripVertical, Calendar, AlertTriangle } from "lucide-react";
 import StatusPill from "./StatusPill";
 import { cn } from "@/lib/utils";
 import { getPaymentStatus, getStatus } from "@/config/jobConfig";
@@ -52,12 +52,6 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
           <div className="mt-2 flex items-center justify-between gap-1.5 flex-wrap">
             <StatusPill value={job.status} />
             <div className="flex items-center gap-2">
-              {job.assigned_technician_name && (
-                <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                  <UserCheck className="h-3 w-3" />
-                  {job.assigned_technician_name}
-                </span>
-              )}
               {job.scheduled_date && !compact && (
                 <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                   <Calendar className="h-3 w-3" />

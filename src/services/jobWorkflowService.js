@@ -49,7 +49,7 @@ const TRANSITION_RULES = {
   repair_in_progress: {
     targetStatus: "repair_in_progress",
     allowedFrom: [
-      "quote_approved", "active", "booked", "technician_assigned",
+      "quote_approved", "active", "booked",
       "waiting_parts", "waiting_supplier", "waiting_customer", "on_hold",
     ],
     check() { return { ok: true }; },
@@ -58,7 +58,7 @@ const TRANSITION_RULES = {
   waiting_parts: {
     targetStatus: "waiting_parts",
     allowedFrom: [
-      "quote_approved", "active", "booked", "technician_assigned", "repair_in_progress",
+      "quote_approved", "active", "booked", "repair_in_progress",
     ],
     check(job, payload) {
       // payload.waitingReason is required
@@ -72,7 +72,7 @@ const TRANSITION_RULES = {
   ready_for_pickup: {
     targetStatus: "ready_for_pickup",
     allowedFrom: [
-      "quote_approved", "active", "booked", "technician_assigned",
+      "quote_approved", "active", "booked",
       "repair_in_progress", "waiting_parts", "waiting_supplier", "waiting_customer",
     ],
     check(job) {

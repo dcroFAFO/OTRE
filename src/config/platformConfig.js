@@ -26,8 +26,6 @@ export const DEFAULT_APP_SETTINGS = {
     jobSingular: "job",
     jobPlural: "jobs",
     customerSingular: "customer",
-    staffAssignmentLabel: "Technician",
-    staffAssignmentLabelPlural: "Technicians",
     assetSingular: "scooter",
     assetPlural: "scooters",
     serviceRequestLabel: "booking request",
@@ -72,7 +70,6 @@ export const DEFAULT_APP_SETTINGS = {
 
 export const CUSTOMER_JOURNEY = [
   { key: "book", label: "Book assessment", icon: "CalendarCheck" },
-  { key: "assigned", label: "Technician assigned", icon: "UserCheck" },
   { key: "inspected", label: "Scooter inspected", icon: "Search" },
   { key: "quote", label: "Quote generated", icon: "FileText" },
   { key: "approval", label: "Awaiting approval", icon: "Clock" },
@@ -106,9 +103,7 @@ export const DEFAULT_JOB_STATUSES = [
   { key: "pending_confirmation", label: "Pending Confirmation", group: "intake", color: "amber" },
   { key: "active", label: "Active", group: "active", color: "indigo" },
   { key: "booked", label: "Booked", group: "active", color: "indigo" },
-  { key: "technician_assigned", label: "Technician Assigned", group: "active", color: "indigo" },
   { key: "waiting_customer", label: "Waiting for Customer", group: "waiting", color: "amber" },
-  { key: "waiting_technician", label: "Waiting for Technician", group: "waiting", color: "amber" },
   { key: "waiting_supplier", label: "Waiting for Supplier", group: "waiting", color: "amber" },
   { key: "waiting_parts", label: "Waiting for Parts", group: "waiting", color: "amber" },
   { key: "quote_required", label: "Quote Required", group: "quote", color: "violet" },
