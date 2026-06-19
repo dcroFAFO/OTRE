@@ -38,10 +38,22 @@ async function getSettings(base44) {
 }
 
 async function getStaffRecipients(base44) {
-  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
-  return staff
-    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
-    .map((s) => s.email);
+  const staffProfiles = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
+  const users = await base44.asServiceRole.entities.User.list();
+  const staffRoles = new Set(["admin", "employee", "technician", "staff"]);
+  const emails = new Set();
+
+  staffProfiles.forEach((staff) => {
+    if (staff.email) emails.add(staff.email);
+  });
+
+  users.forEach((user) => {
+    const isStaffRole = staffRoles.has(user.role);
+    const isStaffAccount = user.is_customer === false || user.data?.is_customer === false;
+    if (user.email && (isStaffRole || isStaffAccount)) emails.add(user.email);
+  });
+
+  return [...emails];
 }
 
 function invoiceHtml({ heading, message, color }, invoice, currency, amount) {
