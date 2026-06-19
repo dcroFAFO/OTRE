@@ -2,6 +2,12 @@
   "name": "Order",
   "type": "object",
   "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
     "reference": {
       "type": "string",
       "description": "Human-readable order reference e.g. ORD-1042"
@@ -106,6 +112,9 @@
       "$or": [
         {
           "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
         },
         {
           "user_condition": {
