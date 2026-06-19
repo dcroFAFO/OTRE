@@ -158,21 +158,7 @@ export const DEFAULT_QUOTE_STATUSES = [
   { key: "rejected", label: "Rejected", color: "rose" },
 ];
 
-export const DEFAULT_ROLES = {
-  admin: { key: "admin", label: "Admin", is_staff: true },
-  employee: { key: "employee", label: "Employee", is_staff: true },
-  technician: { key: "technician", label: "Technician", is_staff: true },
-  customer: { key: "customer", label: "Customer", is_staff: false },
-};
-
-export const DEFAULT_ROLE_PERMISSIONS = {
-  admin: ["*"],
-  employee: ["job.view.all", "job.create", "job.update", "job.status.change", "job.assign", "job.reschedule", "job.note.internal", "job.note.customer", "job.attach", "job.quote.manage", "job.invoice.manage", "job.payment.manage", "job.cancel", "job.reopen", "job.archive", "calendar.manage", "dashboard.view"],
-  technician: ["job.view.assigned", "job.status.change", "job.note.internal", "job.note.customer", "job.attach", "job.checklist.update", "dashboard.view"],
-  customer: ["job.view.own", "quote.approve", "quote.reject", "customer.upload", "customer.message", "invoice.pay"],
-};
-
-export const STAFF_ROLE_KEYS = ["admin", "employee", "technician"];
+export const STAFF_ROLE_KEYS = ["admin", "technician"];
 
 export const DEFAULT_BOOKING_FIELDS = [
   { key: "customer_name", label: "Your name", placeholder: "Liam Carter", field_type: "text", required: true, maps_to: "customer_name", order: 0 },

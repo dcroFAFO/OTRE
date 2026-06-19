@@ -6,7 +6,6 @@ import {
   DEFAULT_QUOTE_STATUSES,
   DEFAULT_WAITING_REASONS,
   DEFAULT_JOB_TYPES,
-  DEFAULT_ROLES,
   DEFAULT_INTAKE_STATUS as INTAKE_STATUS,
 } from "./platformConfig";
 
@@ -15,7 +14,6 @@ export const PAYMENT_STATUSES = DEFAULT_PAYMENT_STATUSES;
 export const QUOTE_STATUSES = DEFAULT_QUOTE_STATUSES;
 export const WAITING_REASONS = DEFAULT_WAITING_REASONS;
 export const JOB_TYPES = DEFAULT_JOB_TYPES;
-export const ROLES = DEFAULT_ROLES;
 export const DEFAULT_INTAKE_STATUS = INTAKE_STATUS;
 
 // Color token map -> tailwind classes for status pills (literal strings so

@@ -11,7 +11,6 @@ export const SEED_STEPS = [
   { key: "business", label: "Setting up your business details" },
   { key: "services", label: "Adding your services" },
   { key: "statuses", label: "Setting up job stages" },
-  { key: "roles", label: "Setting up team roles" },
   { key: "booking", label: "Building the booking form" },
   { key: "templates", label: "Gathering message templates" },
   { key: "demo", label: "Loading jobs" },

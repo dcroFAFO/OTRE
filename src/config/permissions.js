@@ -1,21 +1,37 @@
-// Permission helpers. Delegates to the central role hierarchy in config/roles.js.
+// Simple permission helpers for the admin > technician > customer hierarchy.
 
-import { DEFAULT_ROLE_PERMISSIONS } from "./platformConfig";
-import { isStaffRole, hasCapability, hasAtLeastRole } from "./roles";
+import { isStaffRole, hasCapability, hasAtLeastRole, normalizeRole } from "./roles";
 
-const PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
+const ACTION_PERMISSIONS = {
+  admin: ["*"],
+  technician: [
+    "job.view.all",
+    "job.create",
+    "job.update",
+    "job.status.change",
+    "job.assign",
+    "job.reschedule",
+    "job.note.internal",
+    "job.note.customer",
+    "job.attach",
+    "job.quote.manage",
+    "job.invoice.manage",
+    "job.payment.manage",
+    "job.reopen",
+    "job.checklist.update",
+    "dashboard.view",
+  ],
+  customer: ["job.view.own", "quote.approve", "quote.reject", "customer.upload", "customer.message", "invoice.pay"],
+};
 
-// Legacy action-based check (job.* / quote.* etc). Owner & admin get "*".
 export function can(role, action) {
-  if (!role) return false;
-  if (hasAtLeastRole(role, "admin")) return true;
-  const perms = PERMISSIONS[role] || [];
-  return perms.includes("*") || perms.includes(action);
+  const normalizedRole = normalizeRole(role);
+  const permissions = ACTION_PERMISSIONS[normalizedRole] || [];
+  return permissions.includes("*") || permissions.includes(action);
 }
 
 export function isStaff(role) {
   return isStaffRole(role);
 }
 
-// Re-export the central capability helpers for convenience.
 export { hasCapability, hasAtLeastRole };

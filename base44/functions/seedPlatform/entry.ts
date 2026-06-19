@@ -98,20 +98,6 @@ const JOB_TYPES = [
   { key: "pickup", label: "Pickup / Assessment", description: "Collection or onsite assessment" },
 ];
 
-const ROLES = {
-  admin: { key: "admin", label: "Admin", is_staff: true },
-  employee: { key: "employee", label: "Employee", is_staff: true },
-  technician: { key: "technician", label: "Technician", is_staff: true },
-  customer: { key: "customer", label: "Customer", is_staff: false },
-};
-
-const ROLE_PERMISSIONS = {
-  admin: ["*"],
-  employee: ["job.view.all", "job.create", "job.update", "job.status.change", "job.assign", "job.reschedule", "job.note.internal", "job.note.customer", "job.attach", "job.quote.manage", "job.invoice.manage", "job.payment.manage", "job.cancel", "job.reopen", "job.archive", "calendar.manage", "dashboard.view"],
-  technician: ["job.view.assigned", "job.status.change", "job.note.internal", "job.note.customer", "job.attach", "job.checklist.update", "dashboard.view"],
-  customer: ["job.view.own", "quote.approve", "quote.reject", "customer.upload", "customer.message", "invoice.pay"],
-};
-
 const BOOKING_FIELDS = [
   { key: "customer_name", label: "Your name", placeholder: "Liam Carter", field_type: "text", required: true, maps_to: "customer_name", order: 0 },
   { key: "phone", label: "Phone", placeholder: "04xx xxx xxx", field_type: "tel", required: true, maps_to: "customer_phone", order: 1 },
@@ -135,7 +121,7 @@ const NOTIFICATION_TEMPLATES = [
 const TECHS = [
   { full_name: "Mason Reid", short_name: "Mason R.", role: "technician", role_label: "Technician", color: "teal", active: true },
   { full_name: "Ella Turner", short_name: "Ella T.", role: "technician", role_label: "Technician", color: "indigo", active: true },
-  { full_name: "Priya Nair", short_name: "Priya N.", role: "employee", role_label: "Employee", color: "violet", active: true },
+  { full_name: "Priya Nair", short_name: "Priya N.", role: "technician", role_label: "Technician", color: "violet", active: true },
 ];
 
 const DEMO_JOBS = [
@@ -200,13 +186,6 @@ Deno.serve(async (req) => {
           await createIfNone("JobStatus", { key: item.key }, { ...item, order: i, active: true });
         for (const [i, item] of JOB_TYPES.entries())
           await createIfNone("JobType", { key: item.key }, { ...item, order: i, active: true });
-      },
-      roles: async () => {
-        for (const [key, role] of Object.entries(ROLES)) {
-          await createIfNone("Role", { key }, { ...role, order: Object.keys(ROLES).indexOf(key), active: true });
-          for (const action of ROLE_PERMISSIONS[key] || [])
-            await createIfNone("Permission", { role_key: key, action }, { role_key: key, action, active: true });
-        }
       },
       booking: async () => {
         for (const field of BOOKING_FIELDS)
