@@ -88,9 +88,106 @@
     "job_id"
   ],
   "rls": {
-    "create": null,
-    "read": null,
-    "update": null,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "user_condition": {
+            "is_customer": false
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": false
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "user_condition": {
+            "is_customer": false
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": false
+          }
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "user_condition": {
+            "is_customer": false
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": false
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.customer_id": "{{user.data.customer_id}}"
+            },
+            {
+              "data.approval_status": "pending"
+            }
+          ]
+        }
+      ]
+    },
     "delete": {
       "user_condition": {
         "role": "admin"

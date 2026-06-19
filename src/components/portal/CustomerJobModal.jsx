@@ -8,6 +8,7 @@ import { base44 } from "@/api/base44Client";
 import { DEFAULT_JOB_STATUSES } from "@/config/platformConfig";
 import { Loader2, CheckCircle2, Circle, Clock, Wrench, FileText, Receipt, History, CreditCard } from "lucide-react";
 import { startInvoicePayment } from "@/services/paymentService";
+import SignatureCapture from "@/components/portal/SignatureCapture";
 
 // ─── Status milestones shown to customers (subset of all statuses) ────────────
 const MILESTONES = [
@@ -45,8 +46,19 @@ function getMilestoneIndex(statusKey) {
 
 function StatusTab({ job }) {
   const current = getMilestoneIndex(job.status);
+  const statusDef = DEFAULT_JOB_STATUSES.find((s) => s.key === job.status);
+  const canAcknowledgeCompletion = job.status === "completed" || ["done", "closed"].includes(statusDef?.group);
   return (
-    <div className="py-2">
+    <div className="py-2 space-y-4">
+      {canAcknowledgeCompletion && (
+        <SignatureCapture
+          job={job}
+          signatureKey="completed-work"
+          title="Acknowledge completed work"
+          description="Sign here to confirm the completed repair work has been acknowledged."
+          fileName={`completed-work-signature-${job.reference || job.id}.png`}
+        />
+      )}
       <div className="mb-6 rounded-xl bg-secondary/50 px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
         <Clock className="h-4 w-4 shrink-0" />
         Current status: <span className="font-semibold text-foreground ml-1">
@@ -118,6 +130,7 @@ function HistoryTab({ userEmail }) {
 function QuotesTab({ job, onUpdate }) {
   const qc = useQueryClient();
   const [acting, setActing] = useState(null);
+  const [signedQuotes, setSignedQuotes] = useState({});
 
   const { data: quotes = [], isLoading } = useQuery({
     queryKey: ["portalQuotes", job.id],
@@ -185,13 +198,24 @@ function QuotesTab({ job, onUpdate }) {
               <span className="text-sm font-semibold">Total</span>
               <span className="text-base font-bold text-foreground">{q.currency || "AUD"} ${Number(q.total || 0).toFixed(2)}</span>
             </div>
+            {/* Customer signature */}
+            {!settled && (
+              <SignatureCapture
+                job={job}
+                signatureKey={`quote-${q.id}`}
+                title="Sign off this repair quote"
+                description="Sign here before approving to store your quote sign-off on the job file."
+                fileName={`quote-signature-${q.id}.png`}
+                onSigned={(url) => setSignedQuotes((current) => ({ ...current, [q.id]: url }))}
+              />
+            )}
             {/* Approve / deny (only if not yet settled) */}
             {!settled && (
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  disabled={!!acting}
+                  disabled={!!acting || !signedQuotes[q.id]}
                   onClick={() => handleApproval(q.id, true)}
                 >
                   {acting === q.id + "_approve" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Approve Quote"}

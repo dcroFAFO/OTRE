@@ -63,7 +63,16 @@
     "full_name"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee"
+          ]
+        }
+      }
+    },
     "read": {
       "$or": [
         {
