@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf } from "@/services/paymentService";
+import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { Send, Loader2, FileText, Package, Wrench, Lock, CalendarDays, Copy } from "lucide-react";
+import { Send, Loader2, FileText, Package, Wrench, Lock, CalendarDays, Copy, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -24,6 +24,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const [pdfDocument, setPdfDocument] = useState(null);
   const [pdfRevision, setPdfRevision] = useState(0);
   const [emailingPdf, setEmailingPdf] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadInvoiceData = () => {
@@ -155,6 +156,18 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
     }
   };
 
+  const payOnline = async () => {
+    if (!invoice) return;
+    setPaying(true);
+    try {
+      const result = await startInvoicePayment(invoice);
+      if (result?.blocked) setPaying(false);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to start checkout.");
+      setPaying(false);
+    }
+  };
+
   const currency = invoice?.currency || DEFAULT_INVOICE_SETTINGS.currency;
 
   if (loading) {
@@ -243,6 +256,12 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
                 <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">
                   {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
                   Copy quote
+                </Button>
+              )}
+              {invoice.status !== "paid" && invoice.status !== "refunded" && (
+                <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={payOnline} disabled={paying}>
+                  {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Pay online
                 </Button>
               )}
               <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>

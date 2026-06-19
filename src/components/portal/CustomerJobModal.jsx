@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DEFAULT_JOB_STATUSES } from "@/config/platformConfig";
-import { Loader2, CheckCircle2, Circle, Clock, Wrench, FileText, Receipt, History } from "lucide-react";
+import { Loader2, CheckCircle2, Circle, Clock, Wrench, FileText, Receipt, History, CreditCard } from "lucide-react";
+import { startInvoicePayment } from "@/services/paymentService";
 
 // ─── Status milestones shown to customers (subset of all statuses) ────────────
 const MILESTONES = [
@@ -219,6 +220,7 @@ function QuotesTab({ job, onUpdate }) {
 }
 
 function InvoiceTab({ job }) {
+  const [paying, setPaying] = useState(null);
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["portalInvoices", job.id],
     queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }, "-created_date", 10),
@@ -254,9 +256,23 @@ function InvoiceTab({ job }) {
               <p className="text-xs text-muted-foreground">Paid {new Date(inv.paid_date).toLocaleDateString()}</p>
             )}
             {!isPaid && (
-              <div className="rounded-lg bg-secondary/60 px-4 py-3 text-sm text-muted-foreground border border-border">
-                To pay this invoice, please contact us at <span className="font-medium text-foreground">hello@otrscooters.com</span> or call <span className="font-medium text-foreground">(03) 9000 1234</span>.
-              </div>
+              <Button
+                className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={paying === inv.id}
+                onClick={async () => {
+                  setPaying(inv.id);
+                  try {
+                    const result = await startInvoicePayment(inv);
+                    if (result?.blocked) setPaying(null);
+                  } catch (error) {
+                    alert(error?.response?.data?.error || "Could not start checkout.");
+                    setPaying(null);
+                  }
+                }}
+              >
+                {paying === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Pay invoice online
+              </Button>
             )}
           </div>
         );

@@ -46,6 +46,16 @@ export async function emailInvoicePdf(job, invoice, notes = "", regenerateCount 
   return res.data;
 }
 
+export async function startInvoicePayment(invoice) {
+  if (window.self !== window.top) {
+    alert("Online checkout works only from the published app, not inside the preview.");
+    return { blocked: true };
+  }
+  const res = await base44.functions.invoke("createInvoiceCheckout", { invoiceId: invoice.id });
+  if (res.data?.url) window.location.href = res.data.url;
+  return res.data;
+}
+
 // Read-only display helper — stays client-side.
 export async function getJobInvoice(jobId) {
   const invoices = await base44.entities.Invoice.filter({ job_id: jobId }, "-created_date", 1);

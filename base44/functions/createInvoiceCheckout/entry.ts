@@ -1,0 +1,65 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import Stripe from 'npm:stripe@17.5.0';
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
+
+const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const { invoiceId } = await req.json().catch(() => ({}));
+    if (!invoiceId) return Response.json({ error: 'invoiceId is required' }, { status: 400 });
+
+    const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
+    if (!invoice) return Response.json({ error: 'Invoice not found' }, { status: 404 });
+    if (blockingStatuses.has(invoice.status)) return Response.json({ error: 'This invoice cannot be paid online.' }, { status: 400 });
+
+    const amount = Math.round((Number(invoice.amount) || 0) * 100);
+    if (amount <= 0) return Response.json({ error: 'Invoice amount must be greater than zero.' }, { status: 400 });
+
+    const job = invoice.job_id ? await base44.asServiceRole.entities.Job.get(invoice.job_id).catch(() => null) : null;
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://app.base44.com';
+    const successUrl = `${origin}/portal?payment=success&invoice=${encodeURIComponent(invoice.id)}`;
+    const cancelUrl = `${origin}/portal?payment=cancelled&invoice=${encodeURIComponent(invoice.id)}`;
+
+    const metadata = {
+      base44_app_id: Deno.env.get('BASE44_APP_ID') || '',
+      invoice_id: invoice.id,
+      job_id: invoice.job_id || '',
+      customer_id: invoice.customer_id || '',
+    };
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer_email: job?.customer_email || undefined,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: String(invoice.currency || 'AUD').toLowerCase(),
+            unit_amount: amount,
+            product_data: {
+              name: invoice.number ? `Invoice ${invoice.number}` : 'Invoice payment',
+              description: job?.reference ? `Job ${job.reference}` : 'Invoice payment',
+            },
+          },
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata,
+      payment_intent_data: { metadata },
+    });
+
+    await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+      payment_provider: 'stripe',
+      payment_intent_ref: session.id,
+    });
+
+    return Response.json({ url: session.url });
+  } catch (error) {
+    console.error('[createInvoiceCheckout] failed', error.message, error.stack);
+    return Response.json({ error: error.message || 'Could not start payment checkout.' }, { status: 500 });
+  }
+});
