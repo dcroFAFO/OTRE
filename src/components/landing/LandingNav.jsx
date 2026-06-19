@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Zap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
+import LandingLogo from "@/components/landing/LandingLogo";
 import { cn } from "@/lib/utils";
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const { data: { business, app } } = usePlatformConfig();
+  const { data: { app } } = usePlatformConfig();
 
   useEffect(() => {
     let ticking = false;
@@ -35,11 +36,8 @@ export default function LandingNav() {
       )}
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="grid place-items-center h-9 w-9 rounded-xl bg-accent/15 text-accent">
-            <Zap className="h-5 w-5" />
-          </span>
-          <span className="font-heading font-extrabold text-lg tracking-tight">{business.name}</span>
+        <Link to="/" className="flex items-center" aria-label="On The Road home">
+          <LandingLogo imageClassName="h-12 sm:h-14" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

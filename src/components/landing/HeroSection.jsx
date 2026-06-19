@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, CheckCircle2, Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
+import LandingLogo from "@/components/landing/LandingLogo";
 
 const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag };
 
@@ -53,6 +54,8 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
+          <LandingLogo imageClassName="h-28 sm:h-36 lg:h-44" className="mb-5 -ml-2" />
+
           <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1 text-xs font-semibold text-accent">
             <Zap className="h-3.5 w-3.5" />
             {app.landing.heroEyebrow}
