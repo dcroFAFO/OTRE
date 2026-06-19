@@ -1,6 +1,5 @@
-import React, { Suspense, useEffect, useState } from "react";
-
-const RevenueChartsSection = React.lazy(() => import("@/components/dashboard/RevenueChartsSection"));
+import React, { useEffect, useState } from "react";
+import RevenueChartsSection from "@/components/dashboard/RevenueChartsSection";
 
 function ChartsPlaceholder() {
   return (
@@ -25,9 +24,5 @@ export default function DeferredRevenueCharts() {
 
   if (!ready) return <ChartsPlaceholder />;
 
-  return (
-    <Suspense fallback={<ChartsPlaceholder />}>
-      <RevenueChartsSection />
-    </Suspense>
-  );
+  return <RevenueChartsSection />;
 }
