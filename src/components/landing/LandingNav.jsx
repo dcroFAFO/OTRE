@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Zap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { cn } from "@/lib/utils";
+import BrandLogo from "@/components/landing/BrandLogo";
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -35,10 +36,8 @@ export default function LandingNav() {
       )}
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="grid place-items-center h-9 w-9 rounded-xl bg-accent/15 text-accent">
-            <Zap className="h-5 w-5" />
-          </span>
+        <Link to="/" className="flex items-center gap-3">
+          <BrandLogo className="h-11 w-20 sm:w-24 rounded-xl" />
           <span className="font-heading font-extrabold text-lg tracking-tight">{business.name}</span>
         </Link>
 
