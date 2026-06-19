@@ -25,11 +25,16 @@ Deno.serve(async (req) => {
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
-    const job = jobs[0];
+    let job = null;
+    try {
+      job = await base44.asServiceRole.entities.Job.get(jobId);
+    } catch {
+      const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
+      job = jobs[0] || null;
+    }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role);
+    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || (user.is_customer === false || user.data?.is_customer === false);
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
       base44.asServiceRole.entities.AuditEvent.create({
@@ -155,7 +160,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
     console.error("[jobActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    // Safe, friendly message — internal details stay in the server logs.
-    return Response.json({ error: "Something went wrong while updating this job. Please try again." }, { status: 500 });
+    return Response.json({ error: error.message || "Something went wrong while updating this job. Please try again." }, { status: 500 });
   }
 });

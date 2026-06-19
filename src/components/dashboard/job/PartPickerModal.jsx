@@ -65,7 +65,8 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
       onOpenChange(false);
     } catch (err) {
       console.error("Add parts failed:", err);
-      toast.error("Couldn't add parts. Please try again.");
+      const message = err?.response?.data?.error || err?.message || "Please try again.";
+      toast.error(`Couldn't add parts: ${message}`);
     } finally {
       setAdding(false);
     }
