@@ -1,14 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.5.0';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
-
 Deno.serve(async (req) => {
   try {
     const signature = req.headers.get('stripe-signature');
     const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-    if (!signature || !secret) return Response.json({ error: 'Missing Stripe webhook configuration' }, { status: 400 });
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!signature || !secret || !stripeKey) return Response.json({ error: 'Missing Stripe webhook configuration' }, { status: 400 });
 
+    const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
     const body = await req.text();
     const event = await stripe.webhooks.constructEventAsync(body, signature, secret);
     const base44 = createClientFromRequest(req);
@@ -18,6 +18,21 @@ Deno.serve(async (req) => {
       const metadata = session.metadata || {};
       if (metadata.base44_app_id && metadata.base44_app_id !== Deno.env.get('BASE44_APP_ID')) {
         return Response.json({ received: true, skipped: 'different app' });
+      }
+
+      if (metadata.payment_flow === 'store_order') {
+        const orderId = metadata.order_id;
+        if (!orderId) return Response.json({ received: true, skipped: 'missing order metadata' });
+
+        const order = await base44.asServiceRole.entities.Order.get(orderId).catch(() => null);
+        if (!order) return Response.json({ received: true, skipped: 'order not found' });
+
+        await base44.asServiceRole.entities.Order.update(order.id, {
+          status: 'processing',
+          notes: `${order.notes || ''}${order.notes ? '\n\n' : ''}Stripe payment received: ${session.payment_intent || session.id}`,
+        });
+
+        return Response.json({ received: true });
       }
 
       const invoiceId = metadata.invoice_id;

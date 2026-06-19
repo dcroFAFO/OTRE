@@ -1,12 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.5.0';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
-
 const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
 
 Deno.serve(async (req) => {
   try {
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeKey) return Response.json({ error: 'Stripe is not configured.' }, { status: 500 });
+
+    const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
     const base44 = createClientFromRequest(req);
     const { invoiceId } = await req.json().catch(() => ({}));
     if (!invoiceId) return Response.json({ error: 'invoiceId is required' }, { status: 400 });

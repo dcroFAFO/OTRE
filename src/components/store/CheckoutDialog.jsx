@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import { useCart } from "@/lib/CartContext";
 import { SUPPLIER_NAME } from "@/config/storeConfig";
+import { startStorePayment } from "@/services/paymentService";
 
 export default function CheckoutDialog({ open, onOpenChange }) {
   const { items, subtotal, clear } = useCart();
@@ -24,20 +24,24 @@ export default function CheckoutDialog({ open, onOpenChange }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const reference = `ORD-${Date.now().toString().slice(-6)}`;
-    const order = await base44.entities.Order.create({
-      reference,
-      ...form,
-      items: items.map((i) => ({
-        product_id: i.product.id, name: i.product.name, sku: i.product.sku,
-        qty: i.qty, price: Number(i.product.price || 0),
-      })),
-      subtotal, total: subtotal, currency: "AUD",
-      status: "received", supplier: SUPPLIER_NAME,
-    });
-    setDone(order);
-    clear();
-    setSubmitting(false);
+    try {
+      const result = await startStorePayment({
+        customer: {
+          customer_name: form.customer_name,
+          customer_email: form.customer_email,
+          customer_phone: form.customer_phone,
+        },
+        items: items.map((i) => ({ product_id: i.product.id, qty: i.qty })),
+        fulfilment_method: form.fulfilment_method,
+        shipping_address: form.shipping_address,
+        notes: form.notes,
+      });
+      if (result?.blocked) setSubmitting(false);
+      if (result?.url) clear();
+    } catch (error) {
+      alert(error?.response?.data?.error || "Could not start checkout.");
+      setSubmitting(false);
+    }
   };
 
   const close = () => { setDone(null); onOpenChange(false); };
@@ -89,7 +93,7 @@ export default function CheckoutDialog({ open, onOpenChange }) {
               <div className="flex items-center justify-between pt-2">
                 <span className="font-heading font-semibold">Total: ${subtotal.toFixed(2)}</span>
                 <Button type="submit" disabled={submitting || items.length === 0} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Place order
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Pay with Stripe
                 </Button>
               </div>
             </form>
