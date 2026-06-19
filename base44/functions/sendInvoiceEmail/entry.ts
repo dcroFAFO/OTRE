@@ -1,4 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import Stripe from 'npm:stripe@17.5.0';
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
+const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
 
 async function sendMail({ to, subject, body, from_name }) {
   const apiKey = Deno.env.get("RESEND_API_KEY");
@@ -12,6 +16,46 @@ async function sendMail({ to, subject, body, from_name }) {
   });
   if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
   return res.json();
+}
+
+async function createPaymentUrl({ base44, req, invoice, job }) {
+  if (blockingStatuses.has(invoice.status)) return null;
+  const amount = Math.round((Number(invoice.amount) || 0) * 100);
+  if (amount <= 0) return null;
+
+  const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://app.base44.com';
+  const metadata = {
+    base44_app_id: Deno.env.get('BASE44_APP_ID') || '',
+    invoice_id: invoice.id,
+    job_id: invoice.job_id || '',
+    customer_id: invoice.customer_id || '',
+  };
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    customer_email: job.customer_email || undefined,
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: String(invoice.currency || 'AUD').toLowerCase(),
+        unit_amount: amount,
+        product_data: {
+          name: invoice.number ? `Invoice ${invoice.number}` : 'Invoice payment',
+          description: job.reference ? `Job ${job.reference}` : 'Invoice payment',
+        },
+      },
+    }],
+    success_url: `${origin}/portal?payment=success&invoice=${encodeURIComponent(invoice.id)}`,
+    cancel_url: `${origin}/portal?payment=cancelled&invoice=${encodeURIComponent(invoice.id)}`,
+    metadata,
+    payment_intent_data: { metadata },
+  });
+
+  await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+    payment_provider: 'stripe',
+    payment_intent_ref: session.id,
+  });
+  return session.url;
 }
 
 Deno.serve(async (req) => {
@@ -60,6 +104,7 @@ Deno.serve(async (req) => {
     const customerName = job.customer_name || 'Customer';
     const reference = job.reference || invoice.number;
     const assetLabel = job.asset_label || job.scooter_label || 'your scooter';
+    const paymentUrl = await createPaymentUrl({ base44, req, invoice, job });
 
     // Build line items rows HTML
     const lineItemsHtml = lineItems.length > 0
@@ -170,6 +215,7 @@ Deno.serve(async (req) => {
         <tr>
           <td style="padding:0 36px 28px;">
             <p style="margin:0 0 16px;font-size:14px;color:#64748b;">Please arrange payment at your earliest convenience. For questions, reply to this email or contact us directly.</p>
+            ${paymentUrl ? `<p style="margin:0 0 18px;"><a href="${paymentUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 22px;border-radius:10px;">Pay securely with Stripe</a></p>` : ''}
             <p style="margin:0;font-size:13px;color:#94a3b8;">📞 (03) 9000 1234 &nbsp;·&nbsp; ✉️ hello@otrscooters.com &nbsp;·&nbsp; 📍 12 Workshop Lane, Melbourne VIC</p>
           </td>
         </tr>

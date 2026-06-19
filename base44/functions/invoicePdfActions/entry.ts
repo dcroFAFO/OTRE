@@ -1,5 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { jsPDF } from 'npm:jspdf@4.2.1';
+import Stripe from 'npm:stripe@17.5.0';
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
+const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
 
 const DEFAULT_BUSINESS = {
   name: "On The Run Electrics",
@@ -49,6 +53,46 @@ async function sendMail({ to, subject, html, fromName, fileName, pdfBase64 }) {
   });
   if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
   return res.json();
+}
+
+async function createPaymentUrl({ base44, req, invoice, job }) {
+  if (blockingStatuses.has(invoice.status)) return null;
+  const amount = Math.round((Number(invoice.amount) || 0) * 100);
+  if (amount <= 0) return null;
+
+  const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://app.base44.com';
+  const metadata = {
+    base44_app_id: Deno.env.get('BASE44_APP_ID') || '',
+    invoice_id: invoice.id,
+    job_id: invoice.job_id || '',
+    customer_id: invoice.customer_id || '',
+  };
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    customer_email: job.customer_email || undefined,
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: String(invoice.currency || 'AUD').toLowerCase(),
+        unit_amount: amount,
+        product_data: {
+          name: invoice.number ? `Invoice ${invoice.number}` : 'Invoice payment',
+          description: job.reference ? `Job ${job.reference}` : 'Invoice payment',
+        },
+      },
+    }],
+    success_url: `${origin}/portal?payment=success&invoice=${encodeURIComponent(invoice.id)}`,
+    cancel_url: `${origin}/portal?payment=cancelled&invoice=${encodeURIComponent(invoice.id)}`,
+    metadata,
+    payment_intent_data: { metadata },
+  });
+
+  await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+    payment_provider: 'stripe',
+    payment_intent_ref: session.id,
+  });
+  return session.url;
 }
 
 function buildLineItems(invoice, quote, usageRecords) {
@@ -246,13 +290,14 @@ Deno.serve(async (req) => {
     if (action === "email") {
       if (!job.customer_email) return Response.json({ error: "No customer email on this job" }, { status: 400 });
       const total = Number(invoice.amount) || lineItems.reduce((sum, item) => sum + item.qty * item.unit_price, 0);
+      const paymentUrl = await createPaymentUrl({ base44, req, invoice, job });
       await sendMail({
         to: job.customer_email,
         subject: `Tax invoice ${invoice.number} from ${business.name}`,
         fromName: business.name,
         fileName,
         pdfBase64,
-        html: `<p>Hi ${job.customer_name || "there"},</p><p>Please find your tax invoice attached for job ${job.reference || job.id}.</p><p><strong>Total due:</strong> ${money(invoice.currency || "AUD", total)}</p><p>Regards,<br>${business.name}</p>`,
+        html: `<p>Hi ${job.customer_name || "there"},</p><p>Please find your tax invoice attached for job ${job.reference || job.id}.</p><p><strong>Total due:</strong> ${money(invoice.currency || "AUD", total)}</p>${paymentUrl ? `<p><a href="${paymentUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;">Pay securely with Stripe</a></p>` : ""}<p>Regards,<br>${business.name}</p>`,
       });
       await base44.asServiceRole.entities.AuditEvent.create({
         event_type: "invoice_pdf_emailed",

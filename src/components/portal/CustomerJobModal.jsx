@@ -267,7 +267,7 @@ function InvoiceTab({ invoices = [], isLoading }) {
                 }}
               >
                 {paying === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Pay invoice online
+                Pay securely with Stripe
               </Button>
             )}
           </div>
