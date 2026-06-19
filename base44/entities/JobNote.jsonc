@@ -59,7 +59,14 @@
           }
         },
         {
-          "data.visibility": "customer"
+          "$and": [
+            {
+              "data.visibility": "customer"
+            },
+            {
+              "data.customer_id": "{{user.data.customer_id}}"
+            }
+          ]
         }
       ]
     },
