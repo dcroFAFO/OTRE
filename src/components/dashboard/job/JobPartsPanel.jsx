@@ -36,7 +36,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     if (hrs <= 0) return;
     setAddingLabour(true);
     await base44.entities.InventoryUsage.create({
-      job_id: job.id,
+      job_id: job.job_id || job.id,
+      customer_id: job.customer_id,
       item_id: `labour-${Date.now()}`,
       item_name: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`,
       qty_used: 1,
@@ -143,7 +144,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
           onAdd={async (chosen) => {
             await Promise.all(chosen.map((p) =>
               base44.entities.InventoryUsage.create({
-                job_id: job.id,
+                job_id: job.job_id || job.id,
+                customer_id: job.customer_id,
                 item_id: p.id,
                 item_name: p.name,
                 qty_used: p.qty,

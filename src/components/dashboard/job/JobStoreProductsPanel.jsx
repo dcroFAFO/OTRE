@@ -128,7 +128,8 @@ export default function JobStoreProductsPanel({ job, canEdit }) {
     mutationFn: async () => {
       if (!selected) return;
       await base44.entities.InventoryUsage.create({
-        job_id: job.id,
+        job_id: job.job_id || job.id,
+        customer_id: job.customer_id,
         item_id: selected.id,
         item_name: selected.name,
         qty_used: qty,

@@ -53,7 +53,8 @@ Deno.serve(async (req) => {
 
     if (form.photo_url) {
       await base44.entities.Attachment.create({
-        job_id: job.id,
+        job_id: job.job_id || job.id,
+        customer_id: job.customer_id,
         file_url: form.photo_url,
         file_name: "Customer upload",
         kind: "photo",
@@ -66,7 +67,8 @@ Deno.serve(async (req) => {
     try {
       await base44.asServiceRole.entities.AuditEvent.create({
         event_type: "booking_created",
-        job_id: job.id,
+        job_id: job.job_id || job.id,
+        customer_id: job.customer_id,
         actor_id: user.id,
         actor_name: user.full_name,
         actor_role: "customer",

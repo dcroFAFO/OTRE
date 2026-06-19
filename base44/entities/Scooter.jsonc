@@ -5,6 +5,9 @@
     "customer_id": {
       "type": "string"
     },
+    "job_id": {
+      "type": "string"
+    },
     "make": {
       "type": "string"
     },

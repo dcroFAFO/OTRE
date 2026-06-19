@@ -32,7 +32,8 @@ Deno.serve(async (req) => {
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
       base44.entities.AuditEvent.create({
         event_type: eventType,
-        job_id: job.id,
+        job_id: job.job_id || job.id,
+        customer_id: job.customer_id,
         actor_id: user.id,
         actor_name: user.full_name || "System",
         actor_role: user.role || "system",

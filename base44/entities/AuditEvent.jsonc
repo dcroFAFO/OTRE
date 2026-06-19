@@ -8,6 +8,9 @@
     "job_id": {
       "type": "string"
     },
+    "customer_id": {
+      "type": "string"
+    },
     "actor_id": {
       "type": "string"
     },

@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const CHILD_ENTITIES = new Set(['Quote', 'Invoice', 'Attachment', 'JobNote', 'CustomerNote']);
+const CHILD_ENTITIES = new Set(['Quote', 'Invoice', 'Attachment', 'JobNote', 'CustomerNote', 'AuditEvent', 'InventoryUsage', 'Scooter', 'Order']);
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
