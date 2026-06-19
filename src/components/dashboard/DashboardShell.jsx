@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag, Activity } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag, Activity, Receipt } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export default function DashboardShell({ user, children }) {
   const nav = [
   { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
   { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
+  { to: "/dashboard/invoices", label: "Invoices", icon: Receipt },
   { to: "/dashboard/inventory", label: "Inventory", icon: Package },
   { to: "/dashboard/templates", label: "Templates", icon: FileText },
   ...(isAdmin ? [

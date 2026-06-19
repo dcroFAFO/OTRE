@@ -21,6 +21,7 @@ import Overview from '@/pages/dashboard/Overview';
 import Jobs from '@/pages/dashboard/Jobs';
 import Calendar from '@/pages/dashboard/Calendar';
 import Inventory from '@/pages/dashboard/Inventory';
+import Invoices from '@/pages/dashboard/Invoices';
 import Templates from '@/pages/dashboard/Templates';
 import Notifications from '@/pages/dashboard/Notifications';
 import Parts from '@/pages/dashboard/Parts';
@@ -69,6 +70,7 @@ const AuthenticatedApp = () => {
         <Route path="jobs" element={<Jobs />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="inventory" element={<Inventory />} />
+        <Route path="invoices" element={<Invoices />} />
         <Route path="templates" element={<Templates />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="parts" element={<Parts />} />
