@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
         if (data.id) {
           result = await db.Quote.update(data.id, { ...data, total });
         } else {
-          result = await db.Quote.create({ ...data, job_id: job.id, total, currency: CURRENCY, status: "draft" });
+          result = await db.Quote.create({ ...data, job_id: job.id, customer_id: job.customer_id || data.customer_id || null, total, currency: CURRENCY, status: "draft" });
           await db.Job.update(job.id, { quote_status: "draft" });
           await logAudit({ eventType: "quote_generated", summary: "Quote generated", newValue: `${CURRENCY} ${total}` });
         }
@@ -215,8 +215,13 @@ Deno.serve(async (req) => {
         let quote = await getJobQuote();
         if (!quote) {
           quote = await db.Quote.create({
-            job_id: job.id, currency: CURRENCY, status: "draft",
-            labour_estimate: 0, parts_estimate: 0, total: 0,
+            job_id: job.id,
+            customer_id: job.customer_id || null,
+            currency: CURRENCY,
+            status: "draft",
+            labour_estimate: 0,
+            parts_estimate: 0,
+            total: 0,
           });
           await db.Job.update(job.id, { quote_status: "draft" });
         }
@@ -252,8 +257,13 @@ Deno.serve(async (req) => {
         let quote = await getJobQuote();
         if (!quote) {
           quote = await db.Quote.create({
-            job_id: job.id, currency: CURRENCY, status: "draft",
-            labour_estimate: 0, parts_estimate: 0, total: 0,
+            job_id: job.id,
+            customer_id: job.customer_id || null,
+            currency: CURRENCY,
+            status: "draft",
+            labour_estimate: 0,
+            parts_estimate: 0,
+            total: 0,
           });
           await db.Job.update(job.id, { quote_status: "draft" });
         }
