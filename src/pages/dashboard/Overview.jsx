@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 import MonthlySummary from "@/components/dashboard/MonthlySummary";
+import RevenueChartsSection from "@/components/dashboard/RevenueChartsSection";
 import TurnaroundTracker from "@/components/dashboard/TurnaroundTracker";
 import JobCard from "@/components/shared/JobCard";
 import { useJobs } from "@/hooks/useJobs";
@@ -116,6 +117,9 @@ export default function Overview() {
 
       {/* Monthly summary */}
       <MonthlySummary jobs={jobs} />
+
+      {/* Financial charts */}
+      <RevenueChartsSection />
 
       {/* Turnaround tracker */}
       <TurnaroundTracker jobs={jobs} />
