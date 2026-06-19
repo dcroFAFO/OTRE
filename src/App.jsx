@@ -15,6 +15,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import FeedbackRating from '@/pages/FeedbackRating';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import Overview from '@/pages/dashboard/Overview';
 import Jobs from '@/pages/dashboard/Jobs';
@@ -62,6 +63,7 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/feedback" element={<FeedbackRating />} />
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Overview />} />
         <Route path="jobs" element={<Jobs />} />

@@ -15,11 +15,11 @@ async function sendMail({ to, subject, body, from_name }) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function getStaffRecipients(base44) {
-  const staff = await base44.asServiceRole.entities.StaffProfile.filter({ active: true });
-  return staff
-    .filter((s) => s.email && ["admin", "technician"].includes(s.role))
-    .map((s) => s.email);
+function appBaseUrl(req) {
+  const origin = req.headers.get("origin");
+  if (origin) return origin;
+  const host = req.headers.get("host");
+  return host ? `https://${host}` : "https://ontherunelectrics.com.au";
 }
 
 const NOTIFY_STATUSES = {
@@ -40,6 +40,19 @@ const NOTIFY_STATUSES = {
     heading: "Job Completed",
     message: "Your scooter job has been marked as completed. Thank you for choosing OTR Scooters — we hope to see you again!",
     color: "#2563eb",
+  },
+  invoice_issued: {
+    subject: "Your invoice has been issued",
+    heading: "Invoice Issued",
+    message: "Your invoice has now been issued for this job. Please review the invoice details and arrange payment when convenient.",
+    color: "#2563eb",
+  },
+  paid: {
+    subject: "Payment received — thank you! ✅",
+    heading: "Payment Confirmed",
+    message: "We've received your payment in full. Thank you for choosing OTR Scooters — we'd love to know how we did.",
+    color: "#16a34a",
+    includeFeedback: true,
   },
 };
 
@@ -70,16 +83,25 @@ Deno.serve(async (req) => {
     }
 
     const email = data.customer_email;
-    const recipients = new Set(await getStaffRecipients(base44));
-    if (email) recipients.add(email);
-    if (recipients.size === 0) {
-      return Response.json({ skipped: "no recipients" });
+    if (!email) {
+      return Response.json({ skipped: "no customer email" });
     }
+    const recipients = new Set([email]);
 
     const customerName = data.customer_name || "Customer";
     const reference = data.reference ? ` (${data.reference})` : "";
     const assetLabel = data.asset_label || data.scooter_label || "your scooter";
-    const { subject, heading, message, color } = NOTIFY_STATUSES[newStatus];
+    const statusConfig = NOTIFY_STATUSES[newStatus];
+    const { subject, heading, message, color } = statusConfig;
+    const feedbackUrl = `${appBaseUrl(req)}/feedback?job=${encodeURIComponent(data.id)}&rating=5`;
+    const feedbackBlock = statusConfig.includeFeedback ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+        <tr><td style="font-size:15px;color:#1e293b;font-weight:600;padding-bottom:10px;">How did we do?</td></tr>
+        <tr><td style="font-size:14px;color:#475569;line-height:1.6;padding-bottom:14px;">Please rate your experience and optionally leave a note for our team.</td></tr>
+        <tr><td style="font-size:26px;letter-spacing:4px;">
+          <a href="${feedbackUrl}" style="color:#f59e0b;text-decoration:none;">★★★★★</a>
+        </td></tr>
+      </table>` : "";
 
     const htmlBody = `
 <!DOCTYPE html>
@@ -122,6 +144,7 @@ Deno.serve(async (req) => {
               </tr>
             </table>
 
+            ${feedbackBlock}
             <p style="margin:0;font-size:14px;color:#64748b;">Questions? Reply to this email or call us on <strong>(03) 9000 1234</strong>.</p>
           </td>
         </tr>
@@ -147,45 +170,6 @@ Deno.serve(async (req) => {
         body: htmlBody,
         from_name: "OTR Scooters",
       });
-    }
-
-    // On completion, also send a short feedback / review request.
-    if (newStatus === "completed") {
-      const feedbackHtml = `
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <tr><td style="background:#f59e0b;padding:28px 32px;">
-          <p style="margin:0;color:rgba(255,255,255,0.9);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
-          <h1 style="margin:8px 0 0;color:#fff;font-size:24px;font-weight:700;">How did we do? ⭐</h1>
-        </td></tr>
-        <tr><td style="padding:32px;">
-          <p style="margin:0 0 16px;font-size:16px;color:#1e293b;">Hi ${customerName},</p>
-          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Thanks for choosing OTR Scooters for your repair on <strong>${assetLabel}</strong>. We'd love to hear how it went — your feedback helps us keep improving.</p>
-          <p style="margin:0 0 8px;font-size:15px;color:#1e293b;font-weight:600;">Rate your experience:</p>
-          <p style="margin:0 0 24px;font-size:28px;letter-spacing:6px;">
-            <a href="mailto:hello@otrscooters.com?subject=Review%20${data.reference || ""}%20-%205%20stars" style="text-decoration:none;">⭐⭐⭐⭐⭐</a>
-          </p>
-          <p style="margin:0;font-size:14px;color:#64748b;">Just reply to this email with any comments, or call us on <strong>(03) 9000 1234</strong>.</p>
-        </td></tr>
-        <tr><td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-          <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-      await sleep(600);
-      await sendMail({
-        to: email,
-        subject: `How did we do?${reference}`,
-        body: feedbackHtml,
-        from_name: "OTR Scooters",
-      });
-      console.log(`[jobStatusNotify] Feedback request sent to ${email}`);
     }
 
     console.log(`[jobStatusNotify] Email sent to ${[...recipients].join(", ")} for status: ${newStatus}`);

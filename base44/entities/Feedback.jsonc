@@ -14,6 +14,7 @@
         "General Feedback",
         "UI / UX Issue",
         "Performance Issue",
+        "Customer Rating",
         "Other"
       ],
       "default": "General Feedback"
@@ -21,6 +22,18 @@
     "message": {
       "type": "string",
       "description": "Full feedback message"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Customer 1-5 star rating"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Linked job id for customer rating feedback"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Linked customer id for customer rating feedback"
     },
     "priority": {
       "type": "string",
