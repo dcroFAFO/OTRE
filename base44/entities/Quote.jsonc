@@ -85,15 +85,24 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": "false"
+          }
         }
-      }
+      ]
     },
     "read": {
       "$or": [
@@ -106,6 +115,11 @@
                 "technician"
               ]
             }
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": "false"
           }
         },
         {
@@ -124,6 +138,11 @@
                 "technician"
               ]
             }
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": "false"
           }
         },
         {
