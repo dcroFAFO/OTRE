@@ -79,7 +79,7 @@ export default function DashboardShell({ user, children }) {
             </span>
           </div>
         </div>
-        <button onClick={() => base44.auth.logout(window.location.origin)}
+        <button onClick={() => base44.auth.logout()}
       className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary">
           <LogOut className="h-4 w-4" /> Sign out
         </button>

@@ -4,11 +4,9 @@ import HeroSection from "@/components/landing/HeroSection";
 import ServicesSection from "@/components/landing/ServicesSection";
 import JourneySection from "@/components/landing/JourneySection";
 import LandingFooter from "@/components/landing/LandingFooter";
-import { useCustomerPortalRedirect } from "@/components/landing/useCustomerPortalRedirect";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
-  useCustomerPortalRedirect();
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
