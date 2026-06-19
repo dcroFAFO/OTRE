@@ -4,14 +4,16 @@ import { base44 } from "@/api/base44Client";
 import { Package, Wrench, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
-import { addInventoryParts, removeInventoryPart } from "@/services/jobService";
+import { addInventoryParts, removeInventoryPart, removeInventoryParts } from "@/services/jobService";
 
 export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const qc = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [labourHours, setLabourHours] = useState("1");
   const [addingLabour, setAddingLabour] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const { data: usages = [], refetch } = useQuery({
     queryKey: ["inventoryUsage", job.id, job.job_id],
@@ -29,8 +31,11 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   });
 
   const removeUsage = useMutation({
-    mutationFn: (usage) => removeInventoryPart(job, usage),
+    mutationFn: (payload) => Array.isArray(payload)
+      ? removeInventoryParts(job, payload)
+      : removeInventoryPart(job, payload),
     onSuccess: () => {
+      setSelectedIds([]);
       refetch();
       qc.invalidateQueries({ queryKey: ["inventoryUsage"] });
       qc.invalidateQueries({ queryKey: ["inventoryItems"] });
@@ -60,19 +65,54 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     setAddingLabour(false);
   };
 
+  const selectedUsages = usages.filter((usage) => selectedIds.includes(usage.id));
+  const allSelected = usages.length > 0 && selectedIds.length === usages.length;
   const totalSell = usages.reduce((s, u) => s + (u.unit_sell || 0) * u.qty_used, 0);
+
+  const toggleAll = (checked) => setSelectedIds(checked ? usages.map((usage) => usage.id) : []);
+  const toggleOne = (usageId, checked) => setSelectedIds((current) =>
+    checked ? [...current, usageId] : current.filter((id) => id !== usageId)
+  );
+  const removeSelected = () => {
+    if (selectedUsages.length === 0) return;
+    if (confirm(`Remove ${selectedUsages.length} selected line item(s) and restore stock?`)) {
+      removeUsage.mutate(selectedUsages);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <h3 className="font-heading font-bold flex items-center gap-2 text-sm">
-        Parts &amp; Consumables
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-heading font-bold flex items-center gap-2 text-sm">
+          Parts &amp; Consumables
+        </h3>
+        {canEdit && selectedUsages.length > 0 && (
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 gap-1.5"
+            onClick={removeSelected}
+            disabled={removeUsage.isPending}
+          >
+            {removeUsage.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Delete selected ({selectedUsages.length})
+          </Button>
+        )}
+      </div>
 
       {/* Line items section — mirrors QuotePanel */}
       <div className="rounded-xl border-2 border-dashed border-border bg-secondary/20 overflow-hidden">
         {/* Header bar with labour adder */}
         <div className="flex items-center justify-between px-3 py-2 bg-secondary/50 border-b border-border">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            {canEdit && usages.length > 0 && (
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={toggleAll}
+                onClick={(e) => e.stopPropagation()}
+                className="mr-1"
+              />
+            )}
             <Package className="h-3.5 w-3.5" /> Parts Used
           </span>
           {canEdit && (
@@ -102,10 +142,20 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
             <div className="divide-y divide-border">
               {usages.map((u) => (
                 <div key={u.id} className="flex items-center justify-between px-3 py-2.5 text-sm group-hover:bg-secondary/30 transition-colors">
-                  <span className="text-foreground">
-                    {u.qty_used > 1 ? `${u.qty_used}× ` : ""}{u.item_name}
-                    {u.note && <span className="text-muted-foreground text-xs ml-1.5">— {u.note}</span>}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {canEdit && (
+                      <Checkbox
+                        checked={selectedIds.includes(u.id)}
+                        onCheckedChange={(checked) => toggleOne(u.id, checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0"
+                      />
+                    )}
+                    <span className="text-foreground truncate">
+                      {u.qty_used > 1 ? `${u.qty_used}× ` : ""}{u.item_name}
+                      {u.note && <span className="text-muted-foreground text-xs ml-1.5">— {u.note}</span>}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium tabular-nums">${((u.unit_sell || 0) * u.qty_used).toFixed(2)}</span>
                     {canEdit && (

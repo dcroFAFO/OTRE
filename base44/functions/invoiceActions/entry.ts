@@ -22,9 +22,19 @@ Deno.serve(async (req) => {
     requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
-    const jobs = await base44.entities.Job.filter({ id: jobId }, "", 1);
-    const job = jobs[0];
+    let job = null;
+    try {
+      job = await base44.asServiceRole.entities.Job.get(jobId);
+    } catch {
+      try {
+        const jobs = await base44.asServiceRole.entities.Job.filter({ id: jobId }, "", 1);
+        job = jobs[0] || null;
+      } catch {
+        job = null;
+      }
+    }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
+    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || (user.is_customer === false || user.data?.is_customer === false);
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
       base44.entities.AuditEvent.create({
@@ -44,15 +54,56 @@ Deno.serve(async (req) => {
     switch (action) {
       case "create": {
         const amount = Number(params.amount) || 0;
-        result = await base44.entities.Invoice.create({
+        result = await base44.asServiceRole.entities.Invoice.create({
           job_id: job.id,
+          customer_id: job.customer_id || "",
           number: `${PREFIX}-${Date.now().toString().slice(-6)}`,
           amount,
           currency: CURRENCY,
           status: DEFAULT_STATUS,
         });
-        await base44.entities.Job.update(job.id, { payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
+        await base44.asServiceRole.entities.Job.update(job.id, { invoice_id: result.id, payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
         await logAudit({ eventType: "invoice_created", summary: `Invoice created (${CURRENCY} ${amount})`, visibility: "customer" });
+        break;
+      }
+      case "copy_quote": {
+        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+        const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
+        const quote = quotes[0];
+        if (!quote) return Response.json({ error: "No quote found for this job" }, { status: 404 });
+
+        const lineItems = (quote.line_items || []).map((item) => ({
+          description: item.description || "Line item",
+          qty: Number(item.qty) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          kind: item.kind || "item",
+        }));
+        const amount = Number(quote.total) || lineItems.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
+        const existing = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
+        const invoiceData = {
+          quote_id: quote.id,
+          job_id: job.id,
+          customer_id: job.customer_id || quote.customer_id || "",
+          amount,
+          currency: quote.currency || CURRENCY,
+          status: existing[0]?.status || DEFAULT_STATUS,
+          line_items: lineItems,
+        };
+
+        if (existing[0]) {
+          result = await base44.asServiceRole.entities.Invoice.update(existing[0].id, invoiceData);
+        } else {
+          result = await base44.asServiceRole.entities.Invoice.create({
+            ...invoiceData,
+            number: `${PREFIX}-${Date.now().toString().slice(-6)}`,
+          });
+        }
+        await base44.asServiceRole.entities.Job.update(job.id, {
+          invoice_id: result.id,
+          payment_status: result.status || DEFAULT_STATUS,
+          status: result.status === "paid" ? job.status : "invoice_outstanding",
+        });
+        await logAudit({ eventType: "quote_copied_to_invoice", summary: `Quote copied to invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "customer" });
         break;
       }
       case "set_payment_status": {

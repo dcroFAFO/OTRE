@@ -47,3 +47,7 @@ export async function addInventoryParts(job, parts) {
 export async function removeInventoryPart(job, usage) {
   return invoke({ action: "remove_inventory_part", jobId: job.id, usageId: usage.id });
 }
+
+export async function removeInventoryParts(job, usages) {
+  return invoke({ action: "remove_inventory_parts", jobId: job.id, usageIds: usages.map((usage) => usage.id) });
+}

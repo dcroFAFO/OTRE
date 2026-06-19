@@ -152,33 +152,42 @@ Deno.serve(async (req) => {
         });
         break;
       }
-      case "remove_inventory_part": {
+      case "remove_inventory_part":
+      case "remove_inventory_parts": {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
-        if (!params.usageId) return Response.json({ error: "usageId is required" }, { status: 400 });
+        const usageIds = action === "remove_inventory_parts"
+          ? (Array.isArray(params.usageIds) ? params.usageIds : [])
+          : (params.usageId ? [params.usageId] : []);
+        if (usageIds.length === 0) return Response.json({ error: "No parts selected" }, { status: 400 });
 
-        const usage = await base44.asServiceRole.entities.InventoryUsage.get(params.usageId);
-        if (!usage) return Response.json({ error: "Part usage not found" }, { status: 404 });
-        if (usage.job_id !== job.id && usage.job_id !== job.job_id) {
-          return Response.json({ error: "Part does not belong to this job" }, { status: 403 });
-        }
-
-        try {
-          const item = await base44.asServiceRole.entities.InventoryItem.get(usage.item_id);
-          if (item) {
-            await base44.asServiceRole.entities.InventoryItem.update(usage.item_id, {
-              qty_on_hand: (Number(item.qty_on_hand) || 0) + (Number(usage.qty_used) || 0),
-            });
+        const removed = [];
+        for (const usageId of usageIds) {
+          const usage = await base44.asServiceRole.entities.InventoryUsage.get(usageId);
+          if (!usage) continue;
+          if (usage.job_id !== job.id && usage.job_id !== job.job_id) {
+            return Response.json({ error: "Part does not belong to this job" }, { status: 403 });
           }
-        } catch (stockError) {
-          console.warn("[jobActions] stock restore skipped:", stockError.message);
+
+          try {
+            const item = await base44.asServiceRole.entities.InventoryItem.get(usage.item_id);
+            if (item) {
+              await base44.asServiceRole.entities.InventoryItem.update(usage.item_id, {
+                qty_on_hand: (Number(item.qty_on_hand) || 0) + (Number(usage.qty_used) || 0),
+              });
+            }
+          } catch (stockError) {
+            console.warn("[jobActions] stock restore skipped:", stockError.message);
+          }
+
+          await base44.asServiceRole.entities.InventoryUsage.delete(usage.id);
+          removed.push(usage);
         }
 
-        await base44.asServiceRole.entities.InventoryUsage.delete(usage.id);
-        result = { removed: true, usageId: usage.id };
+        result = { removed: true, count: removed.length, usageIds: removed.map((usage) => usage.id) };
         await logAudit({
-          eventType: "part_removed",
-          summary: `Removed part from job: ${usage.item_name || "Part"}`,
-          previousValue: usage.item_name || "Part",
+          eventType: removed.length > 1 ? "parts_removed" : "part_removed",
+          summary: `Removed ${removed.length} part(s) from job`,
+          previousValue: removed.map((usage) => usage.item_name).filter(Boolean).join(", "),
         });
         break;
       }

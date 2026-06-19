@@ -32,6 +32,27 @@
       "default": "outstanding",
       "description": "Configurable invoice/payment status key"
     },
+    "line_items": {
+      "type": "array",
+      "description": "Invoice line items copied from the approved quote or generated from job parts/labour.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "payment_provider": {
       "type": "string",
       "description": "Provider-agnostic placeholder"

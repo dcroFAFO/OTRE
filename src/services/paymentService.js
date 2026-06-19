@@ -12,6 +12,10 @@ export async function createInvoice(job, amount) {
   return invoke({ action: "create", jobId: job.id, amount });
 }
 
+export async function copyQuoteToInvoice(job) {
+  return invoke({ action: "copy_quote", jobId: job.id });
+}
+
 export async function setPaymentStatus(invoice, job, status) {
   return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
 }

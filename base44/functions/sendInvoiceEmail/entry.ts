@@ -39,18 +39,20 @@ Deno.serve(async (req) => {
     // Fetch inventory usage (parts)
     const usageRecords = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: jobId });
 
-    // Build line items
-    const lineItems = [];
-    if (quote?.labour_estimate > 0) {
-      lineItems.push({ description: 'Labour', qty: 1, unit_price: quote.labour_estimate, kind: 'labour' });
-    }
-    for (const u of usageRecords) {
-      lineItems.push({
-        description: u.item_name,
-        qty: u.qty_used,
-        unit_price: u.unit_sell || u.unit_cost || 0,
-        kind: 'part',
-      });
+    // Build line items — prefer copied invoice items, then quote items, then current job usage.
+    const lineItems = (invoice.line_items?.length ? invoice.line_items : quote?.line_items?.length ? quote.line_items : []);
+    if (lineItems.length === 0) {
+      if (quote?.labour_estimate > 0) {
+        lineItems.push({ description: 'Labour', qty: 1, unit_price: quote.labour_estimate, kind: 'labour' });
+      }
+      for (const u of usageRecords) {
+        lineItems.push({
+          description: u.item_name,
+          qty: u.qty_used,
+          unit_price: u.unit_sell || u.unit_cost || 0,
+          kind: 'part',
+        });
+      }
     }
 
     const currency = invoice.currency || 'AUD';
@@ -62,12 +64,12 @@ Deno.serve(async (req) => {
     // Build line items rows HTML
     const lineItemsHtml = lineItems.length > 0
       ? lineItems.map((li) => {
-          const lineTotal = (li.qty * li.unit_price).toFixed(2);
+          const lineTotal = ((Number(li.qty) || 1) * (Number(li.unit_price) || 0)).toFixed(2);
           return `
           <tr style="border-bottom:1px solid #f1f5f9;">
             <td style="padding:10px 0;font-size:14px;color:#1e293b;">${li.description}</td>
-            <td style="padding:10px 0;font-size:14px;color:#64748b;text-align:center;">${li.qty}</td>
-            <td style="padding:10px 0;font-size:14px;color:#64748b;text-align:right;">${currency} ${Number(li.unit_price).toFixed(2)}</td>
+            <td style="padding:10px 0;font-size:14px;color:#64748b;text-align:center;">${Number(li.qty) || 1}</td>
+            <td style="padding:10px 0;font-size:14px;color:#64748b;text-align:right;">${currency} ${(Number(li.unit_price) || 0).toFixed(2)}</td>
             <td style="padding:10px 0;font-size:14px;font-weight:600;color:#1e293b;text-align:right;">${currency} ${lineTotal}</td>
           </tr>`;
         }).join('')
