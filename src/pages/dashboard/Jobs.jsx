@@ -5,7 +5,7 @@ import JobFilters, { EMPTY_FILTERS } from "@/components/dashboard/JobFilters";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import JobListTable from "@/components/dashboard/job/JobListTable";
 import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
-import { useJobs, useStaff, useInvalidateJobs } from "@/hooks/useJobs";
+import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { SlidersHorizontal, Plus } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
@@ -19,13 +19,11 @@ export default function Jobs() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const queryFilter = useMemo(() => ({
     ...(filters.status !== "all" ? { status: filters.status } : {}),
-    ...(filters.tech !== "all" ? { assigned_technician_name: filters.tech } : {}),
     ...(filters.payment !== "all" ? { payment_status: filters.payment } : {}),
     ...(filters.type !== "all" ? { job_type: filters.type } : {}),
     ...(filters.waiting !== "all" ? { waiting_reason: filters.waiting } : {}),
-  }), [filters.status, filters.tech, filters.payment, filters.type, filters.waiting]);
+  }), [filters.status, filters.payment, filters.type, filters.waiting]);
   const { data: jobs } = useJobs(queryFilter);
-  const { data: staff } = useStaff();
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -69,7 +67,7 @@ export default function Jobs() {
         </button>
       ) : null}
 
-      <JobFilters filters={filters} setFilters={setFilters} staff={staff} />
+      <JobFilters filters={filters} setFilters={setFilters} />
 
       {selectedIds.length > 0 && (
         <BulkActionsBar

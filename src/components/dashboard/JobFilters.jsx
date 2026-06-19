@@ -6,11 +6,11 @@ import { Search, X } from "lucide-react";
 import { JOB_STATUSES, PAYMENT_STATUSES, JOB_TYPES, WAITING_REASONS } from "@/config/jobConfig";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 
-export const EMPTY_FILTERS = { q: "", status: "all", tech: "all", payment: "all", type: "all", waiting: "all" };
+export const EMPTY_FILTERS = { q: "", status: "all", payment: "all", type: "all", waiting: "all" };
 
 const isActive = (filters) => Object.entries(filters).some(([k, v]) => k !== "q" ? v !== "all" : v !== "");
 
-export default function JobFilters({ filters, setFilters, staff }) {
+export default function JobFilters({ filters, setFilters }) {
   const [localQ, setLocalQ] = useState(filters.q);
   const set = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
   const reset = () => { setLocalQ(""); setFilters(EMPTY_FILTERS); };
@@ -42,9 +42,6 @@ export default function JobFilters({ filters, setFilters, staff }) {
 
         <FilterSelect value={filters.status} onChange={(v) => set("status", v)} placeholder="Status"
           options={JOB_STATUSES.map((s) => ({ v: s.key, l: s.label }))} />
-        <FilterSelect value={filters.tech} onChange={(v) => set("tech", v)}
-          placeholder={DEFAULT_APP_SETTINGS.terminology.staffAssignmentLabel}
-          options={(staff || []).map((s) => ({ v: s.short_name || s.full_name, l: s.short_name || s.full_name }))} />
         <FilterSelect value={filters.payment} onChange={(v) => set("payment", v)} placeholder="Payment"
           options={PAYMENT_STATUSES.map((s) => ({ v: s.key, l: s.label }))} />
         <FilterSelect value={filters.type} onChange={(v) => set("type", v)} placeholder="Job type"

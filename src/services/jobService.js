@@ -12,15 +12,6 @@ export async function changeStatus(job, newStatus) {
   return invoke({ action: "change_status", jobId: job.id, newStatus });
 }
 
-export async function assignTechnician(job, tech) {
-  return invoke({
-    action: "assign_technician",
-    jobId: job.id,
-    techId: tech?.id || null,
-    techName: tech?.short_name || tech?.full_name || null,
-  });
-}
-
 export async function rescheduleJob(job, newDate) {
   return invoke({ action: "reschedule", jobId: job.id, newDate });
 }

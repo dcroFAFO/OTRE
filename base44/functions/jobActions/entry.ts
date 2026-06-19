@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-// All job mutations (status, assignment, scheduling, checklist, notes) run
+// All job mutations (status, scheduling, checklist, notes) run
 // server-side here, with audit events written in the same request.
 
 const READY_STATUS = "ready_for_pickup";
@@ -55,19 +55,6 @@ Deno.serve(async (req) => {
           newValue: statusLabel(params.newStatus),
           summary: `Status changed to "${statusLabel(params.newStatus)}"`,
           visibility: "customer",
-        });
-        break;
-      }
-      case "assign_technician": {
-        const { techId = null, techName = null } = params;
-        result = await base44.entities.Job.update(job.id, {
-          assigned_technician_id: techId,
-          assigned_technician_name: techName,
-        });
-        await logAudit({
-          eventType: "job_assigned",
-          newValue: techName,
-          summary: `Technician ${techName || "—"} assigned`,
         });
         break;
       }
