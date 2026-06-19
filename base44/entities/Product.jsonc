@@ -63,40 +63,30 @@
   ],
   "rls": {
     "create": {
-      "data.admin": "{{user.role}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.employee": "{{user.role}}"
-        },
-        {
-          "data.technician": "{{user.role}}"
-        },
-        {
-          "data.admin": "{{user.role}}"
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee"
+          ]
         }
-      ]
+      }
     },
+    "read": null,
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.admin": "{{user.role}}"
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee"
+          ]
         }
-      ]
+      }
     },
     "delete": {
-      "data.admin": "{{user.role}}"
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
