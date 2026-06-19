@@ -179,7 +179,7 @@ function JobModalHeader({ job }) {
           </h2>
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-primary-foreground/70 truncate">
             <Bike className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{job.asset_label || job.scooter_label || "—"}</span>
+            <span className="truncate">{job.asset_label || "—"}</span>
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

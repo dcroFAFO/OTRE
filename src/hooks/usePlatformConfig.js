@@ -3,7 +3,6 @@ import { base44 } from "@/api/base44Client";
 import {
   DEFAULT_APP_SETTINGS,
   DEFAULT_BUSINESS,
-  DEFAULT_BUSINESS_SLUG,
   DEFAULT_SERVICES,
 } from "@/config/platformConfig";
 
@@ -21,11 +20,11 @@ function toBusiness(profile) {
 
 export function usePlatformConfig() {
   return useQuery({
-    queryKey: ["platformConfig", DEFAULT_BUSINESS_SLUG],
+    queryKey: ["platformConfig"],
     queryFn: async () => {
       const [profiles, services, appSettings] = await Promise.all([
         base44.entities.BusinessProfile.filter({ is_default: true }, "", 1),
-        base44.entities.ServiceItem.filter({ business_slug: DEFAULT_BUSINESS_SLUG, active: true }, "order", 100),
+        base44.entities.ServiceItem.filter({ active: true }, "order", 100),
         base44.entities.AppSetting.filter({ active: true }, "", 100),
       ]);
 

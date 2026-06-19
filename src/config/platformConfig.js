@@ -1,7 +1,4 @@
-export const DEFAULT_BUSINESS_SLUG = "otr-scooters";
-
 export const DEFAULT_BUSINESS = {
-  slug: DEFAULT_BUSINESS_SLUG,
   name: "On The Run Electrics",
   legalName: "On The Run Electrics",
   tagline: "Expert electric scooter repairs, servicing, and sales.",
@@ -175,7 +172,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   customer: ["job.view.own", "quote.approve", "quote.reject", "customer.upload", "customer.message", "invoice.pay"],
 };
 
-export const STAFF_ROLE_KEYS = Object.values(DEFAULT_ROLES).filter((r) => r.is_staff).map((r) => r.key);
+export const STAFF_ROLE_KEYS = ["admin", "employee", "technician"];
 
 export const DEFAULT_BOOKING_FIELDS = [
   { key: "customer_name", label: "Your name", placeholder: "Liam Carter", field_type: "text", required: true, maps_to: "customer_name", order: 0 },

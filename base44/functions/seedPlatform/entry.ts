@@ -1,6 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const SLUG = "otr-scooters";
 const CURRENCY = "AUD";
 
 const APP_SETTINGS = {
@@ -27,7 +26,7 @@ const APP_SETTINGS = {
 };
 
 const BUSINESS = {
-  slug: SLUG, name: "On The Run Electrics", legal_name: "On The Run Electrics",
+  name: "On The Run Electrics", legal_name: "On The Run Electrics",
   tagline: "Expert electric scooter repairs, servicing, and sales.",
   subheading: "From puncture fixes and battery replacements to full diagnostics and brand-new scooters — handled by specialists who know e-scooters inside out.",
   email: "hello@otrscooters.com", phone: "(03) 9000 1234", address: "12 Workshop Lane, Melbourne VIC",
@@ -183,49 +182,49 @@ Deno.serve(async (req) => {
     // partial failure is always safe.
     const steps = {
       business: async () => {
-        await createIfNone("BusinessProfile", { slug: SLUG }, BUSINESS);
+        await createIfNone("BusinessProfile", { is_default: true }, BUSINESS);
         await createIfNone("AppSetting", { key: "app" }, { key: "app", value: APP_SETTINGS, description: "Configurable platform terminology and UI labels", active: true });
-        await createIfNone("BusinessSetting", { business_slug: SLUG, key: "booking_copy" }, { business_slug: SLUG, key: "booking_copy", value: BOOKING_COPY, active: true });
-        await createIfNone("InvoiceSetting", { business_slug: SLUG }, { business_slug: SLUG, ...INVOICE_SETTINGS, active: true });
-        await createIfNone("PaymentProviderConfig", { business_slug: SLUG, provider_key: PAYMENT_PROVIDER.provider_key }, { business_slug: SLUG, ...PAYMENT_PROVIDER });
-        await createIfNone("QuoteTemplate", { business_slug: SLUG, name: QUOTE_TEMPLATE.name }, { business_slug: SLUG, ...QUOTE_TEMPLATE, active: true });
+        await createIfNone("BusinessSetting", { key: "booking_copy" }, { key: "booking_copy", value: BOOKING_COPY, active: true });
+        await createIfNone("InvoiceSetting", {}, { ...INVOICE_SETTINGS, active: true });
+        await createIfNone("PaymentProviderConfig", { provider_key: PAYMENT_PROVIDER.provider_key }, { ...PAYMENT_PROVIDER });
+        await createIfNone("QuoteTemplate", { name: QUOTE_TEMPLATE.name }, { ...QUOTE_TEMPLATE, active: true });
       },
       services: async () => {
         for (const [i, item] of SERVICE_CATEGORIES.entries())
-          await createIfNone("ServiceCategory", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
+          await createIfNone("ServiceCategory", { key: item.key }, { ...item, order: i, active: true });
         for (const [i, item] of SERVICES.entries())
-          await createIfNone("ServiceItem", { business_slug: SLUG, name: item.name }, { business_slug: SLUG, ...item, order: i, active: true });
+          await createIfNone("ServiceItem", { name: item.name }, { ...item, order: i, active: true });
       },
       statuses: async () => {
         for (const [i, item] of JOB_STATUSES.entries())
-          await createIfNone("JobStatus", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
+          await createIfNone("JobStatus", { key: item.key }, { ...item, order: i, active: true });
         for (const [i, item] of JOB_TYPES.entries())
-          await createIfNone("JobType", { business_slug: SLUG, key: item.key }, { business_slug: SLUG, ...item, order: i, active: true });
+          await createIfNone("JobType", { key: item.key }, { ...item, order: i, active: true });
       },
       roles: async () => {
         for (const [key, role] of Object.entries(ROLES)) {
-          await createIfNone("Role", { business_slug: SLUG, key }, { business_slug: SLUG, ...role, order: Object.keys(ROLES).indexOf(key), active: true });
+          await createIfNone("Role", { key }, { ...role, order: Object.keys(ROLES).indexOf(key), active: true });
           for (const action of ROLE_PERMISSIONS[key] || [])
-            await createIfNone("Permission", { business_slug: SLUG, role_key: key, action }, { business_slug: SLUG, role_key: key, action, active: true });
+            await createIfNone("Permission", { role_key: key, action }, { role_key: key, action, active: true });
         }
       },
       booking: async () => {
         for (const field of BOOKING_FIELDS)
-          await createIfNone("BookingFieldConfig", { business_slug: SLUG, key: field.key }, { business_slug: SLUG, ...field, active: true });
+          await createIfNone("BookingFieldConfig", { key: field.key }, { ...field, active: true });
       },
       templates: async () => {
         for (const template of NOTIFICATION_TEMPLATES)
-          await createIfNone("NotificationTemplate", { business_slug: SLUG, key: template.key, channel: template.channel }, { business_slug: SLUG, ...template, active: true });
+          await createIfNone("NotificationTemplate", { key: template.key, channel: template.channel }, { ...template, active: true });
       },
       demo: async () => {
         const existingJobs = await db.Job.list("-created_date", 1);
         if (existingJobs.length > 0) return;
         const staff = await db.StaffProfile.list("", 1);
         if (staff.length === 0)
-          await db.StaffProfile.bulkCreate(TECHS.map((s) => ({ ...s, business_slug: SLUG })));
+          await db.StaffProfile.bulkCreate(TECHS);
         for (const j of DEMO_JOBS) {
           const { offset, asset_label, ...rest } = j;
-          const job = await db.Job.create({ ...rest, asset_label, scooter_label: asset_label, scheduled_date: isoDaysFromNow(offset), business_slug: SLUG });
+          const job = await db.Job.create({ ...rest, asset_label, scheduled_date: isoDaysFromNow(offset) });
           if (j.quote_status !== "draft")
             await db.Quote.create({ job_id: job.id, labour_estimate: 80, parts_estimate: 45, total: 125, currency: CURRENCY, status: j.quote_status === "approved" ? "approved" : "sent", recommended_repair: j.issue_description, sent_date: new Date().toISOString() });
           if (j.payment_status === "outstanding" || j.payment_status === "paid")

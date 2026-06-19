@@ -57,7 +57,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
       checklist: (selectedTemplate?.checklist || []).map((c) => ({ ...c, done: false })),
       parts_required: selectedTemplate?.parts_required || [],
       status: "requested",
-      business_slug: "otr-scooters",
     });
     setBusy(false);
     onCreated?.(job);

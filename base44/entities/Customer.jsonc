@@ -44,7 +44,7 @@
     },
     "notes": {
       "type": "string",
-      "description": "Legacy single-field notes (kept for backward compatibility)"
+      "description": "Customer notes"
     }
   },
   "required": [

@@ -2,9 +2,6 @@
   "name": "StaffProfile",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string"
-    },
     "full_name": {
       "type": "string"
     },
@@ -21,9 +18,6 @@
     "role": {
       "type": "string",
       "default": "technician"
-    },
-    "role_label": {
-      "type": "string"
     },
     "color": {
       "type": "string",

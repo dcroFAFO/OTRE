@@ -19,14 +19,6 @@
     "customer_phone": {
       "type": "string"
     },
-    "scooter_id": {
-      "type": "string",
-      "description": "Legacy asset link for OTR demo data"
-    },
-    "scooter_label": {
-      "type": "string",
-      "description": "Legacy asset label kept for backward compatibility"
-    },
     "asset_id": {
       "type": "string",
       "description": "Generic item/equipment/vehicle/location/object related to the job"

@@ -13,7 +13,7 @@ async function sendQuoteEmail({ job, quote }) {
   if (!email) { console.warn("[quoteActions] No customer email on job, skipping email"); return; }
 
   const customerName = job.customer_name || "Customer";
-  const assetLabel = job.asset_label || job.scooter_label || "your scooter";
+  const assetLabel = job.asset_label || "your scooter";
   const reference = job.reference ? ` (${job.reference})` : "";
   const total = Number(quote.total || 0).toFixed(2);
   const currency = quote.currency || CURRENCY;
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
       case "ai_draft": {
         // Build a rich prompt from all available job context
         const intake = job.intake || {};
-        const scooterDesc = [intake.make, intake.model, intake.serial_number].filter(Boolean).join(" ") || job.asset_label || job.scooter_label || "scooter";
+        const scooterDesc = [intake.make, intake.model, intake.serial_number].filter(Boolean).join(" ") || job.asset_label || "scooter";
         const batteryInfo = intake.battery_condition ? `Battery: ${intake.battery_condition}${intake.battery_voltage ? ` (${intake.battery_voltage}V)` : ""}` : "";
         const odometer = intake.odometer_km != null ? `Odometer: ${intake.odometer_km} km` : "";
         const physicalCond = intake.physical_condition ? `Physical condition: ${intake.physical_condition}` : "";
