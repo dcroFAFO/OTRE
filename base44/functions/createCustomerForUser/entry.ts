@@ -19,6 +19,16 @@ async function syncCustomerForUser(base44, user) {
     return { created: false, skipped: true, reason: 'User has no email' };
   }
 
+  const relatedJobs = await base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100);
+  const relatedJobIds = [...new Set(relatedJobs.map((job) => job.job_id || job.id).filter(Boolean))].join(',');
+
+  for (const job of relatedJobs) {
+    const desiredJobId = job.job_id || job.id;
+    if (job.job_id !== desiredJobId) {
+      await base44.asServiceRole.entities.Job.update(job.id, { job_id: desiredJobId });
+    }
+  }
+
   const existingCustomers = await base44.asServiceRole.entities.Customer.filter({ email });
   if (existingCustomers.length > 0) {
     const existingCustomer = existingCustomers[0];
@@ -27,13 +37,17 @@ async function syncCustomerForUser(base44, user) {
 
     if (!existingCustomer.user_id) updates.user_id = user.id;
     if (!existingCustomer.customer_id) updates.customer_id = customerId;
+    if (relatedJobIds && existingCustomer.job_id !== relatedJobIds) updates.job_id = relatedJobIds;
 
     if (Object.keys(updates).length > 0) {
       await base44.asServiceRole.entities.Customer.update(existingCustomer.id, updates);
     }
 
-    if (!user.customer_id) {
-      await base44.asServiceRole.entities.User.update(user.id, { customer_id: customerId });
+    const userUpdates = {};
+    if (!user.customer_id) userUpdates.customer_id = customerId;
+    if (relatedJobIds && user.job_id !== relatedJobIds) userUpdates.job_id = relatedJobIds;
+    if (Object.keys(userUpdates).length > 0) {
+      await base44.asServiceRole.entities.User.update(user.id, userUpdates);
     }
 
     return { created: false, linked: true, customer_id: customerId };
@@ -42,6 +56,7 @@ async function syncCustomerForUser(base44, user) {
   const customerId = buildCustomerId(user);
   const customer = await base44.asServiceRole.entities.Customer.create({
     customer_id: customerId,
+    job_id: relatedJobIds,
     full_name: user.full_name || email,
     email,
     phone: user.phone || '',

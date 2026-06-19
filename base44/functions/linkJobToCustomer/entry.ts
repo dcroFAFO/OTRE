@@ -64,7 +64,7 @@ async function syncUserAndCustomer(base44, options) {
   const matchedUser = options.user || await findUserByEmail(base44, email);
   const matchedCustomer = options.customer || await findCustomerByEmail(base44, email);
   const existingJobs = await jobsForEmail(base44, email);
-  const jobIds = existingJobs.map((job) => job.id);
+  const jobIds = existingJobs.map((job) => job.job_id || job.id);
   if (options.jobId && !jobIds.includes(options.jobId)) jobIds.push(options.jobId);
 
   if (matchedUser) {
@@ -85,8 +85,12 @@ async function syncUserAndCustomer(base44, options) {
   }
 
   for (const job of existingJobs) {
-    if (job.customer_id !== options.customerId) {
-      await base44.asServiceRole.entities.Job.update(job.id, { customer_id: options.customerId });
+    const desiredJobId = job.job_id || job.id;
+    const updates = {};
+    if (job.customer_id !== options.customerId) updates.customer_id = options.customerId;
+    if (job.job_id !== desiredJobId) updates.job_id = desiredJobId;
+    if (Object.keys(updates).length > 0) {
+      await base44.asServiceRole.entities.Job.update(job.id, updates);
     }
   }
 }
@@ -99,13 +103,17 @@ async function linkJob(base44, job) {
   const customer = await findCustomerByEmail(base44, email);
   const customerId = job.customer_id || user?.customer_id || customer?.customer_id || await getUniqueCustomerId(base44);
 
-  await syncUserAndCustomer(base44, { email, customerId, jobId: job.id, user, customer });
+  const jobId = job.job_id || job.id;
+  await syncUserAndCustomer(base44, { email, customerId, jobId, user, customer });
 
-  if (job.customer_id !== customerId) {
-    await base44.asServiceRole.entities.Job.update(job.id, { customer_id: customerId });
+  const updates = {};
+  if (job.customer_id !== customerId) updates.customer_id = customerId;
+  if (job.job_id !== jobId) updates.job_id = jobId;
+  if (Object.keys(updates).length > 0) {
+    await base44.asServiceRole.entities.Job.update(job.id, updates);
   }
 
-  return { linked: true, entity: 'Job', job_id: job.id, customer_id: customerId, user_id: user?.id || null, customer_record_id: customer?.id || null };
+  return { linked: true, entity: 'Job', job_id: jobId, customer_id: customerId, user_id: user?.id || null, customer_record_id: customer?.id || null };
 }
 
 async function linkUser(base44, user) {
