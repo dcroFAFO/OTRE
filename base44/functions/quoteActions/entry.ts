@@ -143,10 +143,8 @@ Deno.serve(async (req) => {
         visibility,
       });
 
-    // Quote writes run with service role: the user is already authenticated above
-    // and quote mutation is staff business logic. This avoids per-user RLS create
-    // denials that previously left the UI spinning.
-    const db = base44.asServiceRole.entities;
+    // Quote writes run as the signed-in user so Quote RLS can validate staff/customer access.
+    const db = base44.entities;
 
     const getJobQuote = async () => {
       const quotes = await db.Quote.filter({ job_id: job.id }, "-created_date", 1);
@@ -328,6 +326,6 @@ Be professional, clear, and customer-friendly. Do not mention internal codes or 
     // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
     console.error("[quoteActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
     // Safe, friendly message — internal details stay in the server logs.
-    return Response.json({ error: "Something went wrong while updating the quote. Please try again." }, { status: 500 });
+    return Response.json({ error: error.message || "Something went wrong while updating the quote. Please try again." }, { status: 500 });
   }
 });
