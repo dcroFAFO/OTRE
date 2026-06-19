@@ -90,7 +90,11 @@ async function syncUserAndCustomer(base44, options) {
     if (job.customer_id !== options.customerId) updates.customer_id = options.customerId;
     if (job.job_id !== desiredJobId) updates.job_id = desiredJobId;
     if (Object.keys(updates).length > 0) {
-      await base44.asServiceRole.entities.Job.update(job.id, updates);
+      try {
+        await base44.asServiceRole.entities.Job.update(job.id, updates);
+      } catch (error) {
+        console.warn('[linkJobToCustomer] Skipped job update:', job.id, error.message);
+      }
     }
   }
 }
