@@ -131,17 +131,23 @@ Deno.serve(async (req) => {
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-    const logAudit = ({ eventType, newValue = null, summary = "", visibility = "internal" }) =>
-      base44.asServiceRole.entities.AuditEvent.create({
-        event_type: eventType,
-        job_id: job.id,
-        actor_id: user.id,
-        actor_name: user.full_name || "System",
-        actor_role: user.role || "system",
-        new_value: newValue != null ? String(newValue) : null,
-        summary,
-        visibility,
-      });
+    const logAudit = async ({ eventType, newValue = null, summary = "", visibility = "internal" }) => {
+      try {
+        await base44.asServiceRole.entities.AuditEvent.create({
+          event_type: eventType,
+          job_id: job.id,
+          customer_id: job.customer_id || null,
+          actor_id: user.id,
+          actor_name: user.full_name || "System",
+          actor_role: user.role || "system",
+          new_value: newValue != null ? String(newValue) : null,
+          summary,
+          visibility,
+        });
+      } catch (auditError) {
+        console.warn("[quoteActions] audit log skipped:", auditError.message);
+      }
+    };
 
     // Quote writes run as the signed-in user so Quote RLS can validate staff/customer access.
     const db = base44.entities;
@@ -326,6 +332,6 @@ Be professional, clear, and customer-friendly. Do not mention internal codes or 
     // Structured server-side error log — inspect in dashboard → Code → Functions → logs.
     console.error("[quoteActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
     // Safe, friendly message — internal details stay in the server logs.
-    return Response.json({ error: error.message || "Something went wrong while updating the quote. Please try again." }, { status: 500 });
+    return Response.json({ error: "Something went wrong while updating the quote. Please try again." }, { status: 500 });
   }
 });
