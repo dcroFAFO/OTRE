@@ -74,40 +74,27 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee"
-          ]
-        }
+        "role": "admin"
       }
     },
     "read": {
       "$or": [
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "admin"
           }
         },
         {
-          "data.customer_email": "{{user.email}}"
+          "data.job_id": "{{user.data.job_id}}"
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
         }
       ]
     },
     "update": {
       "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee"
-          ]
-        }
+        "role": "admin"
       }
     },
     "delete": {
