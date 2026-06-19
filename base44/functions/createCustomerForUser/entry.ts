@@ -66,8 +66,11 @@ async function syncCustomerForUser(base44, user) {
     last_activity_date: new Date().toISOString(),
   });
 
-  if (!user.customer_id) {
-    await base44.asServiceRole.entities.User.update(user.id, { customer_id: customerId });
+  const userUpdates = {};
+  if (!user.customer_id) userUpdates.customer_id = customerId;
+  if (relatedJobIds && user.job_id !== relatedJobIds) userUpdates.job_id = relatedJobIds;
+  if (Object.keys(userUpdates).length > 0) {
+    await base44.asServiceRole.entities.User.update(user.id, userUpdates);
   }
 
   return { created: true, customer_id: customerId, customer_record_id: customer.id };
