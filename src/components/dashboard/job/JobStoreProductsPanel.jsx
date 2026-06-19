@@ -114,8 +114,8 @@ export default function JobStoreProductsPanel({ job, canEdit }) {
   const [note, setNote] = useState("");
 
   const { data: links = [] } = useQuery({
-    queryKey: ["storeUsage", job.id],
-    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.id, source: "estore" }, "-created_date", 50),
+    queryKey: ["storeUsage", job.job_id || job.id],
+    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.job_id || job.id, source: "estore" }, "-created_date", 50),
   });
 
   const { data: products = [] } = useQuery({

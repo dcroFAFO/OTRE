@@ -13,8 +13,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const [addingLabour, setAddingLabour] = useState(false);
 
   const { data: usages = [], refetch } = useQuery({
-    queryKey: ["inventoryUsage", job.id],
-    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 50),
+    queryKey: ["inventoryUsage", job.job_id || job.id],
+    queryFn: () => base44.entities.InventoryUsage.filter({ job_id: job.job_id || job.id, source: "inventory" }, "-created_date", 50),
   });
 
   const removeUsage = useMutation({

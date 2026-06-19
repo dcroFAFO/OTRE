@@ -147,7 +147,10 @@ async function linkChildRecord(base44, entityName, record) {
       : { skipped: entityName + ' has no job_id', record_id: record.id };
   }
 
-  const jobs = await base44.asServiceRole.entities.Job.filter({ id: record.job_id }, '', 1);
+  let jobs = await base44.asServiceRole.entities.Job.filter({ id: record.job_id }, '', 1);
+  if (jobs.length === 0) {
+    jobs = await base44.asServiceRole.entities.Job.filter({ job_id: record.job_id }, '', 1);
+  }
   const job = jobs[0];
   if (!job) return { skipped: 'matching job not found', entity: entityName, record_id: record.id, job_id: record.job_id };
 
