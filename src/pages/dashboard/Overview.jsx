@@ -64,12 +64,12 @@ export default function Overview() {
 
   const metrics = [
     { label: DEFAULT_APP_SETTINGS.dashboard.metrics.active, value: m.active, icon: Briefcase, tone: "default", filter: "status=active" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.awaitingCustomer, value: m.awaitingCustomer, icon: Clock, tone: "amber" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.waitingParts, value: m.waitingParts, icon: Package, tone: "amber" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.readyPickup, value: m.readyPickup, icon: PackageCheck, tone: "emerald" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.outstanding, value: m.outstanding, icon: CreditCard, tone: "rose" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.completedWeek, value: m.completedWeek, icon: CheckCircle2, tone: "emerald" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.requested, value: m.requested, icon: Inbox, tone: "accent" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.awaitingCustomer, value: m.awaitingCustomer, icon: Clock, tone: "amber", filter: "status=waiting_customer" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.waitingParts, value: m.waitingParts, icon: Package, tone: "amber", filter: "status=waiting_parts" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.readyPickup, value: m.readyPickup, icon: PackageCheck, tone: "emerald", filter: "status=ready_for_pickup" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.outstanding, value: m.outstanding, icon: CreditCard, tone: "rose", filter: "payment=outstanding" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.completedWeek, value: m.completedWeek, icon: CheckCircle2, tone: "emerald", filter: "status=completed" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.requested, value: m.requested, icon: Inbox, tone: "accent", filter: "status=requested" },
     { label: DEFAULT_APP_SETTINGS.dashboard.metrics.total, value: m.total, icon: Activity, tone: "default" },
   ];
 
@@ -117,7 +117,7 @@ export default function Overview() {
             </p>
           </div>
           <Button size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0"
-            onClick={() => navigate("/dashboard/jobs")}>
+            onClick={() => navigate("/dashboard/jobs?status=requested")}>
             Review <ArrowRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </div>
@@ -127,7 +127,7 @@ export default function Overview() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {metrics.map((m) => (
           <MetricCard key={m.label} label={m.label} value={m.value} icon={m.icon} tone={m.tone}
-            onClick={() => navigate("/dashboard/jobs")} />
+            onClick={() => navigate(m.filter ? `/dashboard/jobs?${m.filter}` : "/dashboard/jobs")} />
         ))}
       </div>
 

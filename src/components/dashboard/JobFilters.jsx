@@ -17,6 +17,10 @@ export default function JobFilters({ filters, setFilters }) {
   const active = isActive(filters);
 
   useEffect(() => {
+    setLocalQ(filters.q);
+  }, [filters.q]);
+
+  useEffect(() => {
     const t = setTimeout(() => set("q", localQ), 250);
     return () => clearTimeout(t);
   }, [localQ]);

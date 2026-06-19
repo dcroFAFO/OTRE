@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
 import JobFilters, { EMPTY_FILTERS } from "@/components/dashboard/JobFilters";
@@ -12,11 +12,54 @@ import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
 import { isStaffRole } from "@/config/roles";
 
+const FILTER_PARAM_KEYS = ["status", "payment", "type", "waiting", "q"];
+
+const filtersFromSearch = (search) => {
+  const params = new URLSearchParams(search);
+  return {
+    ...EMPTY_FILTERS,
+    q: params.get("q") || "",
+    status: params.get("status") || "all",
+    payment: params.get("payment") || "all",
+    type: params.get("type") || "all",
+    waiting: params.get("waiting") || "all",
+  };
+};
+
+const hasFilterParams = (search) => {
+  const params = new URLSearchParams(search);
+  return search === "" || FILTER_PARAM_KEYS.some((key) => params.has(key));
+};
+
 export default function Jobs() {
   const user = useDashboardUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useState(() => filtersFromSearch(location.search));
+
+  useEffect(() => {
+    if (hasFilterParams(location.search)) {
+      setFilters(filtersFromSearch(location.search));
+    }
+  }, [location.search]);
+
+  const jobsPath = (nextParams = {}) => {
+    const params = new URLSearchParams();
+    if (filters.q) params.set("q", filters.q);
+    if (filters.status !== "all") params.set("status", filters.status);
+    if (filters.payment !== "all") params.set("payment", filters.payment);
+    if (filters.type !== "all") params.set("type", filters.type);
+    if (filters.waiting !== "all") params.set("waiting", filters.waiting);
+
+    Object.entries(nextParams).forEach(([key, value]) => {
+      if (value == null || value === "") params.delete(key);
+      else params.set(key, value);
+    });
+
+    const query = params.toString();
+    return query ? `/dashboard/jobs?${query}` : "/dashboard/jobs";
+  };
+
   const queryFilter = useMemo(() => ({
     ...(filters.status !== "all" ? { status: filters.status } : {}),
     ...(filters.payment !== "all" ? { payment_status: filters.payment } : {}),
@@ -31,8 +74,8 @@ export default function Jobs() {
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("id");
 
-  const open = (id) => navigate(`/dashboard/jobs?id=${id}`);
-  const close = () => { navigate("/dashboard/jobs"); invalidate(); };
+  const open = (id) => navigate(jobsPath({ id }));
+  const close = () => { navigate(jobsPath({ id: null })); invalidate(); };
 
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
