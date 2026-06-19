@@ -56,7 +56,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
         const { addPartsToQuote } = await import("@/services/quoteService");
         await addPartsToQuote(
           job,
-          chosen.map((p) => ({ name: p.name, typical_price: p.price, qty: p.qty, retailer: "Parts catalogue" })),
+          chosen.map((p) => ({ name: p.name, typical_price: p.price, qty: p.qty, sku: p.sku, product_code: p.sku, retailer: "Parts catalogue" })),
           actor
         );
       }

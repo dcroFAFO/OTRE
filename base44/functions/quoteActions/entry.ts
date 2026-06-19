@@ -235,6 +235,7 @@ Deno.serve(async (req) => {
           qty: Number(p.qty) || 1,
           unit_price: Number(p.typical_price) || 0,
           kind: "part",
+          sku: p.sku || p.product_sku || p.product_code || "",
         }));
 
         const line_items = [...(quote.line_items || []), ...newItems];

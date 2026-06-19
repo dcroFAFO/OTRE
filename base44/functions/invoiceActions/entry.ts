@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
           qty: Number(item.qty) || 1,
           unit_price: Number(item.unit_price) || 0,
           kind: item.kind || "item",
+          sku: item.sku || item.product_sku || item.product_code || item.code || "",
         }));
         const amount = Number(quote.total) || lineItems.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
         const existing = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);

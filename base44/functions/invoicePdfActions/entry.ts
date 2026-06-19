@@ -52,26 +52,34 @@ async function sendMail({ to, subject, html, fromName, fileName, pdfBase64 }) {
 }
 
 function buildLineItems(invoice, quote, usageRecords) {
+  const usages = usageRecords || [];
+  const usageCodeByName = new Map(usages.map((usage) => [clean(usage.item_name).toLowerCase(), clean(usage.product_sku || usage.item_id)]));
   const items = invoice?.line_items?.length ? [...invoice.line_items] : quote?.line_items?.length ? [...quote.line_items] : [];
   if (items.length === 0) {
     if (Number(quote?.labour_estimate) > 0) {
       items.push({ description: "Labour", qty: 1, unit_price: Number(quote.labour_estimate), kind: "labour" });
     }
-    for (const usage of usageRecords || []) {
+    for (const usage of usages) {
       items.push({
         description: usage.item_name || "Part",
         qty: Number(usage.qty_used) || 1,
         unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
         kind: "part",
+        sku: usage.product_sku || usage.item_id || "",
       });
     }
   }
-  return items.map((item) => ({
-    description: clean(item.description, "Line item"),
-    qty: Number(item.qty) || 1,
-    unit_price: Number(item.unit_price) || 0,
-    kind: clean(item.kind, "item"),
-  }));
+  return items.map((item) => {
+    const description = clean(item.description, "Line item");
+    const matchedCode = usageCodeByName.get(description.toLowerCase()) || "";
+    return {
+      description,
+      sku: clean(item.sku || item.product_sku || item.product_code || item.code || matchedCode),
+      qty: Number(item.qty) || 1,
+      unit_price: Number(item.unit_price) || 0,
+      kind: clean(item.kind, "item"),
+    };
+  });
 }
 
 function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount = 0 }) {
@@ -132,8 +140,9 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text("Description", margin, y);
-  doc.text("Qty", pageWidth - 210, y, { align: "right" });
-  doc.text("Unit", pageWidth - 125, y, { align: "right" });
+  doc.text("SKU / code", pageWidth - 255, y, { align: "right" });
+  doc.text("Qty", pageWidth - 185, y, { align: "right" });
+  doc.text("Unit", pageWidth - 110, y, { align: "right" });
   doc.text("Total", pageWidth - margin, y, { align: "right" });
   y += 12;
   doc.setDrawColor(226, 232, 240);
@@ -146,10 +155,11 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
       doc.addPage();
       y = 60;
     }
-    const descriptionLines = doc.splitTextToSize(item.description, 245);
+    const descriptionLines = doc.splitTextToSize(item.description, 205);
     doc.text(descriptionLines, margin, y);
-    doc.text(String(item.qty), pageWidth - 210, y, { align: "right" });
-    doc.text(money(currency, item.unit_price), pageWidth - 125, y, { align: "right" });
+    doc.text(item.sku || "-", pageWidth - 255, y, { align: "right" });
+    doc.text(String(item.qty), pageWidth - 185, y, { align: "right" });
+    doc.text(money(currency, item.unit_price), pageWidth - 110, y, { align: "right" });
     doc.text(money(currency, item.qty * item.unit_price), pageWidth - margin, y, { align: "right" });
     y += Math.max(22, descriptionLines.length * 13 + 8);
   }
