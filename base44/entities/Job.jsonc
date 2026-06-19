@@ -165,54 +165,67 @@
     "customer_name"
   ],
   "rls": {
-    "create": null,
-    "read": {
+    "create": {
       "$or": [
         {
-          "data.technician": "{{user.role}}"
-        },
-        {
-          "data.admin": "{{user.role}}"
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
+          "created_by_id": "{{user.id}}"
         },
         {
           "user_condition": {
-            "role": "admin"
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
           }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "data.technician": "{{user.role}}"
-        },
-        {
-          "data.admin": "{{user.role}}"
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
           "user_condition": {
-            "role": "admin"
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
           }
+        },
+        {
+          "created_by_id": "{{user.id}}"
         }
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "data.admin": "{{user.role}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
