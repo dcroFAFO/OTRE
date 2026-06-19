@@ -116,15 +116,6 @@
       "type": "boolean",
       "default": true
     },
-    "location_preference": {
-      "type": "string"
-    },
-    "assigned_technician_id": {
-      "type": "string"
-    },
-    "assigned_technician_name": {
-      "type": "string"
-    },
     "payment_status": {
       "type": "string",
       "default": "unpaid"
@@ -174,9 +165,7 @@
     "customer_name"
   ],
   "rls": {
-    "create": {
-      "created_by_id": "{{user.id}}"
-    },
+    "create": null,
     "read": {
       "$or": [
         {
@@ -186,7 +175,7 @@
           "data.admin": "{{user.role}}"
         },
         {
-          "data.job_id": "{{user.data.job_id}}"
+          "data.customer_id": "{{user.data.customer_id}}"
         },
         {
           "user_condition": {
@@ -204,7 +193,7 @@
           "data.admin": "{{user.role}}"
         },
         {
-          "data.job_id": "{{user.data.job_id}}"
+          "data.customer_id": "{{user.data.customer_id}}"
         },
         {
           "user_condition": {
