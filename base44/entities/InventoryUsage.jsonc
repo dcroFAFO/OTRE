@@ -58,51 +58,9 @@
     "qty_used"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.is_customer": "false"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.is_customer": "false"
-          }
-        },
-        {
-          "data.job_id": "{{user.data.job_id}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.is_customer": "false"
-          }
-        }
-      ]
-    },
+    "create": null,
+    "read": null,
+    "update": null,
     "delete": {
       "user_condition": {
         "role": "admin"
