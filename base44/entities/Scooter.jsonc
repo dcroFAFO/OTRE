@@ -28,53 +28,9 @@
     "model"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        }
-      ]
-    },
+    "create": null,
+    "read": null,
+    "update": null,
     "delete": {
       "user_condition": {
         "role": "admin"
