@@ -46,7 +46,7 @@ export default function HeroSection() {
           src={LANDING_LOGO_URL}
           alt=""
           aria-hidden="true"
-          className="absolute left-1/2 top-16 w-[680px] -translate-x-1/2 opacity-[0.16] blur-[0.3px] saturate-150 sm:top-12 sm:w-[860px] lg:left-[30%] lg:top-20 lg:w-[820px]"
+          className="absolute left-1/2 top-10 w-[860px] -translate-x-1/2 opacity-[0.16] blur-[0.3px] saturate-150 sm:top-4 sm:w-[1080px] lg:left-[30%] lg:top-10 lg:w-[1120px]"
         />
         <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[90px]" />
         <div className="absolute top-60 -left-48 h-[400px] w-[400px] rounded-full bg-accent/10 blur-[80px]" />
