@@ -81,62 +81,56 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "data.admin": "{{user.role}}"
-        },
-        {
-          "data.technician": "{{user.role}}"
-        },
-        {
-          "data.employee": "{{user.role}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
         }
-      ]
+      }
     },
     "read": {
       "$or": [
         {
-          "data.admin": "{{user.role}}"
-        },
-        {
-          "data.technician": "{{user.role}}"
-        },
-        {
-          "data.employee": "{{user.role}}"
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
         },
         {
           "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "data.admin": "{{user.role}}"
-        },
-        {
-          "data.technician": "{{user.role}}"
-        },
-        {
-          "data.employee": "{{user.role}}"
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
           "user_condition": {
-            "role": "admin"
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
           }
+        },
+        {
+          "$and": [
+            {
+              "data.customer_id": "{{user.data.customer_id}}"
+            },
+            {
+              "data.approval_status": "pending"
+            }
+          ]
         }
       ]
     },
