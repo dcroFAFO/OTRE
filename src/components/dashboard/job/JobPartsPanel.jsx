@@ -5,6 +5,7 @@ import { Package, Wrench, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
+import { addInventoryParts } from "@/services/jobService";
 
 export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const qc = useQueryClient();
@@ -152,23 +153,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
           actor={actor}
           open={pickerOpen}
           onOpenChange={setPickerOpen}
-          onAdd={async (chosen) => {
-            await Promise.all(chosen.map((p) =>
-              base44.entities.InventoryUsage.create({
-                job_id: job.id,
-                quote_id: job.quote_id || "",
-                customer_id: job.customer_id,
-                item_id: p.id,
-                item_name: p.name,
-                qty_used: p.qty,
-                unit_cost: 0,
-                unit_sell: Number(p.price) || 0,
-                source: "inventory",
-                product_id: p.id,
-                product_sku: p.sku || "",
-              })
-            ));
-          }}
+          onAdd={(chosen) => addInventoryParts(job, chosen)}
           onAdded={() => { refetch(); qc.invalidateQueries({ queryKey: ["inventoryItems"] }); onChange?.(); }}
         />
       )}

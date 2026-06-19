@@ -39,3 +39,7 @@ export async function savePrivateNotes(job, privateNotes) {
 export async function addNote(job, { body, visibility }) {
   return invoke({ action: "add_note", jobId: job.id, body, visibility });
 }
+
+export async function addInventoryParts(job, parts) {
+  return invoke({ action: "add_inventory_parts", jobId: job.id, parts });
+}

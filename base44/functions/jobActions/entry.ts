@@ -29,8 +29,10 @@ Deno.serve(async (req) => {
     const job = jobs[0];
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
+    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role);
+
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
-      base44.entities.AuditEvent.create({
+      base44.asServiceRole.entities.AuditEvent.create({
         event_type: eventType,
         job_id: job.job_id || job.id,
         customer_id: job.customer_id,
@@ -115,6 +117,33 @@ Deno.serve(async (req) => {
           eventType: visibility === "customer" ? "customer_note_added" : "note_added",
           summary: visibility === "customer" ? "Customer-visible note added" : "Internal note added",
           visibility: visibility === "customer" ? "customer" : "internal",
+        });
+        break;
+      }
+      case "add_inventory_parts": {
+        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+        const parts = Array.isArray(params.parts) ? params.parts : [];
+        if (parts.length === 0) return Response.json({ error: "No parts selected" }, { status: 400 });
+
+        result = await Promise.all(parts.map((part) =>
+          base44.asServiceRole.entities.InventoryUsage.create({
+            job_id: job.id,
+            quote_id: job.quote_id || "",
+            customer_id: job.customer_id || "",
+            item_id: part.id,
+            item_name: part.name,
+            qty_used: Math.max(1, Number(part.qty) || 1),
+            unit_cost: 0,
+            unit_sell: Number(part.price) || 0,
+            source: "inventory",
+            product_id: part.id,
+            product_sku: part.sku || "",
+          })
+        ));
+        await logAudit({
+          eventType: "parts_added",
+          summary: `Added ${parts.length} part(s) to job`,
+          newValue: parts.map((part) => part.name).filter(Boolean).join(", "),
         });
         break;
       }
