@@ -19,6 +19,15 @@
     "display_role_title": {
       "type": "string",
       "description": "Friendly job title e.g. Lead Technician"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Unique customer account identifier used to associate jobs with this customer. No two customer accounts should share the same customer_id.",
+      "unique": true
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Comma-separated list of Job entity IDs associated with this user."
     }
   },
   "required": []
