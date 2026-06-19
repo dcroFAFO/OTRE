@@ -6,7 +6,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Bell, Save, ShieldAlert, Users } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_BUSINESS_SLUG } from "@/config/platformConfig";
 
 const TOGGLES = [
   { key: "notify_status_change", label: "Job status changes", desc: "Email customers when their job moves to In Progress, Ready for Pickup or Completed." },
@@ -23,7 +22,6 @@ export default function Notifications() {
   useEffect(() => {
     base44.entities.NotificationSetting.list("-created_date", 1).then((rows) => {
       setSetting(rows[0] || {
-        business_slug: DEFAULT_BUSINESS_SLUG,
         notify_status_change: true,
         notify_new_booking: true,
         notify_invoice: true,

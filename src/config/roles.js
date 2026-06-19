@@ -31,6 +31,13 @@ export const ROLE_META = {
   customer: { key: "customer", label: "Customer", badgeClass: "bg-slate-100 text-slate-600", staff: false },
 };
 
+export function normalizeRole(role) {
+  if (!role) return "customer";
+  const normalized = role.toLowerCase();
+  if (normalized === "owner") return "admin";
+  return ROLE_META[normalized] ? normalized : "customer";
+}
+
 export function roleRank(role) {
   return ROLE_RANK[role] ?? 0;
 }
@@ -103,7 +110,8 @@ const ROLE_CAPS = {
 // Resolve the full capability set for a role, inheriting from all lower roles
 // up to (and including) the role itself. Higher rank inherits everything below.
 export function capabilitiesFor(role) {
-  const rank = ROLE_RANK[role] ?? 0;
+  const normalizedRole = normalizeRole(role);
+  const rank = ROLE_RANK[normalizedRole] ?? 0;
   const set = new Set();
   for (const [r, caps] of Object.entries(ROLE_CAPS)) {
     if ((ROLE_RANK[r] ?? 0) <= rank) caps.forEach((c) => set.add(c));
@@ -112,13 +120,15 @@ export function capabilitiesFor(role) {
 }
 
 export function hasCapability(role, capability) {
-  const caps = capabilitiesFor(role);
+  const normalizedRole = normalizeRole(role);
+  const caps = capabilitiesFor(normalizedRole);
   return caps.has("*") || caps.has(capability);
 }
 
 // Convenience: assignable roles a given actor may grant (cannot grant above self).
 export function assignableRoles(actorRole) {
-  const actorRank = roleRank(actorRole);
+  const normalizedRole = normalizeRole(actorRole);
+  const actorRank = roleRank(normalizedRole);
   return Object.values(ROLE_META)
     .filter((m) => (ROLE_RANK[m.key] ?? 0) <= actorRank)
     .map((m) => m.key);
