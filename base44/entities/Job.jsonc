@@ -198,6 +198,9 @@
           "data.admin": "{{user.role}}"
         },
         {
+          "data.job_id": "{{user.data.job_id}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }
