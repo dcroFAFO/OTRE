@@ -2,9 +2,6 @@
   "name": "PaymentProviderConfig",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string"
-    },
     "provider_key": {
       "type": "string"
     },
@@ -25,7 +22,6 @@
     }
   },
   "required": [
-    "business_slug",
     "provider_key",
     "display_name"
   ],

@@ -2,9 +2,6 @@
   "name": "NotificationTemplate",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string"
-    },
     "key": {
       "type": "string"
     },

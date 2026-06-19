@@ -2,10 +2,6 @@
   "name": "NotificationSetting",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string",
-      "default": "otr-scooters"
-    },
     "notify_status_change": {
       "type": "boolean",
       "default": true,

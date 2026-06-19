@@ -2,9 +2,6 @@
   "name": "ServiceItem",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string"
-    },
     "name": {
       "type": "string"
     },

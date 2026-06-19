@@ -2,9 +2,6 @@
   "name": "InvoiceSetting",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string"
-    },
     "prefix": {
       "type": "string",
       "default": "INV"
@@ -46,9 +43,7 @@
       "default": true
     }
   },
-  "required": [
-    "business_slug"
-  ],
+  "required": [],
   "rls": {
     "create": {
       "user_condition": {

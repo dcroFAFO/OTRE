@@ -2,9 +2,6 @@
   "name": "JobTemplate",
   "type": "object",
   "properties": {
-    "business_slug": {
-      "type": "string"
-    },
     "name": {
       "type": "string",
       "description": "Template name e.g. Tyre Change Front"
