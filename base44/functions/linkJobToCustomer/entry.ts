@@ -114,7 +114,11 @@ async function linkJob(base44, job) {
   if (job.customer_id !== customerId) updates.customer_id = customerId;
   if (job.job_id !== jobId) updates.job_id = jobId;
   if (Object.keys(updates).length > 0) {
-    await base44.asServiceRole.entities.Job.update(job.id, updates);
+    try {
+      await base44.asServiceRole.entities.Job.update(job.id, updates);
+    } catch (error) {
+      console.warn('[linkJobToCustomer] Skipped job update:', job.id, error.message);
+    }
   }
 
   return { linked: true, entity: 'Job', job_id: jobId, customer_id: customerId, user_id: user?.id || null, customer_record_id: customer?.id || null };
