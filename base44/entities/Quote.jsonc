@@ -71,6 +71,10 @@
           "kind": {
             "type": "string",
             "description": "Configurable line item type"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU or product code for parts."
           }
         }
       }

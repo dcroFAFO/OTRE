@@ -49,6 +49,14 @@
           },
           "kind": {
             "type": "string"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU or product code shown on tax invoices."
+          },
+          "source_usage_id": {
+            "type": "string",
+            "description": "Linked InventoryUsage record used to prevent duplicate invoice line items."
           }
         }
       }

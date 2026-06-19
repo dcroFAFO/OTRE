@@ -108,6 +108,53 @@ Deno.serve(async (req) => {
         await logAudit({ eventType: "quote_copied_to_invoice", summary: `Quote copied to invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "customer" });
         break;
       }
+      case "add_parts_to_invoice": {
+        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+        const usageIds = Array.isArray(params.usageIds) ? params.usageIds : [];
+        if (usageIds.length === 0) return Response.json({ error: "No parts selected" }, { status: 400 });
+
+        let invoice = null;
+        if (job.invoice_id) {
+          try {
+            invoice = await base44.asServiceRole.entities.Invoice.get(job.invoice_id);
+          } catch {
+            invoice = null;
+          }
+        }
+        if (!invoice) {
+          const invoices = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
+          invoice = invoices[0] || null;
+        }
+        if (!invoice) return Response.json({ error: "Create an invoice first" }, { status: 404 });
+
+        const usages = [];
+        for (const usageId of usageIds) {
+          const usage = await base44.asServiceRole.entities.InventoryUsage.get(usageId);
+          if (usage && (usage.job_id === job.id || usage.job_id === job.job_id)) usages.push(usage);
+        }
+        if (usages.length === 0) return Response.json({ error: "No matching parts found" }, { status: 404 });
+
+        const existingItems = invoice.line_items || [];
+        const existingKeys = new Set(existingItems.map((item) => `${item.source_usage_id || ""}|${item.description || ""}`));
+        const newItems = usages
+          .map((usage) => ({
+            description: usage.item_name || "Part",
+            qty: Number(usage.qty_used) || 1,
+            unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
+            kind: "part",
+            sku: usage.product_sku || usage.item_id || "",
+            source_usage_id: usage.id,
+          }))
+          .filter((item) => !existingKeys.has(`${item.source_usage_id}|${item.description}`));
+
+        if (newItems.length === 0) return Response.json({ error: "Selected parts are already on the invoice" }, { status: 400 });
+        const line_items = [...existingItems, ...newItems];
+        const amount = line_items.reduce((sum, item) => sum + (Number(item.qty) || 1) * (Number(item.unit_price) || 0), 0);
+        result = await base44.asServiceRole.entities.Invoice.update(invoice.id, { line_items, amount });
+        await Promise.all(usages.map((usage) => base44.asServiceRole.entities.InventoryUsage.update(usage.id, { invoice_id: invoice.id })));
+        await logAudit({ eventType: "parts_added_to_invoice", summary: `Added ${newItems.length} part(s) to invoice`, visibility: "customer" });
+        break;
+      }
       case "set_payment_status": {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const { invoiceId, status } = params;
