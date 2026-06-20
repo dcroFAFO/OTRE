@@ -18,6 +18,10 @@
       "type": "string",
       "description": "Human-readable job reference e.g. OTR-1042"
     },
+    "customerId": {
+      "type": "string",
+      "description": "Public booking compatible customer id alias"
+    },
     "customer_id": {
       "type": "string"
     },
@@ -39,11 +43,22 @@
       "type": "string",
       "description": "Generic display label for the item/equipment/vehicle/location/object"
     },
+    "scooterDetails": {
+      "type": "string",
+      "description": "Public booking compatible scooter details"
+    },
+    "scooter_details": {
+      "type": "string"
+    },
     "service_item_id": {
       "type": "string"
     },
     "service_category_key": {
       "type": "string"
+    },
+    "issueDescription": {
+      "type": "string",
+      "description": "Public booking compatible issue description"
     },
     "issue_description": {
       "type": "string"
@@ -102,6 +117,14 @@
         }
       }
     },
+    "source": {
+      "type": "string",
+      "enum": [
+        "public_booking",
+        "staff_created"
+      ],
+      "default": "staff_created"
+    },
     "job_type": {
       "type": "string",
       "default": "service"
@@ -135,6 +158,14 @@
     "ready_for_pickup": {
       "type": "boolean",
       "default": false
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
     },
     "checklist": {
       "type": "array",

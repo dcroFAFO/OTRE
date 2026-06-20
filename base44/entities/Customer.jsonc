@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Comma-separated list of Invoice entity IDs associated with this customer."
     },
+    "name": {
+      "type": "string",
+      "description": "Public booking compatible customer name"
+    },
     "full_name": {
       "type": "string"
     },
@@ -26,6 +30,11 @@
     "user_id": {
       "type": "string",
       "description": "Linked User record id for portal access"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Public booking compatible creation timestamp"
     },
     "status": {
       "type": "string",

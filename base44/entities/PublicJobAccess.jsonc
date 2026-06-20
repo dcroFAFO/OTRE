@@ -1,0 +1,101 @@
+{
+  "name": "PublicJobAccess",
+  "type": "object",
+  "properties": {
+    "jobId": {
+      "type": "string",
+      "description": "Linked Job record id"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Linked Job record id, snake_case compatibility"
+    },
+    "tokenHash": {
+      "type": "string",
+      "description": "SHA-256 hash of the raw public access token. Raw tokens are never stored."
+    },
+    "token_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the raw public access token, snake_case compatibility"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional expiry date for this public token"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revokedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set when this public token is revoked"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "view_status",
+        "view_booking",
+        "add_note",
+        "upload_file"
+      ],
+      "description": "Allowed public actions for this token"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "jobId",
+    "tokenHash"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
