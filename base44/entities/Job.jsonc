@@ -204,7 +204,7 @@
     "customer_name"
   ],
   "rls": {
-    "create": null,
+    "create": true,
     "read": {
       "$or": [
         {
