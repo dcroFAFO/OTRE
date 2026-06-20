@@ -35,24 +35,7 @@
     "file_url"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
-          }
-        }
-      ]
-    },
+    "create": null,
     "read": {
       "$or": [
         {
