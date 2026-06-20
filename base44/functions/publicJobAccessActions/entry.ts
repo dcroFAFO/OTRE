@@ -34,6 +34,8 @@ async function getValidAccess(base44, jobId, rawToken) {
   const records = await base44.asServiceRole.entities.PublicJobAccess.filter({ jobId, tokenHash }, '-created_date', 1);
   const access = records[0] || null;
   if (!access) return { error: 'This tracking link is invalid.', status: 403 };
+  const issuedByService = String(access.created_by_id || '').startsWith('service_') || String(access.created_by || '').startsWith('service+');
+  if (!issuedByService) return { error: 'This tracking link is invalid.', status: 403 };
   if (access.revokedAt || access.revoked_at) return { error: 'This tracking link has been revoked.', status: 403 };
   const expires = access.expiresAt || access.expires_at;
   if (expires && new Date(expires).getTime() < Date.now()) return { error: 'This tracking link has expired.', status: 403 };
