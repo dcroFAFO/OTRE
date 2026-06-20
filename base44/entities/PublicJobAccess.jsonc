@@ -59,9 +59,9 @@
     "tokenHash"
   ],
   "rls": {
-    "create": null,
-    "read": null,
-    "update": null,
+    "create": true,
+    "read": false,
+    "update": true,
     "delete": {
       "user_condition": {
         "role": "admin"
