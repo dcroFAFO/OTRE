@@ -34,20 +34,7 @@
     "body"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.is_customer": "false"
-          }
-        }
-      ]
-    },
+    "create": null,
     "read": {
       "$or": [
         {
