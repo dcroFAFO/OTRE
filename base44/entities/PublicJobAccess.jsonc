@@ -59,39 +59,9 @@
     "tokenHash"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
-        }
-      }
-    },
+    "create": null,
+    "read": null,
+    "update": null,
     "delete": {
       "user_condition": {
         "role": "admin"
