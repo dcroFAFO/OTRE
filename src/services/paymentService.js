@@ -36,22 +36,22 @@ export async function setPaymentStatus(invoice, job, status) {
   return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
 }
 
-export async function generateInvoicePdf(job, invoice, notes = "", regenerateCount = 0) {
+export async function generateInvoicePdf(job, invoiceDraft, notes = "", regenerateCount = 0) {
   const res = await base44.functions.invoke("invoicePdfActions", {
-    action: regenerateCount > 0 ? "regenerate" : "generate",
+    action: "preview",
     jobId: job.id,
-    invoiceId: invoice.id,
+    invoiceDraft,
     notes,
     regenerateCount,
   });
   return res.data;
 }
 
-export async function emailInvoicePdf(job, invoice, notes = "", regenerateCount = 0) {
+export async function emailInvoicePdf(job, invoiceDraft, notes = "", regenerateCount = 0) {
   const res = await base44.functions.invoke("invoicePdfActions", {
     action: "email",
     jobId: job.id,
-    invoiceId: invoice.id,
+    invoiceDraft,
     notes,
     regenerateCount,
   });

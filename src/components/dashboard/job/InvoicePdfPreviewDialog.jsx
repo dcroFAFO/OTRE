@@ -17,7 +17,7 @@ export default function InvoicePdfPreviewDialog({
 }) {
   const previewUrl = document?.pdfBase64 ? `data:application/pdf;base64,${document.pdfBase64}` : "";
   const sent = sendStatus === "sent";
-  const failed = sendStatus === "failed";
+  const failed = sendStatus === "send_failed";
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose?.()}>

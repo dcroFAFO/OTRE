@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems } from "@/services/paymentService";
+import { getJobInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
@@ -28,6 +28,36 @@ function calculateLineTotal(item) {
   const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
   const tax = base * ((Number(item.tax_rate) || 0) / 100);
   return base + tax - (Number(item.discount_amount) || 0);
+}
+
+const ASYNC_STATES = {
+  IDLE: "idle",
+  VALIDATING: "validating",
+  GENERATING_PREVIEW: "generating_preview",
+  PREVIEW_READY: "preview_ready",
+  SENDING: "sending",
+  SENT: "sent",
+  SEND_FAILED: "send_failed",
+  GENERATION_FAILED: "generation_failed",
+};
+
+function staffErrorMessage(error, fallback) {
+  console.error("[FinaliseInvoice]", fallback, error);
+  return error?.response?.data?.error || error?.message || fallback;
+}
+
+function validateInvoiceDraft(job, items) {
+  if (!String(job.customer_name || "").trim()) return "Invoice could not be generated. Missing customer name.";
+  if (!String(job.customer_email || "").trim()) return "Missing customer email.";
+  if (!String(job.reference || job.job_id || job.id || "").trim()) return "Invoice could not be generated. Missing job/reference number.";
+  if (!items.length) return "No billing line items found.";
+  const invalidItem = items.find((item) => {
+    const qty = Number(item.qty);
+    const unitPrice = Number(item.unit_price);
+    return !item.description || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0;
+  });
+  if (invalidItem) return "Invoice could not be generated. Check line item quantities and prices.";
+  return "";
 }
 
 function usageToLineItem(usage) {
@@ -58,24 +88,30 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   const [draftItems, setDraftItems] = useState([]);
   const [internalNotes, setInternalNotes] = useState("");
   const [loading, setLoading] = useState(true);
-  const [finaliseStatus, setFinaliseStatus] = useState("not_finalised");
+  const [finaliseStatus, setFinaliseStatus] = useState(ASYNC_STATES.IDLE);
   const [sendError, setSendError] = useState("");
 
-  const loadInvoiceData = () => {
+  const loadInvoiceData = async () => {
     setLoading(true);
-    return Promise.all([
+    const [inv, q, primaryUsage, legacyUsage] = await Promise.all([
       getJobInvoice(job.id),
       getJobQuote(job.id),
       base44.entities.InventoryUsage.filter({ job_id: job.id }),
-    ]).then(([inv, q, usage]) => {
-      setInvoice(inv);
-      setQuote(q);
-      setUsageRecords(usage || []);
-      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
-      setInternalNotes(inv?.internalCostingNotes || "");
-      setFinaliseStatus(inv?.invoiceSentAt ? "sent" : "not_finalised");
-      setLoading(false);
+      job.job_id && job.job_id !== job.id ? base44.entities.InventoryUsage.filter({ job_id: job.job_id }) : Promise.resolve([]),
+    ]);
+    const seen = new Set();
+    const usage = [...(primaryUsage || []), ...(legacyUsage || [])].filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
     });
+    setInvoice(inv);
+    setQuote(q);
+    setUsageRecords(usage);
+    setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
+    setInternalNotes(inv?.internalCostingNotes || "");
+    setFinaliseStatus(inv?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
+    setLoading(false);
   };
 
   useEffect(() => { loadInvoiceData(); }, [job.id]);
@@ -142,69 +178,78 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     }
   };
 
-  const ensureInvoiceForPreview = async () => {
-    const finaliseItems = getFinaliseItems();
-    const finaliseTotal = finaliseItems.reduce((sum, item) => sum + calculateLineTotal(item), 0);
-    if (invoice) {
-      const inv = await updateInvoiceLineItems(job, invoice, finaliseItems, internalNotes);
-      setInvoice(inv);
-      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
-      return inv;
-    }
-    const finalAmount = finaliseTotal > 0 ? finaliseTotal : Number(amount) || 0;
-    const inv = await createInvoice(job, finalAmount, finaliseItems);
-    setInvoice(inv);
-    setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
-    onChange?.();
-    return inv;
+  const buildInvoiceDraft = () => {
+    const lineItems = getFinaliseItems().map(normalizeDraftItem);
+    return {
+      invoiceId: invoice?.id || "",
+      number: invoice?.number || "",
+      currency,
+      amount: lineItems.reduce((sum, item) => sum + calculateLineTotal(item), 0),
+      lineItems,
+      internalCostingNotes: internalNotes,
+    };
   };
 
   const finaliseInvoice = async () => {
     setCreating(true);
     setSendError("");
+    setFinaliseStatus(ASYNC_STATES.VALIDATING);
     try {
-      const inv = await ensureInvoiceForPreview();
+      const draft = buildInvoiceDraft();
+      const validationError = validateInvoiceDraft(job, draft.lineItems);
+      if (validationError) {
+        setFinaliseStatus(ASYNC_STATES.GENERATION_FAILED);
+        toast.error(validationError);
+        return;
+      }
+
+      setFinaliseStatus(ASYNC_STATES.GENERATING_PREVIEW);
       const nextRevision = pdfRevision + 1;
-      const doc = await generateInvoicePdf(job, inv, invoiceNotes, nextRevision);
+      const doc = await generateInvoicePdf(job, draft, invoiceNotes, nextRevision);
       setPdfDocument(doc);
       setPdfRevision(nextRevision);
-      setFinaliseStatus("preview");
+      setFinaliseStatus(ASYNC_STATES.PREVIEW_READY);
       setPreviewOpen(true);
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to generate invoice preview.");
+      const message = staffErrorMessage(err, "Invoice could not be generated.");
+      setFinaliseStatus(ASYNC_STATES.GENERATION_FAILED);
+      toast.error(message);
     } finally {
       setCreating(false);
     }
   };
 
   const confirmSend = async () => {
-    if (!invoice) return;
-    if (!job.customer_email) {
-      setSendError("No customer email on this job.");
-      setFinaliseStatus("failed");
+    const draft = buildInvoiceDraft();
+    const validationError = validateInvoiceDraft(job, draft.lineItems);
+    if (validationError) {
+      setSendError(validationError);
+      setFinaliseStatus(ASYNC_STATES.SEND_FAILED);
       return;
     }
     setSending(true);
     setSendError("");
+    setFinaliseStatus(ASYNC_STATES.SENDING);
     try {
-      await emailInvoicePdf(job, invoice, invoiceNotes, pdfRevision);
+      await emailInvoicePdf(job, draft, invoiceNotes, pdfRevision);
       await loadInvoiceData();
-      setFinaliseStatus("sent");
+      setFinaliseStatus(ASYNC_STATES.SENT);
       toast.success("Invoice sent to customer.");
       onChange?.();
     } catch (err) {
-      setSendError(err?.response?.data?.error || "Failed to send invoice to customer.");
-      setFinaliseStatus("failed");
-      toast.error(err?.response?.data?.error || "Failed to send invoice to customer.");
+      const message = staffErrorMessage(err, "Email sending failed.");
+      setSendError(message);
+      setFinaliseStatus(ASYNC_STATES.SEND_FAILED);
+      toast.error(message);
     } finally {
       setSending(false);
     }
   };
 
   const closePreview = () => {
-    if (finaliseStatus !== "sent") {
+    if (finaliseStatus !== ASYNC_STATES.SENT) {
       setPdfDocument(null);
-      setFinaliseStatus(invoice?.invoiceSentAt ? "sent" : "not_finalised");
+      setFinaliseStatus(invoice?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
     }
     setPreviewOpen(false);
   };
@@ -388,7 +433,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
           )}
           <div className="flex flex-wrap gap-2">
             {quote && <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Copy costing</Button>}
-            <Button size="sm" onClick={finaliseInvoice} disabled={creating} className="gap-1.5">
+            <Button size="sm" onClick={finaliseInvoice} disabled={creating || sending} className="gap-1.5">
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Finalise Invoice{lineTotal > 0 ? ` · ${currency} ${lineTotal.toFixed(2)}` : ""}
             </Button>
@@ -418,13 +463,18 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
 
 function FinaliseBadge({ status }) {
   const config = {
-    not_finalised: { label: "Not finalised", className: "border-amber-200 bg-amber-50 text-amber-700", icon: Clock },
-    preview: { label: "Preview generated", className: "border-blue-200 bg-blue-50 text-blue-700", icon: FileText },
+    idle: { label: "Not finalised", className: "border-amber-200 bg-amber-50 text-amber-700", icon: Clock },
+    validating: { label: "Validating", className: "border-blue-200 bg-blue-50 text-blue-700", icon: Loader2 },
+    generating_preview: { label: "Generating preview", className: "border-blue-200 bg-blue-50 text-blue-700", icon: Loader2 },
+    preview_ready: { label: "Preview ready", className: "border-blue-200 bg-blue-50 text-blue-700", icon: FileText },
+    sending: { label: "Sending", className: "border-blue-200 bg-blue-50 text-blue-700", icon: Loader2 },
     sent: { label: "Sent to customer", className: "border-emerald-200 bg-emerald-50 text-emerald-700", icon: CheckCircle2 },
-    failed: { label: "Send failed", className: "border-rose-200 bg-rose-50 text-rose-700", icon: AlertCircle },
+    send_failed: { label: "Send failed", className: "border-rose-200 bg-rose-50 text-rose-700", icon: AlertCircle },
+    generation_failed: { label: "Generation failed", className: "border-rose-200 bg-rose-50 text-rose-700", icon: AlertCircle },
   }[status] || {};
   const Icon = config.icon || Clock;
-  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${config.className}`}><Icon className="h-3 w-3" />{config.label}</span>;
+  const spinning = status === "validating" || status === "generating_preview" || status === "sending";
+  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${config.className}`}><Icon className={`h-3 w-3 ${spinning ? "animate-spin" : ""}`} />{config.label}</span>;
 }
 
 function VisibilityBadge({ invoice }) {

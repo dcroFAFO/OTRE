@@ -100,37 +100,62 @@ async function createPaymentUrl({ base44, req, invoice, job }) {
   return session.url;
 }
 
-function buildLineItems(invoice, quote, usageRecords) {
-  const usages = usageRecords || [];
-  const usageCodeByName = new Map(usages.map((usage) => [clean(usage.item_name).toLowerCase(), clean(usage.product_sku || usage.item_id)]));
-  const items = invoice?.line_items?.length ? [...invoice.line_items] : quote?.line_items?.length ? [...quote.line_items] : [];
-  if (items.length === 0) {
-    if (Number(quote?.labour_estimate) > 0) {
-      items.push({ description: "Labour", qty: 1, unit_price: Number(quote.labour_estimate), kind: "labour" });
-    }
-    for (const usage of usages) {
-      items.push({
-        description: usage.item_name || "Part",
-        qty: Number(usage.qty_used) || 1,
-        unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
-        kind: "part",
-        sku: usage.product_sku || usage.item_id || "",
-      });
-    }
-  }
-  return items.map((item) => {
+function normaliseCategory(value) {
+  const key = clean(value, "fee").toLowerCase();
+  if (["part", "labour", "consumable", "fee"].includes(key)) return key;
+  if (["surcharge", "expense", "discount", "item"].includes(key)) return "fee";
+  return "fee";
+}
+
+function normalizeLineItems(items, usageRecords = []) {
+  const usageCodeByName = new Map((usageRecords || []).map((usage) => [clean(usage.item_name).toLowerCase(), clean(usage.product_sku || usage.item_id)]));
+  return (Array.isArray(items) ? items : []).map((item) => {
     const description = clean(item.description, "Line item");
     const matchedCode = usageCodeByName.get(description.toLowerCase()) || "";
-    return {
+    const qty = Number(item.qty ?? item.quantity);
+    const unitPrice = Number(item.unit_price ?? item.unitPrice);
+    const taxRate = Number(item.tax_rate ?? item.taxRate ?? item.tax ?? 0) || 0;
+    const discountAmount = Number(item.discount_amount ?? item.discountAmount ?? 0) || 0;
+    const category = normaliseCategory(item.category || item.kind);
+    const normalised = {
       description,
       sku: clean(item.sku || item.product_sku || item.product_code || item.code || matchedCode),
-      qty: Number(item.qty) || 1,
-      unit_price: Number(item.unit_price) || 0,
-      tax_rate: Number(item.tax_rate) || 0,
-      discount_amount: Number(item.discount_amount) || 0,
-      kind: clean(item.kind, "item"),
+      qty,
+      quantity: qty,
+      unit_price: unitPrice,
+      unitPrice,
+      tax_rate: taxRate,
+      tax: taxRate,
+      discount_amount: discountAmount,
+      kind: category,
+      category,
+      source_usage_id: clean(item.source_usage_id),
     };
+    normalised.lineTotal = lineTotal(normalised);
+    return normalised;
   });
+}
+
+function buildLineItems({ invoiceDraft, quote, usageRecords }) {
+  const draftItems = invoiceDraft?.lineItems || invoiceDraft?.line_items;
+  if (Array.isArray(draftItems) && draftItems.length > 0) return normalizeLineItems(draftItems, usageRecords);
+
+  const partItems = (usageRecords || [])
+    .filter((usage) => !String(usage.item_id || "").startsWith("labour-"))
+    .map((usage) => ({
+      description: usage.item_name || "Part",
+      qty: Number(usage.qty_used),
+      unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
+      category: "part",
+      sku: usage.product_sku || usage.item_id || "",
+      source_usage_id: usage.id,
+    }));
+
+  const labourAndConsumables = (quote?.line_items || [])
+    .filter((item) => normaliseCategory(item.category || item.kind) !== "part")
+    .map((item) => ({ ...item, category: normaliseCategory(item.category || item.kind) }));
+
+  return normalizeLineItems([...partItems, ...labourAndConsumables], usageRecords);
 }
 
 function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount = 0 }) {
@@ -194,9 +219,10 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text("Description", margin, y);
-  doc.text("SKU / code", pageWidth - 255, y, { align: "right" });
-  doc.text("Qty", pageWidth - 185, y, { align: "right" });
-  doc.text("Unit", pageWidth - 110, y, { align: "right" });
+  doc.text("Category", pageWidth - 318, y, { align: "right" });
+  doc.text("GST", pageWidth - 255, y, { align: "right" });
+  doc.text("Qty", pageWidth - 195, y, { align: "right" });
+  doc.text("Unit", pageWidth - 115, y, { align: "right" });
   doc.text("Total", pageWidth - margin, y, { align: "right" });
   y += 12;
   doc.setDrawColor(226, 232, 240);
@@ -209,11 +235,12 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
       doc.addPage();
       y = 60;
     }
-    const descriptionLines = doc.splitTextToSize(item.description, 205);
+    const descriptionLines = doc.splitTextToSize(item.sku ? `${item.description} (${item.sku})` : item.description, 205);
     doc.text(descriptionLines, margin, y);
-    doc.text(item.sku || "-", pageWidth - 255, y, { align: "right" });
-    doc.text(String(item.qty), pageWidth - 185, y, { align: "right" });
-    doc.text(money(currency, item.unit_price), pageWidth - 110, y, { align: "right" });
+    doc.text(item.category || item.kind || "fee", pageWidth - 318, y, { align: "right" });
+    doc.text(`${Number(item.tax_rate) || 0}%`, pageWidth - 255, y, { align: "right" });
+    doc.text(String(item.qty), pageWidth - 195, y, { align: "right" });
+    doc.text(money(currency, item.unit_price), pageWidth - 115, y, { align: "right" });
     doc.text(money(currency, lineTotal(item)), pageWidth - margin, y, { align: "right" });
     y += Math.max(22, descriptionLines.length * 13 + 8);
   }
@@ -267,20 +294,88 @@ async function loadInvoiceContext(base44, jobId, invoiceId) {
 
   let invoice = null;
   try {
-    invoice = invoiceId
-      ? await base44.asServiceRole.entities.Invoice.get(invoiceId)
-      : (await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1))[0];
+    if (invoiceId) invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
+    else if (job.invoice_id) invoice = await base44.asServiceRole.entities.Invoice.get(job.invoice_id);
   } catch {
     invoice = null;
   }
-  if (!invoice) return { error: "No invoice found for this job", status: 404 };
+  if (!invoice) {
+    const invoices = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
+    invoice = invoices[0] || null;
+  }
 
   const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
-  const usageRecords = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.id });
+  const primaryUsage = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.id });
+  const legacyUsage = job.job_id && job.job_id !== job.id
+    ? await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.job_id })
+    : [];
+  const seen = new Set();
+  const usageRecords = [...primaryUsage, ...legacyUsage].filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
   return { job, invoice, quote: quotes[0] || null, usageRecords };
 }
 
+function validateInvoiceData(job, lineItems) {
+  if (!clean(job.customer_name)) return "Invoice could not be generated. Missing customer name.";
+  if (!clean(job.customer_email)) return "Missing customer email.";
+  if (!clean(job.reference || job.job_id || job.id)) return "Invoice could not be generated. Missing job/reference number.";
+  if (!lineItems.length) return "No billing line items found.";
+  const invalidItem = lineItems.find((item) => {
+    const qty = Number(item.qty);
+    const unitPrice = Number(item.unit_price);
+    return !clean(item.description) || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0;
+  });
+  if (invalidItem) return "Invoice could not be generated. Check line item quantities and prices.";
+  return "";
+}
+
+function invoicePayload(job, invoice, invoiceDraft, lineItems) {
+  const currency = invoice?.currency || invoiceDraft?.currency || "AUD";
+  const amount = lineItems.reduce((sum, item) => sum + lineTotal(item), 0);
+  return {
+    invoice_id: invoice?.invoice_id || invoiceDraft?.invoice_id || "",
+    quote_id: invoice?.quote_id || "",
+    job_id: job.id,
+    customer_id: job.customer_id || "",
+    number: invoice?.number || invoiceDraft?.number || `INV-${Date.now().toString().slice(-6)}`,
+    amount,
+    currency,
+    status: invoice?.status || "outstanding",
+    invoiceVisibility: invoice?.invoiceVisibility || "internal",
+    internalCostingNotes: invoiceDraft?.internalCostingNotes || invoice?.internalCostingNotes || "",
+    line_items: lineItems.map((item) => ({
+      description: item.description,
+      qty: item.qty,
+      unit_price: item.unit_price,
+      tax_rate: item.tax_rate,
+      discount_amount: item.discount_amount,
+      kind: item.category,
+      category: item.category,
+      sku: item.sku || "",
+      source_usage_id: item.source_usage_id || "",
+    })),
+  };
+}
+
+async function persistInvoice(base44, job, invoice, invoiceDraft, lineItems) {
+  const payload = invoicePayload(job, invoice, invoiceDraft, lineItems);
+  const saved = invoice
+    ? await base44.asServiceRole.entities.Invoice.update(invoice.id, payload)
+    : await base44.asServiceRole.entities.Invoice.create(payload);
+
+  await base44.asServiceRole.entities.Job.update(job.id, {
+    invoice_id: saved.id,
+    payment_status: saved.status || "outstanding",
+  });
+
+  return saved;
+}
+
 Deno.serve(async (req) => {
+  const requestMeta = { fn: "invoicePdfActions" };
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -288,39 +383,76 @@ Deno.serve(async (req) => {
     const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || user.is_customer === false || user.data?.is_customer === false;
     if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
 
-    const { action, jobId, invoiceId, notes = "", regenerateCount = 0 } = await req.json();
+    const { action, jobId, invoiceId, invoiceDraft = null, notes = "", regenerateCount = 0 } = await req.json();
+    requestMeta.action = action;
+    requestMeta.jobId = jobId;
     if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
 
     const business = await getBusiness(base44);
-    const context = await loadInvoiceContext(base44, jobId, invoiceId);
+    const context = await loadInvoiceContext(base44, jobId, invoiceId || invoiceDraft?.invoiceId);
     if (context.error) return Response.json({ error: context.error }, { status: context.status });
     const { job, invoice, quote, usageRecords } = context;
-    const lineItems = buildLineItems(invoice, quote, usageRecords);
-    const pdfBase64 = generatePdf({ business, job, invoice, lineItems, notes, regenerateCount });
-    const fileName = `${invoice.number || "tax-invoice"}-${job.reference || job.id}.pdf`.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const lineItems = buildLineItems({ invoiceDraft, quote, usageRecords });
+    const validationError = validateInvoiceData(job, lineItems);
+    if (validationError) return Response.json({ error: validationError }, { status: 400 });
 
-    if (action === "generate" || action === "regenerate") {
-      return Response.json({ pdfBase64, fileName, invoiceNumber: invoice.number, customerEmail: job.customer_email || "" });
+    const previewInvoice = invoicePayload(job, invoice, invoiceDraft, lineItems);
+    let pdfBase64;
+    try {
+      pdfBase64 = generatePdf({ business, job, invoice: previewInvoice, lineItems, notes, regenerateCount });
+    } catch (pdfError) {
+      console.error("[invoicePdfActions] PDF generation failed", JSON.stringify({ ...requestMeta, message: pdfError.message, stack: pdfError.stack }));
+      return Response.json({ error: "PDF generation failed." }, { status: 500 });
+    }
+
+    const fileName = `${previewInvoice.number || "tax-invoice"}-${job.reference || job.id}.pdf`.replace(/[^a-zA-Z0-9._-]/g, "-");
+
+    if (["preview", "generate", "regenerate"].includes(action)) {
+      return Response.json({ pdfBase64, fileName, invoiceNumber: previewInvoice.number, customerEmail: job.customer_email || "", lineItems });
     }
 
     if (action === "email") {
-      if (!job.customer_email) return Response.json({ error: "No customer email on this job" }, { status: 400 });
-      const total = Number(invoice.amount) || lineItems.reduce((sum, item) => sum + item.qty * item.unit_price, 0);
-      const paymentUrl = await createPaymentUrl({ base44, req, invoice, job });
-      await sendMail({
-        to: job.customer_email,
-        subject: `Tax invoice ${invoice.number} from ${business.name}`,
-        fromName: business.name,
-        fileName,
-        pdfBase64,
-        html: `<p>Hi ${job.customer_name || "there"},</p><p>Please find your tax invoice attached for job ${job.reference || job.id}.</p><p><strong>Total due:</strong> ${money(invoice.currency || "AUD", total)}</p>${paymentUrl ? `<p><a href="${paymentUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;">Pay securely with Stripe</a></p>` : ""}<p>Regards,<br>${business.name}</p>`,
-      });
+      let savedInvoice;
+      try {
+        savedInvoice = await persistInvoice(base44, job, invoice, invoiceDraft, lineItems);
+      } catch (persistError) {
+        console.error("[invoicePdfActions] invoice persistence failed", JSON.stringify({ ...requestMeta, message: persistError.message, stack: persistError.stack }));
+        return Response.json({ error: "Invoice could not be generated." }, { status: 500 });
+      }
+
+      const total = Number(savedInvoice.amount) || lineItems.reduce((sum, item) => sum + lineTotal(item), 0);
+      let paymentUrl = null;
+      try {
+        paymentUrl = await createPaymentUrl({ base44, req, invoice: savedInvoice, job });
+      } catch (paymentError) {
+        console.warn("[invoicePdfActions] payment link skipped", paymentError.message);
+      }
+
+      try {
+        await sendMail({
+          to: job.customer_email,
+          subject: `Tax invoice ${savedInvoice.number} from ${business.name}`,
+          fromName: business.name,
+          fileName,
+          pdfBase64,
+          html: `<p>Hi ${job.customer_name || "there"},</p><p>Please find your tax invoice attached for job ${job.reference || job.id}.</p><p><strong>Total due:</strong> ${money(savedInvoice.currency || "AUD", total)}</p>${paymentUrl ? `<p><a href="${paymentUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;">Pay securely with Stripe</a></p>` : ""}<p>Regards,<br>${business.name}</p>`,
+        });
+      } catch (emailError) {
+        console.error("[invoicePdfActions] email sending failed", JSON.stringify({ ...requestMeta, invoiceId: savedInvoice.id, message: emailError.message, stack: emailError.stack }));
+        return Response.json({ error: "Email sending failed." }, { status: 500 });
+      }
+
       const now = new Date().toISOString();
-      await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+      const visibleInvoice = await base44.asServiceRole.entities.Invoice.update(savedInvoice.id, {
         invoiceVisibility: "customer_visible",
-        invoiceVisibleAt: invoice.invoiceVisibleAt || now,
-        invoiceSentAt: invoice.invoiceSentAt || now,
+        invoiceVisibleAt: savedInvoice.invoiceVisibleAt || now,
+        invoiceSentAt: savedInvoice.invoiceSentAt || now,
         invoiceCustomerNotificationSentAt: now,
+      });
+      await base44.asServiceRole.entities.Job.update(job.id, {
+        invoice_id: savedInvoice.id,
+        payment_status: savedInvoice.status || "outstanding",
+        status: ["ready_for_pickup", "paid", "completed"].includes(job.status) ? job.status : "invoice_sent",
       });
       await base44.asServiceRole.entities.AuditEvent.create({
         event_type: "invoice_pdf_emailed",
@@ -332,12 +464,12 @@ Deno.serve(async (req) => {
         summary: `Tax invoice PDF emailed to ${job.customer_email}`,
         visibility: "customer",
       });
-      return Response.json({ sent: true, to: job.customer_email, fileName });
+      return Response.json({ sent: true, to: job.customer_email, fileName, invoice: visibleInvoice });
     }
 
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
   } catch (error) {
-    console.error("[invoicePdfActions] Error:", error.message, error.stack);
-    return Response.json({ error: error.message || "Failed to generate invoice PDF" }, { status: 500 });
+    console.error("[invoicePdfActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
+    return Response.json({ error: requestMeta.action === "email" ? "Email sending failed." : "Invoice could not be generated." }, { status: 500 });
   }
 });
