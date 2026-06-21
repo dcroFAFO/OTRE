@@ -143,98 +143,102 @@ export default function PublicBookingForm() {
   }
 
   return (
-    <form onSubmit={submit} aria-busy={submitting} className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl space-y-5">
-      <div>
-        <h2 className="font-heading text-2xl font-extrabold">Repair Details</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Tell us what needs attention so we can review the details before inspection.</p>
-      </div>
+    <form onSubmit={submit} aria-busy={submitting} className="rounded-2xl border border-border bg-card p-4 shadow-xl space-y-3 lg:p-5">
+      <div className={submitting ? "space-y-3 opacity-60 pointer-events-none" : "space-y-3"}>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <section className="space-y-2.5">
+            <h2 className="font-heading text-base font-extrabold">Your Details</h2>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field label="Name" required><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required /></Field>
+              <Field label={field("email").label || "Email"} required><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} required /></Field>
+            </div>
+            <PhoneNumberField
+              label={field("phone").label || "Phone"}
+              required
+              countryCode={form.phone_country_code || "+61"}
+              onCountryCodeChange={(value) => set("phone_country_code", value)}
+              value={form.phone}
+              onChange={(e) => { set("phone", e.target.value); setPhoneError(false); }}
+              error={phoneError}
+            />
+          </section>
 
-      <div className={submitting ? "space-y-5 opacity-60 pointer-events-none" : "space-y-5"}>
-      <h3 className="font-heading text-lg font-extrabold">Your Details</h3>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Name" required><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required /></Field>
-        <PhoneNumberField
-          label={field("phone").label || "Phone"}
-          required
-          countryCode={form.phone_country_code}
-          onCountryCodeChange={(value) => set("phone_country_code", value)}
-          value={form.phone}
-          onChange={(e) => { set("phone", e.target.value); setPhoneError(false); }}
-          error={phoneError}
-        />
-        <p className="sm:col-start-2 -mt-3 text-xs text-muted-foreground">Used for repair updates and job notifications.</p>
-      </div>
-      <Field label={field("email").label || "Email"} required><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} required /></Field>
+          <section className="space-y-2.5">
+            <h2 className="font-heading text-base font-extrabold">Scooter Details</h2>
+            <Field label={field("asset_label").label || "Scooter"} required>
+              <AssetBrandPicker
+                make={form.asset_make}
+                model={form.asset_model}
+                customMake={form.asset_custom_make}
+                customModel={form.asset_custom_model}
+                onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))}
+              />
+              {form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand && <p className="text-xs text-destructive">The selected model doesn't belong to {form.asset_make}.</p>}
+            </Field>
+          </section>
+        </div>
 
-      <h3 className="font-heading text-lg font-extrabold pt-2">Scooter Details</h3>
-      <Field label={field("asset_label").label || "Scooter"} required>
-        <AssetBrandPicker
-          make={form.asset_make}
-          model={form.asset_model}
-          customMake={form.asset_custom_make}
-          customModel={form.asset_custom_model}
-          onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))}
-        />
-        {form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand && <p className="text-sm text-destructive">The selected model doesn't belong to {form.asset_make}.</p>}
-      </Field>
+        <section className="space-y-2.5">
+          <h2 className="font-heading text-base font-extrabold">Repair Details</h2>
+          <div className="grid gap-2 lg:grid-cols-[1.15fr_0.85fr]">
+            <Field label={field("issue_description").label || "Issue"} required>
+              <Select value={form.issue_type} onValueChange={(v) => set("issue_type", v)}>
+                <SelectTrigger><SelectValue placeholder="Select a service…" /></SelectTrigger>
+                <SelectContent>
+                  {services.map((s) => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" required />}
+            </Field>
 
-      <h3 className="font-heading text-lg font-extrabold pt-2">What Needs Attention?</h3>
-      <Field label={field("issue_description").label || "Issue"} required>
-        <Select value={form.issue_type} onValueChange={(v) => set("issue_type", v)}>
-          <SelectTrigger><SelectValue placeholder="Select a service…" /></SelectTrigger>
-          <SelectContent>
-            {services.map((s) => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-        {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-24 mt-2" required />}
-      </Field>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <Field label={field("rideable").label || "Is it rideable?"}>
+                <Select value={form.rideable ? "yes" : "no"} onValueChange={(v) => set("rideable", v === "yes")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{options("rideable").map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+              <Field label={field("photo").label || "Photo"}>
+                <label className="flex h-9 items-center gap-2 cursor-pointer rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground hover:border-accent transition-colors">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {photoUrl ? "Photo uploaded ✓" : "Upload photo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+                </label>
+              </Field>
+            </div>
+          </div>
+        </section>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Field label={field("preferred_date").label || "Preferred date"}>
-          <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
-          <label className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label={field("preferred_date").label || "Preferred date"}>
+            <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
+          </Field>
+          <Field label={field("preferred_time_window").label || "Preferred time"}>
+            <Select value={form.preferred_time_window} onValueChange={(v) => set("preferred_time_window", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{options("preferred_time_window").map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground sm:pt-6">
             <Checkbox checked={form.asap} onCheckedChange={(v) => setForm((f) => ({ ...f, asap: !!v, preferred_date: v ? "" : f.preferred_date }))} />
-            <span>ASAP — as soon as possible</span>
+            <span>ASAP</span>
           </label>
-        </Field>
-        <Field label={field("preferred_time_window").label || "Preferred time"}>
-          <Select value={form.preferred_time_window} onValueChange={(v) => set("preferred_time_window", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{options("preferred_time_window").map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-          </Select>
-        </Field>
-      </div>
+        </div>
 
-      <Field label={field("rideable").label || "Is it rideable?"}>
-        <Select value={form.rideable ? "yes" : "no"} onValueChange={(v) => set("rideable", v === "yes")}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{options("rideable").map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-        </Select>
-      </Field>
-
-      <Field label={field("photo").label || "Photo"}>
-        <label className="flex items-center gap-2 cursor-pointer rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-accent transition-colors">
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {photoUrl ? "Photo uploaded ✓" : "Upload a photo of the issue"}
-          <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+        <label className="flex items-start gap-2 text-xs text-muted-foreground">
+          <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
+          <span>I agree to be contacted about this booking and understand my tracking link should be kept private.</span>
         </label>
-        <p className="text-xs text-muted-foreground">Upload photos if they help show the issue, damage, error code, tyre, brake, wiring, or scooter condition.</p>
-      </Field>
-
-      <label className="flex items-start gap-3 text-sm text-muted-foreground">
-        <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
-        <span>I agree to be contacted about this booking and understand my tracking link should be kept private.</span>
-      </label>
       </div>
 
       {submitting && (
-        <p className="rounded-xl border border-accent/20 bg-accent/10 px-4 py-3 text-sm font-medium text-accent flex items-center justify-center gap-2">
+        <p className="rounded-lg border border-accent/20 bg-accent/10 px-3 py-2 text-sm font-medium text-accent flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" /> Sending your booking request…
         </p>
       )}
 
-      <Button type="submit" disabled={submitting || uploading || !form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl disabled:cursor-not-allowed">
+      <Button type="submit" disabled={submitting || uploading || !form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg disabled:cursor-not-allowed">
         {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Submitting repair request…</> : "Submit Repair Request"}
       </Button>
     </form>
@@ -242,5 +246,5 @@ export default function PublicBookingForm() {
 }
 
 function Field({ label, required, children }) {
-  return <div className="space-y-1.5"><Label className="text-sm font-medium">{label}{required && <span className="text-accent"> *</span>}</Label>{children}</div>;
+  return <div className="space-y-1"><Label className="text-xs font-semibold">{label}{required && <span className="text-accent"> *</span>}</Label>{children}</div>;
 }

@@ -6,13 +6,13 @@ import { PHONE_COUNTRY_CODES } from "@/lib/phone";
 
 export default function PhoneNumberField({ label = "Phone", required, countryCode, onCountryCodeChange, value, onChange, error }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium">
+    <div className="space-y-1">
+      <Label className="text-xs font-semibold">
         {label}{required && <span className="text-accent"> *</span>}
       </Label>
-      <div className="flex gap-2">
+      <div className="flex w-full min-w-0 items-stretch">
         <Select value={countryCode || "+61"} onValueChange={onCountryCodeChange}>
-          <SelectTrigger className="w-[112px] shrink-0">
+          <SelectTrigger className="h-9 w-[92px] shrink-0 rounded-r-none border-r-0 bg-muted/40 px-2">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -29,11 +29,11 @@ export default function PhoneNumberField({ label = "Phone", required, countryCod
           placeholder="0415 505 908"
           required={required}
           aria-invalid={!!error}
-          className="min-w-0"
+          className="min-w-0 flex-1 rounded-l-none"
         />
       </div>
-      <p className="text-xs text-muted-foreground">Used for repair updates and job notifications.</p>
-      {error && <p className="text-sm text-destructive">Please enter a valid phone number.</p>}
+      <p className="text-[11px] leading-tight text-muted-foreground">Used for repair updates and job notifications.</p>
+      {error && <p className="text-xs text-destructive">Please enter a valid phone number.</p>}
     </div>
   );
 }
