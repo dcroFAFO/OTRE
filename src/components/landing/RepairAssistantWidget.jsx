@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, Loader2, MessageCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,24 @@ export default function RepairAssistantWidget() {
   const [input, setInput] = useState("");
   const [context, setContext] = useState({ issue: "", makeModel: "", rideable: "", safety: "", category: "" });
   const [loading, setLoading] = useState(false);
+  const [hasRevealed, setHasRevealed] = useState(false);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (hasRevealed) return;
+    const hero = document.getElementById("top");
+    if (!hero) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting && entry.boundingClientRect.bottom <= 0) {
+        setHasRevealed(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0 });
+
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, [hasRevealed]);
 
   const step = useMemo(() => {
     if (!context.issue) return 0;
@@ -105,11 +122,13 @@ export default function RepairAssistantWidget() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  if (!hasRevealed) return null;
+
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-full border border-accent/30 bg-card px-4 py-3 text-sm font-bold text-foreground shadow-xl shadow-slate-900/10 transition hover:border-accent hover:bg-accent/10 sm:bottom-5 sm:right-5"
+        className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-3 duration-500 items-center gap-2 rounded-full border border-accent/30 bg-card px-4 py-3 text-sm font-bold text-foreground shadow-xl shadow-slate-900/10 transition hover:border-accent hover:bg-accent/10 sm:bottom-5 sm:right-5"
         aria-label="Open scooter repair assistant"
       >
         <MessageCircle className="h-5 w-5 text-accent" />
@@ -119,7 +138,7 @@ export default function RepairAssistantWidget() {
   }
 
   return (
-    <section className="fixed bottom-4 right-4 z-40 w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-slate-900/15 sm:bottom-5 sm:right-5" aria-label="Scooter repair assistant">
+    <section className="fixed bottom-4 right-4 z-40 w-[calc(100vw-2rem)] max-w-sm animate-in fade-in slide-in-from-bottom-3 duration-300 overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-slate-900/15 sm:bottom-5 sm:right-5" aria-label="Scooter repair assistant">
       <div className="flex items-center justify-between border-b border-border bg-accent/10 px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-accent-foreground"><Bot className="h-5 w-5" /></span>
