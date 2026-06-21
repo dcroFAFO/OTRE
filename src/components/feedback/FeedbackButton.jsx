@@ -5,8 +5,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import FeedbackModal from "./FeedbackModal";
 
 // Floating "Send Feedback" button — only shown to logged-in users on the
-// landing page and customer portal (staff don't leave feedback).
-const FEEDBACK_PATHS = ["/", "/portal"];
+// customer portal (staff don't leave feedback).
+const FEEDBACK_PATHS = ["/portal"];
 
 export default function FeedbackButton() {
   const { user } = useCurrentUser();
