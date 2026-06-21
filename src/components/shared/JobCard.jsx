@@ -1,12 +1,15 @@
 import React from "react";
 import { User, Wrench, CreditCard, Clock, GripVertical, Calendar, AlertTriangle } from "lucide-react";
 import StatusPill from "./StatusPill";
+import ServiceTypeBadge from "./ServiceTypeBadge";
 import { cn } from "@/lib/utils";
+import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BORDER_CLASSES, SERVICE_TYPE_STRIP_CLASSES } from "@/config/serviceTypes";
 import { getPaymentStatus, getStatus } from "@/config/jobConfig";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 
 export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
   const paymentStatus = getPaymentStatus(job.payment_status);
+  const serviceType = getServiceType(job.service_type || DEFAULT_SERVICE_TYPE);
   const outstanding = job.payment_status === "outstanding";
   const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
   const waitingLabel = DEFAULT_WAITING_REASONS.find((r) => r.key === job.waiting_reason)?.label;
@@ -15,14 +18,14 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
     <div
       onClick={onClick}
       className={cn(
-        "group cursor-pointer rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-gentle hover:border-accent/30 select-none",
-        outstanding && "border-l-2 border-l-rose-400",
-        isWaiting && "border-l-2 border-l-amber-400",
+        "group relative cursor-pointer overflow-hidden rounded-2xl border border-l-4 border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-gentle select-none",
+        SERVICE_TYPE_BORDER_CLASSES[serviceType.key],
         className
       )}
     >
+      <span className={cn("absolute left-4 right-4 top-0 h-1 rounded-b-full", SERVICE_TYPE_STRIP_CLASSES[serviceType.key])} />
       {/* Header row */}
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 pt-0.5">
         {dragHandleProps && (
           <span {...dragHandleProps} onClick={(e) => e.stopPropagation()} className="mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0">
             <GripVertical className="h-4 w-4" />
@@ -50,7 +53,10 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
           )}
 
           <div className="mt-2 flex items-center justify-between gap-1.5 flex-wrap">
-            <StatusPill value={job.status} />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <ServiceTypeBadge value={serviceType.key} />
+              <StatusPill value={job.status} />
+            </div>
             <div className="flex items-center gap-2">
               {job.scheduled_date && !compact && (
                 <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">

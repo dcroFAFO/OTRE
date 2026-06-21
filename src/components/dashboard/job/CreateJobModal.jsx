@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEFAULT_SERVICE_TYPE, SERVICE_TYPES, classifyServiceType } from "@/config/serviceTypes";
 
 const CATEGORY_COLORS = {
   tyre: "bg-blue-100 text-blue-700",
@@ -29,6 +30,8 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
     customer_email: "",
     asset_label: "",
     issue_description: "",
+    service_type: DEFAULT_SERVICE_TYPE,
+    priority: "medium",
     job_type: "service",
   });
   const [asset, setAsset] = useState({ make: "", model: "", customMake: "", customModel: "" });
@@ -45,6 +48,7 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
     setForm((f) => ({
       ...f,
       issue_description: t.issue_description || "",
+      service_type: t.service_type || classifyServiceType(t.issue_description || t.name || ""),
       job_type: t.job_type || "service",
     }));
     setMode("blank");
@@ -66,7 +70,7 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
   const handleClose = () => {
     setMode("blank");
     setSelectedTemplate(null);
-    setForm({ customer_name: "", customer_phone: "", customer_email: "", asset_label: "", issue_description: "", job_type: "service" });
+    setForm({ customer_name: "", customer_phone: "", customer_email: "", asset_label: "", issue_description: "", service_type: DEFAULT_SERVICE_TYPE, priority: "medium", job_type: "service" });
     setAsset({ make: "", model: "", customMake: "", customModel: "" });
     onClose();
   };
@@ -153,10 +157,19 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
                 />
               </div>
               <div className="col-span-2 space-y-1">
+                <Label className="text-xs">Service type</Label>
+                <Select value={form.service_type || DEFAULT_SERVICE_TYPE} onValueChange={(v) => set("service_type", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select service type" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {SERVICE_TYPES.map((type) => <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 space-y-1">
                 <Label className="text-xs">Issue description {selectedTemplate && <span className="text-muted-foreground">(from template)</span>}</Label>
                 <Textarea
                   value={form.issue_description}
-                  onChange={(e) => set("issue_description", e.target.value)}
+                  onChange={(e) => setForm((f) => ({ ...f, issue_description: e.target.value, service_type: f.service_type === DEFAULT_SERVICE_TYPE ? classifyServiceType(e.target.value) : f.service_type }))}
                   placeholder="Describe the issue..."
                   className="min-h-[80px]"
                 />

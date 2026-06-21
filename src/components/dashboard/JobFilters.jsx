@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
 import { JOB_STATUSES, PAYMENT_STATUSES, JOB_TYPES, WAITING_REASONS } from "@/config/jobConfig";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
+import { JOB_PRIORITIES, SERVICE_TYPES } from "@/config/serviceTypes";
 
-export const EMPTY_FILTERS = { q: "", status: "all", payment: "all", type: "all", waiting: "all" };
+export const EMPTY_FILTERS = { q: "", status: "all", service_type: "all", priority: "all", payment: "all", type: "all", waiting: "all" };
 
 const isActive = (filters) => Object.entries(filters).some(([k, v]) => k !== "q" ? v !== "all" : v !== "");
 
@@ -46,6 +47,10 @@ export default function JobFilters({ filters, setFilters }) {
 
         <FilterSelect value={filters.status} onChange={(v) => set("status", v)} placeholder="Status"
           options={JOB_STATUSES.map((s) => ({ v: s.key, l: s.label }))} />
+        <FilterSelect value={filters.service_type} onChange={(v) => set("service_type", v)} placeholder="Service type"
+          options={SERVICE_TYPES.map((s) => ({ v: s.key, l: s.label }))} />
+        <FilterSelect value={filters.priority} onChange={(v) => set("priority", v)} placeholder="Priority"
+          options={JOB_PRIORITIES.map((s) => ({ v: s.key, l: s.label }))} />
         <FilterSelect value={filters.payment} onChange={(v) => set("payment", v)} placeholder="Payment"
           options={PAYMENT_STATUSES.map((s) => ({ v: s.key, l: s.label }))} />
         <FilterSelect value={filters.type} onChange={(v) => set("type", v)} placeholder="Job type"

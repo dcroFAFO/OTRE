@@ -56,6 +56,38 @@
     "service_category_key": {
       "type": "string"
     },
+    "service_type": {
+      "type": "string",
+      "enum": [
+        "general_repair",
+        "puncture_tyres",
+        "brakes",
+        "battery",
+        "controller_electronics",
+        "display_dashboard",
+        "throttle",
+        "wiring",
+        "water_damage",
+        "service_maintenance",
+        "diagnostic",
+        "warranty",
+        "custom_work",
+        "other"
+      ],
+      "default": "general_repair",
+      "description": "Repair/service type used for visual identification on job cards. Separate from job status."
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "urgent"
+      ],
+      "default": "medium",
+      "description": "Job priority used for board filtering."
+    },
     "issueDescription": {
       "type": "string",
       "description": "Public booking compatible issue description"
@@ -99,6 +131,9 @@
           "type": "string"
         },
         "serviceRequested": {
+          "type": "string"
+        },
+        "serviceType": {
           "type": "string"
         },
         "preferredDate": {
@@ -152,6 +187,9 @@
           "type": "string"
         },
         "issueOrService": {
+          "type": "string"
+        },
+        "service_type": {
           "type": "string"
         },
         "date": {

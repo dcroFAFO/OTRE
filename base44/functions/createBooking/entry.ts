@@ -4,6 +4,7 @@ const SLUG = 'otr-scooters';
 const INTAKE_STATUS = 'requested';
 const JOB_TYPE = 'repair';
 const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice', 'pay_invoice'];
+const DEFAULT_SERVICE_TYPE = 'general_repair';
 const encoder = new TextEncoder();
 
 async function sha256(value) {
@@ -37,10 +38,28 @@ function bookingModel(form) {
   return form.scooterModel || (form.asset_model === 'Other' ? form.asset_custom_model : form.asset_model) || '';
 }
 
+function classifyServiceType(text = '') {
+  const value = String(text).toLowerCase();
+  if (/puncture|tyre|tire|tube/.test(value)) return 'puncture_tyres';
+  if (/brake|rotor|pad/.test(value)) return 'brakes';
+  if (/battery|range|charging|charger|charge/.test(value)) return 'battery';
+  if (/controller|error code|fault code/.test(value)) return 'controller_electronics';
+  if (/display|dashboard|screen/.test(value)) return 'display_dashboard';
+  if (/throttle/.test(value)) return 'throttle';
+  if (/wiring|cable|connector/.test(value)) return 'wiring';
+  if (/water|rain|corrosion/.test(value)) return 'water_damage';
+  if (/service|maintenance/.test(value)) return 'service_maintenance';
+  if (/diagnostic|diagnosis|inspect|assessment/.test(value)) return 'diagnostic';
+  if (/warranty/.test(value)) return 'warranty';
+  if (/custom|modify|modification/.test(value)) return 'custom_work';
+  return DEFAULT_SERVICE_TYPE;
+}
+
 function bookingSnapshot(form, email, phone) {
   const make = bookingMake(form);
   const model = bookingModel(form);
   const files = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
+  const issueText = [form.issue_description, form.serviceRequested, form.issue_type].filter(Boolean).join(' ');
   return {
     customerName: form.customer_name || form.customerName || '',
     customerEmail: email || form.customer_email || form.customerEmail || '',
@@ -52,6 +71,7 @@ function bookingSnapshot(form, email, phone) {
     issueOrService: form.issue_description || form.serviceRequested || '',
     issueDescription: form.issue_description || '',
     serviceRequested: form.serviceRequested || form.issue_type || '',
+    serviceType: form.service_type || classifyServiceType(issueText),
     preferredDate: form.preferred_date || form.preferredDate || '',
     preferredTimeWindow: form.preferred_time_window || form.preferredTimeWindow || '',
     isRideable: typeof form.rideable === 'boolean' ? form.rideable : form.isRideable,
@@ -178,6 +198,7 @@ Deno.serve(async (req) => {
       model: submittedBooking.scooterModel,
       issueOrService: submittedBooking.issueOrService,
       initial_issue_notes: submittedBooking.issueOrService,
+      service_type: submittedBooking.serviceType,
       date: submittedBooking.preferredDate,
       isRideable: submittedBooking.isRideable,
       booking_files: submittedBooking.files,
@@ -196,6 +217,8 @@ Deno.serve(async (req) => {
       issue_description: form.issue_description,
       source: 'public_booking',
       job_type: JOB_TYPE,
+      service_type: submittedBooking.serviceType,
+      priority: 'medium',
       status: INTAKE_STATUS,
       scheduled_date: form.asap ? null : (form.preferred_date || null),
       preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window,

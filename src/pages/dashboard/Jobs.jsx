@@ -8,12 +8,13 @@ import JobBoard from "@/components/dashboard/job/JobBoard";
 import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
+import { DEFAULT_SERVICE_TYPE } from "@/config/serviceTypes";
 import { SlidersHorizontal, Plus, LayoutGrid, List } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
 import { isStaffRole } from "@/config/roles";
 
-const FILTER_PARAM_KEYS = ["status", "payment", "type", "waiting", "q"];
+const FILTER_PARAM_KEYS = ["status", "service_type", "priority", "payment", "type", "waiting", "q"];
 
 const filtersFromSearch = (search) => {
   const params = new URLSearchParams(search);
@@ -21,6 +22,8 @@ const filtersFromSearch = (search) => {
     ...EMPTY_FILTERS,
     q: params.get("q") || "",
     status: params.get("status") || "all",
+    service_type: params.get("service_type") || "all",
+    priority: params.get("priority") || "all",
     payment: params.get("payment") || "all",
     type: params.get("type") || "all",
     waiting: params.get("waiting") || "all",
@@ -48,6 +51,8 @@ export default function Jobs() {
     const params = new URLSearchParams();
     if (filters.q) params.set("q", filters.q);
     if (filters.status !== "all") params.set("status", filters.status);
+    if (filters.service_type !== "all") params.set("service_type", filters.service_type);
+    if (filters.priority !== "all") params.set("priority", filters.priority);
     if (filters.payment !== "all") params.set("payment", filters.payment);
     if (filters.type !== "all") params.set("type", filters.type);
     if (filters.waiting !== "all") params.set("waiting", filters.waiting);
@@ -81,12 +86,14 @@ export default function Jobs() {
 
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter((j) =>
-      [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
-        .some((v) => v?.toLowerCase().includes(q))
-    );
-  }, [jobs, filters.q]);
+    return jobs.filter((j) => {
+      const matchesSearch = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
+        .some((v) => v?.toLowerCase().includes(q));
+      const matchesService = filters.service_type === "all" || (j.service_type || DEFAULT_SERVICE_TYPE) === filters.service_type;
+      const matchesPriority = filters.priority === "all" || (j.priority || "medium") === filters.priority;
+      return matchesSearch && matchesService && matchesPriority;
+    });
+  }, [jobs, filters.q, filters.service_type, filters.priority]);
 
   return (
     <div className="space-y-5">

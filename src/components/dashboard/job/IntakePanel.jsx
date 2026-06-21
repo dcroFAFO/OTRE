@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { logError } from "@/lib/logger";
 import { format } from "date-fns";
 import ScooterSpecBox from "./ScooterSpecBox";
+import { DEFAULT_SERVICE_TYPE, SERVICE_TYPES } from "@/config/serviceTypes";
 
 const BATTERY_CONDITIONS = [
   { key: "good", label: "Good" },
@@ -37,6 +38,7 @@ function bookingPrefill(job) {
     model: booking.scooterModel || "",
     issueOrService: booking.issueOrService || booking.issueDescription || job.issue_description || job.issueDescription || "",
     initial_issue_notes: booking.issueOrService || booking.issueDescription || job.issue_description || job.issueDescription || "",
+    service_type: job.service_type || booking.serviceType || DEFAULT_SERVICE_TYPE,
     date: booking.preferredDate || job.scheduled_date || "",
     isRideable: typeof booking.isRideable === "boolean" ? booking.isRideable : job.rideable,
     booking_files: booking.files || booking.photos || [],
@@ -61,6 +63,7 @@ function initialIntakeForm(job) {
     powers_on: true,
     initial_issue_notes: "",
     issueOrService: "",
+    service_type: DEFAULT_SERVICE_TYPE,
     date: "",
     isRideable: undefined,
     booking_files: [],
@@ -165,6 +168,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       };
       await base44.entities.Job.update(job.id, {
         intake,
+        service_type: form.service_type || DEFAULT_SERVICE_TYPE,
         ...(form.make ? { asset_label: [form.make, form.model].filter(Boolean).join(" ") } : {}),
       });
 
@@ -298,6 +302,15 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </Field>
       </div>
 
+      <Field label="Service type">
+        <Select value={form.service_type || DEFAULT_SERVICE_TYPE} onValueChange={(v) => set("service_type", v)}>
+          <SelectTrigger><SelectValue placeholder="Select service type" /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            {SERVICE_TYPES.map((type) => <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </Field>
+
       <Field label="Issue / requested service">
         <Textarea
           value={form.initial_issue_notes || ""}
@@ -396,6 +409,7 @@ function IntakeReadOnly({ intake, jobId }) {
     ["Make", intake.make || intake.scooterMake],
     ["Model", intake.model || intake.scooterModel],
     ["Serial number", intake.serial_number],
+    ["Service type", SERVICE_TYPES.find((type) => type.key === intake.service_type)?.label],
     ["Battery condition", intake.battery_condition],
     ["Battery voltage", intake.battery_voltage],
     ["Odometer", intake.odometer_km != null ? `${intake.odometer_km} km` : null],
