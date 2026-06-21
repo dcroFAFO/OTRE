@@ -1,8 +1,8 @@
 export const DEFAULT_BUSINESS = {
   name: "On The Run Electrics",
   legalName: "On The Run Electrics",
-  tagline: "Expert electric scooter repairs, servicing, and sales.",
-  subheading: "From puncture fixes and battery replacements to full diagnostics and brand-new scooters — handled by specialists who know e-scooters inside out.",
+  tagline: "Don’t Stop. Get Back On The Run.",
+  subheading: "Fast, reliable electric scooter repairs, servicing, and diagnostics to keep your ride safe, road-ready, and moving.",
   email: "hello@otrscooters.com",
   phone: "(03) 9000 1234",
   address: "12 Workshop Lane, Melbourne VIC",
@@ -16,8 +16,8 @@ export const DEFAULT_BUSINESS = {
     { day: "Saturday", hours: "10:00 — 15:00" },
     { day: "Sunday", hours: "Closed" },
   ],
-  primaryCta: { label: "View Services", target: "#services" },
-  secondaryCta: { label: "Book a Technician", target: "#book" },
+  primaryCta: { label: "Book a Repair", target: "/book" },
+  secondaryCta: { label: "View Services", target: "#services" },
 };
 
 export const DEFAULT_APP_SETTINGS = {
@@ -35,18 +35,19 @@ export const DEFAULT_APP_SETTINGS = {
   landing: {
     navLinks: [
       { label: "Services", href: "#services" },
+      { label: "Common issues", href: "#common-issues" },
       { label: "How it works", href: "#journey" },
       { label: "Book a repair", href: "/book" },
     ],
-    heroEyebrow: "Repairs · Servicing · Sales",
-    heroBenefits: ["All major brands serviced", "Genuine & compatible parts", "Transparent fixed-price quotes"],
-    servicesEyebrow: "What we do",
-    servicesTitle: "Everything your scooter needs, in one place",
-    servicesBody: "From quick puncture fixes to full electrical diagnostics and brand-new scooters — handled by people who know e-scooters inside out.",
+    heroEyebrow: "Repairs · Servicing · Diagnostics",
+    heroBenefits: ["Repairs", "Servicing", "Diagnostics & maintenance"],
+    servicesEyebrow: "Repairs & Services",
+    servicesTitle: "Repairs & Services",
+    servicesBody: "From routine servicing to fault finding and major repairs, On The Run Electrics helps keep your electric scooter safe, reliable, and ready to ride. Whether you need brake adjustments, tyre changes, battery diagnostics, electrical repairs, or a full service, we make the process simple with clear updates and practical advice from start to finish.",
     journeyEyebrow: "How it works",
-    journeyTitle: "From drop-off to pickup — always in the loop",
-    journeyBody: "Every job moves through clear, tracked stages. You'll know exactly where your scooter is at all times.",
-    portalLabel: "Customer Portal",
+    journeyTitle: "How It Works",
+    journeyBody: "Tell us what is wrong with your scooter and book your repair online. Bring your scooter in for inspection, and we will assess the issue, complete the required work, and keep you updated as the job progresses. Once your repair is underway, you can track the status of your job online, so you know where things are at without needing to chase updates. When your scooter is ready, we will let you know it is time for pickup.",
+    portalLabel: "Job Tracking",
   },
   dashboard: {
     nav: {
@@ -87,14 +88,12 @@ export const DEFAULT_SERVICE_CATEGORIES = [
 ];
 
 export const DEFAULT_SERVICES = [
-  { name: "Electric Scooter Diagnostics", category: "Diagnostics", category_key: "diagnostics", icon: "Activity", description: "Full electronic and mechanical health check to pinpoint faults fast." },
-  { name: "Puncture & Tyre Repair", category: "Repairs", category_key: "repairs", icon: "CircleDot", description: "Tube, tyre and puncture fixes for solid and pneumatic wheels." },
-  { name: "Brake Servicing", category: "Repairs", category_key: "repairs", icon: "Disc", description: "Brake adjustment, pad replacement and safety calibration." },
-  { name: "Battery Checks & Replacement", category: "Power", category_key: "power", icon: "BatteryCharging", description: "Capacity testing, cell diagnostics and safe battery swaps." },
-  { name: "Controller & Electrical Faults", category: "Diagnostics", category_key: "diagnostics", icon: "Cpu", description: "Wiring, controller and throttle fault diagnosis and repair." },
-  { name: "General Servicing", category: "Maintenance", category_key: "maintenance", icon: "Wrench", description: "Tune-ups, tightening, lubrication and full safety inspection." },
-  { name: "Parts Supply", category: "Parts", category_key: "parts", icon: "Package", description: "Genuine and compatible parts sourced for most major brands." },
-  { name: "Scooter Sales", category: "Sales", category_key: "sales", icon: "ShoppingBag", description: "Quality new and refurbished electric scooters with warranty." },
+  { name: "Brake Repairs", category: "Repairs", category_key: "repairs", icon: "Disc", description: "Brake adjustments, pad replacements, cable checks, and general braking system repairs to keep your scooter stopping safely." },
+  { name: "Tyres & Punctures", category: "Repairs", category_key: "repairs", icon: "CircleDot", description: "Tyre changes, tube replacements, puncture repairs, and checks for wear, damage, or unsafe riding conditions." },
+  { name: "Battery Diagnostics", category: "Diagnostics", category_key: "diagnostics", icon: "BatteryCharging", description: "Testing and inspection for charging issues, reduced range, power loss, and battery-related faults." },
+  { name: "Electrical Fault Finding", category: "Diagnostics", category_key: "diagnostics", icon: "Cpu", description: "Diagnosis of wiring faults, lighting issues, error codes, controller problems, throttle faults, and intermittent power issues." },
+  { name: "General Servicing", category: "Maintenance", category_key: "maintenance", icon: "Wrench", description: "Routine checks and maintenance covering brakes, tyres, bolts, lights, wiring, folding mechanisms, suspension, and overall ride safety." },
+  { name: "Safety Checks", category: "Maintenance", category_key: "maintenance", icon: "Activity", description: "Practical inspections to identify worn, loose, damaged, or unsafe components before they become bigger problems." },
 ];
 
 export const DEFAULT_JOB_STATUSES = [

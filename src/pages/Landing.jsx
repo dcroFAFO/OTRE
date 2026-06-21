@@ -3,6 +3,11 @@ import LandingNav from "@/components/landing/LandingNav";
 import HeroSection from "@/components/landing/HeroSection";
 import ServicesSection from "@/components/landing/ServicesSection";
 import JourneySection from "@/components/landing/JourneySection";
+import IntroSection from "@/components/landing/IntroSection";
+import CommonIssuesSection from "@/components/landing/CommonIssuesSection";
+import ServicingSection from "@/components/landing/ServicingSection";
+import WhyChooseSection from "@/components/landing/WhyChooseSection";
+import FinalCTASection from "@/components/landing/FinalCTASection";
 import LandingFooter from "@/components/landing/LandingFooter";
 import SEO from "@/components/SEO";
 
@@ -10,8 +15,8 @@ export default function Landing() {
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    name: "OTR Scooters",
-    description: "Electric scooter repairs, diagnostics, servicing, parts and sales with online booking and job tracking.",
+    name: "On The Run Electrics",
+    description: "Electric scooter repairs, servicing, diagnostics and maintenance.",
     url: typeof window !== "undefined" ? window.location.origin : "/",
     serviceType: "Electric scooter repair",
   };
@@ -19,8 +24,8 @@ export default function Landing() {
   return (
     <>
       <SEO
-        title="Electric Scooter Repairs | OTR Scooters"
-        description="Book expert electric scooter repairs, diagnostics, servicing and parts with transparent quotes, online approvals and real-time job tracking."
+        title="Electric Scooter Repairs | On The Run Electrics"
+        description="Fast, reliable electric scooter repairs, servicing, diagnostics and maintenance to keep your ride safe and road-ready."
         canonical="/"
         ogType="website"
         structuredData={localBusinessSchema}
@@ -29,8 +34,13 @@ export default function Landing() {
       <LandingNav />
       <main>
         <HeroSection />
+        <IntroSection />
         <ServicesSection />
+        <CommonIssuesSection />
+        <ServicingSection />
+        <WhyChooseSection />
         <JourneySection />
+        <FinalCTASection />
       </main>
       <LandingFooter />
     </div>

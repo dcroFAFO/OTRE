@@ -7,10 +7,10 @@ import ScrollReveal from "./ScrollReveal";
 // Simplified to 4 high-level stages — the booking & service offering are the
 // focus, so this is a light-touch reassurance strip rather than the main event.
 const STEPS = [
-  { icon: CalendarCheck, label: "Book it in", sub: "Tell us the issue, pick a time" },
-  { icon: Search, label: "We assess", sub: "Full diagnostic & fixed-price quote" },
-  { icon: Wrench, label: "We fix it", sub: "Repaired by e-scooter specialists" },
-  { icon: PackageCheck, label: "Pick it up", sub: "Ready to ride, work guaranteed" },
+  { icon: CalendarCheck, label: "Book Your Repair", sub: "Tell us what is wrong with your scooter and submit your repair request online." },
+  { icon: Search, label: "Bring It In", sub: "Drop off your scooter so it can be inspected and assessed." },
+  { icon: Wrench, label: "Track the Job", sub: "Follow your repair status online while the work is underway." },
+  { icon: PackageCheck, label: "Get Back On The Run", sub: "Pick up your scooter once the repair is complete and it is ready to ride." },
 ];
 
 export default function JourneySection() {
@@ -73,7 +73,7 @@ export default function JourneySection() {
 
         <ScrollReveal delay={0.2} className="mt-14">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted-foreground border-t border-border pt-10">
-            {["All major brands serviced", "Transparent fixed-price quotes", "Genuine & compatible parts", "Work guaranteed"].map((t) => (
+            {["Repairs", "Servicing", "Diagnostics", "Maintenance"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                 {t}

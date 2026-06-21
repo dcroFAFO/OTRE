@@ -37,7 +37,7 @@ export default function LandingFooter() {
         </div>
       </div>
       <div className="border-t border-border py-5 text-center text-xs text-muted-foreground/70">
-        © {CURRENT_YEAR} {business.legalName}. Powered by a modular job management platform.
+        © {CURRENT_YEAR} {business.legalName}. Electric scooter repairs, servicing, diagnostics and maintenance.
       </div>
     </footer>
   );

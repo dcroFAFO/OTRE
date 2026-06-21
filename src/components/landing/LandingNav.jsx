@@ -56,7 +56,7 @@ export default function LandingNav() {
 
         <div className="hidden md:flex items-center gap-2">
           <Link to="/portal"><Button variant="ghost" size="sm">{app.landing.portalLabel}</Button></Link>
-          <Link to="/book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book Now</Button></Link>
+          <Link to="/book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book a Repair</Button></Link>
         </div>
 
         <button className="md:hidden p-2" onClick={() => setOpen(!open)}>

@@ -74,8 +74,12 @@ export default function HeroSection() {
           </span>
 
           <h1 className="mt-5 font-heading text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
-            {business.tagline}
+            {business.name}
           </h1>
+
+          <p className="mt-4 text-xl sm:text-2xl font-heading font-bold text-foreground">
+            {business.tagline}
+          </p>
 
           <p className="mt-5 text-lg text-muted-foreground leading-relaxed max-w-lg">
             {business.subheading}
@@ -84,12 +88,12 @@ export default function HeroSection() {
           <div className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
             <Link to="/book" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl shadow-lg shadow-accent/20">
-                {business.secondaryCta.label} <ArrowRight className="h-4 w-4" />
+                {business.primaryCta.label} <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <a href="#services" className="w-full sm:w-auto">
               <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-xl">
-                {business.primaryCta.label}
+                {business.secondaryCta.label}
               </Button>
             </a>
           </div>
