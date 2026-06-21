@@ -8,6 +8,7 @@ export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
   const [value, setValue] = useState(job.private_notes || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => { setValue(job.private_notes || ""); }, [job.id, job.private_notes]);
 
@@ -15,11 +16,17 @@ export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
 
   const save = async () => {
     setSaving(true);
-    await savePrivateNotes(job, value, actor);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    onChange?.();
+    setError("");
+    try {
+      await savePrivateNotes(job, value, actor);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      onChange?.();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Private note could not be saved. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -41,6 +48,7 @@ export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
             placeholder="e.g. Rear hub motor bearing seized — likely water ingress. Controller showing intermittent fault under load."
             className="h-48 leading-relaxed"
           />
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex items-center justify-end">
             <Button size="sm" onClick={save} disabled={!dirty || saving} className="gap-1.5">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}

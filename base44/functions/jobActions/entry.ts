@@ -179,7 +179,8 @@ Deno.serve(async (req) => {
         break;
       }
       case "save_private_notes": {
-        result = await base44.entities.Job.update(job.id, { private_notes: params.privateNotes });
+        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+        result = await base44.asServiceRole.entities.Job.update(job.id, { private_notes: params.privateNotes || "" });
         await logAudit({ eventType: "private_notes_updated", summary: "Private notes updated", visibility: "internal" });
         break;
       }
