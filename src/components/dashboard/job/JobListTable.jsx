@@ -1,6 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
 import StatusPill from "@/components/shared/StatusPill";
+import ServiceTypeBadge from "@/components/shared/ServiceTypeBadge";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -44,6 +45,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
                 />
               </th>
               <Th>Brand</Th>
+              <Th>Service</Th>
               <Th>Issue</Th>
               <Th>Customer</Th>
               <Th>Booked</Th>
@@ -73,6 +75,9 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
                   </Td>
                   <Td className="font-semibold whitespace-nowrap">
                     {j.intake?.make || j.asset_label || j.scooter_label || "—"}
+                  </Td>
+                  <Td className="whitespace-nowrap">
+                    <ServiceTypeBadge job={j} />
                   </Td>
                   <Td className="max-w-[260px]">
                     <span className="line-clamp-1 text-muted-foreground">{j.issue_description || "—"}</span>
