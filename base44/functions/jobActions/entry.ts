@@ -5,7 +5,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const READY_STATUS = "ready_for_pickup";
 const CANCELLED_STATUS = "cancelled";
-const REOPEN_STATUS = "active";
+const REOPEN_STATUS = "booked";
 
 const statusLabel = (key) =>
   String(key || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");

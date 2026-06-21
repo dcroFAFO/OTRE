@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Send, Plus, Lock, CheckCircle2, XCircle, CalendarDays, Save, Wrench, Package, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Send, Plus, Lock, CalendarDays, Save, Wrench, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobQuote, saveQuote, sendQuote, setQuoteApproval } from "@/services/quoteService";
+import { getJobQuote, saveQuote, sendQuote } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 import PartsSourcingPanel from "@/components/dashboard/job/PartsSourcingPanel";
@@ -64,7 +64,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     setQuote(q);
     onChange?.();
     setSaving(false);
-    toast.success("Quote saved as draft.");
+    toast.success("Estimate saved as draft.");
   };
 
   const send = async () => {
@@ -75,13 +75,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     setQuote(s);
     onChange?.();
     setSending(false);
-    toast.success("Quote sent to customer via email.");
-  };
-
-  const approve = async (ok) => {
-    const s = await setQuoteApproval(quote, job, ok, actor);
-    setQuote(s);
-    onChange?.();
+    toast.success("Estimate sent to customer via email.");
   };
 
   const aiDraft = async () => {
@@ -105,18 +99,17 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-heading font-bold flex items-center gap-2">
-          Quote
-          {(!canEdit || quote?.status === "approved") && (
+          Estimate / Costing
+          {!canEdit && (
             <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
-              <Lock className="h-3 w-3" />
-              {quote?.status === "approved" ? "Approved — locked" : "Read-only"}
+              <Lock className="h-3 w-3" /> Read-only
             </span>
           )}
         </h3>
         {quote && <StatusPill kind="quote" value={quote.status} />}
       </div>
 
-      {canEdit && quote?.status !== "approved" ? (
+      {canEdit ? (
         // ── Editable view ────────────────────────────────────────────────────
         <>
           {/* ── LINE ITEMS — hero section ─────────────────────────────────── */}
@@ -187,7 +180,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
 
           {/* ── TOTAL ────────────────────────────────────────────────────────── */}
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
-            <span className="text-sm font-medium">Quote total</span>
+            <span className="text-sm font-medium">Costing total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
           </div>
 
@@ -195,15 +188,12 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
               {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
-              {saving ? "Saving…" : "Save quote"}
+              {saving ? "Saving…" : "Save estimate"}
             </Button>
             <Button size="sm" onClick={send} disabled={sending} className="gap-1.5">
               <Send className={`h-4 w-4 ${sending ? "animate-pulse" : ""}`} />
               {sending ? "Sending…" : "Send to customer"}
             </Button>
-            {quote?.status === "sent" && (
-              <Button size="sm" variant="outline" onClick={() => approve(true)}>Approve manually</Button>
-            )}
             <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
               <Sparkles className="h-4 w-4" /> AI draft
             </Button>
@@ -254,29 +244,12 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
 
 function QuoteReadOnlyView({ quote }) {
   if (!quote) {
-    return <p className="text-sm text-muted-foreground py-4">No quote has been created for this job.</p>;
+    return <p className="text-sm text-muted-foreground py-4">No estimate or costing has been created for this job.</p>;
   }
 
   const allLineItems = (quote.line_items || []);
-  const isApproved = quote.status === "approved" || quote.approval_status === "approved";
-
   return (
     <div className="space-y-4">
-      {/* Approval status banner */}
-      {isApproved && (
-        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span className="font-semibold">Approved quote — locked for editing</span>
-          <span className="ml-auto text-xs opacity-70">This is a legally agreed document</span>
-        </div>
-      )}
-      {quote.approval_status === "rejected" && (
-        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
-          <XCircle className="h-4 w-4 shrink-0" />
-          Quote rejected
-        </div>
-      )}
-
       {/* Diagnosis & repair */}
       {quote.diagnosis_notes && (
         <ReadOnlyField label="Diagnosis notes">

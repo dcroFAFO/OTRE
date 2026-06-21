@@ -8,7 +8,7 @@ import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
   const paymentStatus = getPaymentStatus(job.payment_status);
   const outstanding = job.payment_status === "outstanding";
-  const isWaiting = job.status?.startsWith("waiting_");
+  const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
   const waitingLabel = DEFAULT_WAITING_REASONS.find((r) => r.key === job.waiting_reason)?.label;
 
   return (

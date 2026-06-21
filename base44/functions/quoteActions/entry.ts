@@ -43,14 +43,14 @@ async function sendQuoteEmail({ job, quote }) {
         <tr>
           <td style="background:#0f766e;padding:28px 32px;">
             <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
-            <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Your Repair Quote 🔧</h1>
+            <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Your Repair Estimate 🔧</h1>
           </td>
         </tr>
         <tr>
           <td style="padding:32px;">
             <p style="margin:0 0 16px;font-size:16px;color:#1e293b;">Hi ${customerName},</p>
             <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
-              We've assessed your scooter and prepared a quote for the recommended repair. Please review the details below.
+              We've assessed your scooter and prepared an estimate for the recommended repair. Please review the details below.
             </p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
@@ -72,11 +72,11 @@ async function sendQuoteEmail({ job, quote }) {
               </td></tr>` : ""}
             </table>
 
-            <p style="margin:0 0 12px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Quote Breakdown</p>
+            <p style="margin:0 0 12px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Estimate Breakdown</p>
             ${lineItemsHtml}
 
             <p style="margin:24px 0 0;font-size:14px;color:#64748b;">
-              To approve this quote or if you have any questions, please reply to this email or call us on <strong>(03) 9000 1234</strong>.
+              If you have any questions about this estimate, please reply to this email or call us on <strong>(03) 9000 1234</strong>.
             </p>
           </td>
         </tr>
@@ -97,7 +97,7 @@ async function sendQuoteEmail({ job, quote }) {
     body: JSON.stringify({
       from: "OTR Scooters <hello@ontherunelectrics.com.au>",
       to: [email],
-      subject: `Your repair quote is ready${reference}`,
+      subject: `Your repair estimate is ready${reference}`,
       html,
     }),
   });
@@ -157,20 +157,6 @@ Deno.serve(async (req) => {
       return quotes[0] || null;
     };
 
-    // ── APPROVED QUOTE GUARD ────────────────────────────────────────────────
-    // Once a quote is approved it is a legal agreement and must not be altered.
-    const MUTATING_ACTIONS = ["save", "send", "add_parts", "add_labour"];
-    if (MUTATING_ACTIONS.includes(action)) {
-      const existingQuote = await getJobQuote();
-      if (existingQuote && existingQuote.status === "approved") {
-        return Response.json(
-          { error: "This quote has been approved and cannot be modified." },
-          { status: 403 }
-        );
-      }
-    }
-    // ────────────────────────────────────────────────────────────────────────
-
     let result;
 
     switch (action) {
@@ -192,8 +178,8 @@ Deno.serve(async (req) => {
       }
       case "send": {
         result = await db.Quote.update(params.quoteId, { status: "sent", sent_date: new Date().toISOString() });
-        await db.Job.update(job.id, { quote_status: "sent", status: "quote_sent" });
-        await logAudit({ eventType: "quote_sent", summary: "Quote sent to customer", visibility: "customer" });
+        await db.Job.update(job.id, { quote_status: "sent" });
+        await logAudit({ eventType: "estimate_sent", summary: "Estimate sent to customer", visibility: "customer" });
         await sendQuoteEmail({ job, quote: result });
         break;
       }
@@ -205,7 +191,6 @@ Deno.serve(async (req) => {
         });
         await db.Job.update(job.id, {
           quote_status: approved ? "approved" : "rejected",
-          status: approved ? "quote_approved" : job.status,
         });
         await logAudit({
           eventType: approved ? "quote_approved" : "quote_rejected",
@@ -250,7 +235,7 @@ Deno.serve(async (req) => {
         result = await db.Quote.update(quote.id, { line_items, parts_estimate, labour_estimate, total });
         await logAudit({
           eventType: "quote_generated",
-          summary: `Added ${parts.length} sourced part(s) to quote`,
+          summary: `Added ${parts.length} sourced part(s) to estimate`,
           newValue: `${CURRENCY} ${total.toFixed(2)}`,
         });
         break;
@@ -293,7 +278,7 @@ Deno.serve(async (req) => {
         const initialNotes = intake.initial_issue_notes || job.issue_description || "";
         const contextLines = [scooterDesc, batteryInfo, odometer, physicalCond, powersOn, initialNotes ? `Issue: ${initialNotes}` : ""].filter(Boolean).join("\n");
 
-        const prompt = `You are a scooter repair technician writing a customer-facing repair quote.
+        const prompt = `You are a scooter repair technician writing a customer-facing repair estimate.
 
 Job context:
 ${contextLines}

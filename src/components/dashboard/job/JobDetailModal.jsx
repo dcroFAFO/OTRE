@@ -29,7 +29,7 @@ import { format } from "date-fns";
 // Tab label map
 const TAB_LABELS = {
   intake: "Intake",
-  quote: "Quote",
+  quote: "Estimate / Costing",
   invoice: "Invoice",
   customer: "Customer",
   notes: "Notes",
@@ -98,7 +98,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         label={TAB_LABELS[tab]}
                         badge={
                           tab === "quote" && job.quote_status && job.quote_status !== "draft"
-                            ? job.quote_status
+                            ? "estimate"
                             : tab === "intake" && job.intake?.intake_date
                             ? "✓"
                             : tab === "invoice" && job.payment_status && job.payment_status !== "unpaid"
@@ -160,10 +160,12 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 }
 
 function JobModalHeader({ job }) {
-  const isWaiting = job.status?.startsWith("waiting_");
+  const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
   const outstanding = job.payment_status === "outstanding";
   const paid = job.payment_status === "paid";
-  const waitingReason = job.waiting_reason
+  const waitingReason = job.status === "waiting_on_parts"
+    ? "Parts"
+    : job.waiting_reason
     ? (DEFAULT_WAITING_REASONS?.find((r) => r.key === job.waiting_reason)?.label || job.waiting_reason)
     : null;
 

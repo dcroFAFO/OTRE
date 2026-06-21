@@ -8,8 +8,8 @@ const invoke = async (payload) => {
   return res.data;
 };
 
-export async function createInvoice(job, amount) {
-  return invoke({ action: "create", jobId: job.id, amount });
+export async function createInvoice(job, amount, lineItems = []) {
+  return invoke({ action: "create", jobId: job.id, amount, lineItems });
 }
 
 export async function copyQuoteToInvoice(job) {

@@ -240,6 +240,8 @@ Deno.serve(async (req) => {
       from_name: 'OTR Scooters',
     });
 
+    await base44.asServiceRole.entities.Job.update(job.id, { status: invoice.status === 'paid' ? 'paid' : 'invoice_sent', payment_status: invoice.status || 'outstanding' });
+
     console.log(`[sendInvoiceEmail] Sent invoice ${invoice.number} to ${job.customer_email}`);
     return Response.json({ sent: true, to: job.customer_email, invoice_number: invoice.number });
 

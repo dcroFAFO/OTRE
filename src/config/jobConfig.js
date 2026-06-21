@@ -28,8 +28,27 @@ export const STATUS_PILL_CLASSES = {
   rose: "bg-rose-100 text-rose-700 border-rose-200",
 };
 
+export const LEGACY_STATUS_MAP = {
+  quote_required: "requested",
+  quote_sent: "booked",
+  pending_confirmation: "on_hold",
+  quote_approved: "booked",
+  active: "repair_in_progress",
+  technician_assigned: "booked",
+  waiting_parts: "waiting_on_parts",
+  waiting_supplier: "on_hold",
+  waiting_customer: "on_hold",
+  invoice_outstanding: "invoice_sent",
+  in_progress: "repair_in_progress",
+};
+
+export function normalizeStatusKey(key) {
+  return LEGACY_STATUS_MAP[key] || key;
+}
+
 export function getStatus(key) {
-  return JOB_STATUSES.find((s) => s.key === key) || { key, label: key, color: "slate" };
+  const normalized = normalizeStatusKey(key);
+  return JOB_STATUSES.find((s) => s.key === normalized) || { key: normalized || key, label: normalized || key, color: "slate" };
 }
 export function getPaymentStatus(key) {
   return PAYMENT_STATUSES.find((s) => s.key === key) || { key, label: key, color: "slate" };

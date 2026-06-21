@@ -19,68 +19,32 @@ import { format } from "date-fns";
 // applicableStatuses: which current statuses show this button.
 //                     null = all non-terminal statuses.
 // ---------------------------------------------------------------------------
+const LEGACY_STATUS_MAP = {
+  quote_required: "requested",
+  quote_sent: "booked",
+  pending_confirmation: "on_hold",
+  quote_approved: "booked",
+  active: "repair_in_progress",
+  technician_assigned: "booked",
+  waiting_parts: "waiting_on_parts",
+  waiting_supplier: "on_hold",
+  waiting_customer: "on_hold",
+  invoice_outstanding: "invoice_sent",
+  in_progress: "repair_in_progress",
+};
+
+const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status;
+
 const WORKFLOW_EVENTS = [
-  {
-    key: "quote_sent",
-    label: "Quote sent",
-    variant: "default",
-    applicableStatuses: ["requested", "quote_required", "pending_confirmation", "active", "booked"],
-  },
-  {
-    key: "quote_approved",
-    label: "Customer approved quote",
-    variant: "default",
-    applicableStatuses: ["quote_sent", "pending_confirmation"],
-  },
-  {
-    key: "repair_in_progress",
-    label: "Start repair",
-    variant: "default",
-    applicableStatuses: ["quote_approved", "active", "booked", "waiting_parts", "waiting_supplier", "waiting_customer", "on_hold"],
-  },
-  {
-    key: "waiting_parts",
-    label: "Mark waiting for parts",
-    variant: "amber",
-    applicableStatuses: ["quote_approved", "active", "booked", "repair_in_progress"],
-    requiresReason: true,
-  },
-  {
-    key: "ready_for_pickup",
-    label: "Ready for pickup",
-    variant: "emerald",
-    applicableStatuses: ["quote_approved", "active", "repair_in_progress", "waiting_parts", "waiting_supplier", "waiting_customer"],
-  },
-  {
-    key: "invoice_outstanding",
-    label: "Send invoice",
-    variant: "default",
-    applicableStatuses: ["ready_for_pickup"],
-  },
-  {
-    key: "paid",
-    label: "Record payment",
-    variant: "emerald",
-    applicableStatuses: ["ready_for_pickup", "invoice_outstanding"],
-  },
-  {
-    key: "completed",
-    label: "Complete job",
-    variant: "emerald",
-    applicableStatuses: ["paid", "ready_for_pickup", "invoice_outstanding"],
-  },
-  {
-    key: "on_hold",
-    label: "Put on hold",
-    variant: "rose",
-    applicableStatuses: ["requested", "quote_sent", "quote_approved", "active", "booked", "repair_in_progress", "waiting_parts"],
-  },
-  {
-    key: "cancelled",
-    label: "Cancel job",
-    variant: "rose",
-    applicableStatuses: null,
-  },
+  { key: "booked", label: "Book job", variant: "default", applicableStatuses: ["requested", "on_hold"] },
+  { key: "repair_in_progress", label: "Start repair", variant: "default", applicableStatuses: ["requested", "booked", "on_hold", "waiting_on_parts"] },
+  { key: "waiting_on_parts", label: "Waiting on parts", variant: "amber", applicableStatuses: ["booked", "repair_in_progress", "ready_for_pickup", "on_hold"] },
+  { key: "ready_for_pickup", label: "Ready for pickup", variant: "emerald", applicableStatuses: ["booked", "repair_in_progress", "waiting_on_parts", "on_hold"] },
+  { key: "invoice_sent", label: "Invoice sent", variant: "default", applicableStatuses: ["repair_in_progress", "waiting_on_parts", "ready_for_pickup", "paid"] },
+  { key: "paid", label: "Record payment", variant: "emerald", applicableStatuses: ["ready_for_pickup", "invoice_sent"] },
+  { key: "completed", label: "Complete job", variant: "emerald", applicableStatuses: ["paid", "ready_for_pickup", "invoice_sent"] },
+  { key: "on_hold", label: "Put on hold", variant: "rose", applicableStatuses: ["requested", "booked", "repair_in_progress", "waiting_on_parts", "ready_for_pickup", "invoice_sent"] },
+  { key: "cancelled", label: "Cancel job", variant: "rose", applicableStatuses: null },
 ];
 
 const TERMINAL = ["completed", "cancelled"];
@@ -93,7 +57,8 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
   const [waitingReason, setWaitingReason] = useState("");
   const [trackingLink, setTrackingLink] = useState("");
 
-  const isTerminal = TERMINAL.includes(job.status);
+  const currentStatus = normalizeStatus(job.status);
+  const isTerminal = TERMINAL.includes(currentStatus);
 
   // Run a workflow event, optionally with a payload
   const runEvent = async (eventKey, payload = {}) => {
@@ -132,7 +97,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
 
   const confirmWaitingReason = () => {
     setWaitingPrompt(false);
-    runEvent("waiting_parts", { waitingReason });
+    runEvent("waiting_on_parts", { waitingReason });
     setWaitingReason("");
   };
 
@@ -167,7 +132,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
   const visibleEvents = WORKFLOW_EVENTS.filter((ev) => {
     if (isTerminal) return false;
     if (ev.applicableStatuses === null) return true;
-    return ev.applicableStatuses.includes(job.status);
+    return ev.applicableStatuses.includes(currentStatus);
   });
 
   return (
@@ -240,7 +205,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
         <DialogContent className="max-w-sm">
           <div className="space-y-4 p-1">
             <div>
-              <h3 className="font-heading font-semibold text-base">Mark waiting for parts</h3>
+              <h3 className="font-heading font-semibold text-base">Mark waiting on parts</h3>
               <p className="text-sm text-muted-foreground mt-1">Select what the job is waiting on to proceed.</p>
             </div>
             <div className="space-y-1.5">
@@ -258,8 +223,8 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setWaitingPrompt(false)}>Cancel</Button>
-              <Button size="sm" disabled={!waitingReason || busy === "waiting_parts"} onClick={confirmWaitingReason}>
-                {busy === "waiting_parts" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm"}
+              <Button size="sm" disabled={!waitingReason || busy === "waiting_on_parts"} onClick={confirmWaitingReason}>
+                {busy === "waiting_on_parts" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm"}
               </Button>
             </div>
           </div>

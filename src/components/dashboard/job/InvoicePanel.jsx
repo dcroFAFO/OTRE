@@ -83,7 +83,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
     setCreating(true);
     try {
       const finalAmount = lineTotal > 0 ? lineTotal : amount;
-      const inv = await createInvoice(job, finalAmount, actor);
+      const inv = await createInvoice(job, finalAmount, lineItems);
       setInvoice(inv);
       await generatePdfPreview(inv, 0);
       onChange?.();
@@ -126,9 +126,9 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
       setInvoice(inv);
       await loadInvoiceData();
       onChange?.();
-      toast.success("Quote copied to invoice.");
+      toast.success("Costing copied to invoice.");
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to copy quote.");
+      toast.error(err?.response?.data?.error || "Failed to copy costing.");
     } finally {
       setCopying(false);
     }
@@ -255,7 +255,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
               {quote && (
                 <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">
                   {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
-                  Copy quote
+                  Copy costing
                 </Button>
               )}
               {invoice.status !== "paid" && invoice.status !== "refunded" && (
@@ -322,7 +322,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Creating an invoice will mark this job as invoice outstanding.
+            Creating an invoice saves the bill internally. Email it when you are ready to send the final invoice.
           </p>
         </div>
       ) : (

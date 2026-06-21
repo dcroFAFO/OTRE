@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
 
       const rawToken = makeToken();
       const tokenHash = await sha256(rawToken);
-      const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_quote', 'quote_decision', 'view_invoice', 'pay_invoice'];
+      const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_quote', 'view_invoice', 'pay_invoice'];
       await base44.asServiceRole.entities.PublicJobAccess.create({
         jobId,
         job_id: jobId,

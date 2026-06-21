@@ -69,12 +69,11 @@ export const DEFAULT_APP_SETTINGS = {
 };
 
 export const CUSTOMER_JOURNEY = [
-  { key: "book", label: "Book assessment", icon: "CalendarCheck" },
-  { key: "inspected", label: "Scooter inspected", icon: "Search" },
-  { key: "quote", label: "Quote generated", icon: "FileText" },
-  { key: "approval", label: "Awaiting approval", icon: "Clock" },
+  { key: "book", label: "Book repair", icon: "CalendarCheck" },
+  { key: "confirmed", label: "Job booked", icon: "CalendarCheck" },
   { key: "progress", label: "Repair in progress", icon: "Wrench" },
   { key: "pickup", label: "Ready for pickup", icon: "PackageCheck" },
+  { key: "invoice", label: "Invoice sent", icon: "FileText" },
   { key: "paid", label: "Invoice paid", icon: "CreditCard" },
 ];
 
@@ -100,22 +99,15 @@ export const DEFAULT_SERVICES = [
 
 export const DEFAULT_JOB_STATUSES = [
   { key: "requested", label: "Requested", group: "intake", color: "slate", is_default_intake: true },
-  { key: "pending_confirmation", label: "Pending Confirmation", group: "intake", color: "amber" },
-  { key: "active", label: "Active", group: "active", color: "indigo" },
   { key: "booked", label: "Booked", group: "active", color: "indigo" },
-  { key: "waiting_customer", label: "Waiting for Customer", group: "waiting", color: "amber" },
-  { key: "waiting_supplier", label: "Waiting for Supplier", group: "waiting", color: "amber" },
-  { key: "waiting_parts", label: "Waiting for Parts", group: "waiting", color: "amber" },
-  { key: "quote_required", label: "Quote Required", group: "quote", color: "violet" },
-  { key: "quote_sent", label: "Quote Sent", group: "quote", color: "violet" },
-  { key: "quote_approved", label: "Quote Approved", group: "quote", color: "emerald" },
-  { key: "on_hold", label: "On Hold", group: "waiting", color: "slate" },
   { key: "repair_in_progress", label: "Repair In Progress", group: "active", color: "teal" },
+  { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "ready_for_pickup", label: "Ready for Pickup", group: "done", color: "emerald" },
-  { key: "invoice_outstanding", label: "Invoice Outstanding", group: "billing", color: "rose" },
+  { key: "invoice_sent", label: "Invoice Sent", group: "billing", color: "rose" },
   { key: "paid", label: "Paid", group: "billing", color: "emerald" },
   { key: "completed", label: "Completed", group: "done", color: "emerald", is_terminal: true },
   { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
+  { key: "on_hold", label: "On Hold", group: "waiting", color: "slate" },
 ];
 
 export const DEFAULT_JOB_TYPES = [
@@ -130,7 +122,7 @@ export const DEFAULT_INTAKE_STATUS = "requested";
 export const READY_STATUS_KEY = "ready_for_pickup";
 export const COMPLETE_STATUS_KEY = "completed";
 export const CANCELLED_STATUS_KEY = "cancelled";
-export const REOPEN_STATUS_KEY = "active";
+export const REOPEN_STATUS_KEY = "booked";
 
 export const DEFAULT_WAITING_REASONS = [
   { key: "customer", label: "Customer" },
@@ -219,7 +211,7 @@ export const DEFAULT_PAYMENT_PROVIDER_CONFIG = {
 
 export const DEFAULT_NOTIFICATION_TEMPLATES = [
   { key: "booking_received", channel: "email", subject: "We received your booking", body: "Hi {customer_name}, your request {reference} has been received." },
-  { key: "quote_sent", channel: "email", subject: "Your quote is ready", body: "Hi {customer_name}, your quote for {reference} is ready to review." },
+  { key: "estimate_sent", channel: "email", subject: "Your estimate is ready", body: "Hi {customer_name}, your estimate for {reference} is ready to review." },
   { key: "status_changed", channel: "email", subject: "Your job status changed", body: "Hi {customer_name}, {reference} is now {status}." },
   { key: "invoice_created", channel: "email", subject: "Your invoice is ready", body: "Hi {customer_name}, your invoice for {reference} is ready." },
 ];

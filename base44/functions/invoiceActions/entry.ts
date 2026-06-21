@@ -54,7 +54,16 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "create": {
-        const amount = Number(params.amount) || 0;
+        const lineItems = Array.isArray(params.lineItems) ? params.lineItems.map((item) => ({
+          description: item.description || "Line item",
+          qty: Number(item.qty) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          kind: item.kind || "item",
+          sku: item.sku || "",
+          source_usage_id: item.source_usage_id || "",
+        })) : [];
+        const calculatedAmount = lineItems.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
+        const amount = calculatedAmount || Number(params.amount) || 0;
         result = await base44.asServiceRole.entities.Invoice.create({
           job_id: job.id,
           customer_id: job.customer_id || "",
@@ -62,8 +71,9 @@ Deno.serve(async (req) => {
           amount,
           currency: CURRENCY,
           status: DEFAULT_STATUS,
+          line_items: lineItems,
         });
-        await base44.asServiceRole.entities.Job.update(job.id, { invoice_id: result.id, payment_status: DEFAULT_STATUS, status: "invoice_outstanding" });
+        await base44.asServiceRole.entities.Job.update(job.id, { invoice_id: result.id, payment_status: DEFAULT_STATUS });
         await logAudit({ eventType: "invoice_created", summary: `Invoice created (${CURRENCY} ${amount})`, visibility: "customer" });
         break;
       }
@@ -71,7 +81,7 @@ Deno.serve(async (req) => {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
         const quote = quotes[0];
-        if (!quote) return Response.json({ error: "No quote found for this job" }, { status: 404 });
+        if (!quote) return Response.json({ error: "No estimate or costing found for this job" }, { status: 404 });
 
         const lineItems = (quote.line_items || []).map((item) => ({
           description: item.description || "Line item",
@@ -103,9 +113,9 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.Job.update(job.id, {
           invoice_id: result.id,
           payment_status: result.status || DEFAULT_STATUS,
-          status: result.status === "paid" ? job.status : "invoice_outstanding",
+          status: result.status === "paid" ? "paid" : job.status,
         });
-        await logAudit({ eventType: "quote_copied_to_invoice", summary: `Quote copied to invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "customer" });
+        await logAudit({ eventType: "costing_copied_to_invoice", summary: `Costing copied to invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "customer" });
         break;
       }
       case "add_parts_to_invoice": {

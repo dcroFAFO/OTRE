@@ -3,7 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 const SLUG = 'otr-scooters';
 const INTAKE_STATUS = 'requested';
 const JOB_TYPE = 'repair';
-const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file'];
+const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice', 'pay_invoice'];
 const encoder = new TextEncoder();
 
 async function sha256(value) {
@@ -43,39 +43,44 @@ Deno.serve(async (req) => {
     const email = String(form.customer_email || '').trim().toLowerCase();
     const phone = normalizePhone(form.phone);
     const now = new Date().toISOString();
-    const customerMatches = await base44.asServiceRole.entities.Customer.filter({ email }, '-created_date', 1);
-    let customer = customerMatches[0] || null;
+    let customer = null;
+    try {
+      const customerMatches = await base44.asServiceRole.entities.Customer.filter({ email }, '-created_date', 1);
+      customer = customerMatches[0] || null;
 
-    if (!customer && phone) {
-      const phoneMatches = await base44.asServiceRole.entities.Customer.filter({ phone }, '-created_date', 1);
-      customer = phoneMatches[0] || null;
-    }
+      if (!customer && phone) {
+        const phoneMatches = await base44.asServiceRole.entities.Customer.filter({ phone }, '-created_date', 1);
+        customer = phoneMatches[0] || null;
+      }
 
-    if (!customer) {
-      customer = await base44.asServiceRole.entities.Customer.create({
-        customer_id: `CUST-${Date.now()}`,
-        name: form.customer_name,
-        full_name: form.customer_name,
-        email,
-        phone,
-        status: 'active',
-        createdAt: now,
-        last_activity_date: now,
-      });
-    } else {
-      await base44.asServiceRole.entities.Customer.update(customer.id, {
-        name: customer.name || form.customer_name,
-        full_name: customer.full_name || form.customer_name,
-        phone: customer.phone || phone,
-        last_activity_date: now,
-      });
+      if (!customer) {
+        customer = await base44.asServiceRole.entities.Customer.create({
+          customer_id: `CUST-${Date.now()}`,
+          name: form.customer_name,
+          full_name: form.customer_name,
+          email,
+          phone,
+          status: 'active',
+          createdAt: now,
+          last_activity_date: now,
+        });
+      } else {
+        await base44.asServiceRole.entities.Customer.update(customer.id, {
+          name: customer.name || form.customer_name,
+          full_name: customer.full_name || form.customer_name,
+          phone: customer.phone || phone,
+          last_activity_date: now,
+        });
+      }
+    } catch (customerError) {
+      console.warn('[createBooking] customer match/create skipped:', customerError.message);
     }
 
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
     const job = await base44.asServiceRole.entities.Job.create({
       reference,
-      customerId: customer.id,
-      customer_id: customer.id,
+      customerId: customer?.id || null,
+      customer_id: customer?.id || null,
       customer_name: form.customer_name,
       customer_email: email,
       customer_phone: phone,
@@ -98,7 +103,7 @@ Deno.serve(async (req) => {
     if (form.photo_url) {
       await base44.asServiceRole.entities.Attachment.create({
         job_id: job.id,
-        customer_id: customer.id,
+        customer_id: customer?.id || null,
         file_url: form.photo_url,
         file_name: 'Customer upload',
         kind: 'photo',
@@ -121,7 +126,7 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.AuditEvent.create({
       event_type: 'booking_created',
       job_id: job.id,
-      customer_id: customer.id,
+      customer_id: customer?.id || null,
       actor_name: form.customer_name,
       actor_role: 'customer',
       summary: `Public booking request received from ${form.customer_name}`,

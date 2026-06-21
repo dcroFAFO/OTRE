@@ -5,7 +5,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import StatusPill from "@/components/shared/StatusPill";
-import { AlertCircle, CheckCircle2, CreditCard, FileText, Loader2, MessageSquare, Upload } from "lucide-react";
+import { AlertCircle, CreditCard, FileText, Loader2, MessageSquare, Upload } from "lucide-react";
 
 function money(value, currency = "AUD") {
   return `${currency} ${(Number(value) || 0).toFixed(2)}`;
@@ -58,13 +58,6 @@ export default function PublicTrack() {
     setBusy(null);
   };
 
-  const decideQuote = async (approved) => {
-    if (!data?.quote?.id) return;
-    setBusy(approved ? "approve" : "reject");
-    setData(await invoke({ action: "quote_decision", quoteId: data.quote.id, approved }));
-    setBusy(null);
-  };
-
   const payInvoice = async () => {
     if (!data?.invoice?.id) return;
     if (window.self !== window.top) {
@@ -106,18 +99,13 @@ export default function PublicTrack() {
               </div>
 
               {data.quote && (
-                <Card title="Quote" icon={FileText}>
+                <Card title="Estimate" icon={FileText}>
                   <div className="space-y-3">
                     {data.quote.diagnosis_notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap"><strong className="text-foreground">Diagnosis:</strong> {data.quote.diagnosis_notes}</p>}
                     {data.quote.recommended_repair && <p className="text-sm text-muted-foreground whitespace-pre-wrap"><strong className="text-foreground">Recommended repair:</strong> {data.quote.recommended_repair}</p>}
                     {(data.quote.line_items || []).length > 0 && <LineItems items={data.quote.line_items} currency={data.quote.currency} />}
-                    <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3"><span className="text-sm font-medium">Quote total</span><strong>{money(data.quote.total, data.quote.currency)}</strong></div>
-                    {can("quote_decision") && data.quote.status === "sent" && (
-                      <div className="flex gap-2">
-                        <Button onClick={() => decideQuote(true)} disabled={!!busy}>{busy === "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve quote</Button>
-                        <Button variant="outline" onClick={() => decideQuote(false)} disabled={!!busy}>Reject quote</Button>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3"><span className="text-sm font-medium">Estimate total</span><strong>{money(data.quote.total, data.quote.currency)}</strong></div>
+
                   </div>
                 </Card>
               )}
