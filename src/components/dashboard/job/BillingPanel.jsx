@@ -1,15 +1,14 @@
 import React from "react";
-import { CreditCard, FileText, Package, ShieldCheck } from "lucide-react";
+import { FileText, Package, ShieldCheck } from "lucide-react";
 import JobPartsPanel from "./JobPartsPanel";
 import QuotePanel from "./QuotePanel";
-import InvoicePanel from "./InvoicePanel";
 
 export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoiceReadOnly, onChange }) {
   return (
     <div className="space-y-5">
       <BillingSection
         title="Parts"
-        description="Add parts from the existing search and catalogue, then push selected parts onto the invoice."
+        description="Add parts from the existing search and catalogue; they are included when the invoice is finalised."
         icon={Package}
       >
         <JobPartsPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
@@ -23,13 +22,6 @@ export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoi
         <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />
       </BillingSection>
 
-      <BillingSection
-        title="Invoice"
-        description="Generate, edit, preview, and control when the customer can see the invoice."
-        icon={CreditCard}
-      >
-        <InvoicePanel job={job} actor={actor} canEdit={canEdit && !invoiceReadOnly} onChange={onChange} />
-      </BillingSection>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 flex gap-2">
         <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />

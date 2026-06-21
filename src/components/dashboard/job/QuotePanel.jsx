@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Send, Plus, CalendarDays, Save, Wrench, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Sparkles, Plus, CalendarDays, Save, Wrench, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getJobQuote, saveQuote, sendQuote } from "@/services/quoteService";
+import { getJobQuote, saveQuote } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 import LabourConsumablePickerModal from "@/components/dashboard/job/LabourConsumablePickerModal";
+import InvoicePanel from "@/components/dashboard/job/InvoicePanel";
 import { format } from "date-fns";
 
 function lineTotal(item) {
@@ -26,15 +28,31 @@ function totalsFor(items) {
   }, { labour: 0, parts: 0 });
 }
 
+const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
+
 export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
   const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "" });
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [notesExpanded, setNotesExpanded] = useState(false);
   const qc = useQueryClient();
+
+  const { data: partUsages = [] } = useQuery({
+    queryKey: ["inventoryUsage", job.id, job.job_id],
+    queryFn: async () => {
+      const primary = (await base44.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 50)).filter(isRepairPartUsage);
+      if (!job.job_id || job.job_id === job.id) return primary;
+      const legacy = (await base44.entities.InventoryUsage.filter({ job_id: job.job_id, source: "inventory" }, "-created_date", 50)).filter(isRepairPartUsage);
+      const seen = new Set();
+      return [...primary, ...legacy].filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    },
+    enabled: !!job?.id,
+  });
 
   const labelFor = (key) => DEFAULT_QUOTE_TEMPLATE.fields.find((f) => f.key === key)?.label || key;
 
@@ -48,7 +66,9 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
 
   const lineItems = quote?.line_items || [];
   const labourItems = lineItems.filter((li) => li.kind !== "part");
-  const total = labourItems.reduce((sum, item) => sum + lineTotal(item), 0);
+  const labourTotal = labourItems.reduce((sum, item) => sum + lineTotal(item), 0);
+  const partsTotal = partUsages.reduce((sum, item) => sum + (Number(item.unit_sell) || 0) * (Number(item.qty_used) || 1), 0);
+  const total = partsTotal + labourTotal;
 
   const saveWithItems = async (items = lineItems, nextForm = form) => {
     const totals = totalsFor(items);
@@ -74,23 +94,11 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     toast.success("Labour and consumables saved.");
   };
 
-  const send = async () => {
-    setSending(true);
-    if (!quote) await saveWithItems();
-    const q = await getJobQuote(job.id);
-    const s = await sendQuote(q, job, actor);
-    setQuote(s);
-    onChange?.();
-    setSending(false);
-    toast.success("Estimate sent to customer via email.");
-  };
-
   const aiDraft = async () => {
     setAiMsg("Generating AI draft…");
     const r = await aiService.draftQuote(job);
     if (r.available && r.draft) {
       setForm((prev) => ({ ...prev, diagnosis_notes: r.draft.diagnosis_notes || prev.diagnosis_notes }));
-      setNotesExpanded(true);
       setAiMsg("AI diagnosis draft applied — review the notes below.");
     } else {
       setAiMsg("AI draft failed. Please try again.");
@@ -115,13 +123,10 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
       {canEdit ? (
         <>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 bg-secondary/50 border-b border-border">
+            <div className="flex items-center px-3 py-2 bg-secondary/50 border-b border-border">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                 <Wrench className="h-3.5 w-3.5" /> Labour and Consumables
               </span>
-              <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="h-7 gap-1.5 text-xs">
-                <Plus className="h-3.5 w-3.5" /> Add Labour / Consumable
-              </Button>
             </div>
 
             <div className="min-h-[120px]">
@@ -158,8 +163,25 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
 
           <LabourConsumablePickerModal open={pickerOpen} onOpenChange={setPickerOpen} onAdd={addLabourConsumables} />
 
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground bg-secondary/40 border-b border-border">
+              Diagnosis & Notes
+            </div>
+            <div className="px-3 pb-3 space-y-2 bg-secondary/10">
+              <div className="space-y-1 pt-2">
+                <Label className="text-xs">{labelFor("diagnosis_notes")}</Label>
+                <Textarea
+                  value={form.diagnosis_notes || ""}
+                  onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })}
+                  className="h-20 text-xs resize-none"
+                  placeholder="Diagnosis findings…"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
-            <span className="text-sm font-medium">Labour and consumables total</span>
+            <span className="text-sm font-medium">Total</span>
             <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
           </div>
 
@@ -168,45 +190,22 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
               {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
               {saving ? "Saving…" : "Save"}
             </Button>
-            <Button size="sm" onClick={send} disabled={sending} className="gap-1.5">
-              <Send className={`h-4 w-4 ${sending ? "animate-pulse" : ""}`} />
-              {sending ? "Sending…" : "Send estimate"}
-            </Button>
+            <InvoicePanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} buttonOnly />
             <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
               <Sparkles className="h-4 w-4" /> AI draft
             </Button>
           </div>
 
           {aiMsg && <p className="text-xs text-muted-foreground italic">{aiMsg}</p>}
-
-          <div className="rounded-xl border border-border overflow-hidden">
-            <button className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-secondary/40 transition-colors" onClick={() => setNotesExpanded(!notesExpanded)}>
-              <span>Diagnosis & Notes</span>
-              {notesExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
-            {notesExpanded && (
-              <div className="px-3 pb-3 space-y-2 border-t border-border bg-secondary/10">
-                <div className="space-y-1 pt-2">
-                  <Label className="text-xs">{labelFor("diagnosis_notes")}</Label>
-                  <Textarea
-                    value={form.diagnosis_notes || ""}
-                    onChange={(e) => setForm({ ...form, diagnosis_notes: e.target.value })}
-                    className="h-20 text-xs resize-none"
-                    placeholder="Diagnosis findings…"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         </>
       ) : (
-        <QuoteReadOnlyView quote={quote} />
+        <QuoteReadOnlyView quote={quote} total={total} />
       )}
     </div>
   );
 }
 
-function QuoteReadOnlyView({ quote }) {
+function QuoteReadOnlyView({ quote, total = 0 }) {
   if (!quote) return <p className="text-sm text-muted-foreground py-4">No labour, consumables, or diagnosis notes have been created for this job.</p>;
 
   const allLineItems = (quote.line_items || []).filter((li) => li.kind !== "part");
@@ -232,8 +231,8 @@ function QuoteReadOnlyView({ quote }) {
       )}
 
       <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
-        <span className="text-sm font-medium">Labour and consumables total</span>
-        <span className="font-heading text-xl font-extrabold">${(quote.labour_estimate || 0).toFixed(2)}</span>
+        <span className="text-sm font-medium">Total</span>
+        <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
       </div>
 
       {quote.sent_date && (

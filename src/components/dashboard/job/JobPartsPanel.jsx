@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
 import { addInventoryParts, removeInventoryPart, removeInventoryParts } from "@/services/jobService";
-import { addPartsToInvoice } from "@/services/paymentService";
-import { toast } from "sonner";
+
 
 const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
 
@@ -44,19 +43,6 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     },
   });
 
-  const addToInvoice = useMutation({
-    mutationFn: (selectedUsages) => addPartsToInvoice(job, selectedUsages.map((usage) => usage.id)),
-    onSuccess: () => {
-      setSelectedIds([]);
-      refetch();
-      qc.invalidateQueries({ queryKey: ["inventoryUsage"] });
-      toast.success("Parts added to invoice.");
-      onChange?.();
-    },
-    onError: (err) => {
-      toast.error(err?.response?.data?.error || "Couldn't add parts to invoice.");
-    },
-  });
 
   const selectedUsages = usages.filter((usage) => selectedIds.includes(usage.id));
   const allSelected = usages.length > 0 && selectedIds.length === usages.length;
@@ -80,28 +66,16 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
           Parts
         </h3>
         {canEdit && selectedUsages.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5"
-              onClick={() => addToInvoice.mutate(selectedUsages)}
-              disabled={addToInvoice.isPending}
-            >
-              {addToInvoice.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              Add to invoice ({selectedUsages.length})
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="h-8 gap-1.5"
-              onClick={removeSelected}
-              disabled={removeUsage.isPending}
-            >
-              {removeUsage.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Delete selected ({selectedUsages.length})
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 gap-1.5"
+            onClick={removeSelected}
+            disabled={removeUsage.isPending}
+          >
+            {removeUsage.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Delete selected ({selectedUsages.length})
+          </Button>
         )}
       </div>
 
@@ -191,7 +165,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onAdd={(chosen) => addInventoryParts(job, chosen)}
-          onAdded={() => { refetch(); qc.invalidateQueries({ queryKey: ["inventoryItems"] }); onChange?.(); }}
+          onAdded={() => { refetch(); qc.invalidateQueries({ queryKey: ["inventoryUsage"] }); qc.invalidateQueries({ queryKey: ["inventoryItems"] }); onChange?.(); }}
         />
       )}
     </div>

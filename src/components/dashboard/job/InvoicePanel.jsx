@@ -42,7 +42,7 @@ function usageToLineItem(usage) {
   });
 }
 
-export default function InvoicePanel({ job, actor, canEdit, onChange }) {
+export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly = false }) {
   const [invoice, setInvoice] = useState(null);
   const [amount, setAmount] = useState(0);
   const [quote, setQuote] = useState(null);
@@ -245,7 +245,32 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-24"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+    return buttonOnly
+      ? <Button size="sm" disabled className="gap-1.5"><Loader2 className="h-4 w-4 animate-spin" /> Finalise Invoice</Button>
+      : <div className="flex items-center justify-center h-24"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (buttonOnly) {
+    return (
+      <>
+        <Button size="sm" onClick={finaliseInvoice} disabled={!canEdit || creating || sending} className="gap-1.5">
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {creating ? "Generating…" : "Finalise Invoice"}
+        </Button>
+        <InvoicePdfPreviewDialog
+          open={previewOpen}
+          document={pdfDocument}
+          generating={creating}
+          sending={sending}
+          sendStatus={finaliseStatus}
+          sendError={sendError}
+          onClose={closePreview}
+          onDownload={downloadPdf}
+          onPrint={printPdf}
+          onConfirmSend={confirmSend}
+        />
+      </>
+    );
   }
 
   return (
