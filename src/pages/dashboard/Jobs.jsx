@@ -4,10 +4,11 @@ import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
 import JobFilters, { EMPTY_FILTERS } from "@/components/dashboard/JobFilters";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import JobListTable from "@/components/dashboard/job/JobListTable";
+import JobBoard, { DEFAULT_VISIBLE as DEFAULT_BOARD_STATUSES } from "@/components/dashboard/job/JobBoard";
 import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
-import { SlidersHorizontal, Plus } from "lucide-react";
+import { SlidersHorizontal, Plus, LayoutGrid, List } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
 import { isStaffRole } from "@/config/roles";
@@ -70,6 +71,8 @@ export default function Jobs() {
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [view, setView] = useState("board");
+  const [visibleStatuses, setVisibleStatuses] = useState(DEFAULT_BOARD_STATUSES);
 
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("id");
@@ -110,7 +113,17 @@ export default function Jobs() {
         </button>
       ) : null}
 
-      <JobFilters filters={filters} setFilters={setFilters} />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <JobFilters filters={filters} setFilters={setFilters} />
+        <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
+          <Button size="sm" variant={view === "board" ? "default" : "ghost"} onClick={() => setView("board")} className="gap-1.5">
+            <LayoutGrid className="h-4 w-4" /> Board
+          </Button>
+          <Button size="sm" variant={view === "list" ? "default" : "ghost"} onClick={() => setView("list")} className="gap-1.5">
+            <List className="h-4 w-4" /> List
+          </Button>
+        </div>
+      </div>
 
       {selectedIds.length > 0 && (
         <BulkActionsBar
@@ -127,12 +140,22 @@ export default function Jobs() {
           <p className="text-sm text-muted-foreground">No jobs to show here.</p>
         </div> :
 
-      <JobListTable
-        jobs={filtered}
-        onOpen={open}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-      />
+      view === "board" ? (
+        <JobBoard
+          jobs={filtered}
+          onJobClick={open}
+          onInvalidate={invalidate}
+          visibleStatuses={visibleStatuses}
+          setVisibleStatuses={setVisibleStatuses}
+        />
+      ) : (
+        <JobListTable
+          jobs={filtered}
+          onOpen={open}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+        />
+      )
       }
 
       {/* Spacer so the floating New Job button never covers the last row */}
