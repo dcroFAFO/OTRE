@@ -259,7 +259,7 @@ export default function PublicBookingForm() {
         <div className="space-y-1">
           <label className="flex items-start gap-2 text-xs text-muted-foreground">
             <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
-            <span>I agree to be contacted about this booking and understand my tracking link should be kept private.</span>
+            <span>I agree to be contacted about this booking and understand my booking details should be kept private.</span>
           </label>
           {errors.consent && <p className="text-xs text-destructive">{errors.consent}</p>}
         </div>
