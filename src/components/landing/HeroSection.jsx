@@ -4,8 +4,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, CheckCircle2, Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
-import { LANDING_LOGO_URL } from "@/components/landing/LandingLogo";
-
 const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag };
 
 // A clean grid of the actual services offered — keeps the hero focused on what we do.
@@ -38,29 +36,10 @@ export default function HeroSection() {
   const { data: { business, app, services } } = usePlatformConfig();
   const sectionRef = React.useRef(null);
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
-  const backgroundY = useTransform(scrollYProgress, [0, 1], [0, 170]);
-  const logoY = useTransform(scrollYProgress, [0, 1], [0, 75]);
-  const foregroundY = useTransform(scrollYProgress, [0, 1], [0, -150]);
+  const foregroundY = useTransform(scrollYProgress, [0, 1], [0, -120]);
 
   return (
     <section ref={sectionRef} id="top" className="relative overflow-hidden pt-24 pb-20 sm:pt-36 sm:pb-28 min-h-[90vh] flex items-center">
-      {/* Parallax background */}
-      <motion.div style={{ y: backgroundY }} className="absolute inset-0 pointer-events-none will-change-transform">
-        <div className="absolute inset-0 otr-grid-bg opacity-[0.18]" />
-        <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-accent/15 blur-[90px]" />
-        <div className="absolute top-60 -left-48 h-[400px] w-[400px] rounded-full bg-accent/10 blur-[80px]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-border to-transparent" />
-      </motion.div>
-
-      {/* Parallax mid-ground logo */}
-      <motion.img
-        style={{ y: logoY }}
-        src={LANDING_LOGO_URL}
-        alt=""
-        aria-hidden="true"
-        className="absolute left-1/2 top-10 w-[860px] -translate-x-1/2 opacity-[0.16] blur-[0.3px] saturate-150 sm:top-4 sm:w-[1080px] lg:left-[30%] lg:top-10 lg:w-[1120px] pointer-events-none will-change-transform"
-      />
-
       <motion.div style={{ y: foregroundY }} className="relative mx-auto max-w-7xl px-5 sm:px-8 w-full grid lg:grid-cols-2 gap-10 lg:gap-16 items-center will-change-transform">
         {/* Left: Copy */}
         <motion.div

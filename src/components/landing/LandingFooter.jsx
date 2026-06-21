@@ -8,7 +8,7 @@ import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
 export default function LandingFooter() {
   const { data: { business, app } } = usePlatformConfig();
   return (
-    <footer className="bg-card border-t border-border text-foreground">
+    <footer className="bg-card/90 backdrop-blur-sm border-t border-border text-foreground">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 py-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <div className="flex items-center gap-2">

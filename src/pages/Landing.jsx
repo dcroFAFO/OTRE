@@ -10,6 +10,7 @@ import WhyChooseSection from "@/components/landing/WhyChooseSection";
 import ContactSection from "@/components/landing/ContactSection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
 import LandingFooter from "@/components/landing/LandingFooter";
+import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
@@ -31,20 +32,23 @@ export default function Landing() {
         ogType="website"
         structuredData={localBusinessSchema}
       />
-    <div className="min-h-screen bg-background text-foreground">
-      <LandingNav />
-      <main>
-        <HeroSection />
-        <IntroSection />
-        <ServicesSection />
-        <CommonIssuesSection />
-        <ServicingSection />
-        <WhyChooseSection />
-        <JourneySection />
-        <ContactSection />
-        <FinalCTASection />
-      </main>
-      <LandingFooter />
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <LandingParallaxBackground />
+      <div className="relative z-10">
+        <LandingNav />
+        <main>
+          <HeroSection />
+          <IntroSection />
+          <ServicesSection />
+          <CommonIssuesSection />
+          <ServicingSection />
+          <WhyChooseSection />
+          <JourneySection />
+          <ContactSection />
+          <FinalCTASection />
+        </main>
+        <LandingFooter />
+      </div>
     </div>
     </>
   );
