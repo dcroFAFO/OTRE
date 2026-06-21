@@ -82,12 +82,34 @@ export default function PublicBookingForm() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
-  const [phoneError, setPhoneError] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setErrors((current) => ({ ...current, [k]: null }));
+  };
   const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
   const isOther = form.issue_type === "Other";
   const issueValid = form.issue_type && (!isOther || form.issue_description.trim());
+
+  const validateForm = () => {
+    const nextErrors = {};
+    if (!form.customer_name.trim()) nextErrors.customer_name = "Please enter your name.";
+    if (!form.customer_email.trim()) nextErrors.customer_email = "Please enter your email.";
+    if (!form.phone.trim()) nextErrors.phone = "Please enter your phone number.";
+
+    const normalizedPhone = normalizePhoneToE164(form.phone, form.phone_country_code || "+61");
+    if (form.phone.trim() && !normalizedPhone.is_valid) nextErrors.phone = "Please enter a valid phone number, e.g. 0415 505 908.";
+
+    if (!form.asset_label.trim()) nextErrors.asset_label = "Please select your scooter make and model.";
+    if (form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand) nextErrors.asset_label = `The selected model doesn't belong to ${form.asset_make}.`;
+    if (!form.issue_type) nextErrors.issue_type = "Please select the repair type.";
+    if (isOther && !form.issue_description.trim()) nextErrors.issue_description = "Please describe the issue.";
+    if (!form.consent) nextErrors.consent = "Please confirm we can contact you about this booking.";
+
+    setErrors(nextErrors);
+    return { isValid: Object.keys(nextErrors).length === 0, normalizedPhone };
+  };
 
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -101,13 +123,10 @@ export default function PublicBookingForm() {
   const submit = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    if (!form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid) return;
-    const normalizedPhone = normalizePhoneToE164(form.phone, form.phone_country_code);
-    if (!normalizedPhone.is_valid) {
-      setPhoneError(true);
-      return;
-    }
-    setPhoneError(false);
+
+    const { isValid, normalizedPhone } = validateForm();
+    if (!isValid) return;
+
     setSubmitting(true);
     try {
       const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
@@ -143,32 +162,35 @@ export default function PublicBookingForm() {
   }
 
   return (
-    <form onSubmit={submit} aria-busy={submitting} className="rounded-2xl border border-border bg-card p-4 shadow-xl space-y-3 lg:p-5">
+    <form onSubmit={submit} noValidate aria-busy={submitting} className="rounded-2xl border border-border bg-card p-4 shadow-xl space-y-3 lg:p-5">
       <div className={submitting ? "space-y-3 opacity-60 pointer-events-none" : "space-y-3"}>
         <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
           <section className="space-y-2.5">
             <h2 className="font-heading text-base font-extrabold">Your Details</h2>
             <div className="grid gap-2">
-              <Field label="Name" required><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required /></Field>
-              <Field label={field("email").label || "Email"} required><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} required /></Field>
+              <Field label="Name" required error={errors.customer_name}><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} /></Field>
+              <Field label={field("email").label || "Email"} required error={errors.customer_email}><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} /></Field>
               <PhoneNumberField
                 label={field("phone").label || "Phone"}
                 required
                 countryCode={form.phone_country_code || "+61"}
-                onCountryCodeChange={(value) => set("phone_country_code", value)}
+                onCountryCodeChange={(value) => { set("phone_country_code", value); setErrors((current) => ({ ...current, phone: null })); }}
                 value={form.phone}
-                onChange={(e) => { set("phone", e.target.value); setPhoneError(false); }}
-                error={phoneError}
+                onChange={(e) => set("phone", e.target.value)}
+                error={errors.phone}
               />
-              <Field label={field("asset_label").label || "Scooter"} required>
+              <Field label={field("asset_label").label || "Scooter"} required error={errors.asset_label}>
                 <AssetBrandPicker
                   make={form.asset_make}
                   model={form.asset_model}
                   customMake={form.asset_custom_make}
                   customModel={form.asset_custom_model}
-                  onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))}
+                  onChange={({ make, model, customMake, customModel, label }) => {
+                    setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }));
+                    setErrors((current) => ({ ...current, asset_label: null }));
+                  }}
                 />
-                {form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand && <p className="text-xs text-destructive">The selected model doesn't belong to {form.asset_make}.</p>}
+
               </Field>
             </div>
           </section>
@@ -176,15 +198,18 @@ export default function PublicBookingForm() {
           <section className="space-y-2.5">
             <h2 className="font-heading text-base font-extrabold">Repair Details</h2>
             <div className="grid gap-2">
-              <Field label={field("issue_description").label || "Issue"} required>
-                <Select value={form.issue_type} onValueChange={(v) => set("issue_type", v)}>
+              <Field label={field("issue_description").label || "Issue"} required error={errors.issue_type || errors.issue_description}>
+                <Select value={form.issue_type} onValueChange={(v) => {
+                  set("issue_type", v);
+                  setErrors((current) => ({ ...current, issue_type: null, issue_description: null }));
+                }}>
                   <SelectTrigger><SelectValue placeholder="Select a service…" /></SelectTrigger>
                   <SelectContent>
                     {services.map((s) => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
                     <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" required />}
+                {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" />}
               </Field>
               <Field label={field("rideable").label || "Is it rideable?"}>
                 <Select value={form.rideable ? "yes" : "no"} onValueChange={(v) => set("rideable", v === "yes")}>
@@ -222,10 +247,13 @@ export default function PublicBookingForm() {
           </section>
         </div>
 
-        <label className="flex items-start gap-2 text-xs text-muted-foreground">
-          <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
-          <span>I agree to be contacted about this booking and understand my tracking link should be kept private.</span>
-        </label>
+        <div className="space-y-1">
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
+            <span>I agree to be contacted about this booking and understand my tracking link should be kept private.</span>
+          </label>
+          {errors.consent && <p className="text-xs text-destructive">{errors.consent}</p>}
+        </div>
       </div>
 
       {submitting && (
@@ -234,13 +262,13 @@ export default function PublicBookingForm() {
         </p>
       )}
 
-      <Button type="submit" disabled={submitting || uploading || !form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg disabled:cursor-not-allowed">
+      <Button type="submit" disabled={submitting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg disabled:cursor-not-allowed">
         {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Submitting repair request…</> : "Submit Repair Request"}
       </Button>
     </form>
   );
 }
 
-function Field({ label, required, children }) {
-  return <div className="space-y-1"><Label className="text-xs font-semibold">{label}{required && <span className="text-accent"> *</span>}</Label>{children}</div>;
+function Field({ label, required, error, children }) {
+  return <div className="space-y-1"><Label className="text-xs font-semibold">{label}{required && <span className="text-accent"> *</span>}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
 }

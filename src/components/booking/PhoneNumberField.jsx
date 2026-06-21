@@ -33,7 +33,7 @@ export default function PhoneNumberField({ label = "Phone", required, countryCod
         />
       </div>
       <p className="text-[11px] leading-tight text-muted-foreground">Used for repair updates and job notifications.</p>
-      {error && <p className="text-xs text-destructive">Please enter a valid phone number.</p>}
+      {error && <p className="text-xs text-destructive">{typeof error === "string" ? error : "Please enter a valid phone number."}</p>}
     </div>
   );
 }
