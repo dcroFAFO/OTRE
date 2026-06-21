@@ -76,14 +76,21 @@ function publicQuote(quote) {
 }
 
 function publicInvoice(invoice) {
-  if (!invoice) return null;
+  if (!invoice || invoice.invoiceVisibility !== 'customer_visible') return null;
   return {
     id: invoice.id,
     number: invoice.number,
     amount: invoice.amount,
     currency: invoice.currency || 'AUD',
     status: invoice.status,
-    line_items: invoice.line_items || [],
+    line_items: (invoice.line_items || []).map((item) => ({
+      description: item.description || 'Line item',
+      qty: Number(item.qty) || 1,
+      unit_price: Number(item.unit_price) || 0,
+      tax_rate: Number(item.tax_rate) || 0,
+      discount_amount: Number(item.discount_amount) || 0,
+      kind: item.kind || 'item',
+    })),
     paid_date: invoice.paid_date || null,
     payment_status: invoice.status,
   };
@@ -222,7 +229,7 @@ Deno.serve(async (req) => {
       const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
       if (!stripeKey) return Response.json({ error: 'Stripe is not configured.' }, { status: 500 });
       const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
-      if (!invoice || invoice.job_id !== job.id) return Response.json({ error: 'Invoice not found.' }, { status: 404 });
+      if (!invoice || invoice.job_id !== job.id || invoice.invoiceVisibility !== 'customer_visible') return Response.json({ error: 'Invoice not found.' }, { status: 404 });
       const amount = Math.round((Number(invoice.amount) || 0) * 100);
       if (amount <= 0) return Response.json({ error: 'Invoice amount must be greater than zero.' }, { status: 400 });
       const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });

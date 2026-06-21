@@ -149,7 +149,7 @@ function QuotesTab({ job }) {
 
 function InvoiceTab({ invoices = [], isLoading }) {
   const [paying, setPaying] = useState(null);
-  const visible = invoices.filter((i) => i.status && i.status !== "draft");
+  const visible = invoices.filter((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
 
   if (isLoading) return <Loader2 className="h-5 w-5 animate-spin mx-auto mt-8 text-muted-foreground" />;
   if (!visible.length) return <div className="py-8 text-center text-muted-foreground text-sm"><Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />No invoice has been issued yet.</div>;
@@ -194,7 +194,7 @@ export default function CustomerJobModal({ job, open, onClose, userEmail }) {
     queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }, "-created_date", 10),
     enabled: !!job?.id,
   });
-  const hasInvoice = invoices.some((i) => i.status && i.status !== "draft");
+  const hasInvoice = invoices.some((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
 
   if (!job) return null;
 
@@ -230,6 +230,12 @@ function Field({ label, children }) {
   return <div><p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p><p className="text-sm text-foreground">{children}</p></div>;
 }
 
+function lineTotal(item) {
+  const base = (Number(item.unit_price) || 0) * (Number(item.qty) || 1);
+  const tax = base * ((Number(item.tax_rate) || 0) / 100);
+  return base + tax - (Number(item.discount_amount) || 0);
+}
+
 function LineItems({ items, currency = "AUD" }) {
   return (
     <table className="w-full text-sm border-t border-border pt-2">
@@ -237,7 +243,7 @@ function LineItems({ items, currency = "AUD" }) {
         {items.map((li, i) => (
           <tr key={i} className="border-b border-border/50 last:border-0">
             <td className="py-1.5 text-muted-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</td>
-            <td className="py-1.5 text-right font-medium">{currency} ${((Number(li.unit_price) || 0) * (Number(li.qty) || 1)).toFixed(2)}</td>
+            <td className="py-1.5 text-right font-medium">{currency} ${lineTotal(li).toFixed(2)}</td>
           </tr>
         ))}
       </tbody>

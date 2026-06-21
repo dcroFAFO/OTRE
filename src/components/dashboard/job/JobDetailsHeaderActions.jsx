@@ -92,6 +92,10 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
       setWaitingPrompt(true);
       return;
     }
+    if (ev.key === "ready_for_pickup" && !job.invoice_id && (!job.payment_status || job.payment_status === "unpaid")) {
+      const proceed = confirm("No invoice exists yet. You can still mark this job ready for pickup, but create the invoice from Billing before charging the customer.");
+      if (!proceed) return;
+    }
     runEvent(ev.key);
   };
 

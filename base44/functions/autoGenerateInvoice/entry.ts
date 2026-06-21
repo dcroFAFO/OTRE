@@ -70,6 +70,9 @@ Deno.serve(async (req) => {
       amount: invoiceAmount,
       currency,
       status: "outstanding",
+      invoiceVisibility: "internal",
+      line_items: lineItems,
+      internalCostingNotes: quote?.diagnosis_notes || "",
     });
 
     // Link the invoice back to the job and mark payment as outstanding

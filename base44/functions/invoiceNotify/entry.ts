@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
       data = await base44.asServiceRole.entities.Invoice.get(event.entity_id);
     }
     if (!data) return Response.json({ skipped: "no invoice data" });
+    if (data.invoiceVisibility !== "customer_visible") return Response.json({ skipped: "invoice internal only" });
 
     const newStatus = data.status;
     const oldStatus = old_data?.status;

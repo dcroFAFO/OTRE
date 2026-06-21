@@ -16,6 +16,11 @@ const DEFAULT_BUSINESS = {
 
 const money = (currency, value) => `${currency} ${(Number(value) || 0).toFixed(2)}`;
 const clean = (value, fallback = "") => String(value || fallback || "").trim();
+const lineTotal = (item) => {
+  const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
+  const tax = base * ((Number(item.tax_rate) || 0) / 100);
+  return base + tax - (Number(item.discount_amount) || 0);
+};
 
 async function getBusiness(base44) {
   try {
@@ -121,6 +126,8 @@ function buildLineItems(invoice, quote, usageRecords) {
       sku: clean(item.sku || item.product_sku || item.product_code || item.code || matchedCode),
       qty: Number(item.qty) || 1,
       unit_price: Number(item.unit_price) || 0,
+      tax_rate: Number(item.tax_rate) || 0,
+      discount_amount: Number(item.discount_amount) || 0,
       kind: clean(item.kind, "item"),
     };
   });
@@ -132,10 +139,13 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
   const margin = 42;
   const currency = invoice.currency || "AUD";
   const intake = job.intake || {};
-  const subtotal = lineItems.reduce((sum, item) => sum + item.qty * item.unit_price, 0);
-  const total = Number(invoice.amount) || subtotal;
-  const taxRate = 0;
-  const taxAmount = total * taxRate;
+  const subtotal = lineItems.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.unit_price) || 0)), 0);
+  const discountTotal = lineItems.reduce((sum, item) => sum + (Number(item.discount_amount) || 0), 0);
+  const taxAmount = lineItems.reduce((sum, item) => {
+    const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
+    return sum + base * ((Number(item.tax_rate) || 0) / 100);
+  }, 0);
+  const total = Number(invoice.amount) || lineItems.reduce((sum, item) => sum + lineTotal(item), 0);
   const issueDate = new Date().toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
 
   doc.setFillColor(15, 23, 42);
@@ -204,7 +214,7 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
     doc.text(item.sku || "-", pageWidth - 255, y, { align: "right" });
     doc.text(String(item.qty), pageWidth - 185, y, { align: "right" });
     doc.text(money(currency, item.unit_price), pageWidth - 110, y, { align: "right" });
-    doc.text(money(currency, item.qty * item.unit_price), pageWidth - margin, y, { align: "right" });
+    doc.text(money(currency, lineTotal(item)), pageWidth - margin, y, { align: "right" });
     y += Math.max(22, descriptionLines.length * 13 + 8);
   }
 
@@ -217,7 +227,13 @@ function generatePdf({ business, job, invoice, lineItems, notes, regenerateCount
   y += 18;
   doc.text("GST", pageWidth - 170, y, { align: "right" });
   doc.text(money(currency, taxAmount), pageWidth - margin, y, { align: "right" });
-  y += 24;
+  y += 18;
+  if (discountTotal > 0) {
+    doc.text("Discounts", pageWidth - 170, y, { align: "right" });
+    doc.text(`-${money(currency, discountTotal)}`, pageWidth - margin, y, { align: "right" });
+    y += 18;
+  }
+  y += 6;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text("Total due", pageWidth - 170, y, { align: "right" });
@@ -298,6 +314,13 @@ Deno.serve(async (req) => {
         fileName,
         pdfBase64,
         html: `<p>Hi ${job.customer_name || "there"},</p><p>Please find your tax invoice attached for job ${job.reference || job.id}.</p><p><strong>Total due:</strong> ${money(invoice.currency || "AUD", total)}</p>${paymentUrl ? `<p><a href="${paymentUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;">Pay securely with Stripe</a></p>` : ""}<p>Regards,<br>${business.name}</p>`,
+      });
+      const now = new Date().toISOString();
+      await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+        invoiceVisibility: "customer_visible",
+        invoiceVisibleAt: invoice.invoiceVisibleAt || now,
+        invoiceSentAt: invoice.invoiceSentAt || now,
+        invoiceCustomerNotificationSentAt: now,
       });
       await base44.asServiceRole.entities.AuditEvent.create({
         event_type: "invoice_pdf_emailed",

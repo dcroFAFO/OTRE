@@ -11,6 +11,12 @@ function money(value, currency = "AUD") {
   return `${currency} ${(Number(value) || 0).toFixed(2)}`;
 }
 
+function lineTotal(item) {
+  const base = (Number(item.unit_price) || 0) * (Number(item.qty) || 1);
+  const tax = base * ((Number(item.tax_rate) || 0) / 100);
+  return base + tax - (Number(item.discount_amount) || 0);
+}
+
 export default function PublicTrack() {
   const { jobId } = useParams();
   const token = new URLSearchParams(window.location.search).get("token") || "";
@@ -148,5 +154,5 @@ function Card({ title, icon: Icon, children }) {
 }
 
 function LineItems({ items, currency }) {
-  return <div className="rounded-xl border border-border divide-y divide-border">{items.map((li, i) => <div key={i} className="flex items-center justify-between px-3 py-2 text-sm"><span>{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span><span className="font-medium">{money((Number(li.unit_price) || 0) * (Number(li.qty) || 1), currency)}</span></div>)}</div>;
+  return <div className="rounded-xl border border-border divide-y divide-border">{items.map((li, i) => <div key={i} className="flex items-center justify-between px-3 py-2 text-sm"><span>{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span><span className="font-medium">{money(lineTotal(li), currency)}</span></div>)}</div>;
 }

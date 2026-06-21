@@ -34,6 +34,31 @@ const listJobPartUsages = async (base44, job) => {
   });
 };
 
+const makeInvoiceCustomerVisible = async (base44, job) => {
+  const invoice = await findJobInvoice(base44, job);
+  if (!invoice) return { invoice: null, sent: false, warning: "No invoice exists for this job" };
+  const now = new Date().toISOString();
+  const visibleInvoice = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+    invoiceVisibility: "customer_visible",
+    invoiceVisibleAt: invoice.invoiceVisibleAt || now,
+    invoiceSentAt: invoice.invoiceSentAt || now,
+  });
+  try {
+    await base44.functions.invoke("sendInvoiceEmail", { jobId: job.id });
+    const sentAt = new Date().toISOString();
+    const sentInvoice = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+      invoiceVisibility: "customer_visible",
+      invoiceVisibleAt: visibleInvoice.invoiceVisibleAt || sentAt,
+      invoiceSentAt: visibleInvoice.invoiceSentAt || sentAt,
+      invoiceCustomerNotificationSentAt: sentAt,
+    });
+    return { invoice: sentInvoice, sent: true };
+  } catch (error) {
+    console.warn("[jobActions] invoice visibility set, but invoice email failed:", error.message);
+    return { invoice: visibleInvoice, sent: false, warning: error.message };
+  }
+};
+
 const addUninvoicedPartsToInvoice = async (base44, job) => {
   const invoice = await findJobInvoice(base44, job);
   if (!invoice) return { addedCount: 0, invoice: null };
@@ -122,14 +147,21 @@ Deno.serve(async (req) => {
           visibility: "customer",
         });
         if (params.newStatus === READY_STATUS) {
-          const invoiceSync = await addUninvoicedPartsToInvoice(base44, { ...job, ...result });
+          const readyJob = { ...job, ...result };
+          const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
           if (invoiceSync.addedCount > 0) {
             await logAudit({
               eventType: "parts_added_to_invoice",
               summary: `Automatically added ${invoiceSync.addedCount} part(s) to invoice`,
-              visibility: "customer",
+              visibility: "internal",
             });
           }
+          const visible = await makeInvoiceCustomerVisible(base44, readyJob);
+          await logAudit({
+            eventType: visible.invoice ? "invoice_customer_visible" : "invoice_missing_on_ready",
+            summary: visible.invoice ? (visible.sent ? "Invoice made customer-visible and notification sent" : "Invoice made customer-visible, but notification could not be sent") : "Ready for pickup set without an invoice",
+            visibility: visible.invoice ? "customer" : "internal",
+          });
         }
         break;
       }
@@ -147,14 +179,21 @@ Deno.serve(async (req) => {
       case "mark_ready": {
         result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
-        const invoiceSync = await addUninvoicedPartsToInvoice(base44, { ...job, ...result });
+        const readyJob = { ...job, ...result };
+        const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
         if (invoiceSync.addedCount > 0) {
           await logAudit({
             eventType: "parts_added_to_invoice",
             summary: `Automatically added ${invoiceSync.addedCount} part(s) to invoice`,
-            visibility: "customer",
+            visibility: "internal",
           });
         }
+        const visible = await makeInvoiceCustomerVisible(base44, readyJob);
+        await logAudit({
+          eventType: visible.invoice ? "invoice_customer_visible" : "invoice_missing_on_ready",
+          summary: visible.invoice ? (visible.sent ? "Invoice made customer-visible and notification sent" : "Invoice made customer-visible, but notification could not be sent") : "Ready for pickup set without an invoice",
+          visibility: visible.invoice ? "customer" : "internal",
+        });
         break;
       }
       case "cancel": {

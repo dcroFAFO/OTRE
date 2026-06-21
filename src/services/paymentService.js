@@ -20,6 +20,18 @@ export async function addPartsToInvoice(job, usageIds) {
   return invoke({ action: "add_parts_to_invoice", jobId: job.id, usageIds });
 }
 
+export async function updateInvoiceLineItems(job, invoice, lineItems, internalCostingNotes = "") {
+  return invoke({ action: "update_line_items", jobId: job.id, invoiceId: invoice.id, lineItems, internalCostingNotes });
+}
+
+export async function setInvoiceVisibility(job, invoice, invoiceVisibility) {
+  return invoke({ action: "set_visibility", jobId: job.id, invoiceId: invoice.id, invoiceVisibility });
+}
+
+export async function sendInvoiceToCustomer(job, invoice) {
+  return invoke({ action: "send_to_customer", jobId: job.id, invoiceId: invoice.id });
+}
+
 export async function setPaymentStatus(invoice, job, status) {
   return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
 }

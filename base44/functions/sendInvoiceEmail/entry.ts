@@ -4,6 +4,12 @@ import Stripe from 'npm:stripe@17.5.0';
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
 const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
 
+function lineTotal(item) {
+  const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
+  const tax = base * ((Number(item.tax_rate) || 0) / 100);
+  return base + tax - (Number(item.discount_amount) || 0);
+}
+
 async function sendMail({ to, subject, body, from_name }) {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) throw new Error("RESEND_API_KEY not set");
@@ -100,7 +106,7 @@ Deno.serve(async (req) => {
     }
 
     const currency = invoice.currency || 'AUD';
-    const total = invoice.amount || 0;
+    const total = Number(invoice.amount) || lineItems.reduce((sum, item) => sum + lineTotal(item), 0);
     const customerName = job.customer_name || 'Customer';
     const reference = job.reference || invoice.number;
     const assetLabel = job.asset_label || job.scooter_label || 'your scooter';
@@ -109,13 +115,13 @@ Deno.serve(async (req) => {
     // Build line items rows HTML
     const lineItemsHtml = lineItems.length > 0
       ? lineItems.map((li) => {
-          const lineTotal = ((Number(li.qty) || 1) * (Number(li.unit_price) || 0)).toFixed(2);
+          const lineAmount = lineTotal(li).toFixed(2);
           return `
           <tr style="border-bottom:1px solid #f1f5f9;">
             <td style="padding:10px 0;font-size:14px;color:#1e293b;">${li.description}</td>
             <td style="padding:10px 0;font-size:14px;color:#64748b;text-align:center;">${Number(li.qty) || 1}</td>
             <td style="padding:10px 0;font-size:14px;color:#64748b;text-align:right;">${currency} ${(Number(li.unit_price) || 0).toFixed(2)}</td>
-            <td style="padding:10px 0;font-size:14px;font-weight:600;color:#1e293b;text-align:right;">${currency} ${lineTotal}</td>
+            <td style="padding:10px 0;font-size:14px;font-weight:600;color:#1e293b;text-align:right;">${currency} ${lineAmount}</td>
           </tr>`;
         }).join('')
       : `<tr><td colspan="4" style="padding:12px 0;font-size:13px;color:#94a3b8;text-align:center;">No line items recorded</td></tr>`;
@@ -240,7 +246,15 @@ Deno.serve(async (req) => {
       from_name: 'OTR Scooters',
     });
 
-    await base44.asServiceRole.entities.Job.update(job.id, { status: invoice.status === 'paid' ? 'paid' : 'invoice_sent', payment_status: invoice.status || 'outstanding' });
+    const now = new Date().toISOString();
+    await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+      invoiceVisibility: 'customer_visible',
+      invoiceVisibleAt: invoice.invoiceVisibleAt || now,
+      invoiceSentAt: invoice.invoiceSentAt || now,
+      invoiceCustomerNotificationSentAt: now,
+    });
+    const nextJobStatus = ['ready_for_pickup', 'paid', 'completed'].includes(job.status) ? job.status : 'invoice_sent';
+    await base44.asServiceRole.entities.Job.update(job.id, { status: invoice.status === 'paid' ? 'paid' : nextJobStatus, payment_status: invoice.status || 'outstanding' });
 
     console.log(`[sendInvoiceEmail] Sent invoice ${invoice.number} to ${job.customer_email}`);
     return Response.json({ sent: true, to: job.customer_email, invoice_number: invoice.number });

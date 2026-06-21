@@ -4,13 +4,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment } from "@/services/paymentService";
+import { getJobInvoice, createInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems, setInvoiceVisibility, sendInvoiceToCustomer } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { Send, Loader2, FileText, Package, Wrench, Lock, CalendarDays, Copy, CreditCard } from "lucide-react";
+import { Send, Loader2, FileText, Package, Wrench, Lock, CalendarDays, Copy, CreditCard, Plus, Trash2, Eye, EyeOff, Save } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+function normalizeDraftItem(item = {}) {
+  return {
+    description: item.description || "Line item",
+    qty: Number(item.qty) || 1,
+    unit_price: Number(item.unit_price) || 0,
+    tax_rate: Number(item.tax_rate) || 0,
+    discount_amount: Number(item.discount_amount) || 0,
+    kind: item.kind || "item",
+    sku: item.sku || "",
+    source_usage_id: item.source_usage_id || "",
+  };
+}
+
+function calculateLineTotal(item) {
+  const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
+  const tax = base * ((Number(item.tax_rate) || 0) / 100);
+  return base + tax - (Number(item.discount_amount) || 0);
+}
 
 export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const [invoice, setInvoice] = useState(null);
@@ -25,6 +44,10 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const [pdfRevision, setPdfRevision] = useState(0);
   const [emailingPdf, setEmailingPdf] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [savingLines, setSavingLines] = useState(false);
+  const [visibilityBusy, setVisibilityBusy] = useState(false);
+  const [draftItems, setDraftItems] = useState([]);
+  const [internalNotes, setInternalNotes] = useState("");
   const [loading, setLoading] = useState(true);
 
   const loadInvoiceData = () => {
@@ -37,6 +60,8 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
       setInvoice(inv);
       setQuote(q);
       setUsageRecords(usage || []);
+      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
+      setInternalNotes(inv?.internalCostingNotes || "");
       setLoading(false);
     });
   };
@@ -49,18 +74,22 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
   const lineItems = (invoice?.line_items?.length ? invoice.line_items : quote?.line_items?.length ? quote.line_items : []);
   if (lineItems.length === 0) {
     if (quote?.labour_estimate > 0) {
-      lineItems.push({ description: "Labour", qty: 1, unit_price: Number(quote.labour_estimate), kind: "labour" });
+      lineItems.push({ description: "Labour", qty: 1, unit_price: Number(quote.labour_estimate), tax_rate: 0, discount_amount: 0, kind: "labour" });
     }
     for (const u of usageRecords) {
       lineItems.push({
         description: u.item_name,
         qty: u.qty_used,
         unit_price: Number(u.unit_sell || u.unit_cost || 0),
-        kind: "part",
+        tax_rate: 0,
+        discount_amount: 0,
+        kind: String(u.item_id || "").startsWith("labour-") ? "labour" : "part",
+        source_usage_id: u.id,
       });
     }
   }
-  const lineTotal = lineItems.reduce((s, li) => s + (Number(li.qty) || 1) * (Number(li.unit_price) || 0), 0);
+  const activeItems = invoice ? draftItems : lineItems;
+  const lineTotal = activeItems.reduce((s, li) => s + calculateLineTotal(li), 0);
 
   const invoiceNotes = job.issue_description || "";
 
@@ -85,6 +114,8 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
       const finalAmount = lineTotal > 0 ? lineTotal : amount;
       const inv = await createInvoice(job, finalAmount, lineItems);
       setInvoice(inv);
+      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
+      setInternalNotes(inv?.internalCostingNotes || "");
       await generatePdfPreview(inv, 0);
       onChange?.();
     } catch (err) {
@@ -124,6 +155,8 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
     try {
       const inv = await copyQuoteToInvoice(job);
       setInvoice(inv);
+      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
+      setInternalNotes(inv?.internalCostingNotes || "");
       await loadInvoiceData();
       onChange?.();
       toast.success("Costing copied to invoice.");
@@ -138,6 +171,73 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
     const inv = await setPaymentStatus(invoice, job, s, actor);
     setInvoice(inv);
     onChange?.();
+  };
+
+  const updateDraft = (index, patch) => {
+    setDraftItems((items) => items.map((item, i) => i === index ? normalizeDraftItem({ ...item, ...patch }) : item));
+  };
+
+  const addLine = (kind) => {
+    const defaults = {
+      labour: { description: "Labour", qty: 1, unit_price: 80, kind: "labour" },
+      expense: { description: "Additional expense", qty: 1, unit_price: 0, kind: "expense" },
+      discount: { description: "Discount", qty: 1, unit_price: 0, discount_amount: 0, kind: "discount" },
+    };
+    setDraftItems((items) => [...items, normalizeDraftItem(defaults[kind] || defaults.expense)]);
+  };
+
+  const removeLine = (index) => {
+    setDraftItems((items) => items.filter((_, i) => i !== index));
+  };
+
+  const saveLineItems = async () => {
+    if (!invoice) return;
+    setSavingLines(true);
+    try {
+      const inv = await updateInvoiceLineItems(job, invoice, draftItems, internalNotes);
+      setInvoice(inv);
+      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
+      toast.success("Invoice line items saved.");
+      onChange?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to save invoice line items.");
+    } finally {
+      setSavingLines(false);
+    }
+  };
+
+  const changeVisibility = async (visibility) => {
+    if (!invoice) return;
+    setVisibilityBusy(true);
+    try {
+      const inv = await setInvoiceVisibility(job, invoice, visibility);
+      setInvoice(inv);
+      toast.success(visibility === "customer_visible" ? "Invoice is now visible to the customer." : "Invoice is internal only.");
+      onChange?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to update invoice visibility.");
+    } finally {
+      setVisibilityBusy(false);
+    }
+  };
+
+  const sendToCustomer = async () => {
+    if (!invoice) return;
+    if (!job.customer_email) {
+      toast.error("No customer email on this job.");
+      return;
+    }
+    setSending(true);
+    try {
+      const inv = await sendInvoiceToCustomer(job, invoice);
+      setInvoice(inv);
+      toast.success("Invoice sent and made visible to the customer.");
+      onChange?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to send invoice to customer.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const sendEmail = async () => {
@@ -193,7 +293,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
       </div>
 
       {/* Line items — shown in both editable and read-only */}
-      {lineItems.length > 0 && (
+      {activeItems.length > 0 && (
         <div className="rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-2.5 bg-secondary/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <FileText className="h-3.5 w-3.5" /> Line Items
@@ -208,17 +308,32 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
               </tr>
             </thead>
             <tbody>
-              {lineItems.map((li, i) => (
+              {activeItems.map((li, i) => (
                 <tr key={i} className="border-b border-border/50 last:border-0">
-                  <td className="px-4 py-2.5 flex items-center gap-1.5">
-                    {li.kind === "labour"
-                      ? <Wrench className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      : <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                    {li.description}
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-1.5">
+                      {li.kind === "labour"
+                        ? <Wrench className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        : <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      {canEdit && invoice ? (
+                        <Input value={li.description} onChange={(e) => updateDraft(i, { description: e.target.value })} className="h-8 min-w-[180px]" />
+                      ) : li.description}
+                    </div>
+                    {canEdit && invoice && (
+                      <div className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-4">
+                        <Input type="number" step="0.01" value={li.qty} onChange={(e) => updateDraft(i, { qty: e.target.value })} className="h-7 text-xs" placeholder="Qty" />
+                        <Input type="number" step="0.01" value={li.unit_price} onChange={(e) => updateDraft(i, { unit_price: e.target.value })} className="h-7 text-xs" placeholder="Unit" />
+                        <Input type="number" step="0.01" value={li.tax_rate} onChange={(e) => updateDraft(i, { tax_rate: e.target.value })} className="h-7 text-xs" placeholder="Tax %" />
+                        <Input type="number" step="0.01" value={li.discount_amount} onChange={(e) => updateDraft(i, { discount_amount: e.target.value })} className="h-7 text-xs" placeholder="Discount" />
+                      </div>
+                    )}
                   </td>
                   <td className="px-2 py-2.5 text-center text-muted-foreground">{li.qty}</td>
                   <td className="px-4 py-2.5 text-right text-muted-foreground">{currency} {(Number(li.unit_price) || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">{currency} {((Number(li.qty) || 1) * (Number(li.unit_price) || 0)).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-right font-medium">
+                    <div>{currency} {calculateLineTotal(li).toFixed(2)}</div>
+                    {canEdit && invoice && <button onClick={() => removeLine(i)} className="mt-1 text-xs text-rose-600 hover:underline"><Trash2 className="inline h-3 w-3" /> Remove</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -231,15 +346,54 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
               </tr>
             </tfoot>
           </table>
+          {canEdit && invoice && (
+            <div className="flex flex-wrap gap-2 border-t border-border bg-secondary/20 px-4 py-3">
+              <Button size="sm" variant="outline" onClick={() => addLine("labour")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add labour</Button>
+              <Button size="sm" variant="outline" onClick={() => addLine("expense")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add expense</Button>
+              <Button size="sm" variant="outline" onClick={() => addLine("discount")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add discount</Button>
+              <Button size="sm" onClick={saveLineItems} disabled={savingLines} className="gap-1.5 ml-auto">
+                {savingLines ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Save invoice items
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {invoice && canEdit && activeItems.length === 0 && (
+        <div className="rounded-xl border border-dashed border-border bg-secondary/20 p-4 space-y-3">
+          <p className="text-sm text-muted-foreground">No invoice line items yet. Add labour, expenses, discounts, or copy costing.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => addLine("labour")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add labour</Button>
+            <Button size="sm" variant="outline" onClick={() => addLine("expense")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add expense</Button>
+            <Button size="sm" variant="outline" onClick={() => addLine("discount")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add discount</Button>
+            <Button size="sm" onClick={saveLineItems} disabled={savingLines || draftItems.length === 0} className="gap-1.5">
+              {savingLines ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Save invoice items
+            </Button>
+          </div>
         </div>
       )}
 
       {invoice ? (
         <div className="rounded-xl border border-border p-4 space-y-3">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground font-mono">{invoice.number}</span>
-            <span className="font-heading text-xl font-extrabold">{currency} {(invoice.amount || 0).toFixed(2)}</span>
+          <div className="flex justify-between items-start gap-3 text-sm">
+            <div className="space-y-1">
+              <span className="text-muted-foreground font-mono">{invoice.number}</span>
+              <div className="flex flex-wrap gap-1.5">
+                <VisibilityBadge invoice={invoice} />
+                {invoice.invoiceSentAt && <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Sent to customer on {format(new Date(invoice.invoiceSentAt), "d MMM yyyy")}</span>}
+              </div>
+            </div>
+            <span className="font-heading text-xl font-extrabold">{currency} {(invoice.amount || lineTotal || 0).toFixed(2)}</span>
           </div>
+
+          {canEdit && (
+            <div className="space-y-1">
+              <Label>Internal costing notes</Label>
+              <Input value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal notes only — never shown to customers" />
+            </div>
+          )}
 
           {/* Paid date (read-only info, always shown if present) */}
           {invoice.paid_date && (
@@ -267,15 +421,21 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
               <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setStatus("paid")}>Mark paid</Button>
               <Button size="sm" variant="ghost" onClick={() => setStatus("refunded")}>Refund</Button>
+              <Button size="sm" variant="outline" onClick={() => changeVisibility("internal")} disabled={visibilityBusy} className="gap-1.5">
+                <EyeOff className="h-4 w-4" /> Internal only
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => changeVisibility("customer_visible")} disabled={visibilityBusy} className="gap-1.5">
+                <Eye className="h-4 w-4" /> Mark visible
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
                 className="gap-1.5 border-primary text-primary hover:bg-primary hover:text-primary-foreground ml-auto"
-                onClick={sendEmail}
+                onClick={sendToCustomer}
                 disabled={sending || !job.customer_email}
               >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Email invoice
+                Send to customer
               </Button>
             </div>
           ) : (
@@ -340,5 +500,14 @@ export default function InvoicePanel({ job, actor, canEdit, onChange }) {
         onRegenerate={regeneratePdf}
       />
     </div>
+  );
+}
+
+function VisibilityBadge({ invoice }) {
+  const visible = invoice?.invoiceVisibility === "customer_visible";
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${visible ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+      {visible ? "Visible to customer" : "Internal only"}
+    </span>
   );
 }

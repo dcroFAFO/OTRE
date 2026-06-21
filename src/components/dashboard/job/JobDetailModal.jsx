@@ -8,13 +8,11 @@ import {
 } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
-import QuotePanel from "./QuotePanel";
-import InvoicePanel from "./InvoicePanel";
+import BillingPanel from "./BillingPanel";
 import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
 import AuditTimeline from "./AuditTimeline";
 import AttachmentsPanel from "./AttachmentsPanel";
-import JobPartsPanel from "./JobPartsPanel";
 import IntakePanel from "./IntakePanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import { can } from "@/config/permissions";
@@ -30,13 +28,11 @@ import { format } from "date-fns";
 // Tab label map
 const TAB_LABELS = {
   intake: "Intake",
-  quote: "Estimate / Costing",
-  invoice: "Invoice",
+  billing: "Billing",
   customer: "Customer",
   notes: "Notes",
   private: "Private",
   timeline: "Timeline",
-  parts: "Parts",
   files: "Files",
 };
 
@@ -99,12 +95,10 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         value={tab}
                         label={TAB_LABELS[tab]}
                         badge={
-                          tab === "quote" && job.quote_status && job.quote_status !== "draft"
-                            ? "estimate"
+                          tab === "billing" && job.payment_status && job.payment_status !== "unpaid"
+                            ? job.payment_status
                             : tab === "intake" && job.intake?.intake_date
                             ? "✓"
-                            : tab === "invoice" && job.payment_status && job.payment_status !== "unpaid"
-                            ? job.payment_status
                             : null
                         }
                       />
@@ -116,25 +110,14 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   <TabsContent value="intake" className="mt-0">
                     {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
                   </TabsContent>
-                  <TabsContent value="quote" className="mt-0">
-                    {safeTab === "quote" && (
-                      <QuotePanel
+                  <TabsContent value="billing" className="mt-0">
+                    {safeTab === "billing" && (
+                      <BillingPanel
                         job={job}
                         actor={actor}
-                        canEdit={!quoteReadOnly && (can(role, "job.quote.manage") || role === "admin")}
-                        onChange={bump}
-                      />
-                    )}
-                  </TabsContent>
-                  <TabsContent value="parts" className="mt-0">
-                    {safeTab === "parts" && <JobPartsPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
-                  </TabsContent>
-                  <TabsContent value="invoice" className="mt-0">
-                    {safeTab === "invoice" && (
-                      <InvoicePanel
-                        job={job}
-                        actor={actor}
-                        canEdit={!invoiceReadOnly && (can(role, "job.invoice.manage") || role === "admin")}
+                        canEdit={canManage}
+                        quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
+                        invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
                         onChange={bump}
                       />
                     )}
