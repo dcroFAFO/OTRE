@@ -64,12 +64,16 @@ export default function PublicBookingForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid) return;
     setSubmitting(true);
-    const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
-    const result = await createBookingRequest({ ...form, issue_description, photo_url: photoUrl });
-    setDone(result);
-    setSubmitting(false);
+    try {
+      const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
+      const result = await createBookingRequest({ ...form, issue_description, photo_url: photoUrl });
+      setDone(result);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (done) {
@@ -96,12 +100,13 @@ export default function PublicBookingForm() {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl space-y-5">
+    <form onSubmit={submit} aria-busy={submitting} className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl space-y-5">
       <div>
         <h2 className="font-heading text-2xl font-extrabold">Repair booking details</h2>
         <p className="mt-2 text-sm text-muted-foreground">No account needed. We’ll create a private tracking link for this job.</p>
       </div>
 
+      <div className={submitting ? "space-y-5 opacity-60 pointer-events-none" : "space-y-5"}>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Name" required><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required /></Field>
         <Field label={field("phone").label || "Phone"} required><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} required /></Field>
@@ -165,9 +170,16 @@ export default function PublicBookingForm() {
         <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
         <span>I agree to be contacted about this booking and understand my tracking link should be kept private.</span>
       </label>
+      </div>
 
-      <Button type="submit" disabled={submitting || !form.consent || !form.customer_email || !form.customer_name || !form.phone || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
-        {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit booking"}
+      {submitting && (
+        <p className="rounded-xl border border-accent/20 bg-accent/10 px-4 py-3 text-sm font-medium text-accent flex items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Sending your booking request…
+        </p>
+      )}
+
+      <Button type="submit" disabled={submitting || uploading || !form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl disabled:cursor-not-allowed">
+        {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Submitting booking…</> : "Submit booking"}
       </Button>
     </form>
   );
