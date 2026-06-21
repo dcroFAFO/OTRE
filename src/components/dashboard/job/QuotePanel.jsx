@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Send, Plus, CalendarDays, Save, Wrench, Package, ChevronDown, ChevronUp } from "lucide-react";
@@ -22,8 +20,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
     labour_estimate: 0, parts_estimate: 0,
     diagnosis_notes: "", recommended_repair: "",
   });
-  const [labourHours, setLabourHours] = useState("1");
-  const [addingLabour, setAddingLabour] = useState(false);
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,16 +42,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const labourItems = lineItems.filter((li) => li.kind === "labour");
 
   const total = (Number(quote?.labour_estimate) || 0) + (Number(quote?.parts_estimate) || 0);
-
-  const addLabour = async () => {
-    const hrs = Number(labourHours) || 1;
-    if (hrs <= 0) return;
-    setAddingLabour(true);
-    const res = await base44.functions.invoke("quoteActions", { action: "add_labour", jobId: job.id, hours: hrs });
-    setQuote(res.data);
-    onChange?.();
-    setAddingLabour(false);
-  };
 
   const save = async () => {
     setSaving(true);
@@ -86,7 +72,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
         diagnosis_notes: r.draft.diagnosis_notes || prev.diagnosis_notes,
         recommended_repair: r.draft.recommended_repair || prev.recommended_repair,
       }));
-      if (r.draft.labour_hours) setLabourHours(String(r.draft.labour_hours));
       setNotesExpanded(true);
       setAiMsg("AI draft applied — review the notes below and add parts.");
     } else {
@@ -102,25 +87,10 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
           {/* ── LINE ITEMS — hero section ─────────────────────────────────── */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             {/* Header bar */}
-            <div className="flex items-center justify-between px-3 py-2 bg-secondary/50 border-b border-border">
+            <div className="flex items-center px-3 py-2 bg-secondary/50 border-b border-border">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                 <Package className="h-3.5 w-3.5" /> Line Items
               </span>
-              {/* Labour adder inline */}
-              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                <Wrench className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground hidden sm:inline">Labour</span>
-                <Input
-                  type="number" min={0.25} step={0.25}
-                  value={labourHours}
-                  onChange={(e) => setLabourHours(e.target.value)}
-                  className="h-6 w-14 px-1.5 py-0 text-xs"
-                />
-                <span className="text-xs text-muted-foreground">hr</span>
-                <Button size="sm" variant="outline" className="h-6 text-xs px-2 gap-1" onClick={addLabour} disabled={addingLabour}>
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
             </div>
 
             {/* Clickable body — opens parts picker */}
