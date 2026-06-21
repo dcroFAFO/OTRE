@@ -29,6 +29,15 @@
     "customer_id": {
       "type": "string"
     },
+    "customer_account_id": {
+      "type": "string",
+      "description": "Linked app User record id after a customer account claims or matches this job."
+    },
+    "claimed_by_customer": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this job has been linked to a verified customer account."
+    },
     "customer_name": {
       "type": "string",
       "description": "Denormalized for fast display"
@@ -55,6 +64,10 @@
     "asset_label": {
       "type": "string",
       "description": "Generic display label for the item/equipment/vehicle/location/object"
+    },
+    "scooter_make_model": {
+      "type": "string",
+      "description": "Customer-submitted scooter make/model for customer-safe job management views."
     },
     "scooterDetails": {
       "type": "string",
@@ -107,6 +120,18 @@
     },
     "issue_description": {
       "type": "string"
+    },
+    "issue_summary": {
+      "type": "string",
+      "description": "Customer-submitted issue/service summary for customer-safe job management views."
+    },
+    "rideable_status": {
+      "type": "string",
+      "description": "Customer-facing rideable status captured at booking."
+    },
+    "job_status": {
+      "type": "string",
+      "description": "Customer-safe status alias captured for portal use."
     },
     "private_notes": {
       "type": "string",
@@ -350,6 +375,11 @@
       "type": "string",
       "format": "date-time"
     },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Customer-facing booking/request creation timestamp."
+    },
     "updatedAt": {
       "type": "string",
       "format": "date-time"
@@ -398,6 +428,12 @@
           "data.customer_id": "{{user.data.customer_id}}"
         },
         {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "data.customer_account_id": "{{user.id}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }
@@ -416,6 +452,12 @@
         },
         {
           "data.customer_id": "{{user.data.customer_id}}"
+        },
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "data.customer_account_id": "{{user.id}}"
         },
         {
           "user_condition": {
