@@ -16,8 +16,8 @@ export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoi
       </BillingSection>
 
       <BillingSection
-        title="Labour & expenses"
-        description="Manage labour charges, costing totals, discounts, expenses, and internal estimate notes before customer invoicing."
+        title="Labour and Consumables"
+        description="Manage labour, fees, surcharges, consumables, and diagnosis notes before customer invoicing."
         icon={FileText}
       >
         <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />

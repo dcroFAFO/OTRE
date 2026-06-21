@@ -66,10 +66,6 @@ async function sendQuoteEmail({ job, quote }) {
                 <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Diagnosis</span><br>
                 <span style="font-size:14px;color:#475569;line-height:1.5;">${quote.diagnosis_notes}</span>
               </td></tr>` : ""}
-              ${quote.recommended_repair ? `<tr><td style="padding:8px 0 4px;">
-                <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Recommended Repair</span><br>
-                <span style="font-size:14px;color:#475569;line-height:1.5;">${quote.recommended_repair}</span>
-              </td></tr>` : ""}
             </table>
 
             <p style="margin:0 0 12px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Estimate Breakdown</p>
@@ -285,8 +281,7 @@ ${contextLines}
 
 Based on the above, write:
 1. A concise "diagnosis_notes" (1-3 sentences) explaining what the technician found.
-2. A brief "recommended_repair" (1 sentence) describing the recommended fix.
-3. An estimated "labour_hours" (number, e.g. 1.5) for the repair.
+2. An estimated "labour_hours" (number, e.g. 1.5) for the repair.
 
 Be professional, clear, and customer-friendly. Do not mention internal codes or jargon.`;
 
@@ -296,7 +291,6 @@ Be professional, clear, and customer-friendly. Do not mention internal codes or 
             type: "object",
             properties: {
               diagnosis_notes: { type: "string" },
-              recommended_repair: { type: "string" },
               labour_hours: { type: "number" },
             },
           },
@@ -304,7 +298,6 @@ Be professional, clear, and customer-friendly. Do not mention internal codes or 
 
         result = {
           diagnosis_notes: aiResult.diagnosis_notes || "",
-          recommended_repair: aiResult.recommended_repair || "",
           labour_hours: aiResult.labour_hours || 1,
         };
         break;

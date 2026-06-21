@@ -9,6 +9,8 @@ import { addInventoryParts, removeInventoryPart, removeInventoryParts } from "@/
 import { addPartsToInvoice } from "@/services/paymentService";
 import { toast } from "sonner";
 
+const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
+
 export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const qc = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -17,9 +19,9 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const { data: usages = [], refetch } = useQuery({
     queryKey: ["inventoryUsage", job.id, job.job_id],
     queryFn: async () => {
-      const primary = await base44.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 50);
+      const primary = (await base44.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 50)).filter(isRepairPartUsage);
       if (!job.job_id || job.job_id === job.id) return primary;
-      const legacy = await base44.entities.InventoryUsage.filter({ job_id: job.job_id, source: "inventory" }, "-created_date", 50);
+      const legacy = (await base44.entities.InventoryUsage.filter({ job_id: job.job_id, source: "inventory" }, "-created_date", 50)).filter(isRepairPartUsage);
       const seen = new Set();
       return [...primary, ...legacy].filter((item) => {
         if (seen.has(item.id)) return false;
@@ -75,7 +77,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-heading font-bold flex items-center gap-2 text-sm">
-          Parts &amp; Consumables
+          Parts
         </h3>
         {canEdit && selectedUsages.length > 0 && (
           <div className="flex items-center gap-2">
