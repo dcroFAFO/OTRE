@@ -160,21 +160,17 @@ export default function PublicBookingForm() {
                 onChange={(e) => { set("phone", e.target.value); setPhoneError(false); }}
                 error={phoneError}
               />
+              <Field label={field("asset_label").label || "Scooter"} required>
+                <AssetBrandPicker
+                  make={form.asset_make}
+                  model={form.asset_model}
+                  customMake={form.asset_custom_make}
+                  customModel={form.asset_custom_model}
+                  onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))}
+                />
+                {form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand && <p className="text-xs text-destructive">The selected model doesn't belong to {form.asset_make}.</p>}
+              </Field>
             </div>
-          </section>
-
-          <section className="space-y-2.5">
-            <h2 className="font-heading text-base font-extrabold">Scooter Details</h2>
-            <Field label={field("asset_label").label || "Scooter"} required>
-              <AssetBrandPicker
-                make={form.asset_make}
-                model={form.asset_model}
-                customMake={form.asset_custom_make}
-                customModel={form.asset_custom_model}
-                onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, asset_make: make, asset_model: model, asset_custom_make: customMake, asset_custom_model: customModel, asset_label: label }))}
-              />
-              {form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand && <p className="text-xs text-destructive">The selected model doesn't belong to {form.asset_make}.</p>}
-            </Field>
           </section>
 
           <section className="space-y-2.5">
@@ -203,6 +199,12 @@ export default function PublicBookingForm() {
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
                 </label>
               </Field>
+            </div>
+          </section>
+
+          <section className="space-y-2.5">
+            <h2 className="font-heading text-base font-extrabold">Scheduling</h2>
+            <div className="grid gap-2">
               <Field label={field("preferred_date").label || "Preferred date"}>
                 <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
               </Field>
