@@ -132,14 +132,24 @@
       "$or": [
         {
           "user_condition": {
-            "role": "admin"
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
           }
         },
         {
-          "data.job_id": "{{user.data.job_id}}"
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
+          "$and": [
+            {
+              "data.customer_id": "{{user.data.customer_id}}"
+            },
+            {
+              "data.invoiceVisibility": "customer_visible"
+            }
+          ]
         }
       ]
     },
