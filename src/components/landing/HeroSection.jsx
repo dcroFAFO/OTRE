@@ -82,16 +82,16 @@ export default function HeroSection() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
-            <a href="#services" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl shadow-lg shadow-accent/20">
-                {business.primaryCta.label} <ArrowRight className="h-4 w-4" />
-              </Button>
-            </a>
             <Link to="/book" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-xl">
-                {business.secondaryCta.label}
+              <Button size="lg" className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground gap-2 rounded-xl shadow-lg shadow-accent/20">
+                {business.secondaryCta.label} <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
+            <a href="#services" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-xl">
+                {business.primaryCta.label}
+              </Button>
+            </a>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">
