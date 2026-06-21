@@ -1,0 +1,59 @@
+{
+  "name": "JobCalendarEvent",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Linked Job record id"
+    },
+    "calendar_id": {
+      "type": "string",
+      "description": "Google Calendar id where the event was created"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Google Calendar event id for this job"
+    },
+    "event_link": {
+      "type": "string",
+      "description": "Google Calendar event link"
+    },
+    "last_synced_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "job_id",
+    "calendar_id",
+    "event_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "employee",
+            "technician"
+          ]
+        }
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
