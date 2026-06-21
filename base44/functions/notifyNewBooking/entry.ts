@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Send customer confirmation (separate, friendly email)
-    if (data.customer_email) {
+    // Public bookings send customer confirmation from createBooking so the private tracking link can be included.
+    if (data.customer_email && data.source !== "public_booking") {
       if (staffRecipients.length > 0) await sleep(600);
       await sendMail({
         to: data.customer_email,
