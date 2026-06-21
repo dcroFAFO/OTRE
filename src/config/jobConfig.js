@@ -1,7 +1,6 @@
 // Backward-compatible job config entry point.
 // Default values are OTR seed/demo data, not permanent platform logic.
 import {
-  DEFAULT_JOB_STATUSES,
   DEFAULT_PAYMENT_STATUSES,
   DEFAULT_QUOTE_STATUSES,
   DEFAULT_WAITING_REASONS,
@@ -9,7 +8,21 @@ import {
   DEFAULT_INTAKE_STATUS as INTAKE_STATUS,
 } from "./platformConfig";
 
-export const JOB_STATUSES = DEFAULT_JOB_STATUSES;
+export const JOB_STATUSES = [
+  { key: "requested", label: "Requested", group: "intake", color: "slate", is_default_intake: true },
+  { key: "booked", label: "Booked", group: "active", color: "indigo" },
+  { key: "repair_in_progress", label: "Repair In Progress", group: "active", color: "teal" },
+  { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
+  { key: "ready_for_pickup", label: "Ready for Pickup", group: "done", color: "emerald" },
+  { key: "invoice_sent", label: "Invoice Sent", group: "billing", color: "rose" },
+  { key: "paid", label: "Paid", group: "billing", color: "emerald" },
+  { key: "completed", label: "Completed", group: "done", color: "emerald", is_terminal: true },
+  { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
+  { key: "on_hold", label: "On Hold", group: "waiting", color: "slate" },
+];
+
+export const JOB_STATUS_VALUES = JOB_STATUSES.map((status) => status.key);
+export const JOB_STATUS_LABELS = Object.fromEntries(JOB_STATUSES.map((status) => [status.key, status.label]));
 export const PAYMENT_STATUSES = DEFAULT_PAYMENT_STATUSES;
 export const QUOTE_STATUSES = DEFAULT_QUOTE_STATUSES;
 export const WAITING_REASONS = DEFAULT_WAITING_REASONS;
@@ -43,12 +56,21 @@ export const LEGACY_STATUS_MAP = {
 };
 
 export function normalizeStatusKey(key) {
-  return LEGACY_STATUS_MAP[key] || key;
+  return LEGACY_STATUS_MAP[key] || key || "requested";
+}
+
+export function isCanonicalJobStatus(key) {
+  return JOB_STATUS_VALUES.includes(key);
+}
+
+export function getCanonicalJobStatus(key) {
+  const normalized = normalizeStatusKey(key);
+  return isCanonicalJobStatus(normalized) ? normalized : "requested";
 }
 
 export function getStatus(key) {
-  const normalized = normalizeStatusKey(key);
-  return JOB_STATUSES.find((s) => s.key === normalized) || { key: normalized || key, label: normalized || key, color: "slate" };
+  const normalized = getCanonicalJobStatus(key);
+  return JOB_STATUSES.find((s) => s.key === normalized) || { key: "requested", label: "Requested", color: "slate" };
 }
 export function getPaymentStatus(key) {
   return PAYMENT_STATUSES.find((s) => s.key === key) || { key, label: key, color: "slate" };

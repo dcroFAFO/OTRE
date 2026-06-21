@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { changeStatus } from "@/services/jobService";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, ChevronDown, Loader2, Bell } from "lucide-react";
@@ -17,7 +18,8 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
     if (!statusValue) return;
     setLoading(true);
     try {
-      await Promise.all(selectedIds.map((id) => base44.entities.Job.update(id, { status: statusValue })));
+      const selectedJobs = allJobs.filter((job) => selectedIds.includes(job.id));
+      await Promise.all(selectedJobs.map((job) => changeStatus(job, statusValue)));
       toast({ title: `Updated ${count} job${count !== 1 ? "s" : ""}`, description: `Status set to "${JOB_STATUSES.find(s => s.key === statusValue)?.label || statusValue}"` });
       setStatusValue("");
       onDone();

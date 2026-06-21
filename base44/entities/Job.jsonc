@@ -268,7 +268,20 @@
     },
     "status": {
       "type": "string",
-      "default": "requested"
+      "enum": [
+        "requested",
+        "booked",
+        "repair_in_progress",
+        "waiting_on_parts",
+        "ready_for_pickup",
+        "invoice_sent",
+        "paid",
+        "completed",
+        "cancelled",
+        "on_hold"
+      ],
+      "default": "requested",
+      "description": "Canonical job status used by the model, Kanban board, filters, dropdowns, and drag/drop updates."
     },
     "waiting_reason": {
       "type": "string"

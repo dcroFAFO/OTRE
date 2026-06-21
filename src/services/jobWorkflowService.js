@@ -7,28 +7,20 @@
  */
 
 import { changeStatus, reopenJob } from "./jobService";
+import { getCanonicalJobStatus, isCanonicalJobStatus, normalizeStatusKey } from "@/config/jobConfig";
 
 const TERMINAL = ["completed", "cancelled"];
 
-const LEGACY_STATUS_MAP = {
-  quote_required: "requested",
-  quote_sent: "booked",
-  pending_confirmation: "on_hold",
-  quote_approved: "booked",
-  active: "repair_in_progress",
-  technician_assigned: "booked",
-  waiting_parts: "waiting_on_parts",
-  waiting_supplier: "on_hold",
-  waiting_customer: "on_hold",
-  invoice_outstanding: "invoice_sent",
-  in_progress: "repair_in_progress",
-};
-
 function normalizeStatus(status) {
-  return LEGACY_STATUS_MAP[status] || status || "requested";
+  return getCanonicalJobStatus(status);
 }
 
 const TRANSITION_RULES = {
+  requested: {
+    targetStatus: "requested",
+    allowedFrom: null,
+    check() { return { ok: true }; },
+  },
   booked: {
     targetStatus: "booked",
     allowedFrom: ["requested", "on_hold"],
@@ -104,11 +96,16 @@ const TRANSITION_RULES = {
 };
 
 export async function updateJobStatusFromEvent(job, eventType, payload = {}) {
-  const rule = TRANSITION_RULES[eventType];
+  const canonicalEventType = normalizeStatusKey(eventType);
+  if (!isCanonicalJobStatus(canonicalEventType) && canonicalEventType !== "reopen") {
+    throw new Error(`Invalid job status: "${eventType}".`);
+  }
+
+  const rule = TRANSITION_RULES[canonicalEventType];
   if (!rule) throw new Error(`Unknown workflow event: "${eventType}".`);
 
   const currentStatus = normalizeStatus(job.status);
-  if (TERMINAL.includes(currentStatus) && eventType !== "reopen") {
+  if (TERMINAL.includes(currentStatus) && canonicalEventType !== "reopen") {
     throw new Error(`This job is ${currentStatus} and cannot be changed further. Use "Reopen" to reactivate it.`);
   }
 
@@ -119,8 +116,7 @@ export async function updateJobStatusFromEvent(job, eventType, payload = {}) {
   const checkResult = rule.check({ ...job, status: currentStatus }, payload);
   if (!checkResult.ok) throw new Error(checkResult.reason);
 
-  if (eventType === "reopen") await reopenJob(job);
-  else await changeStatus(job, rule.targetStatus);
-
-  return { ok: true };
+  return canonicalEventType === "reopen"
+    ? await reopenJob(job)
+    : await changeStatus(job, rule.targetStatus);
 }

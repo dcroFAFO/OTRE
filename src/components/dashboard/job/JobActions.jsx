@@ -93,11 +93,10 @@ export default function JobActions({ job, actor, onChange }) {
         <Select
           value={job.waiting_reason || "none"}
           onValueChange={run("waiting", async (v) => {
-            const newStatus = v === "none" ? "active" :
-              v === "customer" ? "waiting_customer" :
-              v === "supplier" ? "waiting_supplier" :
-              "waiting_parts";
-            await changeStatus({ ...job, status: v === "none" ? "active" : job.status }, newStatus, actor);
+            const newStatus = v === "none" ? "repair_in_progress" :
+              v === "parts" ? "waiting_on_parts" :
+              "on_hold";
+            await changeStatus({ ...job, status: v === "none" ? "repair_in_progress" : job.status }, newStatus, actor);
           })}
         >
           <SelectTrigger className="max-w-[220px]">

@@ -3,9 +3,39 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 // All job mutations (status, scheduling, checklist, notes) run
 // server-side here, with audit events written in the same request.
 
+const JOB_STATUSES = [
+  "requested",
+  "booked",
+  "repair_in_progress",
+  "waiting_on_parts",
+  "ready_for_pickup",
+  "invoice_sent",
+  "paid",
+  "completed",
+  "cancelled",
+  "on_hold",
+];
+
+const LEGACY_STATUS_MAP = {
+  quote_required: "requested",
+  quote_sent: "booked",
+  pending_confirmation: "on_hold",
+  quote_approved: "booked",
+  active: "repair_in_progress",
+  technician_assigned: "booked",
+  waiting_parts: "waiting_on_parts",
+  waiting_supplier: "on_hold",
+  waiting_customer: "on_hold",
+  invoice_outstanding: "invoice_sent",
+  in_progress: "repair_in_progress",
+};
+
 const READY_STATUS = "ready_for_pickup";
 const CANCELLED_STATUS = "cancelled";
 const REOPEN_STATUS = "booked";
+
+const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status || "requested";
+const isCanonicalStatus = (status) => JOB_STATUSES.includes(status);
 
 const statusLabel = (key) =>
   String(key || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -137,16 +167,21 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "change_status": {
-        if (job.status === params.newStatus) { result = job; break; }
-        result = await base44.entities.Job.update(job.id, { status: params.newStatus });
+        const nextStatus = normalizeStatus(params.newStatus);
+        const currentStatus = normalizeStatus(job.status);
+        if (!isCanonicalStatus(nextStatus)) {
+          return Response.json({ error: `Invalid job status: ${params.newStatus}` }, { status: 400 });
+        }
+        if (currentStatus === nextStatus && job.status === nextStatus) { result = job; break; }
+        result = await base44.entities.Job.update(job.id, { status: nextStatus });
         await logAudit({
           eventType: "status_changed",
-          previousValue: statusLabel(job.status),
-          newValue: statusLabel(params.newStatus),
-          summary: `Status changed to "${statusLabel(params.newStatus)}"`,
+          previousValue: statusLabel(currentStatus),
+          newValue: statusLabel(nextStatus),
+          summary: `Status changed to "${statusLabel(nextStatus)}"`,
           visibility: "customer",
         });
-        if (params.newStatus === READY_STATUS) {
+        if (nextStatus === READY_STATUS) {
           const readyJob = { ...job, ...result };
           const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
           if (invoiceSync.addedCount > 0) {

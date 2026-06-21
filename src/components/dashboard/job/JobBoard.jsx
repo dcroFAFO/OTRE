@@ -1,37 +1,50 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { DragDropContext } from "@hello-pangea/dnd";
-import { DEFAULT_JOB_STATUSES } from "@/config/platformConfig";
-import { normalizeStatusKey } from "@/config/jobConfig";
+import { JOB_STATUSES, getStatus, isCanonicalJobStatus, normalizeStatusKey } from "@/config/jobConfig";
 import KanbanColumn from "@/components/dashboard/kanban/KanbanColumn";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 import { toast } from "sonner";
 
-const BOARD_STATUSES = DEFAULT_JOB_STATUSES;
+const BOARD_STATUSES = JOB_STATUSES;
 
 export default function JobBoard({ jobs, onJobClick, onInvalidate }) {
   const columns = useMemo(() => BOARD_STATUSES, []);
+  const [boardJobs, setBoardJobs] = useState(jobs);
+
+  useEffect(() => {
+    setBoardJobs(jobs.map((job) => ({ ...job, status: normalizeStatusKey(job.status) })));
+  }, [jobs]);
 
   const jobsByStatus = useMemo(() => {
     const map = {};
     columns.forEach((s) => { map[s.key] = []; });
-    jobs.forEach((job) => {
+    boardJobs.forEach((job) => {
       const statusKey = normalizeStatusKey(job.status);
-      if (map[statusKey] !== undefined) map[statusKey].push(job);
+      if (map[statusKey] !== undefined) map[statusKey].push({ ...job, status: statusKey });
     });
     return map;
-  }, [jobs, columns]);
+  }, [boardJobs, columns]);
 
   const onDragEnd = async ({ source, destination, draggableId }) => {
     if (!destination || destination.droppableId === source.droppableId) return;
-    const job = jobs.find((item) => item.id === draggableId);
+
+    const targetStatus = destination.droppableId;
+    if (!isCanonicalJobStatus(targetStatus)) {
+      toast.error("That column is not a valid job status.");
+      return;
+    }
+
+    const job = boardJobs.find((item) => item.id === draggableId);
     if (!job) return;
 
     try {
-      await updateJobStatusFromEvent(job, destination.droppableId);
-      toast.success(`Moved to ${columns.find((s) => s.key === destination.droppableId)?.label || "new status"}.`);
-      onInvalidate?.();
+      const updatedJob = await updateJobStatusFromEvent(job, targetStatus);
+      const nextJob = { ...job, ...(updatedJob?.job || updatedJob || {}), status: targetStatus };
+      setBoardJobs((current) => current.map((item) => item.id === draggableId ? nextJob : item));
+      toast.success(`Moved to ${getStatus(targetStatus).label}.`);
+      await onInvalidate?.();
     } catch (error) {
-      toast.error(error.message || "This job can't be moved there yet.");
+      toast.error(error?.response?.data?.error || error.message || "This job can't be moved there yet.");
     }
   };
 

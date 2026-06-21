@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { DEFAULT_JOB_STATUSES } from "@/config/platformConfig";
+import { getStatus, normalizeStatusKey } from "@/config/jobConfig";
 import { Loader2, CheckCircle2, Circle, Clock, Wrench, FileText, Receipt, CreditCard } from "lucide-react";
 import { startInvoicePayment } from "@/services/paymentService";
 import SignatureCapture from "@/components/portal/SignatureCapture";
@@ -20,19 +20,8 @@ const MILESTONES = [
   { key: "completed", label: "Completed" },
 ];
 
-const LEGACY_STATUS_MAP = {
-  pending_confirmation: "on_hold",
-  technician_assigned: "booked",
-  quote_required: "requested",
-  quote_sent: "booked",
-  quote_approved: "booked",
-  active: "repair_in_progress",
-  waiting_parts: "waiting_on_parts",
-  invoice_outstanding: "invoice_sent",
-};
-
 function normalizedStatus(status) {
-  return LEGACY_STATUS_MAP[status] || status;
+  return normalizeStatusKey(status);
 }
 
 function getMilestoneIndex(statusKey) {
@@ -46,7 +35,7 @@ function getMilestoneIndex(statusKey) {
 
 function StatusTab({ job }) {
   const current = getMilestoneIndex(job.status);
-  const statusDef = DEFAULT_JOB_STATUSES.find((s) => s.key === normalizedStatus(job.status));
+  const statusDef = getStatus(job.status);
   const canAcknowledgeCompletion = normalizedStatus(job.status) === "completed";
 
   return (
@@ -99,7 +88,7 @@ function HistoryTab({ userEmail }) {
   return (
     <ul className="space-y-3 py-2">
       {jobs.map((j) => {
-        const statusDef = DEFAULT_JOB_STATUSES.find((s) => s.key === normalizedStatus(j.status));
+        const statusDef = getStatus(j.status);
         return (
           <li key={j.id} className="rounded-xl border border-border bg-card px-4 py-3 flex items-start justify-between gap-3">
             <div className="min-w-0">

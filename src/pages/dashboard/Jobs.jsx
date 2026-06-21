@@ -8,6 +8,7 @@ import JobBoard from "@/components/dashboard/job/JobBoard";
 import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
+import { normalizeStatusKey } from "@/config/jobConfig";
 import { DEFAULT_SERVICE_TYPE } from "@/config/serviceTypes";
 import { SlidersHorizontal, Plus, LayoutGrid, List } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
@@ -67,11 +68,10 @@ export default function Jobs() {
   };
 
   const queryFilter = useMemo(() => ({
-    ...(filters.status !== "all" ? { status: filters.status } : {}),
     ...(filters.payment !== "all" ? { payment_status: filters.payment } : {}),
     ...(filters.type !== "all" ? { job_type: filters.type } : {}),
     ...(filters.waiting !== "all" ? { waiting_reason: filters.waiting } : {}),
-  }), [filters.status, filters.payment, filters.type, filters.waiting]);
+  }), [filters.payment, filters.type, filters.waiting]);
   const { data: jobs } = useJobs(queryFilter);
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
@@ -89,11 +89,12 @@ export default function Jobs() {
     return jobs.filter((j) => {
       const matchesSearch = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
         .some((v) => v?.toLowerCase().includes(q));
+      const matchesStatus = view === "board" || filters.status === "all" || normalizeStatusKey(j.status) === filters.status;
       const matchesService = filters.service_type === "all" || (j.service_type || DEFAULT_SERVICE_TYPE) === filters.service_type;
       const matchesPriority = filters.priority === "all" || (j.priority || "medium") === filters.priority;
-      return matchesSearch && matchesService && matchesPriority;
+      return matchesSearch && matchesStatus && matchesService && matchesPriority;
     });
-  }, [jobs, filters.q, filters.service_type, filters.priority]);
+  }, [jobs, filters.q, filters.status, filters.service_type, filters.priority, view]);
 
   return (
     <div className="space-y-5">

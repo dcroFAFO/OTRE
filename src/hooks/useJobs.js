@@ -11,7 +11,7 @@ export function useJobs(filter = {}) {
         : base44.entities.Job.list("-created_date", 200);
     },
     placeholderData: [],
-    staleTime: 30 * 1000, // 30s — reduces re-fetches on tab switching
+    staleTime: 0,
   });
 }
 
@@ -25,5 +25,5 @@ export function useStaff() {
 
 export function useInvalidateJobs() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: ["jobs"] });
+  return () => qc.invalidateQueries({ queryKey: ["jobs"], refetchType: "all" });
 }
