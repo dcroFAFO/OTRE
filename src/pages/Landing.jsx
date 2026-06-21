@@ -7,6 +7,7 @@ import IntroSection from "@/components/landing/IntroSection";
 import CommonIssuesSection from "@/components/landing/CommonIssuesSection";
 import ServicingSection from "@/components/landing/ServicingSection";
 import WhyChooseSection from "@/components/landing/WhyChooseSection";
+import ContactSection from "@/components/landing/ContactSection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
 import LandingFooter from "@/components/landing/LandingFooter";
 import SEO from "@/components/SEO";
@@ -40,6 +41,7 @@ export default function Landing() {
         <ServicingSection />
         <WhyChooseSection />
         <JourneySection />
+        <ContactSection />
         <FinalCTASection />
       </main>
       <LandingFooter />
