@@ -4,7 +4,7 @@ import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
 import JobFilters, { EMPTY_FILTERS } from "@/components/dashboard/JobFilters";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import JobListTable from "@/components/dashboard/job/JobListTable";
-import JobBoard, { DEFAULT_VISIBLE as DEFAULT_BOARD_STATUSES } from "@/components/dashboard/job/JobBoard";
+import JobBoard from "@/components/dashboard/job/JobBoard";
 import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
@@ -72,7 +72,6 @@ export default function Jobs() {
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [view, setView] = useState("board");
-  const [visibleStatuses, setVisibleStatuses] = useState(DEFAULT_BOARD_STATUSES);
 
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("id");
@@ -145,8 +144,6 @@ export default function Jobs() {
           jobs={filtered}
           onJobClick={open}
           onInvalidate={invalidate}
-          visibleStatuses={visibleStatuses}
-          setVisibleStatuses={setVisibleStatuses}
         />
       ) : (
         <JobListTable
