@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Package, Wrench, Plus, Trash2, Loader2 } from "lucide-react";
+import { Package, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
 import { addInventoryParts, removeInventoryPart, removeInventoryParts } from "@/services/jobService";
@@ -13,8 +12,6 @@ import { toast } from "sonner";
 export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   const qc = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [labourHours, setLabourHours] = useState("1");
-  const [addingLabour, setAddingLabour] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
   const { data: usages = [], refetch } = useQuery({
@@ -58,28 +55,6 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
       toast.error(err?.response?.data?.error || "Couldn't add parts to invoice.");
     },
   });
-
-  const LABOUR_RATE = 80;
-
-  const addLabour = async () => {
-    const hrs = Number(labourHours) || 1;
-    if (hrs <= 0) return;
-    setAddingLabour(true);
-    await base44.entities.InventoryUsage.create({
-      job_id: job.id,
-      invoice_id: job.invoice_id || "",
-      customer_id: job.customer_id,
-      item_id: `labour-${Date.now()}`,
-      item_name: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`,
-      qty_used: 1,
-      unit_cost: hrs * LABOUR_RATE,
-      unit_sell: hrs * LABOUR_RATE,
-      source: "inventory",
-    });
-    refetch();
-    onChange?.();
-    setAddingLabour(false);
-  };
 
   const selectedUsages = usages.filter((usage) => selectedIds.includes(usage.id));
   const allSelected = usages.length > 0 && selectedIds.length === usages.length;
@@ -130,8 +105,8 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
 
       {/* Line items section — mirrors QuotePanel */}
       <div className="rounded-xl border-2 border-dashed border-border bg-secondary/20 overflow-hidden">
-        {/* Header bar with labour adder */}
-        <div className="flex items-center justify-between px-3 py-2 bg-secondary/50 border-b border-border">
+        {/* Header bar */}
+        <div className="flex items-center px-3 py-2 bg-secondary/50 border-b border-border">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
             {canEdit && usages.length > 0 && (
               <Checkbox
@@ -143,22 +118,6 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
             )}
             <Package className="h-3.5 w-3.5" /> Parts Used
           </span>
-          {canEdit && (
-            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-              <Wrench className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground hidden sm:inline">Labour</span>
-              <Input
-                type="number" min={0.25} step={0.25}
-                value={labourHours}
-                onChange={(e) => setLabourHours(e.target.value)}
-                className="h-6 w-14 px-1.5 py-0 text-xs"
-              />
-              <span className="text-xs text-muted-foreground">hr</span>
-              <Button size="sm" variant="outline" className="h-6 text-xs px-2 gap-1" onClick={addLabour} disabled={addingLabour}>
-                {addingLabour ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Clickable body — opens parts picker */}
