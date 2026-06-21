@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Send, Plus, Lock, CalendarDays, Save, Wrench, Package, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Send, Plus, CalendarDays, Save, Wrench, Package, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import StatusPill from "@/components/shared/StatusPill";
 import { getJobQuote, saveQuote, sendQuote } from "@/services/quoteService";
 import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
@@ -97,18 +96,6 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-heading font-bold flex items-center gap-2">
-          Estimate / Costing
-          {!canEdit && (
-            <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
-              <Lock className="h-3 w-3" /> Read-only
-            </span>
-          )}
-        </h3>
-        {quote && <StatusPill kind="quote" value={quote.status} />}
-      </div>
-
       {canEdit ? (
         // ── Editable view ────────────────────────────────────────────────────
         <>
