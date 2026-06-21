@@ -33,7 +33,16 @@
       "type": "string"
     },
     "customer_phone": {
-      "type": "string"
+      "type": "string",
+      "description": "Primary customer phone number stored in E.164 format for SMS workflows."
+    },
+    "customer_phone_e164": {
+      "type": "string",
+      "description": "Normalized E.164 customer phone number used by Twilio."
+    },
+    "customer_phone_display": {
+      "type": "string",
+      "description": "User-friendly local phone number as entered/displayed."
     },
     "asset_id": {
       "type": "string",
@@ -112,6 +121,12 @@
         "customerPhone": {
           "type": "string"
         },
+        "customerPhoneE164": {
+          "type": "string"
+        },
+        "phoneCountryCode": {
+          "type": "string"
+        },
         "scooterMake": {
           "type": "string"
         },
@@ -178,6 +193,9 @@
           "type": "string"
         },
         "customerPhone": {
+          "type": "string"
+        },
+        "customerPhoneE164": {
           "type": "string"
         },
         "scooterMake": {

@@ -10,7 +10,9 @@ import { base44 } from "@/api/base44Client";
 import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
+import PhoneNumberField from "@/components/booking/PhoneNumberField";
 import { isModelValidForBrand } from "@/config/scooterBrands";
+import { normalizePhoneToE164 } from "@/lib/phone";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import BookingSignInGate from "@/components/landing/BookingSignInGate";
@@ -19,7 +21,7 @@ const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 const options = (key) => field(key).options || [];
 
 const EMPTY = {
-  customer_name: "", phone: "", asset_label: "", issue_type: "", issue_description: "",
+  customer_name: "", phone: "", phone_country_code: "+61", asset_label: "", issue_type: "", issue_description: "",
   asset_make: "", asset_model: "", asset_custom_make: "", asset_custom_model: "",
   preferred_date: "", preferred_time_window: "Anytime", rideable: true,
   asap: false, consent: false,
@@ -34,6 +36,7 @@ export default function BookingSection() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [error, setError] = useState(null);
+  const [phoneError, setPhoneError] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -54,6 +57,12 @@ export default function BookingSection() {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.consent || !form.asset_label || !modelMatchesBrand || !issueValid) return;
+    const normalizedPhone = normalizePhoneToE164(form.phone, form.phone_country_code);
+    if (!normalizedPhone.is_valid) {
+      setPhoneError(true);
+      return;
+    }
+    setPhoneError(false);
     setSubmitting(true);
     setError(null);
     try {
@@ -61,6 +70,9 @@ export default function BookingSection() {
       const job = await createBookingRequest({
         ...form,
         customer_name: form.customer_name || user.full_name,
+        phone_e164: normalizedPhone.phone_e164,
+        customer_phone_e164: normalizedPhone.phone_e164,
+        phone_display: normalizedPhone.phone_display,
         issue_description,
         photo_url: photoUrl,
       });
@@ -123,9 +135,15 @@ export default function BookingSection() {
             <Field label={field("customer_name").label} required>
               <Input value={form.customer_name || user.full_name || ""} onChange={(e) => set("customer_name", e.target.value)} placeholder={field("customer_name").placeholder} required />
             </Field>
-            <Field label={field("phone").label} required>
-              <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder={field("phone").placeholder} required />
-            </Field>
+            <PhoneNumberField
+              label={field("phone").label}
+              required
+              countryCode={form.phone_country_code}
+              onCountryCodeChange={(value) => set("phone_country_code", value)}
+              value={form.phone}
+              onChange={(e) => { set("phone", e.target.value); setPhoneError(false); }}
+              error={phoneError}
+            />
           </div>
           <Field label={field("email").label}>
             <Input type="email" value={user.email} disabled className="opacity-70" />
@@ -197,7 +215,7 @@ export default function BookingSection() {
           </label>
 
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
-          <Button type="submit" disabled={submitting || !form.consent || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
+          <Button type="submit" disabled={submitting || !form.consent || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid} size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : DEFAULT_BOOKING_COPY.submitLabel}
           </Button>
         </form>

@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       }
       if (data.customer_phone) {
         await sendSms({
-          to: String(data.customer_phone).replace(/\s+/g, "").trim(),
+          to: data.customer_phone_e164 || (String(data.customer_phone).trim().startsWith("+") ? String(data.customer_phone).replace(/\s+/g, "").trim() : ""),
           body: customerConfirmationSms(data),
         }).catch((smsErr) => console.warn("[notifyNewBooking] customer confirmation SMS skipped:", smsErr.message));
       }

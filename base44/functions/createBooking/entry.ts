@@ -26,8 +26,19 @@ function originFrom(req) {
   return 'https://app.base44.com';
 }
 
-function normalizePhone(value) {
-  return String(value || '').replace(/\s+/g, '').trim();
+const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
+
+function normalizePhone(value, countryCode = '+61') {
+  const code = String(countryCode || '+61').trim();
+  let cleaned = String(value || '').replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('+')) return cleaned;
+  cleaned = cleaned.replace(/\D/g, '');
+  if (code === '+61' && cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+  return `${code}${cleaned}`;
+}
+
+function phoneDisplay(form) {
+  return String(form.phone_display || form.phone || form.customerPhone || '').trim();
 }
 
 function bookingMake(form) {
@@ -55,7 +66,7 @@ function classifyServiceType(text = '') {
   return DEFAULT_SERVICE_TYPE;
 }
 
-function bookingSnapshot(form, email, phone) {
+function bookingSnapshot(form, email, phone, displayPhone) {
   const make = bookingMake(form);
   const model = bookingModel(form);
   const files = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
@@ -63,7 +74,9 @@ function bookingSnapshot(form, email, phone) {
   return {
     customerName: form.customer_name || form.customerName || '',
     customerEmail: email || form.customer_email || form.customerEmail || '',
-    customerPhone: phone || form.phone || form.customerPhone || '',
+    customerPhone: displayPhone || phone || form.phone || form.customerPhone || '',
+    customerPhoneE164: phone || '',
+    phoneCountryCode: form.phone_country_code || '+61',
     scooterMake: make,
     scooterBrand: make,
     scooterModel: model,
@@ -175,7 +188,12 @@ Deno.serve(async (req) => {
     }
 
     const email = String(form.customer_email || '').trim().toLowerCase();
-    const phone = normalizePhone(form.phone);
+    const displayPhone = phoneDisplay(form);
+    const phone = form.phone_e164 || form.customer_phone_e164 || normalizePhone(form.phone, form.phone_country_code || '+61');
+    const countryCode = form.phone_country_code || '+61';
+    if (!E164_PATTERN.test(phone) || phone.length <= countryCode.length) {
+      return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
+    }
     const now = new Date().toISOString();
     let customer = null;
     try {
@@ -194,6 +212,9 @@ Deno.serve(async (req) => {
           full_name: form.customer_name,
           email,
           phone,
+          phone_e164: phone,
+          phone_display: displayPhone,
+          phone_country_code: form.phone_country_code || '+61',
           status: 'active',
           createdAt: now,
           last_activity_date: now,
@@ -202,7 +223,10 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.Customer.update(customer.id, {
           name: customer.name || form.customer_name,
           full_name: customer.full_name || form.customer_name,
-          phone: customer.phone || phone,
+          phone: phone,
+          phone_e164: phone,
+          phone_display: displayPhone,
+          phone_country_code: form.phone_country_code || '+61',
           last_activity_date: now,
         });
       }
@@ -211,11 +235,12 @@ Deno.serve(async (req) => {
     }
 
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
-    const submittedBooking = bookingSnapshot(form, email, phone);
+    const submittedBooking = bookingSnapshot(form, email, phone, displayPhone);
     const initialIntake = {
       customerName: submittedBooking.customerName,
       customerEmail: submittedBooking.customerEmail,
       customerPhone: submittedBooking.customerPhone,
+      customerPhoneE164: submittedBooking.customerPhoneE164,
       scooterMake: submittedBooking.scooterMake,
       scooterModel: submittedBooking.scooterModel,
       make: submittedBooking.scooterMake,
@@ -234,6 +259,8 @@ Deno.serve(async (req) => {
       customer_name: form.customer_name,
       customer_email: email,
       customer_phone: phone,
+      customer_phone_e164: phone,
+      customer_phone_display: displayPhone,
       asset_label: form.asset_label || submittedBooking.assetLabel,
       scooterDetails: form.asset_label || submittedBooking.assetLabel,
       scooter_details: form.asset_label || submittedBooking.assetLabel,

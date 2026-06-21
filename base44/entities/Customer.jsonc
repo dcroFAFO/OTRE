@@ -25,7 +25,21 @@
       "type": "string"
     },
     "phone": {
-      "type": "string"
+      "type": "string",
+      "description": "Primary phone number stored in E.164 format for SMS workflows."
+    },
+    "phone_e164": {
+      "type": "string",
+      "description": "Normalized E.164 phone number used by Twilio."
+    },
+    "phone_display": {
+      "type": "string",
+      "description": "User-friendly local phone number as entered/displayed."
+    },
+    "phone_country_code": {
+      "type": "string",
+      "default": "+61",
+      "description": "Selected country calling code for phone input."
     },
     "user_id": {
       "type": "string",

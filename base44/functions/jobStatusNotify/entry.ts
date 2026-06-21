@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     }
 
     const email = data.customer_email;
-    const phone = data.customer_phone ? String(data.customer_phone).replace(/\s+/g, "").trim() : "";
+    const phone = data.customer_phone_e164 || (data.customer_phone && String(data.customer_phone).trim().startsWith("+") ? String(data.customer_phone).replace(/\s+/g, "").trim() : "");
     if (!email && !phone) {
       return Response.json({ skipped: "no customer email or phone" });
     }

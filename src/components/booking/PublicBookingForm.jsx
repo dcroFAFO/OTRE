@@ -10,8 +10,10 @@ import { base44 } from "@/api/base44Client";
 import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
+import PhoneNumberField from "@/components/booking/PhoneNumberField";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
+import { normalizePhoneToE164 } from "@/lib/phone";
 import { CheckCircle2, Copy, Loader2, Upload } from "lucide-react";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
@@ -21,6 +23,7 @@ const EMPTY = {
   customer_name: "",
   customer_email: "",
   phone: "",
+  phone_country_code: "+61",
   asset_label: "",
   issue_type: "",
   issue_description: "",
@@ -42,6 +45,7 @@ export default function PublicBookingForm() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
+  const [phoneError, setPhoneError] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
@@ -66,10 +70,23 @@ export default function PublicBookingForm() {
     e.preventDefault();
     if (submitting) return;
     if (!form.consent || !form.customer_email || !form.customer_name || !form.phone || !form.asset_label || !modelMatchesBrand || !issueValid) return;
+    const normalizedPhone = normalizePhoneToE164(form.phone, form.phone_country_code);
+    if (!normalizedPhone.is_valid) {
+      setPhoneError(true);
+      return;
+    }
+    setPhoneError(false);
     setSubmitting(true);
     try {
       const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
-      const result = await createBookingRequest({ ...form, issue_description, photo_url: photoUrl });
+      const result = await createBookingRequest({
+        ...form,
+        phone_e164: normalizedPhone.phone_e164,
+        customer_phone_e164: normalizedPhone.phone_e164,
+        phone_display: normalizedPhone.phone_display,
+        issue_description,
+        photo_url: photoUrl,
+      });
       setDone(result);
     } finally {
       setSubmitting(false);
@@ -109,7 +126,15 @@ export default function PublicBookingForm() {
       <div className={submitting ? "space-y-5 opacity-60 pointer-events-none" : "space-y-5"}>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Name" required><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required /></Field>
-        <Field label={field("phone").label || "Phone"} required><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} required /></Field>
+        <PhoneNumberField
+          label={field("phone").label || "Phone"}
+          required
+          countryCode={form.phone_country_code}
+          onCountryCodeChange={(value) => set("phone_country_code", value)}
+          value={form.phone}
+          onChange={(e) => { set("phone", e.target.value); setPhoneError(false); }}
+          error={phoneError}
+        />
       </div>
       <Field label={field("email").label || "Email"} required><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} required /></Field>
 
