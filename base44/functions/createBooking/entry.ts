@@ -240,6 +240,7 @@ Deno.serve(async (req) => {
     }
 
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+    const rawToken = makeToken();
     const submittedBooking = bookingSnapshot(form, email, phone, displayPhone);
     const initialIntake = {
       customerName: submittedBooking.customerName,
@@ -259,6 +260,7 @@ Deno.serve(async (req) => {
     };
     const job = await base44.asServiceRole.entities.Job.create({
       reference,
+      tracking_token: rawToken,
       customerId: customer?.id || null,
       customer_id: customer?.id || null,
       customer_name: form.customer_name,
@@ -298,7 +300,6 @@ Deno.serve(async (req) => {
       })));
     }
 
-    const rawToken = makeToken();
     const tokenHash = await sha256(rawToken);
     await base44.asServiceRole.entities.PublicJobAccess.create({
       jobId: job.id,
@@ -319,7 +320,7 @@ Deno.serve(async (req) => {
       visibility: 'system',
     }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
 
-    const trackingPath = `/track/${encodeURIComponent(job.id)}?token=${encodeURIComponent(rawToken)}`;
+    const trackingPath = `/track/${encodeURIComponent(rawToken)}`;
     const trackingLink = `${originFrom(req)}${trackingPath}`;
 
     await sendMail({

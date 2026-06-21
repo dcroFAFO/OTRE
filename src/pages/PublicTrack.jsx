@@ -18,7 +18,7 @@ function lineTotal(item) {
 }
 
 export default function PublicTrack() {
-  const { jobId } = useParams();
+  const { jobId: trackingToken } = useParams();
   const token = new URLSearchParams(window.location.search).get("token") || "";
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -26,7 +26,7 @@ export default function PublicTrack() {
   const [busy, setBusy] = useState(null);
 
   const invoke = async (payload) => {
-    const res = await base44.functions.invoke("publicJobAccessActions", { jobId, token, ...payload });
+    const res = await base44.functions.invoke("publicJobAccessActions", { trackingToken, token, ...payload });
     return res.data;
   };
 
@@ -36,13 +36,13 @@ export default function PublicTrack() {
     try {
       setData(await invoke({ action: "get" }));
     } catch (err) {
-      setError(err?.response?.data?.error || "This tracking link is invalid or unavailable.");
+      setError(err?.response?.data?.error || "This tracking link is not valid. Please check the link or contact On The Run Electrics for help.");
     } finally {
       setBusy(null);
     }
   };
 
-  useEffect(() => { load(); }, [jobId, token]);
+  useEffect(() => { load(); }, [trackingToken, token]);
 
   const can = (permission) => data?.permissions?.includes(permission);
 
@@ -78,7 +78,7 @@ export default function PublicTrack() {
 
   return (
     <>
-      <SEO title="Track Repair Job | OTR Scooters" description="Secure public repair job tracking." canonical={`/track/${jobId}`} noindex />
+      <SEO title="Track Repair Job | On The Run Electrics" description="Secure public repair job tracking." canonical={`/track/${trackingToken}`} noindex />
       <main className="min-h-screen bg-background text-foreground">
         <section className="mx-auto max-w-4xl px-5 py-10 sm:py-16">
           <Link to="/" className="text-sm font-semibold text-muted-foreground hover:text-foreground">← Back to home</Link>
@@ -90,6 +90,10 @@ export default function PublicTrack() {
               <AlertCircle className="mx-auto h-8 w-8" />
               <h1 className="mt-3 font-heading text-2xl font-extrabold">Tracking link unavailable</h1>
               <p className="mt-2 text-sm">{error}</p>
+              <div className="mt-4 space-y-1 text-sm text-destructive/90">
+                <p><a className="underline" href="mailto:hello@ontherunelectrics.com.au">hello@ontherunelectrics.com.au</a></p>
+                <p><a className="underline" href="tel:0415505908">0415 505 908</a></p>
+              </div>
             </div>
           ) : data ? (
             <div className="mt-8 space-y-5">

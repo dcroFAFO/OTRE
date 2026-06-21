@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Stable job identifier used to link users, customers, quotes, invoices, attachments, and notes. Defaults to the Job record id when synced."
     },
+    "tracking_token": {
+      "type": "string",
+      "description": "Stable customer-facing public tracking token used for /track/{tracking_token} links."
+    },
     "quote_id": {
       "type": "string",
       "description": "Linked Quote entity ID for this job."
@@ -125,6 +129,21 @@
           "type": "string"
         },
         "phoneCountryCode": {
+          "type": "string"
+        },
+        "scooterIssueSummary": {
+          "type": "string"
+        },
+        "scooterMakeModel": {
+          "type": "string"
+        },
+        "rideableStatus": {
+          "type": "string"
+        },
+        "urgencyOrSafetyNotes": {
+          "type": "string"
+        },
+        "suspectedServiceCategory": {
           "type": "string"
         },
         "scooterMake": {

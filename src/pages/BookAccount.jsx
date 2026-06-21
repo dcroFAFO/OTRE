@@ -5,17 +5,17 @@ import PublicBookingForm from "@/components/booking/PublicBookingForm";
 import { CheckCircle2, ClipboardList, FileCheck2, ShieldCheck } from "lucide-react";
 
 const BENEFITS = [
-  { icon: ClipboardList, title: "Book without an account", body: "Submit your repair request and get a private tracking link instantly." },
-  { icon: ShieldCheck, title: "Secure tracking link", body: "Your job can only be opened with the private token in your link." },
-  { icon: FileCheck2, title: "Approve quotes online", body: "When a quote is ready, you can review and respond from the tracking page." },
+  { icon: ClipboardList, title: "Share the repair details", body: "Tell us the symptoms, damage, error codes, or rideability issues before inspection." },
+  { icon: ShieldCheck, title: "Review and next steps", body: "We’ll assess the details and confirm what happens next for your scooter." },
+  { icon: FileCheck2, title: "Track the repair", body: "Use your job tracking button to follow updates as the repair progresses." },
 ];
 
 export default function BookAccount() {
   return (
     <>
       <SEO
-        title="Book Scooter Repair | OTR Scooters"
-        description="Book a scooter repair without creating an account and track your job with a private secure link."
+        title="Book Your Scooter Repair | On The Run Electrics"
+        description="Submit your electric scooter repair details so On The Run Electrics can assess the issue and manage the repair process."
         canonical="/book"
         noindex
       />
@@ -30,14 +30,19 @@ export default function BookAccount() {
             <div className="lg:sticky lg:top-24">
               <Link to="/" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">← Back to home</Link>
               <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1 text-xs font-semibold text-accent">
-                <CheckCircle2 className="h-3.5 w-3.5" /> No account required
+                <CheckCircle2 className="h-3.5 w-3.5" /> Repair assessment request
               </div>
               <h1 className="mt-5 font-heading text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-                Book your scooter repair and track it privately.
+                Book Your Scooter Repair
               </h1>
-              <p className="mt-5 text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                Submit your repair details now. We’ll create the job for our technicians and give you a secure tracking link for updates, files, quotes and invoices.
-              </p>
+              <div className="mt-5 space-y-4 text-lg text-muted-foreground leading-relaxed max-w-2xl">
+                <p>Tell us what is happening with your electric scooter and provide a few details about the repair you need. This helps On The Run Electrics understand the issue before your scooter is inspected.</p>
+                <p>Once your request is submitted, we will review the details, confirm the next steps, and keep you updated as the job progresses.</p>
+              </div>
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                <p>The more detail you provide, the easier it is to understand the issue. Include any symptoms, error codes, strange noises, charging problems, rideability issues, or recent damage.</p>
+                <p className="mt-2 font-medium">If your scooter is unsafe to ride, losing power, has brake issues, exposed wiring, battery swelling, smoke, or a burning smell, do not continue riding it. Book it in for inspection.</p>
+              </div>
               <div className="mt-8 grid gap-3">
                 {BENEFITS.map((benefit) => {
                   const Icon = benefit.icon;

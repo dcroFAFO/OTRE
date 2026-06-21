@@ -28,18 +28,28 @@ function hasPermission(access, permission) {
   return (access.permissions || []).includes(permission);
 }
 
-async function getValidAccess(base44, jobId, rawToken) {
-  if (!jobId || !rawToken) return { error: 'Tracking link is missing required information.', status: 400 };
-  const tokenHash = await sha256(rawToken);
-  const records = await base44.asServiceRole.entities.PublicJobAccess.filter({ jobId, tokenHash }, '-created_date', 1);
+async function getValidAccess(base44, jobIdentifier, rawToken) {
+  const trackingToken = rawToken || jobIdentifier;
+  if (!trackingToken) return { error: 'Tracking link is missing required information.', status: 400 };
+
+  let job = null;
+  if (rawToken && jobIdentifier) {
+    job = await base44.asServiceRole.entities.Job.get(jobIdentifier).catch(() => null);
+  }
+  if (!job) {
+    const jobs = await base44.asServiceRole.entities.Job.filter({ tracking_token: trackingToken }, '-created_date', 1);
+    job = jobs[0] || null;
+  }
+  if (!job) return { error: 'This tracking link is not valid. Please check the link or contact On The Run Electrics for help.', status: 403 };
+
+  const tokenHash = await sha256(trackingToken);
+  const records = await base44.asServiceRole.entities.PublicJobAccess.filter({ jobId: job.id, tokenHash }, '-created_date', 1);
   const access = records[0] || null;
-  if (!access) return { error: 'This tracking link is invalid.', status: 403 };
-  const issuedByService = String(access.created_by_id || '').startsWith('service_') || String(access.created_by || '').startsWith('service+');
-  if (!issuedByService) return { error: 'This tracking link is invalid.', status: 403 };
+  if (!access) return { error: 'This tracking link is not valid. Please check the link or contact On The Run Electrics for help.', status: 403 };
   if (access.revokedAt || access.revoked_at) return { error: 'This tracking link has been revoked.', status: 403 };
   const expires = access.expiresAt || access.expires_at;
   if (expires && new Date(expires).getTime() < Date.now()) return { error: 'This tracking link has expired.', status: 403 };
-  return { access };
+  return { access, job, trackingToken };
 }
 
 function publicJob(job) {
@@ -124,7 +134,7 @@ Deno.serve(async (req) => {
   const meta = { fn: 'publicJobAccessActions' };
   try {
     const base44 = createClientFromRequest(req);
-    const { action, jobId, token, permissions, note, file_url, file_name, kind, quoteId, approved, invoiceId } = await req.json().catch(() => ({}));
+    const { action, jobId, trackingToken, token, permissions, note, file_url, file_name, kind, quoteId, approved, invoiceId } = await req.json().catch(() => ({}));
     meta.action = action;
     meta.jobId = jobId;
 
@@ -143,6 +153,7 @@ Deno.serve(async (req) => {
       const rawToken = makeToken();
       const tokenHash = await sha256(rawToken);
       const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_quote', 'view_invoice', 'pay_invoice'];
+      await base44.asServiceRole.entities.Job.update(jobId, { tracking_token: rawToken, updatedAt: now });
       await base44.asServiceRole.entities.PublicJobAccess.create({
         jobId,
         job_id: jobId,
@@ -151,7 +162,7 @@ Deno.serve(async (req) => {
         permissions: accessPermissions,
         createdAt: now,
       });
-      const trackingLink = `${originFrom(req)}/track/${encodeURIComponent(jobId)}?token=${encodeURIComponent(rawToken)}`;
+      const trackingLink = `${originFrom(req)}/track/${encodeURIComponent(rawToken)}`;
       return Response.json({ trackingLink, permissions: accessPermissions });
     }
 
@@ -164,11 +175,10 @@ Deno.serve(async (req) => {
       return Response.json({ revoked: existing.length });
     }
 
-    const accessResult = await getValidAccess(base44, jobId, token);
+    const accessResult = await getValidAccess(base44, trackingToken || jobId, token);
     if (accessResult.error) return Response.json({ error: accessResult.error }, { status: accessResult.status });
     const access = accessResult.access;
-    const job = await base44.asServiceRole.entities.Job.get(jobId).catch(() => null);
-    if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
+    const job = accessResult.job;
 
     if (action === 'get') {
       return Response.json(await buildPayload(base44, job, access));
@@ -235,7 +245,7 @@ Deno.serve(async (req) => {
       const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
       const origin = originFrom(req);
       const metadata = { base44_app_id: Deno.env.get('BASE44_APP_ID') || '', invoice_id: invoice.id, job_id: job.id, customer_id: job.customer_id || '' };
-      const returnUrl = `${origin}/track/${encodeURIComponent(job.id)}?token=${encodeURIComponent(token)}`;
+      const returnUrl = `${origin}/track/${encodeURIComponent(accessResult.trackingToken)}`;
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         customer_email: job.customer_email || undefined,
