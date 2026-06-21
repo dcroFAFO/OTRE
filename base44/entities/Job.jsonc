@@ -67,10 +67,106 @@
       "type": "string",
       "description": "Internal technician-only notes (repair issues, part failures). Never shown to customers."
     },
+    "booking_submission": {
+      "type": "object",
+      "description": "Original booking form values preserved for audit/reference. Intake edits do not overwrite this snapshot.",
+      "properties": {
+        "customerName": {
+          "type": "string"
+        },
+        "customerEmail": {
+          "type": "string"
+        },
+        "customerPhone": {
+          "type": "string"
+        },
+        "scooterMake": {
+          "type": "string"
+        },
+        "scooterBrand": {
+          "type": "string"
+        },
+        "scooterModel": {
+          "type": "string"
+        },
+        "assetLabel": {
+          "type": "string"
+        },
+        "issueOrService": {
+          "type": "string"
+        },
+        "issueDescription": {
+          "type": "string"
+        },
+        "serviceRequested": {
+          "type": "string"
+        },
+        "preferredDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "preferredTimeWindow": {
+          "type": "string"
+        },
+        "isRideable": {
+          "type": "boolean"
+        },
+        "asap": {
+          "type": "boolean"
+        },
+        "photos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "intake": {
       "type": "object",
       "description": "Standardised technician intake details captured when a scooter is received",
       "properties": {
+        "customerName": {
+          "type": "string"
+        },
+        "customerEmail": {
+          "type": "string"
+        },
+        "customerPhone": {
+          "type": "string"
+        },
+        "scooterMake": {
+          "type": "string"
+        },
+        "scooterModel": {
+          "type": "string"
+        },
+        "issueOrService": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "isRideable": {
+          "type": "boolean"
+        },
+        "booking_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "make": {
           "type": "string"
         },
@@ -124,6 +220,9 @@
         "staff_created"
       ],
       "default": "staff_created"
+    },
+    "business_slug": {
+      "type": "string"
     },
     "job_type": {
       "type": "string",

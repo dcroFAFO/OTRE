@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ClipboardCheck, Loader2, CheckCircle2, Camera, X, ImageIcon } from "lucide-react";
+import { ClipboardCheck, Loader2, CheckCircle2, Camera, X, ImageIcon, FileText } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -25,9 +25,31 @@ const BATTERY_CONDITIONS = [
   { key: "unknown", label: "Unknown" },
 ];
 
-export default function IntakePanel({ job, actor, canEdit, onChange }) {
+function bookingPrefill(job) {
+  const booking = job.booking_submission || {};
+  return {
+    customerName: booking.customerName || job.customer_name || "",
+    customerEmail: booking.customerEmail || job.customer_email || "",
+    customerPhone: booking.customerPhone || job.customer_phone || "",
+    scooterMake: booking.scooterMake || booking.scooterBrand || "",
+    scooterModel: booking.scooterModel || "",
+    make: booking.scooterMake || booking.scooterBrand || "",
+    model: booking.scooterModel || "",
+    issueOrService: booking.issueOrService || booking.issueDescription || job.issue_description || job.issueDescription || "",
+    initial_issue_notes: booking.issueOrService || booking.issueDescription || job.issue_description || job.issueDescription || "",
+    date: booking.preferredDate || job.scheduled_date || "",
+    isRideable: typeof booking.isRideable === "boolean" ? booking.isRideable : job.rideable,
+    booking_files: booking.files || booking.photos || [],
+  };
+}
 
-  const [form, setForm] = useState({
+function initialIntakeForm(job) {
+  return {
+    customerName: "",
+    customerEmail: "",
+    customerPhone: "",
+    scooterMake: "",
+    scooterModel: "",
     make: "",
     model: "",
     serial_number: "",
@@ -38,8 +60,23 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
     accessories_received: "",
     powers_on: true,
     initial_issue_notes: "",
+    issueOrService: "",
+    date: "",
+    isRideable: undefined,
+    booking_files: [],
+    ...bookingPrefill(job),
     ...(job.intake || {}),
-  });
+  };
+}
+
+function isBookingOrIntakeFile(file) {
+  const name = file.file_name || "";
+  return name.startsWith("intake_") || name.startsWith("booking_upload_") || name === "Customer upload";
+}
+
+export default function IntakePanel({ job, actor, canEdit, onChange }) {
+
+  const [form, setForm] = useState(() => initialIntakeForm(job));
   const [saving, setSaving] = useState(false);
   const [spec, setSpec] = useState(null);
   const [photos, setPhotos] = useState([]);
@@ -48,10 +85,14 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   const [editableSpec, setEditableSpec] = useState(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-  // Load existing intake photos for this job
   useEffect(() => {
-    base44.entities.Attachment.filter({ job_id: job.id, kind: "photo" }, "-created_date", 50)
-      .then((rows) => setPhotos(rows.filter((r) => r.file_name?.startsWith("intake_"))));
+    setForm(initialIntakeForm(job));
+  }, [job.id]);
+
+  // Load existing booking and intake files for this job
+  useEffect(() => {
+    base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50)
+      .then((rows) => setPhotos(rows.filter(isBookingOrIntakeFile)));
   }, [job.id]);
 
   const uploadPhoto = async (e) => {
@@ -164,9 +205,21 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         <ClipboardCheck className="h-4 w-4 text-accent" /> Scooter intake
       </div>
 
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Field label="Customer name">
+          <Input value={form.customerName || ""} onChange={(e) => set("customerName", e.target.value)} placeholder="Customer name" />
+        </Field>
+        <Field label="Customer email">
+          <Input type="email" value={form.customerEmail || ""} onChange={(e) => set("customerEmail", e.target.value)} placeholder="Customer email" />
+        </Field>
+        <Field label="Customer phone">
+          <Input value={form.customerPhone || ""} onChange={(e) => set("customerPhone", e.target.value)} placeholder="Customer phone" />
+        </Field>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Make">
-          <Select value={form.make || ""} onValueChange={(v) => { set("make", v); set("model", ""); }}>
+        <Field label="Make / brand">
+          <Select value={form.make || ""} onValueChange={(v) => { setForm((f) => ({ ...f, make: v, scooterMake: v, model: "", scooterModel: "" })); }}>
             <SelectTrigger><SelectValue placeholder="Select make" /></SelectTrigger>
             <SelectContent className="max-h-72">
               {BRAND_NAMES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
@@ -175,14 +228,14 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </Field>
         <Field label="Model">
           {models.length > 0 ? (
-            <Select value={form.model || ""} onValueChange={(v) => set("model", v)}>
+            <Select value={form.model || ""} onValueChange={(v) => setForm((f) => ({ ...f, model: v, scooterModel: v }))}>
               <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
               <SelectContent className="max-h-72">
                 {models.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
-            <Input value={form.model || ""} onChange={(e) => set("model", e.target.value)} placeholder="Model" />
+            <Input value={form.model || ""} onChange={(e) => setForm((f) => ({ ...f, model: e.target.value, scooterModel: e.target.value }))} placeholder="Model" />
           )}
         </Field>
       </div>
@@ -230,14 +283,34 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         <Input value={form.accessories_received || ""} onChange={(e) => set("accessories_received", e.target.value)} placeholder="Charger, key, phone mount..." />
       </Field>
 
-      <Field label="Initial issue notes">
-        <Textarea value={form.initial_issue_notes || ""} onChange={(e) => set("initial_issue_notes", e.target.value)} placeholder="Technician's initial assessment of the reported issue..." className="h-24" />
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Preferred date">
+          <Input type="date" value={form.date || ""} onChange={(e) => set("date", e.target.value)} />
+        </Field>
+        <Field label="Scooter rideable?">
+          <Select value={form.isRideable === true ? "yes" : form.isRideable === false ? "no" : ""} onValueChange={(v) => set("isRideable", v === "yes")}>
+            <SelectTrigger><SelectValue placeholder="Not provided" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yes">Yes</SelectItem>
+              <SelectItem value="no">No</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+
+      <Field label="Issue / requested service">
+        <Textarea
+          value={form.initial_issue_notes || ""}
+          onChange={(e) => setForm((f) => ({ ...f, initial_issue_notes: e.target.value, issueOrService: e.target.value }))}
+          placeholder="Customer's reported issue or requested service..."
+          className="h-24"
+        />
       </Field>
 
-      {/* Condition photos */}
+      {/* Booking and intake files */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-xs flex items-center gap-1.5"><Camera className="h-3.5 w-3.5" /> Condition photos</Label>
+          <Label className="text-xs flex items-center gap-1.5"><Camera className="h-3.5 w-3.5" /> Booking & intake files</Label>
           <label className="flex items-center gap-1.5 text-xs font-medium text-accent cursor-pointer hover:opacity-80">
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
             {uploading ? "Uploading..." : "Add photos"}
@@ -248,7 +321,16 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
               <div key={p.id} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-secondary">
-                <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover" />
+                <a href={p.file_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                  {p.kind === "photo" ? (
+                    <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="flex h-full flex-col items-center justify-center gap-2 p-3 text-xs text-muted-foreground text-center">
+                      <FileText className="h-6 w-6" />
+                      {p.file_name || "Booking file"}
+                    </span>
+                  )}
+                </a>
                 <button
                   onClick={() => removePhoto(p)}
                   className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -261,7 +343,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         ) : (
           <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-6 cursor-pointer hover:border-accent/50 transition-colors">
             <ImageIcon className="h-6 w-6 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Upload condition photos</span>
+            <span className="text-xs text-muted-foreground">Upload intake photos</span>
             <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
           </label>
         )}
@@ -300,24 +382,29 @@ function IntakeReadOnly({ intake, jobId }) {
   const [photos, setPhotos] = useState([]);
   useEffect(() => {
     if (!jobId) return;
-    base44.entities.Attachment.filter({ job_id: jobId, kind: "photo" }, "-created_date", 50)
-      .then((rows) => setPhotos(rows.filter((r) => r.file_name?.startsWith("intake_"))));
+    base44.entities.Attachment.filter({ job_id: jobId }, "-created_date", 50)
+      .then((rows) => setPhotos(rows.filter(isBookingOrIntakeFile)));
   }, [jobId]);
 
   if (!intake || !intake.intake_date) {
     return <p className="text-sm text-muted-foreground text-center py-8">No intake recorded yet.</p>;
   }
   const rows = [
-    ["Make", intake.make],
-    ["Model", intake.model],
+    ["Customer name", intake.customerName],
+    ["Customer email", intake.customerEmail],
+    ["Customer phone", intake.customerPhone],
+    ["Make", intake.make || intake.scooterMake],
+    ["Model", intake.model || intake.scooterModel],
     ["Serial number", intake.serial_number],
     ["Battery condition", intake.battery_condition],
     ["Battery voltage", intake.battery_voltage],
     ["Odometer", intake.odometer_km != null ? `${intake.odometer_km} km` : null],
     ["Powers on", intake.powers_on ? "Yes" : "No"],
+    ["Preferred date", intake.date],
+    ["Rideable", intake.isRideable === true ? "Yes" : intake.isRideable === false ? "No" : null],
     ["Physical condition", intake.physical_condition],
     ["Accessories", intake.accessories_received],
-    ["Initial issue notes", intake.initial_issue_notes],
+    ["Issue / requested service", intake.initial_issue_notes || intake.issueOrService],
   ].filter(([, v]) => v != null && v !== "");
 
   return (
@@ -332,12 +419,19 @@ function IntakeReadOnly({ intake, jobId }) {
       </div>
       {photos.length > 0 && (
         <div className="space-y-1.5 pt-2">
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><Camera className="h-3 w-3" /> Condition photos</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><Camera className="h-3 w-3" /> Booking & intake files</p>
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
               <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer"
                 className="rounded-lg overflow-hidden border border-border aspect-square bg-secondary block">
-                <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                {p.kind === "photo" ? (
+                  <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                ) : (
+                  <span className="flex h-full flex-col items-center justify-center gap-2 p-3 text-xs text-muted-foreground text-center">
+                    <FileText className="h-6 w-6" />
+                    {p.file_name || "Booking file"}
+                  </span>
+                )}
               </a>
             ))}
           </div>

@@ -29,6 +29,39 @@ function normalizePhone(value) {
   return String(value || '').replace(/\s+/g, '').trim();
 }
 
+function bookingMake(form) {
+  return form.scooterMake || form.scooterBrand || (form.asset_make === 'Other' ? form.asset_custom_make : form.asset_make) || '';
+}
+
+function bookingModel(form) {
+  return form.scooterModel || (form.asset_model === 'Other' ? form.asset_custom_model : form.asset_model) || '';
+}
+
+function bookingSnapshot(form, email, phone) {
+  const make = bookingMake(form);
+  const model = bookingModel(form);
+  const files = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
+  return {
+    customerName: form.customer_name || form.customerName || '',
+    customerEmail: email || form.customer_email || form.customerEmail || '',
+    customerPhone: phone || form.phone || form.customerPhone || '',
+    scooterMake: make,
+    scooterBrand: make,
+    scooterModel: model,
+    assetLabel: form.asset_label || [make, model].filter(Boolean).join(' '),
+    issueOrService: form.issue_description || form.serviceRequested || '',
+    issueDescription: form.issue_description || '',
+    serviceRequested: form.serviceRequested || form.issue_type || '',
+    preferredDate: form.preferred_date || form.preferredDate || '',
+    preferredTimeWindow: form.preferred_time_window || form.preferredTimeWindow || '',
+    isRideable: typeof form.rideable === 'boolean' ? form.rideable : form.isRideable,
+    asap: !!form.asap,
+    photos: files,
+    files,
+    submittedAt: new Date().toISOString(),
+  };
+}
+
 async function sendMail({ to, subject, body }) {
   const apiKey = Deno.env.get('RESEND_API_KEY');
   if (!apiKey) throw new Error('RESEND_API_KEY not set');
@@ -134,6 +167,21 @@ Deno.serve(async (req) => {
     }
 
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+    const submittedBooking = bookingSnapshot(form, email, phone);
+    const initialIntake = {
+      customerName: submittedBooking.customerName,
+      customerEmail: submittedBooking.customerEmail,
+      customerPhone: submittedBooking.customerPhone,
+      scooterMake: submittedBooking.scooterMake,
+      scooterModel: submittedBooking.scooterModel,
+      make: submittedBooking.scooterMake,
+      model: submittedBooking.scooterModel,
+      issueOrService: submittedBooking.issueOrService,
+      initial_issue_notes: submittedBooking.issueOrService,
+      date: submittedBooking.preferredDate,
+      isRideable: submittedBooking.isRideable,
+      booking_files: submittedBooking.files,
+    };
     const job = await base44.asServiceRole.entities.Job.create({
       reference,
       customerId: customer?.id || null,
@@ -141,9 +189,9 @@ Deno.serve(async (req) => {
       customer_name: form.customer_name,
       customer_email: email,
       customer_phone: phone,
-      asset_label: form.asset_label,
-      scooterDetails: form.asset_label,
-      scooter_details: form.asset_label,
+      asset_label: form.asset_label || submittedBooking.assetLabel,
+      scooterDetails: form.asset_label || submittedBooking.assetLabel,
+      scooter_details: form.asset_label || submittedBooking.assetLabel,
       issueDescription: form.issue_description,
       issue_description: form.issue_description,
       source: 'public_booking',
@@ -151,22 +199,24 @@ Deno.serve(async (req) => {
       status: INTAKE_STATUS,
       scheduled_date: form.asap ? null : (form.preferred_date || null),
       preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window,
-      rideable: form.rideable,
+      rideable: submittedBooking.isRideable,
+      intake: initialIntake,
+      booking_submission: submittedBooking,
       business_slug: SLUG,
       createdAt: now,
       updatedAt: now,
     });
 
-    if (form.photo_url) {
-      await base44.asServiceRole.entities.Attachment.create({
+    if (submittedBooking.files.length > 0) {
+      await Promise.all(submittedBooking.files.map((fileUrl, index) => base44.asServiceRole.entities.Attachment.create({
         job_id: job.id,
         customer_id: customer?.id || null,
-        file_url: form.photo_url,
-        file_name: 'Customer upload',
+        file_url: fileUrl,
+        file_name: `booking_upload_${index + 1}`,
         kind: 'photo',
         visibility: 'customer',
-        uploaded_by_name: form.customer_name,
-      });
+        uploaded_by_name: submittedBooking.customerName,
+      })));
     }
 
     const rawToken = makeToken();
