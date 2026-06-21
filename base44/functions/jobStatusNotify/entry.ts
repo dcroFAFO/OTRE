@@ -13,6 +13,25 @@ async function sendMail({ to, subject, body, from_name }) {
   if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
   return res.json();
 }
+async function sendSms({ to, body }) {
+  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+  const from = Deno.env.get("TWILIO_FROM_NUMBER");
+  if (!accountSid || !authToken || !from) throw new Error("Twilio SMS secrets are not set");
+  if (!to) return null;
+
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ From: from, To: to, Body: body }),
+  });
+  if (!res.ok) throw new Error(`Twilio SMS failed: ${await res.text()}`);
+  return res.json();
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function appBaseUrl(req) {
@@ -27,30 +46,35 @@ const NOTIFY_STATUSES = {
     subject: "Your scooter is now being repaired 🔧",
     heading: "Repair In Progress",
     message: "Great news — your scooter is now on the workbench! Our technician has started working on it and we'll keep you updated.",
+    sms: "Your scooter is now being repaired. Our technician has started work and we'll keep you updated.",
     color: "#0f766e",
   },
   ready_for_pickup: {
     subject: "Your scooter is ready for pickup! 🛴",
     heading: "Ready for Pickup",
     message: "Your scooter has been repaired and is ready to collect. Please come by during our opening hours: Mon–Fri 9am–5:30pm · Sat 10am–3pm.",
+    sms: "Your scooter is ready for pickup. Please collect it during opening hours: Mon-Fri 9am-5:30pm, Sat 10am-3pm.",
     color: "#16a34a",
   },
   completed: {
     subject: "Your scooter job is complete ✅",
     heading: "Job Completed",
     message: "Your scooter job has been marked as completed. Thank you for choosing OTR Scooters — we hope to see you again!",
+    sms: "Your scooter job is complete. Thank you for choosing On The Run Electrics.",
     color: "#2563eb",
   },
   invoice_issued: {
     subject: "Your invoice has been issued",
     heading: "Invoice Issued",
     message: "Your invoice has now been issued for this job. Please review the invoice details and arrange payment when convenient.",
+    sms: "Your invoice has been issued for your scooter repair. Please review it when convenient.",
     color: "#2563eb",
   },
   paid: {
     subject: "Payment received — thank you! ✅",
     heading: "Payment Confirmed",
     message: "We've received your payment in full. Thank you for choosing OTR Scooters — we'd love to know how we did.",
+    sms: "Payment received - thank you. Your scooter repair payment has been confirmed.",
     color: "#16a34a",
     includeFeedback: true,
   },
@@ -83,10 +107,11 @@ Deno.serve(async (req) => {
     }
 
     const email = data.customer_email;
-    if (!email) {
-      return Response.json({ skipped: "no customer email" });
+    const phone = data.customer_phone ? String(data.customer_phone).replace(/\s+/g, "").trim() : "";
+    if (!email && !phone) {
+      return Response.json({ skipped: "no customer email or phone" });
     }
-    const recipients = new Set([email]);
+    const recipients = new Set(email ? [email] : []);
 
     const customerName = data.customer_name || "Customer";
     const reference = data.reference ? ` (${data.reference})` : "";
@@ -172,8 +197,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[jobStatusNotify] Email sent to ${[...recipients].join(", ")} for status: ${newStatus}`);
-    return Response.json({ sent: true, recipients: [...recipients], status: newStatus });
+    if (phone) {
+      const smsReference = data.reference ? ` (${data.reference})` : "";
+      await sendSms({
+        to: phone,
+        body: `On The Run Electrics${smsReference}: ${statusConfig.sms}`,
+      }).catch((smsErr) => console.warn("[jobStatusNotify] status SMS skipped:", smsErr.message));
+    }
+
+    const sentTo = [...recipients, ...(phone ? [phone] : [])];
+    console.log(`[jobStatusNotify] Notifications sent to ${sentTo.join(", ")} for status: ${newStatus}`);
+    return Response.json({ sent: true, recipients: sentTo, status: newStatus });
 
   } catch (error) {
     console.error("[jobStatusNotify] Error:", error.message);

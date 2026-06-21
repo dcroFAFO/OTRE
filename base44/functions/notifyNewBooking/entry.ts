@@ -17,6 +17,25 @@ async function sendMail({ to, subject, body, from_name }) {
   return res.json();
 }
 
+async function sendSms({ to, body }) {
+  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+  const from = Deno.env.get("TWILIO_FROM_NUMBER");
+  if (!accountSid || !authToken || !from) throw new Error("Twilio SMS secrets are not set");
+  if (!to) return null;
+
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ From: from, To: to, Body: body }),
+  });
+  if (!res.ok) throw new Error(`Twilio SMS failed: ${await res.text()}`);
+  return res.json();
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function getSettings(base44) {
@@ -76,6 +95,11 @@ function staffBookingHtml(job) {
   </table>
 </body>
 </html>`;
+}
+
+function customerConfirmationSms(job) {
+  const reference = job.reference ? ` (${job.reference})` : "";
+  return `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. Our team will contact you shortly to confirm the appointment.`;
 }
 
 function customerConfirmationHtml(job) {
@@ -155,17 +179,25 @@ Deno.serve(async (req) => {
     }
 
     // Public bookings send customer confirmation from createBooking so the private tracking link can be included.
-    if (data.customer_email && data.source !== "public_booking") {
-      if (staffRecipients.length > 0) await sleep(600);
-      await sendMail({
-        to: data.customer_email,
-        subject: `Booking confirmed${reference} — ${BUSINESS.name}`,
-        body: customerConfirmationHtml(data),
-        from_name: BUSINESS.name,
-      });
+    if (data.source !== "public_booking") {
+      if (data.customer_email) {
+        if (staffRecipients.length > 0) await sleep(600);
+        await sendMail({
+          to: data.customer_email,
+          subject: `Booking confirmed${reference} — ${BUSINESS.name}`,
+          body: customerConfirmationHtml(data),
+          from_name: BUSINESS.name,
+        });
+      }
+      if (data.customer_phone) {
+        await sendSms({
+          to: String(data.customer_phone).replace(/\s+/g, "").trim(),
+          body: customerConfirmationSms(data),
+        }).catch((smsErr) => console.warn("[notifyNewBooking] customer confirmation SMS skipped:", smsErr.message));
+      }
     }
 
-    const allRecipients = [...staffRecipients, ...(data.customer_email ? [data.customer_email] : [])];
+    const allRecipients = [...staffRecipients, ...(data.customer_email ? [data.customer_email] : []), ...(data.customer_phone ? [data.customer_phone] : [])];
     console.log(`[notifyNewBooking] Sent to ${allRecipients.join(", ")}`);
     return Response.json({ sent: true, recipients: allRecipients });
   } catch (error) {

@@ -99,6 +99,30 @@ async function sendMail({ to, subject, body }) {
   return res.json();
 }
 
+async function sendSms({ to, body }) {
+  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const from = Deno.env.get('TWILIO_FROM_NUMBER');
+  if (!accountSid || !authToken || !from) throw new Error('Twilio SMS secrets are not set');
+  if (!to) return null;
+
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ From: from, To: to, Body: body }),
+  });
+  if (!res.ok) throw new Error(`Twilio SMS failed: ${await res.text()}`);
+  return res.json();
+}
+
+function customerConfirmationSms(job, trackingLink) {
+  const reference = job.reference ? ` (${job.reference})` : '';
+  return `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. Track your request here: ${trackingLink}`;
+}
+
 function customerConfirmationHtml(job, trackingLink) {
   const assetLabel = job.asset_label || job.scooter_label || '—';
   const firstName = (job.customer_name || 'there').split(' ')[0];
@@ -271,6 +295,11 @@ Deno.serve(async (req) => {
       subject: `Booking confirmed${job.reference ? ` (${job.reference})` : ''} — OTR Scooters`,
       body: customerConfirmationHtml(job, trackingLink),
     }).catch((mailErr) => console.warn('[createBooking] customer confirmation email skipped:', mailErr.message));
+
+    await sendSms({
+      to: phone,
+      body: customerConfirmationSms(job, trackingLink),
+    }).catch((smsErr) => console.warn('[createBooking] customer confirmation SMS skipped:', smsErr.message));
 
     return Response.json({ job, customer, trackingLink, trackingPath });
   } catch (error) {
