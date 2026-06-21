@@ -266,6 +266,41 @@ Deno.serve(async (req) => {
         });
         break;
       }
+      case "list_activity": {
+        if (!isStaff && job.customer_id !== user.customer_id && job.customer_id !== user.data?.customer_id) {
+          return Response.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        const jobKeys = [job.id, job.job_id].filter(Boolean);
+        const auditLists = await Promise.all(jobKeys.map((key) =>
+          base44.asServiceRole.entities.AuditEvent.filter({ job_id: key }, "-created_date", 200)
+        ));
+        const audits = Array.from(new Map(auditLists.flat().map((event) => [event.id, event])).values())
+          .filter((event) => !["note_added", "customer_note_added"].includes(event.event_type));
+        const notes = await base44.asServiceRole.entities.JobNote.filter({ job_id: job.id }, "-created_date", 200);
+
+        result = [
+          ...audits.map((event) => ({
+            id: `audit-${event.id}`,
+            type: event.event_type,
+            title: event.summary || "Job updated",
+            detail: [event.previous_value, event.new_value].filter(Boolean).join(" → "),
+            actor: event.actor_name || "System",
+            visibility: event.visibility,
+            date: event.created_date,
+          })),
+          ...notes.map((note) => ({
+            id: `note-${note.id}`,
+            type: "note",
+            title: note.visibility === "customer" ? "Customer-visible note" : "Internal note",
+            detail: note.body,
+            actor: note.author_name || "Team member",
+            visibility: note.visibility,
+            date: note.created_date,
+          })),
+        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+        break;
+      }
       default:
         return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }

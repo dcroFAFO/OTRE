@@ -12,6 +12,7 @@ import QuotePanel from "./QuotePanel";
 import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
+import AuditTimeline from "./AuditTimeline";
 import AttachmentsPanel from "./AttachmentsPanel";
 import JobPartsPanel from "./JobPartsPanel";
 import IntakePanel from "./IntakePanel";
@@ -34,6 +35,7 @@ const TAB_LABELS = {
   customer: "Customer",
   notes: "Notes",
   private: "Private",
+  timeline: "Timeline",
   parts: "Parts",
   files: "Files",
 };
@@ -145,6 +147,9 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="private" className="mt-0">
                     {safeTab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
+                  </TabsContent>
+                  <TabsContent value="timeline" className="mt-0">
+                    {safeTab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
                     {safeTab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
