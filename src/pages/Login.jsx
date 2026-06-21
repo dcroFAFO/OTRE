@@ -9,10 +9,20 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import SEO from "@/components/SEO";
 
-const REDIRECT_AFTER_AUTH = "/portal";
+const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
+
+function authParams() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH;
+  return {
+    email: params.get("email") || "",
+    next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
+  };
+}
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const { email: initialEmail, next } = authParams();
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,10 +32,10 @@ export default function Login() {
     base44.auth
       .isAuthenticated()
       .then((authed) => {
-        if (authed) window.location.href = REDIRECT_AFTER_AUTH;
+        if (authed) window.location.href = next;
       })
       .catch(() => {});
-  }, []);
+  }, [next]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +43,7 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = REDIRECT_AFTER_AUTH;
+      window.location.href = next;
     } catch (err) {
       setError(err.message || "Invalid email or password");
       setLoading(false);
@@ -57,7 +67,7 @@ export default function Login() {
       footer={
         <>
           Don't have an account?{" "}
-          <Link to="/register" className="text-primary font-medium hover:underline">
+          <Link to={`/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`} className="text-primary font-medium hover:underline">
             Create one
           </Link>
         </>
@@ -69,7 +79,7 @@ export default function Login() {
             key={provider.key}
             variant="outline"
             className="w-full h-12 text-sm font-medium"
-            onClick={() => base44.auth.loginWithProvider(provider.key, REDIRECT_AFTER_AUTH)}
+            onClick={() => base44.auth.loginWithProvider(provider.key, next)}
           >
             {provider.key === "google" && <GoogleIcon className="w-5 h-5 mr-2" />}
             {provider.label}

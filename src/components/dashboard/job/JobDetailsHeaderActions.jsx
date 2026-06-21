@@ -4,9 +4,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  RotateCcw, CalendarDays, Loader2, AlertCircle, X, Link2, Copy, ShieldOff
+  RotateCcw, CalendarDays, Loader2, AlertCircle, X, Copy
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import { rescheduleJob } from "@/services/jobService";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 
@@ -55,7 +54,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
   // Waiting-reason modal state
   const [waitingPrompt, setWaitingPrompt] = useState(false);
   const [waitingReason, setWaitingReason] = useState("");
-  const [trackingLink, setTrackingLink] = useState("");
+  const [copiedManageLink, setCopiedManageLink] = useState(false);
 
   const currentStatus = normalizeStatus(job.status);
   const isTerminal = TERMINAL.includes(currentStatus);
@@ -105,29 +104,16 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
     setWaitingReason("");
   };
 
-  const generateTrackingLink = async () => {
-    setBusy("public_link");
+  const copyManageLink = async () => {
+    setBusy("manage_link");
     setError(null);
     try {
-      const res = await base44.functions.invoke("publicJobAccessActions", { action: "staff_generate", jobId: job.id });
-      setTrackingLink(res.data.trackingLink);
-      await navigator.clipboard.writeText(res.data.trackingLink);
+      const email = job.customer_email || "";
+      const managePath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent("/portal")}`;
+      await navigator.clipboard.writeText(`${window.location.origin}${managePath}`);
+      setCopiedManageLink(true);
     } catch (err) {
-      setError(err?.response?.data?.error || err.message);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const revokeTrackingLinks = async () => {
-    setBusy("public_revoke");
-    setError(null);
-    try {
-      await base44.functions.invoke("publicJobAccessActions", { action: "staff_revoke", jobId: job.id });
-      setTrackingLink("");
-      onChange?.();
-    } catch (err) {
-      setError(err?.response?.data?.error || err.message);
+      setError(err.message);
     } finally {
       setBusy(null);
     }
@@ -150,22 +136,13 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
         />
 
         <button
-          onClick={generateTrackingLink}
-          disabled={busy === "public_link"}
+          onClick={copyManageLink}
+          disabled={busy === "manage_link"}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-          title="Generate and copy a public tracking link"
+          title="Copy the customer portal account link"
         >
-          {busy === "public_link" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : trackingLink ? <Copy className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
-          {trackingLink ? "Copied tracking link" : "Copy tracking link"}
-        </button>
-        <button
-          onClick={revokeTrackingLinks}
-          disabled={busy === "public_revoke"}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-300 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
-          title="Revoke all public tracking links for this job"
-        >
-          {busy === "public_revoke" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldOff className="h-3.5 w-3.5" />}
-          Revoke link
+          {busy === "manage_link" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+          {copiedManageLink ? "Copied manage link" : "Copy manage link"}
         </button>
 
         <div className="flex-1" />

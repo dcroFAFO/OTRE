@@ -22,7 +22,10 @@ export default function Portal() {
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["portalJobs", user?.email],
-    queryFn: () => base44.entities.Job.filter({ customer_email: user.email }, "-created_date", 50),
+    queryFn: async () => {
+      await base44.functions.invoke("claimCustomerJobs", {});
+      return base44.entities.Job.filter({ customer_email: user.email }, "-created_date", 50);
+    },
     enabled: !!user && !isStaff(user.role),
   });
 

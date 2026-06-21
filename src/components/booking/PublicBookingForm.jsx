@@ -145,6 +145,8 @@ export default function PublicBookingForm() {
   };
 
   if (done) {
+    const managePath = `/register?email=${encodeURIComponent(form.customer_email)}&next=${encodeURIComponent("/portal")}`;
+
     return (
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl text-center">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/15 text-accent">
@@ -152,10 +154,17 @@ export default function PublicBookingForm() {
         </span>
         <h2 className="mt-4 font-heading text-2xl font-extrabold">Your repair request has been submitted.</h2>
         <p className="mt-2 text-muted-foreground">
-          We will review the details and keep you updated as the job progresses. Use the job tracking button to check the status of your repair online.
+          We have received your scooter repair request and will review the details. You will receive updates as the job progresses.
         </p>
-        <div className="mt-5 flex justify-center">
-          <Button asChild size="lg"><Link to={done.trackingPath || "/"}>View My Job</Link></Button>
+        <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-4 text-left">
+          <h3 className="font-heading text-lg font-bold text-foreground">Want to track this repair online?</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Create an account or verify your details to manage this job, view updates, and check the status of your repair.
+          </p>
+          <Button asChild size="lg" className="mt-4 w-full"><Link to={managePath}>Manage This Job</Link></Button>
+          <p className="mt-3 text-xs text-muted-foreground text-center">
+            You can also contact On The Run Electrics directly if you need help with your booking.
+          </p>
         </div>
       </div>
     );

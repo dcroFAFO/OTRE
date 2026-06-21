@@ -136,12 +136,12 @@ async function sendSms({ to, body }) {
   return res.json();
 }
 
-function customerConfirmationSms(job, trackingLink) {
+function customerConfirmationSms(job, manageLink) {
   const reference = job.reference ? ` (${job.reference})` : '';
-  return `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. Track your request here: ${trackingLink}`;
+  return `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. Manage this job online: ${manageLink}`;
 }
 
-function customerConfirmationHtml(job, trackingLink) {
+function customerConfirmationHtml(job, manageLink) {
   const assetLabel = job.asset_label || job.scooter_label || '—';
   const firstName = (job.customer_name || 'there').split(' ')[0];
   const reference = job.reference || '—';
@@ -159,16 +159,16 @@ function customerConfirmationHtml(job, trackingLink) {
         </td></tr>
         <tr><td style="padding:32px;">
           <p style="margin:0 0 16px;font-size:15px;color:#1e293b;line-height:1.6;">Hi ${firstName},</p>
-          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Thanks for your booking request — we've received it and our team will be in touch shortly to confirm your appointment.</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Your repair request has been submitted. We have received your scooter repair request and will review the details. You will receive updates as the job progresses.</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
             <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Reference:</strong> ${reference}</td></tr>
             <tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Scooter:</strong> ${assetLabel}</td></tr>
             ${job.issue_description ? `<tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Issue reported:</strong> ${job.issue_description}</td></tr>` : ''}
           </table>
           <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:10px;background:#0ea5e9;">
-            <a href="${trackingLink}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">View my booking</a>
+            <a href="${manageLink}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">Manage This Job</a>
           </td></tr></table>
-          <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.6;">This is your private tracking link. Keep it safe and don't share it publicly.</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#64748b;line-height:1.6;">Want to track this repair online? Create an account or sign in with this email address to manage this job, view updates, and check the status of your repair.</p>
           <p style="margin:16px 0 0;font-size:14px;color:#475569;line-height:1.6;">Questions? Reply to this email or call us and we'll be happy to help.</p>
         </td></tr>
         <tr><td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
@@ -242,6 +242,7 @@ Deno.serve(async (req) => {
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
     const rawToken = makeToken();
     const submittedBooking = bookingSnapshot(form, email, phone, displayPhone);
+    const customerKey = customer?.customer_id || null;
     const initialIntake = {
       customerName: submittedBooking.customerName,
       customerEmail: submittedBooking.customerEmail,
@@ -261,18 +262,24 @@ Deno.serve(async (req) => {
     const job = await base44.asServiceRole.entities.Job.create({
       reference,
       tracking_token: rawToken,
-      customerId: customer?.id || null,
-      customer_id: customer?.id || null,
+      customerId: customerKey,
+      customer_id: customerKey,
+      customer_account_id: null,
+      claimed_by_customer: false,
       customer_name: form.customer_name,
       customer_email: email,
       customer_phone: phone,
       customer_phone_e164: phone,
       customer_phone_display: displayPhone,
       asset_label: form.asset_label || submittedBooking.assetLabel,
+      scooter_make_model: form.asset_label || submittedBooking.assetLabel,
       scooterDetails: form.asset_label || submittedBooking.assetLabel,
       scooter_details: form.asset_label || submittedBooking.assetLabel,
       issueDescription: form.issue_description,
       issue_description: form.issue_description,
+      issue_summary: form.issue_description,
+      rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable',
+      job_status: INTAKE_STATUS,
       source: 'public_booking',
       job_type: JOB_TYPE,
       service_type: submittedBooking.serviceType,
@@ -285,13 +292,14 @@ Deno.serve(async (req) => {
       booking_submission: submittedBooking,
       business_slug: SLUG,
       createdAt: now,
+      created_at: now,
       updatedAt: now,
     });
 
     if (submittedBooking.files.length > 0) {
       await Promise.all(submittedBooking.files.map((fileUrl, index) => base44.asServiceRole.entities.Attachment.create({
         job_id: job.id,
-        customer_id: customer?.id || null,
+        customer_id: customerKey,
         file_url: fileUrl,
         file_name: `booking_upload_${index + 1}`,
         kind: 'photo',
@@ -320,21 +328,21 @@ Deno.serve(async (req) => {
       visibility: 'system',
     }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
 
-    const trackingPath = `/track/${encodeURIComponent(rawToken)}`;
-    const trackingLink = `${originFrom(req)}${trackingPath}`;
+    const managePath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/portal')}`;
+    const manageLink = `${originFrom(req)}${managePath}`;
 
     await sendMail({
       to: email,
       subject: `Booking confirmed${job.reference ? ` (${job.reference})` : ''} — OTR Scooters`,
-      body: customerConfirmationHtml(job, trackingLink),
+      body: customerConfirmationHtml(job, manageLink),
     }).catch((mailErr) => console.warn('[createBooking] customer confirmation email skipped:', mailErr.message));
 
     await sendSms({
       to: phone,
-      body: customerConfirmationSms(job, trackingLink),
+      body: customerConfirmationSms(job, manageLink),
     }).catch((smsErr) => console.warn('[createBooking] customer confirmation SMS skipped:', smsErr.message));
 
-    return Response.json({ job, customer, trackingLink, trackingPath });
+    return Response.json({ reference: job.reference, managePath });
   } catch (error) {
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
     return Response.json({ error: error.message || "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });

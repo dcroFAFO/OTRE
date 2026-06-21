@@ -11,10 +11,20 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import SEO from "@/components/SEO";
 
-const REDIRECT_AFTER_AUTH = "/portal";
+const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
+
+function authParams() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH;
+  return {
+    email: params.get("email") || "",
+    next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
+  };
+}
 
 export default function Register() {
-  const [email, setEmail] = useState("");
+  const { email: initialEmail, next } = authParams();
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,10 +37,10 @@ export default function Register() {
     base44.auth
       .isAuthenticated()
       .then((authed) => {
-        if (authed) window.location.href = REDIRECT_AFTER_AUTH;
+        if (authed) window.location.href = next;
       })
       .catch(() => {});
-  }, []);
+  }, [next]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,9 +67,9 @@ export default function Register() {
       const result = await base44.auth.verifyOtp({ email, otpCode });
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
-        await base44.auth.updateMe({ role: "customer" });
+        await base44.auth.updateMe({ role: "customer", is_customer: true });
       }
-      window.location.href = REDIRECT_AFTER_AUTH;
+      window.location.href = next;
     } catch (err) {
       setError(err.message || "Invalid verification code");
       setLoading(false);
@@ -80,7 +90,7 @@ export default function Register() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", REDIRECT_AFTER_AUTH);
+    base44.auth.loginWithProvider("google", next);
   };
 
   if (showOtp) {
@@ -150,7 +160,7 @@ export default function Register() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to={`/login?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`} className="text-primary font-medium hover:underline">
             Log in
           </Link>
         </>

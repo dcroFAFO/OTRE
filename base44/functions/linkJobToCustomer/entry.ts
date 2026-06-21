@@ -88,6 +88,9 @@ async function syncUserAndCustomer(base44, options) {
     const desiredJobId = job.job_id || job.id;
     const updates = {};
     if (job.customer_id !== options.customerId) updates.customer_id = options.customerId;
+    if (job.customerId !== options.customerId) updates.customerId = options.customerId;
+    if (options.user?.id && job.customer_account_id !== options.user.id) updates.customer_account_id = options.user.id;
+    if (options.user?.id && job.claimed_by_customer !== true) updates.claimed_by_customer = true;
     if (job.job_id !== desiredJobId) updates.job_id = desiredJobId;
     if (Object.keys(updates).length > 0) {
       try {

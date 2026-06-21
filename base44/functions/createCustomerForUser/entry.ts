@@ -22,10 +22,18 @@ async function syncCustomerForUser(base44, user) {
   const relatedJobs = await base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100);
   const relatedJobIds = [...new Set(relatedJobs.map((job) => job.job_id || job.id).filter(Boolean))].join(',');
 
-  for (const job of relatedJobs) {
-    const desiredJobId = job.job_id || job.id;
-    if (job.job_id !== desiredJobId) {
-      await base44.asServiceRole.entities.Job.update(job.id, { job_id: desiredJobId });
+  async function claimRelatedJobs(customerId) {
+    for (const job of relatedJobs) {
+      const desiredJobId = job.job_id || job.id;
+      const jobUpdates = {};
+      if (job.job_id !== desiredJobId) jobUpdates.job_id = desiredJobId;
+      if (job.customer_id !== customerId) jobUpdates.customer_id = customerId;
+      if (job.customerId !== customerId) jobUpdates.customerId = customerId;
+      if (job.customer_account_id !== user.id) jobUpdates.customer_account_id = user.id;
+      if (job.claimed_by_customer !== true) jobUpdates.claimed_by_customer = true;
+      if (Object.keys(jobUpdates).length > 0) {
+        await base44.asServiceRole.entities.Job.update(job.id, jobUpdates);
+      }
     }
   }
 
@@ -50,6 +58,8 @@ async function syncCustomerForUser(base44, user) {
       await base44.asServiceRole.entities.User.update(user.id, userUpdates);
     }
 
+    await claimRelatedJobs(customerId);
+
     return { created: false, linked: true, customer_id: customerId };
   }
 
@@ -72,6 +82,8 @@ async function syncCustomerForUser(base44, user) {
   if (Object.keys(userUpdates).length > 0) {
     await base44.asServiceRole.entities.User.update(user.id, userUpdates);
   }
+
+  await claimRelatedJobs(customerId);
 
   return { created: true, customer_id: customerId, customer_record_id: customer.id };
 }
