@@ -26,15 +26,13 @@ function originFrom(req) {
   return 'https://app.base44.com';
 }
 
-const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
+const E164_PATTERN = /^\+614\d{8}$/;
 
-function normalizePhone(value, countryCode = '+61') {
-  const code = String(countryCode || '+61').trim();
-  let cleaned = String(value || '').replace(/[^\d+]/g, '');
-  if (cleaned.startsWith('+')) return cleaned;
-  cleaned = cleaned.replace(/\D/g, '');
-  if (code === '+61' && cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-  return `${code}${cleaned}`;
+function normalizePhone(value) {
+  let cleaned = String(value || '').replace(/\D/g, '');
+  if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
+  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+  return `+61${cleaned}`;
 }
 
 function phoneDisplay(form) {
@@ -76,7 +74,7 @@ function bookingSnapshot(form, email, phone, displayPhone) {
     customerEmail: email || form.customer_email || form.customerEmail || '',
     customerPhone: displayPhone || phone || form.phone || form.customerPhone || '',
     customerPhoneE164: phone || '',
-    phoneCountryCode: form.phone_country_code || '+61',
+    phoneCountryCode: '+61',
     scooterIssueSummary: form.scooter_issue_summary || '',
     scooterMakeModel: form.scooter_make_model || '',
     rideableStatus: form.rideable_status || '',
@@ -194,9 +192,8 @@ Deno.serve(async (req) => {
 
     const email = String(form.customer_email || '').trim().toLowerCase();
     const displayPhone = phoneDisplay(form);
-    const phone = form.phone_e164 || form.customer_phone_e164 || normalizePhone(form.phone, form.phone_country_code || '+61');
-    const countryCode = form.phone_country_code || '+61';
-    if (!E164_PATTERN.test(phone) || phone.length <= countryCode.length) {
+    const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
+    if (!E164_PATTERN.test(phone)) {
       return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
     }
     const now = new Date().toISOString();
@@ -219,7 +216,7 @@ Deno.serve(async (req) => {
           phone,
           phone_e164: phone,
           phone_display: displayPhone,
-          phone_country_code: form.phone_country_code || '+61',
+          phone_country_code: '+61',
           status: 'active',
           createdAt: now,
           last_activity_date: now,
@@ -231,7 +228,7 @@ Deno.serve(async (req) => {
           phone: phone,
           phone_e164: phone,
           phone_display: displayPhone,
-          phone_country_code: form.phone_country_code || '+61',
+          phone_country_code: '+61',
           last_activity_date: now,
         });
       }

@@ -23,7 +23,6 @@ const EMPTY = {
   customer_name: "",
   customer_email: "",
   phone: "",
-  phone_country_code: "+61",
   asset_label: "",
   issue_type: "",
   issue_description: "",
@@ -98,8 +97,8 @@ export default function PublicBookingForm() {
     if (!form.customer_email.trim()) nextErrors.customer_email = "Please enter your email.";
     if (!form.phone.trim()) nextErrors.phone = "Please enter your phone number.";
 
-    const normalizedPhone = normalizePhoneToE164(form.phone, form.phone_country_code || "+61");
-    if (form.phone.trim() && !normalizedPhone.is_valid) nextErrors.phone = "Please enter a valid phone number, e.g. 0415 505 908.";
+    const normalizedPhone = normalizePhoneToE164(form.phone);
+    if (form.phone.trim() && !normalizedPhone.is_valid) nextErrors.phone = "Please enter a valid Australian mobile number, e.g. 0415 505 908.";
 
     if (!form.asset_label.trim()) nextErrors.asset_label = "Please select your scooter make and model.";
     if (form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand) nextErrors.asset_label = `The selected model doesn't belong to ${form.asset_make}.`;
@@ -182,8 +181,6 @@ export default function PublicBookingForm() {
               <PhoneNumberField
                 label={field("phone").label || "Phone"}
                 required
-                countryCode={form.phone_country_code || "+61"}
-                onCountryCodeChange={(value) => { set("phone_country_code", value); setErrors((current) => ({ ...current, phone: null })); }}
                 value={form.phone}
                 onChange={(e) => set("phone", e.target.value)}
                 error={errors.phone}
