@@ -36,11 +36,48 @@ const EMPTY = {
   rideable: true,
   asap: false,
   consent: false,
+  scooter_issue_summary: "",
+  scooter_make_model: "",
+  rideable_status: "",
+  urgency_or_safety_notes: "",
+  suspected_service_category: "",
 };
+
+function getBookingPrefill() {
+  const params = new URLSearchParams(window.location.search);
+  const issue = params.get("scooter_issue_summary") || "";
+  const makeModel = params.get("scooter_make_model") || "";
+  const rideableStatus = params.get("rideable_status") || "";
+  const safetyNotes = params.get("urgency_or_safety_notes") || "";
+  const category = params.get("suspected_service_category") || "";
+  if (!issue && !makeModel && !rideableStatus && !safetyNotes && !category) return {};
+
+  const details = [
+    issue,
+    makeModel && `Scooter: ${makeModel}`,
+    rideableStatus && `Rideable: ${rideableStatus}`,
+    safetyNotes && `Urgency/safety: ${safetyNotes}`,
+    category && `Likely category: ${category}`,
+  ].filter(Boolean).join("\n");
+
+  return {
+    issue_type: "Other",
+    issue_description: details,
+    asset_make: makeModel ? "Other" : "",
+    asset_custom_make: makeModel,
+    asset_label: makeModel,
+    rideable: rideableStatus ? !/no|not|unsafe|leave|off road|don't ride|do not ride/i.test(rideableStatus) : true,
+    scooter_issue_summary: issue,
+    scooter_make_model: makeModel,
+    rideable_status: rideableStatus,
+    urgency_or_safety_notes: safetyNotes,
+    suspected_service_category: category,
+  };
+}
 
 export default function PublicBookingForm() {
   const { data: { services } } = usePlatformConfig();
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState(() => ({ ...EMPTY, ...getBookingPrefill() }));
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);

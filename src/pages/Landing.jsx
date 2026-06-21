@@ -11,6 +11,7 @@ import ContactSection from "@/components/landing/ContactSection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
+import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
@@ -48,6 +49,7 @@ export default function Landing() {
           <FinalCTASection />
         </main>
         <LandingFooter />
+        <RepairAssistantWidget />
       </div>
     </div>
     </>
