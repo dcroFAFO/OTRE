@@ -145,10 +145,10 @@ export default function PublicBookingForm() {
   return (
     <form onSubmit={submit} aria-busy={submitting} className="rounded-2xl border border-border bg-card p-4 shadow-xl space-y-3 lg:p-5">
       <div className={submitting ? "space-y-3 opacity-60 pointer-events-none" : "space-y-3"}>
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-3">
           <section className="space-y-2.5">
             <h2 className="font-heading text-base font-extrabold">Your Details</h2>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2">
               <Field label="Name" required><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required /></Field>
               <Field label={field("email").label || "Email"} required><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} required /></Field>
             </div>
@@ -180,7 +180,7 @@ export default function PublicBookingForm() {
 
         <section className="space-y-2.5">
           <h2 className="font-heading text-base font-extrabold">Repair Details</h2>
-          <div className="grid gap-2 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid gap-2">
             <Field label={field("issue_description").label || "Issue"} required>
               <Select value={form.issue_type} onValueChange={(v) => set("issue_type", v)}>
                 <SelectTrigger><SelectValue placeholder="Select a service…" /></SelectTrigger>
@@ -192,7 +192,7 @@ export default function PublicBookingForm() {
               {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" required />}
             </Field>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="grid gap-2">
               <Field label={field("rideable").label || "Is it rideable?"}>
                 <Select value={form.rideable ? "yes" : "no"} onValueChange={(v) => set("rideable", v === "yes")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -210,7 +210,7 @@ export default function PublicBookingForm() {
           </div>
         </section>
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2">
           <Field label={field("preferred_date").label || "Preferred date"}>
             <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
           </Field>
@@ -220,7 +220,7 @@ export default function PublicBookingForm() {
               <SelectContent>{options("preferred_time_window").map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground sm:pt-6">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <Checkbox checked={form.asap} onCheckedChange={(v) => setForm((f) => ({ ...f, asap: !!v, preferred_date: v ? "" : f.preferred_date }))} />
             <span>ASAP</span>
           </label>
