@@ -144,10 +144,10 @@ export default function BookAccount() {
                 </div>
               </div>
 
-              <div className="my-6 h-px bg-border hidden" />
+              
 
               <Button asChild className="h-11 w-full rounded-xl">
-                <Link to={registerHref} className="hidden">Not a member yet? Create a free account now <ArrowRight className="h-4 w-4" /></Link>
+                
               </Button>
               <Button asChild variant="ghost" className="mt-3 h-11 w-full rounded-xl">
                 <Link to="/book/guest">Continue as guest</Link>
