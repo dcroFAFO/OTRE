@@ -5,20 +5,19 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import GoogleIcon from "@/components/GoogleIcon";
-import { BadgePercent, Bell, CreditCard, HandHeart, Mail, Medal, Phone, Sparkles, Wrench } from "lucide-react";
+import { CheckCircle2, Mail, Phone, ShieldCheck, Sparkles } from "lucide-react";
 
 const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
 
 const benefits = [
-  "Track your repair from your customer portal",
-  "Get automatic status updates",
-  "View and pay invoices online",
-  "Join Refer a Rider",
-  "Join Frequent Rider and get a free performance tune up valued at $150 on every 5th service or repair",
-  "Access exclusive offers and deals"];
+"Track your repair from your customer portal",
+"Get automatic status updates",
+"View and pay invoices online",
+"Join Refer a Rider",
+"Join Frequent Rider and get a free performance tune up valued at $150 on every 5th service or repair",
+"Access exclusive offers and deals"];
 
-const benefitIcons = [Wrench, Bell, CreditCard, HandHeart, Medal, BadgePercent];
 
 const providers = [
 { key: "google", label: "Continue with Google", supported: true },
@@ -60,18 +59,23 @@ export default function BookAccount() {
                 Sign in or create a free account for the best booking experience, or continue as a guest to send through a repair request.
               </p>
 
-              <div className="mt-6 rounded-[5px] border border-[#D9DEE5] bg-white px-8 py-8 shadow-none sm:px-12 sm:py-12">
-                <h2 className="font-heading text-[32px] font-extrabold leading-tight text-[#111827]">Free account benefits</h2>
-                <div className="mt-8 divide-y divide-[#E1E6EC]">
-                  {benefits.map((benefit, index) => {
-                    const BenefitIcon = benefitIcons[index];
-                    return (
-                      <div key={benefit} className="flex items-start gap-6 py-5 first:pt-0 last:pb-0">
-                        <BenefitIcon className="mt-0.5 h-7 w-7 shrink-0 stroke-[1.8] text-[#6B7A90]" aria-hidden="true" />
-                        <span className="text-[22px] leading-[1.3] text-[#05070A]">{benefit}</span>
-                      </div>
-                    );
-                  })}
+              <div className="mt-6 rounded-2xl border border-accent/15 bg-card p-4 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Included</p>
+                    <h2 className="mt-1 font-heading text-lg font-extrabold">Free account benefits</h2>
+                  </div>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+                    <ShieldCheck className="h-5 w-5" />
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {benefits.map((benefit) =>
+                  <div key={benefit} className="flex gap-2 rounded-xl border border-border/70 bg-secondary/25 p-3 text-sm leading-snug text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                      <span>{benefit}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
