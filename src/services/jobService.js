@@ -33,7 +33,7 @@ export async function toggleChecklistItem(job, index) {
 }
 
 export async function savePrivateNotes(job, privateNotes) {
-  return invoke({ action: "save_private_notes", jobId: job.id, privateNotes });
+  return base44.entities.Job.update(job.id, { private_notes: privateNotes || "" });
 }
 
 export async function addNote(job, { body, visibility }) {

@@ -255,7 +255,8 @@ Deno.serve(async (req) => {
       case "save_private_notes": {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         result = await base44.asServiceRole.entities.Job.update(job.id, { private_notes: params.privateNotes || "" });
-        await logAudit({ eventType: "private_notes_updated", summary: "Private notes updated", visibility: "internal" });
+        await logAudit({ eventType: "private_notes_updated", summary: params.privateNotes ? "Private notes updated" : "Private notes deleted", visibility: "internal" })
+          .catch((auditError) => console.warn("[jobActions] private notes audit skipped:", auditError.message));
         break;
       }
       case "add_note": {

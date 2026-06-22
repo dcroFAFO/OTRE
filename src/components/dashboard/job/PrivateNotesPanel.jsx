@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Lock, Save, Check, Loader2 } from "lucide-react";
+import { Lock, Save, Check, Loader2, Trash2 } from "lucide-react";
 import { savePrivateNotes } from "@/services/jobService";
 
 export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
@@ -14,11 +14,12 @@ export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
 
   const dirty = value !== (job.private_notes || "");
 
-  const save = async () => {
+  const save = async (nextValue = value) => {
     setSaving(true);
     setError("");
     try {
-      await savePrivateNotes(job, value, actor);
+      await savePrivateNotes(job, nextValue);
+      setValue(nextValue);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       onChange?.();
@@ -49,8 +50,11 @@ export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
             className="h-48 leading-relaxed"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex items-center justify-end">
-            <Button size="sm" onClick={save} disabled={!dirty || saving} className="gap-1.5">
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => save("")} disabled={!value.trim() || saving} className="gap-1.5">
+              <Trash2 className="h-3.5 w-3.5" /> Delete note
+            </Button>
+            <Button type="button" size="sm" onClick={() => save()} disabled={!dirty || saving} className="gap-1.5">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
               {saved ? "Saved" : "Save"}
             </Button>
