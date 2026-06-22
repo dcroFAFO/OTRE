@@ -1,0 +1,93 @@
+{
+  "name": "CustomerProfile",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone_e164": {
+      "type": "string"
+    },
+    "auth_user_id": {
+      "type": "string",
+      "description": "Linked authenticated app user id when this customer has claimed the profile."
+    },
+    "email_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "created_from_booking": {
+      "type": "boolean",
+      "default": false
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "name",
+    "email"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "data.auth_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": false
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.auth_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "user_condition": {
+            "data.is_customer": false
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
