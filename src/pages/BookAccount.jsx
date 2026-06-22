@@ -58,15 +58,22 @@ export default function BookAccount() {
                 Sign in, create a free customer account, or continue as a guest to submit your electric scooter repair request.
               </p>
 
-              <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-5">
-                <div className="flex items-center gap-2 font-heading text-lg font-extrabold">
-                  <ShieldCheck className="h-5 w-5 text-accent" /> Free account benefits
+              <div className="mt-6 rounded-2xl border border-accent/15 bg-card p-4 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Included</p>
+                    <h2 className="mt-1 font-heading text-lg font-extrabold">Free account benefits</h2>
+                  </div>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+                    <ShieldCheck className="h-5 w-5" />
+                  </span>
                 </div>
-                <div className="mt-4 grid gap-3">
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   {benefits.map((benefit) => (
-                    <p key={benefit} className="flex gap-2 text-sm text-muted-foreground">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {benefit}
-                    </p>
+                    <div key={benefit} className="flex gap-2 rounded-xl border border-border/70 bg-secondary/25 p-3 text-sm leading-snug text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                      <span>{benefit}</span>
+                    </div>
                   ))}
                 </div>
               </div>
