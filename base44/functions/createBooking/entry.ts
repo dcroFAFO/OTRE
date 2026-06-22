@@ -113,10 +113,12 @@ async function findOrCreateProfile(base44, { name, email, phone, user, now }) {
   }
   const authUserId = isCustomerUser(user) ? user.id : null;
   if (!profile) {
-    profile = await base44.asServiceRole.entities.CustomerProfile.create({ name, email, phone_e164: phone, auth_user_id: authUserId || undefined, email_verified: !!authUserId, created_from_booking: true, created_at: now, updated_at: now });
+    profile = await base44.asServiceRole.entities.CustomerProfile.create({ name, display_name: name, full_name: name, email, phone_e164: phone, auth_user_id: authUserId || undefined, email_verified: !!authUserId, created_from_booking: true, created_at: now, updated_at: now });
   } else {
     const updates = { updated_at: now };
     if (!profile.name && name) updates.name = name;
+    if (!profile.display_name && name) updates.display_name = name;
+    if (!profile.full_name && name) updates.full_name = name;
     if (phone && profile.phone_e164 !== phone) updates.phone_e164 = phone;
     if (authUserId && !profile.auth_user_id) { updates.auth_user_id = authUserId; updates.email_verified = true; }
     if (Object.keys(updates).length > 1) { await base44.asServiceRole.entities.CustomerProfile.update(profile.id, updates); profile = { ...profile, ...updates }; }
@@ -195,7 +197,8 @@ Deno.serve(async (req) => {
       full_name: profile.full_name || form.customer_name,
       scooter_make: submittedBooking.scooterMake || profile.scooter_make || '',
       scooter_model: submittedBooking.scooterModel || profile.scooter_model || '',
-      scooter_make_model: submittedBooking.assetLabel || profile.scooter_make_model || '',
+      scooter_make_model: submittedBooking.assetLabel || profile.scooter_make_model || profile.default_scooter_make_model || '',
+      default_scooter_make_model: submittedBooking.assetLabel || profile.default_scooter_make_model || profile.scooter_make_model || '',
       updated_at: now,
     }).catch((profileErr) => console.warn('[createBooking] profile details sync skipped:', profileErr.message));
     const initialIntake = { customerName: submittedBooking.customerName, customerEmail: submittedBooking.customerEmail, customerPhone: submittedBooking.customerPhone, customerPhoneE164: submittedBooking.customerPhoneE164, scooterMake: submittedBooking.scooterMake, scooterModel: submittedBooking.scooterModel, make: submittedBooking.scooterMake, model: submittedBooking.scooterModel, issueOrService: submittedBooking.issueOrService, initial_issue_notes: [submittedBooking.issueOrService, submittedBooking.urgencyOrSafetyNotes].filter(Boolean).join('\n'), service_type: submittedBooking.serviceType, date: submittedBooking.preferredDate, isRideable: submittedBooking.isRideable, booking_files: submittedBooking.files };

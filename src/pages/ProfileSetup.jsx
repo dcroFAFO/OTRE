@@ -9,6 +9,17 @@ import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { Loader2, UserRound } from "lucide-react";
 
+function oauthProviderName(user) {
+  return user?.oauth_provider || user?.auth_provider || user?.provider || user?.provider_name || user?.identities?.[0]?.provider || "oauth";
+}
+
+function scooterComplete(form) {
+  if (!form.scooter_make) return false;
+  if (form.scooter_make === "Other") return !!form.asset_custom_make.trim() && !!form.asset_custom_model.trim();
+  if (form.scooter_model === "Other model") return !!form.asset_custom_model.trim();
+  return !!form.scooter_model;
+}
+
 function nextPath() {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next") || "/portal?book=1";
@@ -20,7 +31,7 @@ export default function ProfileSetup() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [phoneError, setPhoneError] = useState(null);
-  const [form, setForm] = useState({ display_name: "", full_name: "", phone: "", scooter_make: "", scooter_model: "", scooter_make_model: "" });
+  const [form, setForm] = useState({ display_name: "", full_name: "", phone: "", scooter_make: "", scooter_model: "", scooter_make_model: "", asset_custom_make: "", asset_custom_model: "" });
 
   useEffect(() => {
     base44.auth.me().then((me) => {
@@ -32,6 +43,7 @@ export default function ProfileSetup() {
   const submit = async (event) => {
     event.preventDefault();
     setPhoneError(null);
+    if (!scooterComplete(form)) return;
     const phone = form.phone.trim() ? normalizePhoneToE164(form.phone) : { is_valid: true, phone_e164: "" };
     if (!phone.is_valid) {
       setPhoneError("Enter a valid Australian mobile number");
@@ -43,9 +55,12 @@ export default function ProfileSetup() {
         display_name: form.display_name.trim(),
         full_name: form.full_name.trim() || form.display_name.trim(),
         phone_e164: phone.phone_e164,
-        scooter_make: form.scooter_make,
-        scooter_model: form.scooter_model,
+        oauth_provider: oauthProviderName(user),
+        display_photo: user?.picture || user?.avatar_url || user?.photo_url || "",
+        scooter_make: form.scooter_make === "Other" ? form.asset_custom_make : form.scooter_make,
+        scooter_model: form.scooter_model === "Other model" ? form.asset_custom_model : form.scooter_model,
         scooter_make_model: form.scooter_make_model,
+        default_scooter_make_model: form.scooter_make_model,
       },
     });
     window.location.href = nextPath();
@@ -77,14 +92,14 @@ export default function ProfileSetup() {
               <AssetBrandPicker
                 make={form.scooter_make}
                 model={form.scooter_model}
-                customMake=""
-                customModel=""
-                onChange={({ make, model, label }) => setForm((f) => ({ ...f, scooter_make: make, scooter_model: model, scooter_make_model: label }))}
+                customMake={form.asset_custom_make}
+                customModel={form.asset_custom_model}
+                onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, scooter_make: make, scooter_model: model, asset_custom_make: customMake, asset_custom_model: customModel, scooter_make_model: label }))}
               />
             </div>
           </div>
 
-          <Button type="submit" disabled={saving || !form.display_name.trim()} className="mt-6 w-full h-11 rounded-xl">
+          <Button type="submit" disabled={saving || !form.display_name.trim() || !scooterComplete(form)} className="mt-6 w-full h-11 rounded-xl">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue to book a job"}
           </Button>
         </form>

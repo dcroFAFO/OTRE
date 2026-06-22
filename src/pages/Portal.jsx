@@ -31,7 +31,7 @@ export default function Portal() {
     enabled: !!user && !isStaff(user.role),
   });
 
-  const { data: customerProfile = null } = useQuery({
+  const { data: customerProfile = null, isLoading: isLoadingCustomerProfile } = useQuery({
     queryKey: ["customerProfile", user?.id],
     queryFn: async () => {
       await base44.functions.invoke("claimCustomerJobs", {}).catch(() => null);
@@ -113,7 +113,7 @@ export default function Portal() {
       </main>
 
       <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
-      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} profile={customerProfile} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} />
+      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} profile={customerProfile} profileLoading={isLoadingCustomerProfile} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} />
 
       <SupportChat user={user} />
     </div>

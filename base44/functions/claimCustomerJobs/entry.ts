@@ -22,11 +22,26 @@ function addIdList(existing, nextId) {
   return ids.join(',');
 }
 
+function userPhoto(user) {
+  return user.picture || user.avatar_url || user.photo_url || user.image || user.data?.picture || user.data?.avatar_url || '';
+}
+
+function userProvider(user) {
+  return user.oauth_provider || user.auth_provider || user.provider || user.provider_name || user.identities?.[0]?.provider || user.data?.oauth_provider || '';
+}
+
+function scooterLabel(profileData, profile, jobs) {
+  return profileData.scooter_make_model || profileData.default_scooter_make_model || profile?.scooter_make_model || profile?.default_scooter_make_model || jobs[0]?.asset_label || jobs[0]?.scooter_make_model || jobs[0]?.scooter_details || '';
+}
+
 async function ensureProfile(base44, user, email, jobs, profileData = {}) {
   const matches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 10).catch(() => []);
   let profile = matches.find((p) => !p.auth_user_id || p.auth_user_id === user.id) || matches[0] || null;
   const now = new Date().toISOString();
   const phone = normalizePhone(profileData.phone_e164) || normalizePhone(user.phone) || normalizePhone(jobs[0]?.customer_phone_e164) || normalizePhone(jobs[0]?.customer_phone) || normalizePhone(profile?.phone_e164);
+  const defaultScooter = scooterLabel(profileData, profile, jobs);
+  const provider = profileData.oauth_provider || userProvider(user);
+  const photo = profileData.display_photo || userPhoto(user);
 
   if (!profile) {
     profile = await base44.asServiceRole.entities.CustomerProfile.create({
@@ -35,10 +50,12 @@ async function ensureProfile(base44, user, email, jobs, profileData = {}) {
       full_name: profileData.full_name || user.full_name || '',
       email,
       phone_e164: phone,
-      display_photo: profileData.display_photo || user.picture || user.avatar_url || '',
+      display_photo: photo,
+      oauth_provider: provider,
       scooter_make: profileData.scooter_make || '',
       scooter_model: profileData.scooter_model || '',
-      scooter_make_model: profileData.scooter_make_model || '',
+      scooter_make_model: defaultScooter,
+      default_scooter_make_model: defaultScooter,
       auth_user_id: user.id,
       email_verified: true,
       created_from_booking: jobs.length > 0,
@@ -52,10 +69,14 @@ async function ensureProfile(base44, user, email, jobs, profileData = {}) {
     if (profileData.display_name) updates.display_name = profileData.display_name;
     if (profileData.full_name) updates.full_name = profileData.full_name;
     if (!profile.name && (profileData.full_name || profileData.display_name || user.full_name)) updates.name = profileData.full_name || profileData.display_name || user.full_name;
-    if (profileData.display_photo) updates.display_photo = profileData.display_photo;
+    if (photo) updates.display_photo = photo;
+    if (provider) updates.oauth_provider = provider;
     if (profileData.scooter_make) updates.scooter_make = profileData.scooter_make;
     if (profileData.scooter_model) updates.scooter_model = profileData.scooter_model;
-    if (profileData.scooter_make_model) updates.scooter_make_model = profileData.scooter_make_model;
+    if (defaultScooter) {
+      updates.scooter_make_model = defaultScooter;
+      updates.default_scooter_make_model = defaultScooter;
+    }
     await base44.asServiceRole.entities.CustomerProfile.update(profile.id, updates);
     profile = { ...profile, ...updates };
   }

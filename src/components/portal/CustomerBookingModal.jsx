@@ -13,7 +13,7 @@ import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformC
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import PhoneNumberField from "@/components/booking/PhoneNumberField";
 import PreferredDateField from "@/components/booking/PreferredDateField";
-import { isModelValidForBrand } from "@/config/scooterBrands";
+import { BRAND_NAMES, SCOOTER_BRANDS, isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { normalizePhoneToE164 } from "@/lib/phone";
 
@@ -35,7 +35,27 @@ function localPhone(value) {
   return text;
 }
 
-export default function CustomerBookingModal({ open, onClose, user, profile, onSuccess }) {
+function savedScooterLabel(profile) {
+  return profile?.scooter_make_model || profile?.default_scooter_make_model || [profile?.scooter_make, profile?.scooter_model].filter(Boolean).join(" ");
+}
+
+function scooterPickerValues(profile) {
+  const label = savedScooterLabel(profile).trim();
+  const make = profile?.scooter_make || "";
+  const model = profile?.scooter_model || "";
+  if (make || model) return { make, model, customMake: "", customModel: "", label: label || [make, model].filter(Boolean).join(" ") };
+
+  const matchedMake = BRAND_NAMES.find((brand) => label === brand || label.startsWith(`${brand} `));
+  if (matchedMake) {
+    const rest = label.slice(matchedMake.length).trim();
+    const knownModel = (SCOOTER_BRANDS[matchedMake] || []).find((item) => item === rest);
+    return { make: matchedMake, model: knownModel || (rest ? "Other model" : ""), customMake: "", customModel: knownModel ? "" : rest, label };
+  }
+
+  return label ? { make: "Other", model: "", customMake: label, customModel: "", label } : { make: "", model: "", customMake: "", customModel: "", label: "" };
+}
+
+export default function CustomerBookingModal({ open, onClose, user, profile, profileLoading = false, onSuccess }) {
   const { data: { services } } = usePlatformConfig();
   const [form, setForm] = useState(EMPTY);
   const [photoUrl, setPhotoUrl] = useState(null);
@@ -47,13 +67,16 @@ export default function CustomerBookingModal({ open, onClose, user, profile, onS
 
   useEffect(() => {
     if (!open) return;
+    const scooter = scooterPickerValues(profile);
     setForm((current) => ({
       ...current,
-      customer_name: profile?.display_name || profile?.full_name || profile?.name || user?.full_name || "",
-      phone: localPhone(profile?.phone_e164),
-      asset_make: profile?.scooter_make || "",
-      asset_model: profile?.scooter_model || "",
-      asset_label: profile?.scooter_make_model || [profile?.scooter_make, profile?.scooter_model].filter(Boolean).join(" "),
+      customer_name: current.customer_name || profile?.display_name || profile?.full_name || profile?.name || user?.full_name || "",
+      phone: current.phone || localPhone(profile?.phone_e164),
+      asset_make: current.asset_make || scooter.make,
+      asset_model: current.asset_model || scooter.model,
+      asset_custom_make: current.asset_custom_make || scooter.customMake,
+      asset_custom_model: current.asset_custom_model || scooter.customModel,
+      asset_label: current.asset_label || scooter.label,
     }));
   }, [open, profile, user]);
 
@@ -130,7 +153,11 @@ export default function CustomerBookingModal({ open, onClose, user, profile, onS
           </DialogTitle>
         </DialogHeader>
 
-        {done ? (
+        {profileLoading ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading your profile…
+          </div>
+        ) : done ? (
           <div className="text-center py-6">
             <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/15 text-accent">
               <CheckCircle2 className="h-8 w-8" />

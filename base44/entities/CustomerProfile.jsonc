@@ -20,6 +20,9 @@
     "display_photo": {
       "type": "string"
     },
+    "oauth_provider": {
+      "type": "string"
+    },
     "scooter_make": {
       "type": "string"
     },
@@ -27,6 +30,9 @@
       "type": "string"
     },
     "scooter_make_model": {
+      "type": "string"
+    },
+    "default_scooter_make_model": {
       "type": "string"
     },
     "auth_user_id": {
