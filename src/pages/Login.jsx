@@ -43,6 +43,7 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
+      await base44.functions.invoke("claimCustomerJobs", {}).catch(() => null);
       window.location.href = next;
     } catch (err) {
       setError(err.message || "Invalid email or password");

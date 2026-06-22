@@ -21,10 +21,12 @@ export default function Portal() {
   const qc = useQueryClient();
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["portalJobs", user?.email],
+    queryKey: ["portalJobs", user?.id],
     queryFn: async () => {
+      let linkedJobs = await base44.entities.Job.filter({ customer_user_id: user.id }, "-created_date", 50);
+      if (linkedJobs.length > 0) return linkedJobs;
       await base44.functions.invoke("claimCustomerJobs", {});
-      return base44.entities.Job.filter({ customer_email: user.email }, "-created_date", 50);
+      return base44.entities.Job.filter({ customer_user_id: user.id }, "-created_date", 50);
     },
     enabled: !!user && !isStaff(user.role),
   });
@@ -94,8 +96,8 @@ export default function Portal() {
         </div>
       </main>
 
-      <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} userEmail={user?.email} />
-      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.email] })} />
+      <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
+      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} />
 
       <SupportChat user={user} />
     </div>

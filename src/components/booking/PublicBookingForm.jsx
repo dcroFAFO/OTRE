@@ -147,7 +147,8 @@ export default function PublicBookingForm() {
   };
 
   if (done) {
-    const managePath = `/register?email=${encodeURIComponent(form.customer_email)}&next=${encodeURIComponent("/portal")}&customerFlow=1`;
+    const viewPath = done.managePath || "/portal";
+    const accountPath = done.accountPath || `/register?email=${encodeURIComponent(form.customer_email)}&next=${encodeURIComponent("/portal")}&customerFlow=1`;
 
     return (
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl text-center">
@@ -165,11 +166,12 @@ export default function PublicBookingForm() {
           </div>
         )}
         <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-4 text-left">
-          <h3 className="font-heading text-lg font-bold text-foreground">Want to track this repair online?</h3>
+          <h3 className="font-heading text-lg font-bold text-foreground">Track this repair online</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create an account or verify your details to manage this job, view updates, and check the status of your repair.
+            View this job securely now, or create an account to manage this and future jobs from your dashboard.
           </p>
-          <Button asChild size="lg" className="mt-4 w-full"><Link to={managePath}>Manage This Job</Link></Button>
+          <Button asChild size="lg" className="mt-4 w-full"><Link to={viewPath}>View My Job</Link></Button>
+          {!done?.linked && <Button asChild variant="outline" className="mt-3 w-full"><Link to={accountPath}>Create an account to manage this job</Link></Button>}
           <p className="mt-3 text-xs text-muted-foreground text-center">
             You can also contact On The Run Electrics directly if you need help with your booking.
           </p>

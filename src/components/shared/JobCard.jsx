@@ -13,6 +13,7 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
   const outstanding = job.payment_status === "outstanding";
   const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
   const waitingLabel = DEFAULT_WAITING_REASONS.find((r) => r.key === job.waiting_reason)?.label;
+  const ownershipLabel = job.customer_user_id || job.customer_account_id ? "Claimed" : job.customer_profile_id ? "Guest" : null;
 
   return (
     <div
@@ -56,6 +57,7 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
             <div className="flex items-center gap-1.5 flex-wrap">
               <ServiceTypeBadge value={serviceType.key} />
               <StatusPill value={job.status} />
+              {ownershipLabel && <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{ownershipLabel}</span>}
             </div>
             <div className="flex items-center gap-2">
               {job.scheduled_date && !compact && (

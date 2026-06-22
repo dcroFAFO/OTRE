@@ -116,7 +116,7 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
               <CheckCircle2 className="h-8 w-8" />
             </span>
             <p className="mt-4 text-muted-foreground">
-              Thanks {done.customer_name?.split(" ")[0]} — request <span className="font-semibold text-foreground">{done.reference}</span>. Our team will review it and confirm shortly.
+              Thanks {(form.customer_name || user?.full_name || "there").split(" ")[0]} — request <span className="font-semibold text-foreground">{done.reference}</span>. Our team will review it and confirm shortly.
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{DEFAULT_BOOKING_COPY.successNote}</p>
             <div className="mt-6 flex gap-3 justify-center">

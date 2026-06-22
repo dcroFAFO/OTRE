@@ -68,9 +68,9 @@ function bookingSnapshot(form, email, phone) {
   const issueText = [form.issue_description, form.serviceRequested, form.issue_type].filter(Boolean).join(' ');
   return {
     customerName: form.customer_name || form.customerName || '',
-    customerEmail: email || form.customer_email || form.customerEmail || '',
-    customerPhone: phone || '',
-    customerPhoneE164: phone || '',
+    customerEmail: email,
+    customerPhone: phone,
+    customerPhoneE164: phone,
     phoneCountryCode: '+61',
     scooterIssueSummary: form.scooter_issue_summary || '',
     scooterMakeModel: form.scooter_make_model || '',
@@ -136,7 +136,7 @@ async function syncLegacyCustomer(base44, { profile, name, email, phone, user, n
 
 async function sendMail({ to, subject, body }) {
   const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) throw new Error('RESEND_API_KEY not set');
+  if (!apiKey) return null;
   const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'OTR Scooters <hello@ontherunelectrics.com.au>', to: [to], subject, html: body }) });
   if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
   return res.json();
@@ -171,22 +171,27 @@ Deno.serve(async (req) => {
     const form = await req.json();
     const user = await currentUser(base44);
     requestMeta.fields = Object.keys(form || {});
+
     if (!form.customer_name || !form.customer_email || !form.phone || !form.asset_label || !form.issue_description) return Response.json({ error: 'Name, email, phone, scooter details and issue description are required.' }, { status: 400 });
     const email = String(form.customer_email || '').trim().toLowerCase();
     const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
     if (!E164_PATTERN.test(phone)) return Response.json({ error: 'Enter a valid Australian mobile number' }, { status: 400 });
+
     const now = new Date().toISOString();
     const profile = await findOrCreateProfile(base44, { name: form.customer_name, email, phone, user, now });
     await syncLegacyCustomer(base44, { profile, name: form.customer_name, email, phone, user, now });
+
     const customerUserId = isCustomerUser(user) ? user.id : null;
     const rawToken = customerUserId ? null : makeToken();
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
     const submittedBooking = bookingSnapshot(form, email, phone);
     const initialIntake = { customerName: submittedBooking.customerName, customerEmail: submittedBooking.customerEmail, customerPhone: submittedBooking.customerPhone, customerPhoneE164: submittedBooking.customerPhoneE164, scooterMake: submittedBooking.scooterMake, scooterModel: submittedBooking.scooterModel, make: submittedBooking.scooterMake, model: submittedBooking.scooterModel, issueOrService: submittedBooking.issueOrService, initial_issue_notes: [submittedBooking.issueOrService, submittedBooking.urgencyOrSafetyNotes].filter(Boolean).join('\n'), service_type: submittedBooking.serviceType, date: submittedBooking.preferredDate, isRideable: submittedBooking.isRideable, booking_files: submittedBooking.files };
     const job = await base44.asServiceRole.entities.Job.create({ reference, tracking_token: rawToken, guest_access_token: rawToken, customer_profile_id: profile.id, customer_user_id: customerUserId, customerId: profile.id, customer_id: profile.id, customer_account_id: customerUserId, claimed_by_customer: !!customerUserId, customer_name: form.customer_name, customer_email: email, customer_phone: phone, customer_phone_e164: phone, customer_phone_display: phone, asset_label: form.asset_label || submittedBooking.assetLabel, scooter_make_model: form.asset_label || submittedBooking.assetLabel, scooterDetails: form.asset_label || submittedBooking.assetLabel, scooter_details: form.asset_label || submittedBooking.assetLabel, issueDescription: form.issue_description, issue_description: form.issue_description, issue_summary: form.issue_description, rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable', job_status: INTAKE_STATUS, source: 'public_booking', job_type: JOB_TYPE, service_type: submittedBooking.serviceType, priority: 'medium', status: INTAKE_STATUS, scheduled_date: form.asap ? null : (form.preferred_date || null), preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window, rideable: submittedBooking.isRideable, intake: initialIntake, booking_submission: submittedBooking, business_slug: SLUG, createdAt: now, created_at: now, updatedAt: now });
+
     if (submittedBooking.files.length > 0) await Promise.all(submittedBooking.files.map((fileUrl, index) => base44.asServiceRole.entities.Attachment.create({ job_id: job.id, customer_id: profile.id, file_url: fileUrl, file_name: `booking_upload_${index + 1}`, kind: 'photo', visibility: 'customer', uploaded_by_name: submittedBooking.customerName })));
     if (rawToken) { const tokenHash = await sha256(rawToken); await base44.asServiceRole.entities.PublicJobAccess.create({ jobId: job.id, job_id: job.id, tokenHash, token_hash: tokenHash, permissions: DEFAULT_PERMISSIONS, createdAt: now }); }
     await base44.asServiceRole.entities.AuditEvent.create({ event_type: 'booking_created', job_id: job.id, customer_id: profile.id, actor_name: form.customer_name, actor_role: customerUserId ? 'customer_account' : 'guest_customer', summary: `Booking request received from ${form.customer_name}`, visibility: 'system' }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
+
     const origin = originFrom(req);
     const trackingLink = rawToken ? `${origin}/track/${encodeURIComponent(rawToken)}` : `${origin}/portal`;
     const managePath = rawToken ? `/track/${encodeURIComponent(rawToken)}` : '/portal';

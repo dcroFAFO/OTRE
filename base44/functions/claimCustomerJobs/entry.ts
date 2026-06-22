@@ -1,10 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
-
-function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
+const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
 function normalizePhone(value) {
   let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
@@ -26,8 +23,8 @@ function addIdList(existing, nextId) {
 }
 
 async function ensureProfile(base44, user, email, jobs) {
-  const profileMatches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 10).catch(() => []);
-  let profile = profileMatches.find((p) => !p.auth_user_id || p.auth_user_id === user.id) || profileMatches[0] || null;
+  const matches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 10).catch(() => []);
+  let profile = matches.find((p) => !p.auth_user_id || p.auth_user_id === user.id) || matches[0] || null;
   const now = new Date().toISOString();
   const phone = normalizePhone(user.phone) || normalizePhone(jobs[0]?.customer_phone_e164) || normalizePhone(jobs[0]?.customer_phone) || normalizePhone(profile?.phone_e164);
 
@@ -63,10 +60,11 @@ Deno.serve(async (req) => {
     const email = normalizeEmail(user.email);
     if (!email) return Response.json({ error: 'Your account needs an email address to manage jobs.' }, { status: 400 });
 
-    const byUser = await base44.asServiceRole.entities.Job.filter({ customer_user_id: user.id }, '-created_date', 100);
-    const byEmail = await base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100);
-    const jobsById = new Map([...byUser, ...byEmail].map((job) => [job.id, job]));
-    const jobs = [...jobsById.values()];
+    const [byUser, byEmail] = await Promise.all([
+      base44.asServiceRole.entities.Job.filter({ customer_user_id: user.id }, '-created_date', 100),
+      base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100),
+    ]);
+    const jobs = [...new Map([...byUser, ...byEmail].map((job) => [job.id, job])).values()];
     const profile = await ensureProfile(base44, user, email, jobs);
 
     let jobIdList = user.job_id || '';
@@ -88,15 +86,14 @@ Deno.serve(async (req) => {
     }
 
     const legacyCustomers = await base44.asServiceRole.entities.Customer.filter({ email }, '-created_date', 1).catch(() => []);
-    const legacy = legacyCustomers[0] || null;
-    if (legacy) {
-      await base44.asServiceRole.entities.Customer.update(legacy.id, {
+    if (legacyCustomers[0]) {
+      await base44.asServiceRole.entities.Customer.update(legacyCustomers[0].id, {
         customer_id: profile.id,
         user_id: user.id,
-        job_id: jobIdList || legacy.job_id || '',
-        phone: profile.phone_e164 || legacy.phone || '',
-        phone_e164: profile.phone_e164 || legacy.phone_e164 || '',
-        phone_display: profile.phone_e164 || legacy.phone_display || '',
+        job_id: jobIdList || legacyCustomers[0].job_id || '',
+        phone: profile.phone_e164 || legacyCustomers[0].phone || '',
+        phone_e164: profile.phone_e164 || legacyCustomers[0].phone_e164 || '',
+        phone_display: profile.phone_e164 || legacyCustomers[0].phone_display || '',
         last_activity_date: new Date().toISOString(),
       });
     }
@@ -104,7 +101,6 @@ Deno.serve(async (req) => {
     const userUpdates = { is_customer: true, customer_id: profile.id };
     if (jobIdList) userUpdates.job_id = jobIdList;
     await base44.asServiceRole.entities.User.update(user.id, userUpdates);
-
     return Response.json({ linked, customer_profile_id: profile.id });
   } catch (error) {
     console.error('[claimCustomerJobs] Error:', error.message);
