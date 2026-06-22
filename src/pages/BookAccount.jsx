@@ -11,12 +11,12 @@ const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
 
 const benefits = [
-  "Easily book and track your repair using our customer portal",
-  "Get automatic updates on the status of your repair",
+  "Track your repair from your customer portal",
+  "Get automatic status updates",
   "View and pay invoices online",
   "Join Refer a Rider",
   "Join Frequent Rider and get a free performance tune up valued at $150 on every 5th service or repair",
-  "Get access to exclusive offers and deals",
+  "Access exclusive offers and deals",
 ];
 
 const providers = [
@@ -53,9 +53,9 @@ export default function BookAccount() {
               <span className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
                 <Sparkles className="h-3.5 w-3.5" /> Repair booking
               </span>
-              <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">Book your repair</h1>
+              <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">Book your repair your way</h1>
               <p className="mt-4 max-w-xl text-muted-foreground leading-relaxed">
-                Sign in, create a free customer account, or continue as a guest to submit your electric scooter repair request.
+                Sign in or create a free account for the best booking experience, or continue as a guest to send through a repair request.
               </p>
 
               <div className="mt-6 rounded-2xl border border-accent/15 bg-card p-4 shadow-soft">
@@ -80,8 +80,8 @@ export default function BookAccount() {
             </section>
 
             <section className="rounded-3xl border border-border bg-card p-6 shadow-xl sm:p-8">
-              <h2 className="font-heading text-2xl font-extrabold">Choose how to continue</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Account customers can manage bookings, quotes, invoices and updates from the portal.</p>
+              <h2 className="font-heading text-2xl font-extrabold">Create a free account</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Book faster, track your repair, manage invoices, and access rewards from your customer portal.</p>
 
               <div className="mt-6 mx-auto flex w-full max-w-[380px] flex-col items-center gap-3">
                 <Button
@@ -156,9 +156,13 @@ export default function BookAccount() {
               <Button asChild className="h-11 w-full rounded-xl">
                 <Link to={registerHref}>Not a member yet? Create a free account now <ArrowRight className="h-4 w-4" /></Link>
               </Button>
-              <Button asChild variant="ghost" className="mt-3 h-11 w-full rounded-xl">
-                <Link to="/book/guest">Continue as guest</Link>
-              </Button>
+              <div className="mt-5 rounded-2xl border border-border bg-secondary/25 p-4">
+                <h3 className="font-heading text-lg font-extrabold">Continue as guest</h3>
+                <p className="mt-1 text-sm text-muted-foreground">No account needed. Submit your repair request and we’ll keep you updated by email or SMS.</p>
+                <Button asChild variant="ghost" className="mt-3 h-11 w-full rounded-xl">
+                  <Link to="/book/guest">Continue as guest</Link>
+                </Button>
+              </div>
             </section>
           </div>
         </section>
