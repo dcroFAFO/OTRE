@@ -29,11 +29,14 @@ function originFrom(req) {
 const E164_PATTERN = /^\+614\d{8}$/;
 
 function normalizePhone(value) {
-  let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
-  if (cleaned.startsWith('+61')) cleaned = cleaned.slice(3);
-  else if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
+  let cleaned = String(value || '').replace(/\D/g, '');
+  if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
   if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-  return `+61${cleaned.replace(/\D/g, '')}`;
+  return `+61${cleaned}`;
+}
+
+function phoneDisplay(form) {
+  return String(form.phone_display || form.phone || form.customerPhone || '').trim();
 }
 
 function bookingMake(form) {
@@ -61,7 +64,7 @@ function classifyServiceType(text = '') {
   return DEFAULT_SERVICE_TYPE;
 }
 
-function bookingSnapshot(form, email, phone) {
+function bookingSnapshot(form, email, phone, displayPhone) {
   const make = bookingMake(form);
   const model = bookingModel(form);
   const files = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
@@ -69,7 +72,7 @@ function bookingSnapshot(form, email, phone) {
   return {
     customerName: form.customer_name || form.customerName || '',
     customerEmail: email || form.customer_email || form.customerEmail || '',
-    customerPhone: phone || '',
+    customerPhone: displayPhone || phone || form.phone || form.customerPhone || '',
     customerPhoneE164: phone || '',
     phoneCountryCode: '+61',
     scooterIssueSummary: form.scooter_issue_summary || '',
@@ -188,6 +191,7 @@ Deno.serve(async (req) => {
     }
 
     const email = String(form.customer_email || '').trim().toLowerCase();
+    const displayPhone = phoneDisplay(form);
     const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
     if (!E164_PATTERN.test(phone)) {
       return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
@@ -211,7 +215,7 @@ Deno.serve(async (req) => {
           email,
           phone,
           phone_e164: phone,
-          phone_display: phone,
+          phone_display: displayPhone,
           phone_country_code: '+61',
           status: 'active',
           createdAt: now,
@@ -223,7 +227,7 @@ Deno.serve(async (req) => {
           full_name: customer.full_name || form.customer_name,
           phone: phone,
           phone_e164: phone,
-          phone_display: phone,
+          phone_display: displayPhone,
           phone_country_code: '+61',
           last_activity_date: now,
         });
@@ -234,7 +238,7 @@ Deno.serve(async (req) => {
 
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
     const rawToken = makeToken();
-    const submittedBooking = bookingSnapshot(form, email, phone);
+    const submittedBooking = bookingSnapshot(form, email, phone, displayPhone);
     const customerKey = customer?.customer_id || null;
     const initialIntake = {
       customerName: submittedBooking.customerName,
@@ -263,7 +267,7 @@ Deno.serve(async (req) => {
       customer_email: email,
       customer_phone: phone,
       customer_phone_e164: phone,
-      customer_phone_display: phone,
+      customer_phone_display: displayPhone,
       asset_label: form.asset_label || submittedBooking.assetLabel,
       scooter_make_model: form.asset_label || submittedBooking.assetLabel,
       scooterDetails: form.asset_label || submittedBooking.assetLabel,

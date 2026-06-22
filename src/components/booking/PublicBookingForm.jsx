@@ -99,7 +99,7 @@ export default function PublicBookingForm() {
     if (!form.phone.trim()) nextErrors.phone = "Please enter your phone number.";
 
     const normalizedPhone = normalizePhoneToE164(form.phone);
-    if (form.phone.trim() && !normalizedPhone.is_valid) nextErrors.phone = "Enter a valid Australian mobile number";
+    if (form.phone.trim() && !normalizedPhone.is_valid) nextErrors.phone = "Please enter a valid Australian mobile number, e.g. 0415 505 908.";
 
     if (!form.asset_label.trim()) nextErrors.asset_label = "Please select your scooter make and model.";
     if (form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand) nextErrors.asset_label = `The selected model doesn't belong to ${form.asset_make}.`;
@@ -132,9 +132,9 @@ export default function PublicBookingForm() {
       const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
       const result = await createBookingRequest({
         ...form,
-        phone: normalizedPhone.phone_e164,
         phone_e164: normalizedPhone.phone_e164,
         customer_phone_e164: normalizedPhone.phone_e164,
+        phone_display: normalizedPhone.phone_display,
         issue_description,
         photo_url: photoUrl,
       });

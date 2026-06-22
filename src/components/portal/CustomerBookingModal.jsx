@@ -11,10 +11,8 @@ import { base44 } from "@/api/base44Client";
 import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_COPY, DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
-import PhoneNumberField from "@/components/booking/PhoneNumberField";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
-import { normalizePhoneToE164 } from "@/lib/phone";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 const options = (key) => field(key).options || [];
@@ -33,12 +31,8 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
-  const [errors, setErrors] = useState({});
 
-  const set = (k, v) => {
-    setForm((f) => ({ ...f, [k]: v }));
-    setErrors((current) => ({ ...current, [k]: null }));
-  };
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
   const isOther = form.issue_type === "Other";
   const issueValid = form.issue_type && (!isOther || form.issue_description.trim());
@@ -54,11 +48,6 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
 
   const submit = async (e) => {
     e.preventDefault();
-    const normalizedPhone = normalizePhoneToE164(form.phone);
-    if (!normalizedPhone.is_valid) {
-      setErrors({ phone: "Enter a valid Australian mobile number" });
-      return;
-    }
     if (!form.consent || !form.asset_label || !modelMatchesBrand || !issueValid) return;
     setSubmitting(true);
     try {
@@ -67,9 +56,6 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
         ...form,
         customer_name: form.customer_name || user?.full_name,
         customer_email: user?.email,
-        phone: normalizedPhone.phone_e164,
-        phone_e164: normalizedPhone.phone_e164,
-        customer_phone_e164: normalizedPhone.phone_e164,
         issue_description,
         photo_url: photoUrl,
       });
@@ -124,13 +110,9 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
               <Field label={field("customer_name").label} required>
                 <Input value={form.customer_name || user?.full_name || ""} onChange={(e) => set("customer_name", e.target.value)} placeholder={field("customer_name").placeholder} required />
               </Field>
-              <PhoneNumberField
-                label={field("phone").label || "Mobile"}
-                required
-                value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
-                error={errors.phone}
-              />
+              <Field label={field("phone").label} required>
+                <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder={field("phone").placeholder} required />
+              </Field>
             </div>
 
             <Field label={field("email").label}>
