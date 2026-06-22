@@ -183,21 +183,25 @@ export default function Register() {
         </>
       }
     >
-      <Button
-        variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
-        onClick={handleGoogle}
-      >
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continue with Google
-      </Button>
+      <div className="mb-7 mx-auto flex w-full max-w-[440px] flex-col items-center gap-[13px]">
+        <Button
+          variant="outline"
+          className="group h-16 w-full overflow-hidden rounded-[10px] border-[#2F7FE4] bg-[#2F7FE4] p-0 text-[25px] font-semibold text-white shadow-[0_2px_7px_rgba(47,127,228,0.25)] hover:bg-[#2B77D7] hover:text-white"
+          onClick={handleGoogle}
+        >
+          <span className="grid h-full w-16 shrink-0 place-items-center bg-white">
+            <GoogleIcon className="h-8 w-8" />
+          </span>
+          <span className="flex-1 pr-16 text-center">Continue with Google</span>
+        </Button>
+      </div>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
+          <div className="w-full border-t border-[#6F7F8C]" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
+        <div className="relative flex justify-center text-[24px] font-medium">
+          <span className="bg-card px-4 text-[#22313F]">or</span>
         </div>
       </div>
 
