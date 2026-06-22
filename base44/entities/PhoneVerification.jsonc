@@ -1,0 +1,43 @@
+{
+  "name": "PhoneVerification",
+  "type": "object",
+  "properties": {
+    "phone_e164": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string",
+      "default": "signup"
+    },
+    "code_hash": {
+      "type": "string"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "consumed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "phone_e164",
+    "purpose",
+    "code_hash",
+    "expires_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

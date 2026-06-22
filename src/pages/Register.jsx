@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, Phone } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -19,18 +19,24 @@ function authParams() {
   const next = params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH;
   return {
     email: params.get("email") || "",
+    phone: params.get("phone") || "",
     next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
     customerFlow: params.get("customerFlow") === "1",
   };
 }
 
 export default function Register() {
-  const { email: initialEmail, next, customerFlow } = authParams();
+  const { email: initialEmail, phone: initialPhone, next, customerFlow } = authParams();
   const [email, setEmail] = useState(initialEmail);
+  const [phone, setPhone] = useState(initialPhone);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPhoneOtp, setShowPhoneOtp] = useState(false);
+  const [phoneOtpCode, setPhoneOtpCode] = useState("");
+  const [maskedPhone, setMaskedPhone] = useState("");
+  const [verifiedPhoneE164, setVerifiedPhoneE164] = useState("");
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [verified, setVerified] = useState(false);
@@ -58,14 +64,49 @@ export default function Register() {
       setError("Passwords do not match");
       return;
     }
+    if (!phone.trim()) {
+      setError("Enter your mobile number to receive a security code.");
+      return;
+    }
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
-      setShowOtp(true);
+      const response = await base44.functions.invoke("sendSignupPhoneOtp", { phone, email });
+      setMaskedPhone(response.data?.masked_phone || phone);
+      setShowPhoneOtp(true);
     } catch (err) {
-      setError(err.message || "Registration failed");
+      setError(err.response?.data?.error || err.message || "Could not send SMS verification code");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const response = await base44.functions.invoke("verifySignupPhoneOtp", { phone, code: phoneOtpCode });
+      setVerifiedPhoneE164(response.data?.phone_e164 || "");
+      await base44.auth.register({ email, password });
+      setShowPhoneOtp(false);
+      setShowOtp(true);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || "Could not verify mobile code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendPhone = async () => {
+    setError("");
+    try {
+      const response = await base44.functions.invoke("sendSignupPhoneOtp", { phone, email });
+      setMaskedPhone(response.data?.masked_phone || phone);
+      toast({
+        title: "Code sent",
+        description: "Check your mobile for the new code.",
+      });
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || "Failed to resend SMS code");
     }
   };
 
@@ -77,6 +118,12 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
         setVerified(true);
+        await base44.auth.updateMe({
+          phone: verifiedPhoneE164 || phone,
+          phone_e164: verifiedPhoneE164,
+          phone_verified: true,
+          is_customer: true,
+        });
         await base44.functions.invoke("claimCustomerJobs", {});
       }
       setTimeout(() => {
@@ -104,6 +151,63 @@ export default function Register() {
   const handleGoogle = () => {
     base44.auth.loginWithProvider("google", next);
   };
+
+  if (showPhoneOtp) {
+    return (
+      <>
+      <SEO title="Verify Mobile | OTR Scooters" description="Verify your mobile number to finish creating your OTR Scooters customer portal account." canonical="/register" noindex />
+      <AuthLayout
+        icon={Phone}
+        title="Verify your mobile"
+        subtitle={`We sent a security code to ${maskedPhone || phone}`}
+      >
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {error}
+          </div>
+        )}
+        <div className="flex justify-center mb-6">
+          <InputOTP
+            maxLength={6}
+            value={phoneOtpCode}
+            onChange={setPhoneOtpCode}
+            autoFocus
+            autoComplete="one-time-code"
+          >
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
+        <Button
+          className="w-full h-12 font-medium"
+          onClick={handleVerifyPhone}
+          disabled={loading || phoneOtpCode.length < 6}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Verifying...
+            </>
+          ) : (
+            "Verify mobile"
+          )}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          Didn't receive the code?{" "}
+          <button onClick={handleResendPhone} className="text-primary font-medium hover:underline">
+            Resend
+          </button>
+        </p>
+      </AuthLayout>
+      </>
+    );
+  }
 
   if (showOtp) {
     return (
@@ -230,6 +334,23 @@ export default function Register() {
           </div>
         </div>
         <div className="space-y-2">
+          <Label htmlFor="phone">Mobile number</Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="04xx xxx xxx"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="pl-10 h-12"
+              required
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">We’ll send a one-time security code to this mobile.</p>
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -265,10 +386,10 @@ export default function Register() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating account...
+              Sending code...
             </>
           ) : (
-            "Create account"
+            "Send mobile security code"
           )}
         </Button>
       </form>

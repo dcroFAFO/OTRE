@@ -16,6 +16,15 @@
       "type": "string",
       "description": "Contact phone"
     },
+    "phone_e164": {
+      "type": "string",
+      "description": "Verified mobile phone number in E.164 format."
+    },
+    "phone_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user's mobile phone number has been verified by SMS OTP."
+    },
     "display_role_title": {
       "type": "string",
       "description": "Friendly job title e.g. Lead Technician"

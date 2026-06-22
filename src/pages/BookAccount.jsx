@@ -30,8 +30,9 @@ export default function BookAccount() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const emailParam = signupEmail.trim() ? `&email=${encodeURIComponent(signupEmail.trim())}` : "";
+  const phoneParam = signupPhone.trim() ? `&phone=${encodeURIComponent(signupPhone.trim())}` : "";
   const loginHref = `/login?next=${encodeURIComponent(BOOK_NEXT)}${emailParam}`;
-  const registerHref = `/register?next=${encodeURIComponent(SETUP_NEXT)}&customerFlow=1${emailParam}`;
+  const registerHref = `/register?next=${encodeURIComponent(SETUP_NEXT)}&customerFlow=1${emailParam}${phoneParam}`;
 
   const oauth = (provider) => {
     base44.auth.loginWithProvider(provider, SETUP_NEXT);
