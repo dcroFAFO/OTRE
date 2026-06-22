@@ -33,6 +33,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [verified, setVerified] = useState(false);
 
   // Already signed in? Customer booking links should not reuse a staff session.
   useEffect(() => {
@@ -75,9 +76,12 @@ export default function Register() {
       const result = await base44.auth.verifyOtp({ email, otpCode });
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
-        await base44.auth.updateMe({ role: "customer", is_customer: true });
+        setVerified(true);
+        await base44.functions.invoke("claimCustomerJobs", {});
       }
-      window.location.href = next;
+      setTimeout(() => {
+        window.location.href = next;
+      }, 900);
     } catch (err) {
       setError(err.message || "Invalid verification code");
       setLoading(false);
@@ -110,6 +114,11 @@ export default function Register() {
         title="Verify your email"
         subtitle={`We sent a code to ${email}`}
       >
+        {verified && (
+          <div className="mb-4 p-3 rounded-lg bg-accent/10 text-accent text-sm font-medium">
+            Email verified — linking your booking now.
+          </div>
+        )}
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
             {error}

@@ -30,8 +30,12 @@ async function createUniqueCustomerId(base44, userId) {
 }
 
 async function assignCustomerId(base44, user) {
-  if (!user?.id || user.is_customer !== true) {
-    return { skipped: 'user is not marked as customer', user_id: user?.id || null };
+  if (!user?.id) {
+    return { skipped: 'user is missing', user_id: null };
+  }
+  const isStaffAccount = ['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) || user.is_customer === false || user.data?.is_customer === false;
+  if (isStaffAccount) {
+    return { skipped: 'user is staff', user_id: user.id };
   }
 
   if (user.customer_id) {
@@ -61,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     const users = await base44.asServiceRole.entities.User.list('-created_date', 1000);
-    const customerUsersMissingId = users.filter((user) => user.is_customer === true && !user.customer_id);
+    const customerUsersMissingId = users.filter((user) => !user.customer_id && !['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) && user.is_customer !== false && user.data?.is_customer !== false);
     const results = [];
 
     for (const user of customerUsersMissingId) {

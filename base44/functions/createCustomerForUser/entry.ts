@@ -10,8 +10,12 @@ function buildCustomerId(user) {
 }
 
 async function syncCustomerForUser(base44, user) {
-  if (!user?.id || user.is_customer !== true) {
-    return { created: false, skipped: true, reason: 'User is not marked as a customer' };
+  if (!user?.id) {
+    return { created: false, skipped: true, reason: 'User is missing' };
+  }
+  const isStaffAccount = ['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) || user.is_customer === false || user.data?.is_customer === false;
+  if (isStaffAccount) {
+    return { created: false, skipped: true, reason: 'User is staff' };
   }
 
   const email = normalizeEmail(user.email);
@@ -99,7 +103,7 @@ Deno.serve(async (req) => {
     }
 
     const users = await base44.asServiceRole.entities.User.list('-created_date', 1000);
-    const customerUsers = users.filter((user) => user.is_customer === true);
+    const customerUsers = users.filter((user) => !['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) && user.is_customer !== false && user.data?.is_customer !== false);
     const results = [];
 
     for (const user of customerUsers) {

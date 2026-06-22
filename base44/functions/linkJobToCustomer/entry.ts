@@ -128,7 +128,8 @@ async function linkJob(base44, job) {
 }
 
 async function linkUser(base44, user) {
-  if (user.role && user.role !== 'customer') return { skipped: 'user is not a customer', user_id: user.id };
+  const isStaffAccount = ['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) || user.is_customer === false || user.data?.is_customer === false;
+  if (isStaffAccount) return { skipped: 'user is staff', user_id: user.id };
 
   const email = normalizeEmail(user.email);
   if (!email) return { skipped: 'user has no email', user_id: user.id };

@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userUpdates = { role: user.role || 'customer', is_customer: true };
+    const userUpdates = { is_customer: true };
     if (user.customer_id !== customerId) userUpdates.customer_id = customerId;
     if (jobIdList && user.job_id !== jobIdList) userUpdates.job_id = jobIdList;
     await base44.asServiceRole.entities.User.update(user.id, userUpdates);
