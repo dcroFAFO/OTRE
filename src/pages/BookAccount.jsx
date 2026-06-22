@@ -11,20 +11,20 @@ const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
 
 const benefits = [
-  "Easily book and track your repair using our customer portal",
-  "Get automatic updates on the status of your repair",
-  "View and pay invoices online",
-  "Join Refer a Rider",
-  "Join Frequent Rider and get a free performance tune up valued at $150 on every 5th service or repair",
-  "Get access to exclusive offers and deals",
-];
+"Easily book and track your repair using our customer portal",
+"Get automatic updates on the status of your repair",
+"View and pay invoices online",
+"Join Refer a Rider",
+"Join Frequent Rider and get a free performance tune up valued at $150 on every 5th service or repair",
+"Get access to exclusive offers and deals"];
+
 
 const providers = [
-  { key: "google", label: "Continue with Google", supported: true },
-  { key: "microsoft", label: "Continue with Microsoft", supported: true },
-  { key: "facebook", label: "Continue with Facebook", supported: true },
-  { key: "apple", label: "Continue with Apple", supported: true },
-];
+{ key: "google", label: "Continue with Google", supported: true },
+{ key: "microsoft", label: "Continue with Microsoft", supported: true },
+{ key: "facebook", label: "Continue with Facebook", supported: true },
+{ key: "apple", label: "Continue with Apple", supported: true }];
+
 
 export default function BookAccount() {
   const [signupEmail, setSignupEmail] = useState("");
@@ -63,11 +63,11 @@ export default function BookAccount() {
                   <ShieldCheck className="h-5 w-5 text-accent" /> Free account benefits
                 </div>
                 <div className="mt-4 grid gap-3">
-                  {benefits.map((benefit) => (
-                    <p key={benefit} className="flex gap-2 text-sm text-muted-foreground">
+                  {benefits.map((benefit) =>
+                  <p key={benefit} className="flex gap-2 text-sm text-muted-foreground">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {benefit}
                     </p>
-                  ))}
+                  )}
                 </div>
               </div>
             </section>
@@ -80,38 +80,38 @@ export default function BookAccount() {
                 <Button
                   variant="outline"
                   className="group h-12 w-full overflow-hidden rounded-[9px] border-[#2F7FE4] bg-[#2F7FE4] p-0 text-lg font-semibold text-white shadow-[0_2px_7px_rgba(47,127,228,0.2)] hover:bg-[#2B77D7] hover:text-white"
-                  onClick={() => oauth("google")}
-                >
+                  onClick={() => oauth("google")}>
+                  
                   <span className="grid h-full w-14 shrink-0 place-items-center bg-white">
                     <GoogleIcon className="h-5 w-5" />
                   </span>
                   <span className="flex-1 pr-14 text-center">Continue with Google</span>
                 </Button>
 
-                {providers.slice(1).map((provider) => (
-                  <Button
-                    key={provider.key}
-                    variant="outline"
-                    className="h-12 w-full justify-center rounded-[9px] border-[#B7C1CA] bg-white text-lg font-semibold text-[#07111E] shadow-[0_1px_4px_rgba(15,23,42,0.12)] hover:bg-[#F8FAFC]"
-                    onClick={() => oauth(provider.key)}
-                  >
-                    {provider.key === "microsoft" && (
-                      <span className="grid h-5 w-5 grid-cols-2 gap-0.5">
+                {providers.slice(1).map((provider) =>
+                <Button
+                  key={provider.key}
+                  variant="outline"
+                  className="h-12 w-full justify-center rounded-[9px] border-[#B7C1CA] bg-white text-lg font-semibold text-[#07111E] shadow-[0_1px_4px_rgba(15,23,42,0.12)] hover:bg-[#F8FAFC]"
+                  onClick={() => oauth(provider.key)}>
+                  
+                    {provider.key === "microsoft" &&
+                  <span className="grid h-5 w-5 grid-cols-2 gap-0.5">
                         <span className="bg-[#F25022]" />
                         <span className="bg-[#7FBA00]" />
                         <span className="bg-[#00A4EF]" />
                         <span className="bg-[#FFB900]" />
                       </span>
-                    )}
+                  }
                     {provider.key === "facebook" && <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1877F2] text-[22px] font-bold leading-none text-white">f</span>}
-                    {provider.key === "apple" && (
-                      <svg className="h-5 w-5 text-black" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    {provider.key === "apple" &&
+                  <svg className="h-5 w-5 text-black" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M16.8 12.45c-.03-3.04 2.48-4.5 2.59-4.57-1.41-2.06-3.61-2.35-4.39-2.38-1.87-.19-3.65 1.1-4.6 1.1-.94 0-2.4-1.07-3.95-1.04-2.03.03-3.9 1.18-4.95 3-2.11 3.66-.54 9.08 1.52 12.05 1 1.45 2.2 3.08 3.77 3.02 1.51-.06 2.08-.98 3.91-.98 1.82 0 2.34.98 3.94.95 1.63-.03 2.66-1.48 3.65-2.94 1.15-1.68 1.62-3.31 1.65-3.39-.04-.02-3.16-1.21-3.19-4.82ZM13.78 3.53c.83-1 1.39-2.39 1.24-3.78-1.2.05-2.65.8-3.51 1.8-.77.89-1.45 2.31-1.27 3.67 1.34.1 2.71-.68 3.54-1.69Z" />
                       </svg>
-                    )}
+                  }
                     {provider.label}
                   </Button>
-                ))}
+                )}
 
                 <div className="my-4 flex w-full items-center gap-4 text-lg font-medium text-[#22313F]">
                   <span className="h-px flex-1 bg-[#6F7F8C]" />
@@ -128,8 +128,8 @@ export default function BookAccount() {
                       placeholder="Email address"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
-                      className="h-11 rounded-xl pl-10"
-                    />
+                      className="h-11 rounded-xl pl-10" />
+                    
                   </div>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -138,8 +138,8 @@ export default function BookAccount() {
                       placeholder="Phone number"
                       value={signupPhone}
                       onChange={(e) => setSignupPhone(e.target.value)}
-                      className="h-11 rounded-xl pl-10"
-                    />
+                      className="h-11 rounded-xl pl-10" />
+                    
                   </div>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function BookAccount() {
               <div className="my-6 h-px bg-border" />
 
               <Button asChild className="h-11 w-full rounded-xl">
-                <Link to={registerHref}>Not a member yet? Create a free account now <ArrowRight className="h-4 w-4" /></Link>
+                <Link to={registerHref} className="hidden">Not a member yet? Create a free account now <ArrowRight className="h-4 w-4" /></Link>
               </Button>
               <Button asChild variant="ghost" className="mt-3 h-11 w-full rounded-xl">
                 <Link to="/book/guest">Continue as guest</Link>
@@ -156,6 +156,6 @@ export default function BookAccount() {
           </div>
         </section>
       </main>
-    </>
-  );
+    </>);
+
 }
