@@ -5,7 +5,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import GoogleIcon from "@/components/GoogleIcon";
-import { ArrowRight, CheckCircle2, Mail, Phone, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, Mail, Phone, ShieldCheck, Sparkles } from "lucide-react";
 
 const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
@@ -149,14 +149,14 @@ export default function BookAccount() {
                       className="h-11 rounded-xl pl-10"
                     />
                   </div>
+                  <Button asChild className="h-11 w-full rounded-xl bg-muted-foreground text-background hover:bg-foreground">
+                    <Link to={registerHref}>Sign Up Now</Link>
+                  </Button>
                 </div>
               </div>
 
               <div className="my-6 h-px bg-border" />
 
-              <Button asChild className="h-11 w-full rounded-xl">
-                <Link to={registerHref}>Not a member yet? Create a free account now <ArrowRight className="h-4 w-4" /></Link>
-              </Button>
               <div className="mt-5 rounded-2xl border border-border bg-secondary/25 p-4">
                 <h3 className="font-heading text-lg font-extrabold">Continue as guest</h3>
                 <p className="mt-1 text-sm text-muted-foreground">No account needed. Submit your repair request and we’ll keep you updated by email or SMS.</p>
