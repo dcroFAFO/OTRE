@@ -3,75 +3,68 @@
   "type": "object",
   "properties": {
     "job_id": {
-      "type": "string",
-      "description": "Stable job identifier used to link users, customers, quotes, invoices, attachments, and notes. Defaults to the Job record id when synced."
+      "type": "string"
     },
     "tracking_token": {
-      "type": "string",
-      "description": "Stable customer-facing public tracking token used for /track/{tracking_token} links."
+      "type": "string"
+    },
+    "guest_access_token": {
+      "type": "string"
+    },
+    "customer_profile_id": {
+      "type": "string"
+    },
+    "customer_user_id": {
+      "type": "string"
     },
     "quote_id": {
-      "type": "string",
-      "description": "Linked Quote entity ID for this job."
+      "type": "string"
     },
     "invoice_id": {
-      "type": "string",
-      "description": "Linked Invoice entity ID for this job."
+      "type": "string"
     },
     "reference": {
-      "type": "string",
-      "description": "Human-readable job reference e.g. OTR-1042"
+      "type": "string"
     },
     "customerId": {
-      "type": "string",
-      "description": "Public booking compatible customer id alias"
+      "type": "string"
     },
     "customer_id": {
       "type": "string"
     },
     "customer_account_id": {
-      "type": "string",
-      "description": "Linked app User record id after a customer account claims or matches this job."
+      "type": "string"
     },
     "claimed_by_customer": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether this job has been linked to a verified customer account."
+      "default": false
     },
     "customer_name": {
-      "type": "string",
-      "description": "Denormalized for fast display"
+      "type": "string"
     },
     "customer_email": {
       "type": "string"
     },
     "customer_phone": {
-      "type": "string",
-      "description": "Primary customer phone number stored in E.164 format for SMS workflows."
+      "type": "string"
     },
     "customer_phone_e164": {
-      "type": "string",
-      "description": "Normalized E.164 customer phone number used by Twilio."
+      "type": "string"
     },
     "customer_phone_display": {
-      "type": "string",
-      "description": "User-friendly local phone number as entered/displayed."
+      "type": "string"
     },
     "asset_id": {
-      "type": "string",
-      "description": "Generic item/equipment/vehicle/location/object related to the job"
+      "type": "string"
     },
     "asset_label": {
-      "type": "string",
-      "description": "Generic display label for the item/equipment/vehicle/location/object"
+      "type": "string"
     },
     "scooter_make_model": {
-      "type": "string",
-      "description": "Customer-submitted scooter make/model for customer-safe job management views."
+      "type": "string"
     },
     "scooterDetails": {
-      "type": "string",
-      "description": "Public booking compatible scooter details"
+      "type": "string"
     },
     "scooter_details": {
       "type": "string"
@@ -100,8 +93,7 @@
         "custom_work",
         "other"
       ],
-      "default": "general_repair",
-      "description": "Repair/service type used for visual identification on job cards. Separate from job status."
+      "default": "general_repair"
     },
     "priority": {
       "type": "string",
@@ -111,35 +103,29 @@
         "high",
         "urgent"
       ],
-      "default": "medium",
-      "description": "Job priority used for board filtering."
+      "default": "medium"
     },
     "issueDescription": {
-      "type": "string",
-      "description": "Public booking compatible issue description"
+      "type": "string"
     },
     "issue_description": {
       "type": "string"
     },
     "issue_summary": {
-      "type": "string",
-      "description": "Customer-submitted issue/service summary for customer-safe job management views."
+      "type": "string"
     },
     "rideable_status": {
-      "type": "string",
-      "description": "Customer-facing rideable status captured at booking."
+      "type": "string"
     },
     "job_status": {
-      "type": "string",
-      "description": "Customer-safe status alias captured for portal use."
+      "type": "string"
     },
     "private_notes": {
-      "type": "string",
-      "description": "Internal technician-only notes (repair issues, part failures). Never shown to customers."
+      "type": "string"
     },
     "booking_submission": {
       "type": "object",
-      "description": "Original booking form values preserved for audit/reference. Intake edits do not overwrite this snapshot.",
+      "additionalProperties": true,
       "properties": {
         "customerName": {
           "type": "string"
@@ -228,7 +214,7 @@
     },
     "intake": {
       "type": "object",
-      "description": "Standardised technician intake details captured when a scooter is received",
+      "additionalProperties": true,
       "properties": {
         "customerName": {
           "type": "string"
@@ -340,10 +326,10 @@
         "paid",
         "completed",
         "cancelled",
-        "on_hold"
+        "on_hold",
+        "quote_approved"
       ],
-      "default": "requested",
-      "description": "Canonical job status used by the model, Kanban board, filters, dropdowns, and drag/drop updates."
+      "default": "requested"
     },
     "waiting_reason": {
       "type": "string"
@@ -377,8 +363,7 @@
     },
     "created_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Customer-facing booking/request creation timestamp."
+      "format": "date-time"
     },
     "updatedAt": {
       "type": "string",
@@ -425,22 +410,25 @@
     "read": {
       "$or": [
         {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
-          "data.customer_email": "{{user.email}}"
+          "data.customer_user_id": "{{user.id}}"
         },
         {
           "data.customer_account_id": "{{user.id}}"
         },
         {
           "user_condition": {
-            "role": "admin"
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
           }
         },
         {
           "user_condition": {
-            "data.is_customer": "false"
+            "data.is_customer": false
           }
         }
       ]
@@ -448,25 +436,25 @@
     "update": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
-          "data.customer_email": "{{user.email}}"
+          "data.customer_user_id": "{{user.id}}"
         },
         {
           "data.customer_account_id": "{{user.id}}"
         },
         {
           "user_condition": {
-            "role": "admin"
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
           }
         },
         {
           "user_condition": {
-            "data.is_customer": "false"
+            "data.is_customer": false
           }
         }
       ]
