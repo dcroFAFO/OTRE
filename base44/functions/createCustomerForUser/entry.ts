@@ -9,6 +9,15 @@ function buildCustomerId(user) {
   return `CUST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
+function normalizePhone(value) {
+  let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('+61')) cleaned = cleaned.slice(3);
+  else if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
+  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+  const phone = `+61${cleaned.replace(/\D/g, '')}`;
+  return /^\+614\d{8}$/.test(phone) ? phone : '';
+}
+
 async function syncCustomerForUser(base44, user) {
   if (!user?.id) {
     return { created: false, skipped: true, reason: 'User is missing' };
@@ -25,6 +34,7 @@ async function syncCustomerForUser(base44, user) {
 
   const relatedJobs = await base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100);
   const relatedJobIds = [...new Set(relatedJobs.map((job) => job.job_id || job.id).filter(Boolean))].join(',');
+  const phone = normalizePhone(user.phone) || normalizePhone(relatedJobs[0]?.customer_phone_e164) || normalizePhone(relatedJobs[0]?.customer_phone);
 
   async function claimRelatedJobs(customerId) {
     for (const job of relatedJobs) {
@@ -49,6 +59,9 @@ async function syncCustomerForUser(base44, user) {
 
     if (!existingCustomer.user_id) updates.user_id = user.id;
     if (!existingCustomer.customer_id) updates.customer_id = customerId;
+    if (phone && existingCustomer.phone !== phone) updates.phone = phone;
+    if (phone && existingCustomer.phone_e164 !== phone) updates.phone_e164 = phone;
+    if (phone && existingCustomer.phone_display !== phone) updates.phone_display = phone;
     if (relatedJobIds && existingCustomer.job_id !== relatedJobIds) updates.job_id = relatedJobIds;
 
     if (Object.keys(updates).length > 0) {
@@ -73,7 +86,9 @@ async function syncCustomerForUser(base44, user) {
     job_id: relatedJobIds,
     full_name: user.full_name || email,
     email,
-    phone: user.phone || '',
+    phone,
+    phone_e164: phone,
+    phone_display: phone,
     user_id: user.id,
     status: 'active',
     tags: ['customer'],
