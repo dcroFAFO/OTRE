@@ -48,7 +48,7 @@ export default function BookAccount() {
             <div className="absolute -top-40 -right-36 h-[420px] w-[420px] rounded-full bg-accent/10 blur-[90px]" />
           </div>
 
-          <div className="relative mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
+          <div className="relative mx-auto grid max-w-6xl items-stretch gap-6 lg:grid-cols-2">
             <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-xl sm:p-8">
               <Link to="/" className="text-sm font-semibold text-muted-foreground hover:text-foreground">← Back to home</Link>
               <span className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
