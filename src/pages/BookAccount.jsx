@@ -72,18 +72,60 @@ export default function BookAccount() {
               <h2 className="font-heading text-2xl font-extrabold">Choose how to continue</h2>
               <p className="mt-2 text-sm text-muted-foreground">Account customers can manage bookings, quotes, invoices and updates from the portal.</p>
 
-              <div className="mt-6 grid gap-3">
-                {providers.map((provider) => (
-                  <Button key={provider.key} variant="outline" className="h-11 justify-start rounded-xl" onClick={() => oauth(provider.key)}>
-                    {provider.key === "google" ? <GoogleIcon className="h-5 w-5" /> : <span className="grid h-5 w-5 place-items-center rounded-full bg-secondary text-[10px] font-bold uppercase">{provider.key[0]}</span>}
+              <div className="mt-8 mx-auto flex w-full max-w-[440px] flex-col items-center gap-[13px]">
+                <Button
+                  variant="outline"
+                  className="group h-16 w-full overflow-hidden rounded-[10px] border-[#2F7FE4] bg-[#2F7FE4] p-0 text-[25px] font-semibold text-white shadow-[0_2px_7px_rgba(47,127,228,0.25)] hover:bg-[#2B77D7] hover:text-white"
+                  onClick={() => oauth("google")}
+                >
+                  <span className="grid h-full w-16 shrink-0 place-items-center bg-white">
+                    <GoogleIcon className="h-8 w-8" />
+                  </span>
+                  <span className="flex-1 pr-16 text-center">Continue with Google</span>
+                </Button>
+
+                <div className="my-4 flex w-full items-center gap-4 text-[24px] font-medium text-[#22313F]">
+                  <span className="h-px flex-1 bg-[#6F7F8C]" />
+                  <span>or</span>
+                  <span className="h-px flex-1 bg-[#6F7F8C]" />
+                </div>
+
+                {providers.slice(1).map((provider) => (
+                  <Button
+                    key={provider.key}
+                    variant="outline"
+                    className="h-16 w-full justify-center rounded-[9px] border-[#B7C1CA] bg-white text-[25px] font-semibold text-[#07111E] shadow-[0_1px_4px_rgba(15,23,42,0.12)] hover:bg-[#F8FAFC]"
+                    onClick={() => oauth(provider.key)}
+                  >
+                    {provider.key === "microsoft" && (
+                      <span className="grid h-8 w-8 grid-cols-2 gap-0.5">
+                        <span className="bg-[#F25022]" />
+                        <span className="bg-[#7FBA00]" />
+                        <span className="bg-[#00A4EF]" />
+                        <span className="bg-[#FFB900]" />
+                      </span>
+                    )}
+                    {provider.key === "facebook" && <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1877F2] text-[29px] font-bold leading-none text-white">f</span>}
+                    {provider.key === "apple" && (
+                      <svg className="h-8 w-8 text-black" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M16.8 12.45c-.03-3.04 2.48-4.5 2.59-4.57-1.41-2.06-3.61-2.35-4.39-2.38-1.87-.19-3.65 1.1-4.6 1.1-.94 0-2.4-1.07-3.95-1.04-2.03.03-3.9 1.18-4.95 3-2.11 3.66-.54 9.08 1.52 12.05 1 1.45 2.2 3.08 3.77 3.02 1.51-.06 2.08-.98 3.91-.98 1.82 0 2.34.98 3.94.95 1.63-.03 2.66-1.48 3.65-2.94 1.15-1.68 1.62-3.31 1.65-3.39-.04-.02-3.16-1.21-3.19-4.82ZM13.78 3.53c.83-1 1.39-2.39 1.24-3.78-1.2.05-2.65.8-3.51 1.8-.77.89-1.45 2.31-1.27 3.67 1.34.1 2.71-.68 3.54-1.69Z" />
+                      </svg>
+                    )}
                     {provider.label}
                   </Button>
                 ))}
-                <Button asChild variant="outline" className="h-11 justify-start rounded-xl">
-                  <Link to={loginHref}><Mail className="h-5 w-5" /> Continue with Email</Link>
+
+                <div className="my-7 flex w-full items-center gap-4 text-[24px] font-medium text-[#22313F]">
+                  <span className="h-px flex-1 bg-[#6F7F8C]" />
+                  <span>or</span>
+                  <span className="h-px flex-1 bg-[#6F7F8C]" />
+                </div>
+
+                <Button asChild variant="ghost" className="h-12 w-full justify-center rounded-[10px] bg-transparent text-[27px] font-semibold text-[#07111E] hover:bg-transparent hover:text-[#07111E]">
+                  <Link to={loginHref}><Mail className="h-8 w-8 stroke-[#24394E]" /> Email</Link>
                 </Button>
-                <Button variant="outline" disabled className="h-11 justify-start rounded-xl opacity-60">
-                  <Phone className="h-5 w-5" /> Continue with Phone Number <span className="ml-auto text-xs">Coming soon</span>
+                <Button variant="ghost" disabled className="mt-4 h-16 w-full rounded-full bg-[#E5E9EE] text-[25px] font-semibold text-[#687585] opacity-100 disabled:opacity-100">
+                  Phone Number <span className="ml-3 rounded-full bg-[#CBD2DB] px-4 py-1.5 text-[17px] font-bold text-[#556273]">Coming soon</span>
                 </Button>
               </div>
 
