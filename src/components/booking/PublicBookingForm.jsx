@@ -75,7 +75,7 @@ function getBookingPrefill() {
   };
 }
 
-export default function PublicBookingForm() {
+export default function PublicBookingForm({ guestOnly = false }) {
   const { data: { services } } = usePlatformConfig();
   const [form, setForm] = useState(() => ({ ...EMPTY, ...getBookingPrefill() }));
   const [photoUrl, setPhotoUrl] = useState(null);
@@ -165,17 +165,27 @@ export default function PublicBookingForm() {
             <p className="mt-1 font-heading text-3xl font-extrabold text-foreground">{done.reference}</p>
           </div>
         )}
-        <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-4 text-left">
-          <h3 className="font-heading text-lg font-bold text-foreground">Track this repair online</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            View this job securely now, or create an account to manage this and future jobs from your dashboard.
-          </p>
-          <Button asChild size="lg" className="mt-4 w-full"><Link to={viewPath}>View My Job</Link></Button>
-          {!done?.linked && <Button asChild variant="outline" className="mt-3 w-full"><Link to={accountPath}>Create an account to manage this job</Link></Button>}
-          <p className="mt-3 text-xs text-muted-foreground text-center">
-            You can also contact On The Run Electrics directly if you need help with your booking.
-          </p>
-        </div>
+        {guestOnly ? (
+          <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-4 text-left">
+            <h3 className="font-heading text-lg font-bold text-foreground">Want easier bookings next time?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You can create a free account later to manage future bookings, updates, invoices and offers from your customer portal.
+            </p>
+            <Button asChild variant="outline" className="mt-4 w-full"><Link to={accountPath}>Create a free account</Link></Button>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-4 text-left">
+            <h3 className="font-heading text-lg font-bold text-foreground">Track this repair online</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              View this job securely now, or create an account to manage this and future jobs from your dashboard.
+            </p>
+            <Button asChild size="lg" className="mt-4 w-full"><Link to={viewPath}>View My Job</Link></Button>
+            {!done?.linked && <Button asChild variant="outline" className="mt-3 w-full"><Link to={accountPath}>Create an account to manage this job</Link></Button>}
+            <p className="mt-3 text-xs text-muted-foreground text-center">
+              You can also contact On The Run Electrics directly if you need help with your booking.
+            </p>
+          </div>
+        )}
       </div>
     );
   }

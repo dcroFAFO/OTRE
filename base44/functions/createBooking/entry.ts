@@ -154,14 +154,18 @@ async function sendSms({ to, body }) {
 
 function customerConfirmationSms(job, manageLink) {
   const reference = job.reference ? ` (${job.reference})` : '';
-  return `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. View it here: ${manageLink}`;
+  return manageLink
+    ? `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. View it in your customer portal: ${manageLink}`
+    : `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. We will review it and keep you updated.`;
 }
 
 function customerConfirmationHtml(job, manageLink) {
   const assetLabel = job.asset_label || '—';
   const firstName = (job.customer_name || 'there').split(' ')[0];
   const reference = job.reference || '—';
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);"><tr><td style="background:#0f172a;padding:28px 32px;"><p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p><h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Booking Confirmed</h1></td></tr><tr><td style="padding:32px;"><p style="margin:0 0 16px;font-size:15px;color:#1e293b;line-height:1.6;">Hi ${firstName},</p><p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Your repair request has been submitted. We will review the details and send updates as the job progresses.</p><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;"><tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Reference:</strong> ${reference}</td></tr><tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Scooter:</strong> ${assetLabel}</td></tr>${job.issue_description ? `<tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Issue reported:</strong> ${job.issue_description}</td></tr>` : ''}</table><table cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:10px;background:#0ea5e9;"><a href="${manageLink}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">View My Job</a></td></tr></table><p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">You can also create an account with this email address to manage all future bookings in one dashboard.</p></td></tr></table></td></tr></table></body></html>`;
+  const portalButton = manageLink ? `<table cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:10px;background:#0ea5e9;"><a href="${manageLink}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">View in Customer Portal</a></td></tr></table>` : '';
+  const accountNote = manageLink ? 'You can manage this repair from your customer portal.' : 'We will send repair updates to the email address or mobile number on this booking.';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);"><tr><td style="background:#0f172a;padding:28px 32px;"><p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p><h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Booking Confirmed</h1></td></tr><tr><td style="padding:32px;"><p style="margin:0 0 16px;font-size:15px;color:#1e293b;line-height:1.6;">Hi ${firstName},</p><p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Your repair request has been submitted. We will review the details and send updates as the job progresses.</p><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;"><tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Reference:</strong> ${reference}</td></tr><tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Scooter:</strong> ${assetLabel}</td></tr>${job.issue_description ? `<tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Issue reported:</strong> ${job.issue_description}</td></tr>` : ''}</table>${portalButton}<p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">${accountNote}</p></td></tr></table></td></tr></table></body></html>`;
 }
 
 Deno.serve(async (req) => {
@@ -185,6 +189,15 @@ Deno.serve(async (req) => {
     const rawToken = customerUserId ? null : makeToken();
     const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
     const submittedBooking = bookingSnapshot(form, email, phone);
+    await base44.asServiceRole.entities.CustomerProfile.update(profile.id, {
+      display_name: profile.display_name || form.customer_name,
+      name: profile.name || form.customer_name,
+      full_name: profile.full_name || form.customer_name,
+      scooter_make: submittedBooking.scooterMake || profile.scooter_make || '',
+      scooter_model: submittedBooking.scooterModel || profile.scooter_model || '',
+      scooter_make_model: submittedBooking.assetLabel || profile.scooter_make_model || '',
+      updated_at: now,
+    }).catch((profileErr) => console.warn('[createBooking] profile details sync skipped:', profileErr.message));
     const initialIntake = { customerName: submittedBooking.customerName, customerEmail: submittedBooking.customerEmail, customerPhone: submittedBooking.customerPhone, customerPhoneE164: submittedBooking.customerPhoneE164, scooterMake: submittedBooking.scooterMake, scooterModel: submittedBooking.scooterModel, make: submittedBooking.scooterMake, model: submittedBooking.scooterModel, issueOrService: submittedBooking.issueOrService, initial_issue_notes: [submittedBooking.issueOrService, submittedBooking.urgencyOrSafetyNotes].filter(Boolean).join('\n'), service_type: submittedBooking.serviceType, date: submittedBooking.preferredDate, isRideable: submittedBooking.isRideable, booking_files: submittedBooking.files };
     const job = await base44.asServiceRole.entities.Job.create({ reference, tracking_token: rawToken, guest_access_token: rawToken, customer_profile_id: profile.id, customer_user_id: customerUserId, customerId: profile.id, customer_id: profile.id, customer_account_id: customerUserId, claimed_by_customer: !!customerUserId, customer_name: form.customer_name, customer_email: email, customer_phone: phone, customer_phone_e164: phone, customer_phone_display: phone, asset_label: form.asset_label || submittedBooking.assetLabel, scooter_make_model: form.asset_label || submittedBooking.assetLabel, scooterDetails: form.asset_label || submittedBooking.assetLabel, scooter_details: form.asset_label || submittedBooking.assetLabel, issueDescription: form.issue_description, issue_description: form.issue_description, issue_summary: form.issue_description, rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable', job_status: INTAKE_STATUS, source: 'public_booking', job_type: JOB_TYPE, service_type: submittedBooking.serviceType, priority: 'medium', status: INTAKE_STATUS, scheduled_date: form.asap ? null : (form.preferred_date || null), preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window, rideable: submittedBooking.isRideable, intake: initialIntake, booking_submission: submittedBooking, business_slug: SLUG, createdAt: now, created_at: now, updatedAt: now });
 
@@ -193,12 +206,12 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.AuditEvent.create({ event_type: 'booking_created', job_id: job.id, customer_id: profile.id, actor_name: form.customer_name, actor_role: customerUserId ? 'customer_account' : 'guest_customer', summary: `Booking request received from ${form.customer_name}`, visibility: 'system' }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
 
     const origin = originFrom(req);
-    const trackingLink = rawToken ? `${origin}/track/${encodeURIComponent(rawToken)}` : `${origin}/portal`;
-    const managePath = rawToken ? `/track/${encodeURIComponent(rawToken)}` : '/portal';
-    const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/portal')}&customerFlow=1`;
-    await sendMail({ to: email, subject: `Booking confirmed${job.reference ? ` (${job.reference})` : ''} — OTR Scooters`, body: customerConfirmationHtml(job, trackingLink) }).catch((mailErr) => console.warn('[createBooking] customer confirmation email skipped:', mailErr.message));
-    await sendSms({ to: phone, body: customerConfirmationSms(job, trackingLink) }).catch((smsErr) => console.warn('[createBooking] customer confirmation SMS skipped:', smsErr.message));
-    return Response.json({ reference: job.reference, managePath, trackingLink, accountPath, job_id: job.id, customer_profile_id: profile.id, linked: !!customerUserId });
+    const portalLink = customerUserId ? `${origin}/portal` : null;
+    const managePath = customerUserId ? '/portal' : null;
+    const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
+    await sendMail({ to: email, subject: `Booking confirmed${job.reference ? ` (${job.reference})` : ''} — OTR Scooters`, body: customerConfirmationHtml(job, portalLink) }).catch((mailErr) => console.warn('[createBooking] customer confirmation email skipped:', mailErr.message));
+    await sendSms({ to: phone, body: customerConfirmationSms(job, portalLink) }).catch((smsErr) => console.warn('[createBooking] customer confirmation SMS skipped:', smsErr.message));
+    return Response.json({ reference: job.reference, managePath, accountPath, job_id: job.id, customer_profile_id: profile.id, linked: !!customerUserId });
   } catch (error) {
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
     return Response.json({ error: error.message || "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });

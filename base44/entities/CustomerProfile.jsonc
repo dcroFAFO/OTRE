@@ -2,7 +2,13 @@
   "name": "CustomerProfile",
   "type": "object",
   "properties": {
+    "display_name": {
+      "type": "string"
+    },
     "name": {
+      "type": "string"
+    },
+    "full_name": {
       "type": "string"
     },
     "email": {
@@ -11,11 +17,27 @@
     "phone_e164": {
       "type": "string"
     },
+    "display_photo": {
+      "type": "string"
+    },
+    "scooter_make": {
+      "type": "string"
+    },
+    "scooter_model": {
+      "type": "string"
+    },
+    "scooter_make_model": {
+      "type": "string"
+    },
     "auth_user_id": {
       "type": "string",
       "description": "Linked authenticated app user id when this customer has claimed the profile."
     },
     "email_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "phone_verified": {
       "type": "boolean",
       "default": false
     },

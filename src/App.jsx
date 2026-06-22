@@ -10,6 +10,8 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import Landing from '@/pages/Landing';
 import BookAccount from '@/pages/BookAccount';
+import GuestBooking from '@/pages/GuestBooking';
+import ProfileSetup from '@/pages/ProfileSetup';
 import Portal from '@/pages/Portal';
 import Store from '@/pages/Store';
 import Login from '@/pages/Login';
@@ -60,6 +62,8 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/book" element={<BookAccount />} />
+      <Route path="/book/guest" element={<GuestBooking />} />
+      <Route path="/profile-setup" element={<ProfileSetup />} />
       <Route path="/portal" element={<Portal />} />
       <Route path="/store" element={<Store />} />
       <Route path="/login" element={<Login />} />

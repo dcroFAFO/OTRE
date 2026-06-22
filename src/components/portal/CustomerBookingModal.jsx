@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,15 @@ const EMPTY = {
   asap: false, consent: false,
 };
 
-export default function CustomerBookingModal({ open, onClose, user, onSuccess }) {
+function localPhone(value) {
+  const text = String(value || "").replace(/\s/g, "");
+  if (text.startsWith("+61")) return text.slice(3);
+  if (text.startsWith("61")) return text.slice(2);
+  if (text.startsWith("0")) return text.slice(1);
+  return text;
+}
+
+export default function CustomerBookingModal({ open, onClose, user, profile, onSuccess }) {
   const { data: { services } } = usePlatformConfig();
   const [form, setForm] = useState(EMPTY);
   const [photoUrl, setPhotoUrl] = useState(null);
@@ -36,6 +44,18 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
   const [done, setDone] = useState(null);
   const [errors, setErrors] = useState({});
   const [dateValid, setDateValid] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm((current) => ({
+      ...current,
+      customer_name: profile?.display_name || profile?.full_name || profile?.name || user?.full_name || "",
+      phone: localPhone(profile?.phone_e164),
+      asset_make: profile?.scooter_make || "",
+      asset_model: profile?.scooter_model || "",
+      asset_label: profile?.scooter_make_model || [profile?.scooter_make, profile?.scooter_model].filter(Boolean).join(" "),
+    }));
+  }, [open, profile, user]);
 
   const set = (k, v) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -71,7 +91,7 @@ export default function CustomerBookingModal({ open, onClose, user, onSuccess })
       const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
       const job = await createBookingRequest({
         ...form,
-        customer_name: form.customer_name || user?.full_name,
+        customer_name: form.customer_name || profile?.display_name || user?.full_name,
         customer_email: user?.email,
         phone: normalizedPhone.phone_e164,
         phone_e164: normalizedPhone.phone_e164,

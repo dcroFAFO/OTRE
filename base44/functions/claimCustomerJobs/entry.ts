@@ -22,17 +22,23 @@ function addIdList(existing, nextId) {
   return ids.join(',');
 }
 
-async function ensureProfile(base44, user, email, jobs) {
+async function ensureProfile(base44, user, email, jobs, profileData = {}) {
   const matches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 10).catch(() => []);
   let profile = matches.find((p) => !p.auth_user_id || p.auth_user_id === user.id) || matches[0] || null;
   const now = new Date().toISOString();
-  const phone = normalizePhone(user.phone) || normalizePhone(jobs[0]?.customer_phone_e164) || normalizePhone(jobs[0]?.customer_phone) || normalizePhone(profile?.phone_e164);
+  const phone = normalizePhone(profileData.phone_e164) || normalizePhone(user.phone) || normalizePhone(jobs[0]?.customer_phone_e164) || normalizePhone(jobs[0]?.customer_phone) || normalizePhone(profile?.phone_e164);
 
   if (!profile) {
     profile = await base44.asServiceRole.entities.CustomerProfile.create({
-      name: user.full_name || jobs[0]?.customer_name || email,
+      display_name: profileData.display_name || user.full_name || jobs[0]?.customer_name || email,
+      name: profileData.full_name || profileData.display_name || user.full_name || jobs[0]?.customer_name || email,
+      full_name: profileData.full_name || user.full_name || '',
       email,
       phone_e164: phone,
+      display_photo: profileData.display_photo || user.picture || user.avatar_url || '',
+      scooter_make: profileData.scooter_make || '',
+      scooter_model: profileData.scooter_model || '',
+      scooter_make_model: profileData.scooter_make_model || '',
       auth_user_id: user.id,
       email_verified: true,
       created_from_booking: jobs.length > 0,
@@ -43,7 +49,13 @@ async function ensureProfile(base44, user, email, jobs) {
     const updates = { updated_at: now, email_verified: true };
     if (!profile.auth_user_id) updates.auth_user_id = user.id;
     if (phone && profile.phone_e164 !== phone) updates.phone_e164 = phone;
-    if (!profile.name && user.full_name) updates.name = user.full_name;
+    if (profileData.display_name) updates.display_name = profileData.display_name;
+    if (profileData.full_name) updates.full_name = profileData.full_name;
+    if (!profile.name && (profileData.full_name || profileData.display_name || user.full_name)) updates.name = profileData.full_name || profileData.display_name || user.full_name;
+    if (profileData.display_photo) updates.display_photo = profileData.display_photo;
+    if (profileData.scooter_make) updates.scooter_make = profileData.scooter_make;
+    if (profileData.scooter_model) updates.scooter_model = profileData.scooter_model;
+    if (profileData.scooter_make_model) updates.scooter_make_model = profileData.scooter_make_model;
     await base44.asServiceRole.entities.CustomerProfile.update(profile.id, updates);
     profile = { ...profile, ...updates };
   }
@@ -53,6 +65,7 @@ async function ensureProfile(base44, user, email, jobs) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const payload = await req.json().catch(() => ({}));
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (isStaffAccount(user)) return Response.json({ linked: 0, skipped: 'staff account' });
@@ -65,7 +78,7 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100),
     ]);
     const jobs = [...new Map([...byUser, ...byEmail].map((job) => [job.id, job])).values()];
-    const profile = await ensureProfile(base44, user, email, jobs);
+    const profile = await ensureProfile(base44, user, email, jobs, payload.profile || {});
 
     let jobIdList = user.job_id || '';
     let linked = 0;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,22 @@ export default function Portal() {
     },
     enabled: !!user && !isStaff(user.role),
   });
+
+  const { data: customerProfile = null } = useQuery({
+    queryKey: ["customerProfile", user?.id],
+    queryFn: async () => {
+      await base44.functions.invoke("claimCustomerJobs", {}).catch(() => null);
+      const profiles = await base44.entities.CustomerProfile.filter({ auth_user_id: user.id }, "-updated_date", 1);
+      return profiles[0] || null;
+    },
+    enabled: !!user && !isStaff(user.role),
+  });
+
+  useEffect(() => {
+    if (!user || isStaff(user.role)) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("book") === "1") setShowBooking(true);
+  }, [user]);
 
   const portalSeo = <SEO title="Customer Portal | OTR Scooters" description="Secure customer portal for tracking scooter repairs, approving quotes, checking invoices and managing repair bookings." canonical="/portal" noindex />;
 
@@ -97,7 +113,7 @@ export default function Portal() {
       </main>
 
       <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
-      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} />
+      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} profile={customerProfile} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} />
 
       <SupportChat user={user} />
     </div>
