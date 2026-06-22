@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
       visibility: 'system',
     }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
 
-    const managePath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/portal')}`;
+    const managePath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/portal')}&customerFlow=1`;
     const manageLink = `${originFrom(req)}${managePath}`;
 
     await sendMail({
@@ -339,7 +339,7 @@ Deno.serve(async (req) => {
       body: customerConfirmationSms(job, manageLink),
     }).catch((smsErr) => console.warn('[createBooking] customer confirmation SMS skipped:', smsErr.message));
 
-    return Response.json({ reference: job.reference, managePath });
+    return Response.json({ reference: job.reference, managePath, job_id: job.id });
   } catch (error) {
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
     return Response.json({ error: error.message || "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });

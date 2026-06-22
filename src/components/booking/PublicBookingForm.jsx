@@ -11,6 +11,7 @@ import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import PhoneNumberField from "@/components/booking/PhoneNumberField";
+import PreferredDateField from "@/components/booking/PreferredDateField";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { normalizePhoneToE164 } from "@/lib/phone";
@@ -144,7 +145,7 @@ export default function PublicBookingForm() {
   };
 
   if (done) {
-    const managePath = `/register?email=${encodeURIComponent(form.customer_email)}&next=${encodeURIComponent("/portal")}`;
+    const managePath = `/register?email=${encodeURIComponent(form.customer_email)}&next=${encodeURIComponent("/portal")}&customerFlow=1`;
 
     return (
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl text-center">
@@ -155,6 +156,12 @@ export default function PublicBookingForm() {
         <p className="mt-2 text-muted-foreground">
           We have received your scooter repair request and will review the details. You will receive updates as the job progresses.
         </p>
+        {done?.reference && (
+          <div className="mt-5 rounded-2xl border-2 border-accent/40 bg-accent/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent">Job reference</p>
+            <p className="mt-1 font-heading text-3xl font-extrabold text-foreground">{done.reference}</p>
+          </div>
+        )}
         <div className="mt-6 rounded-2xl border border-border bg-secondary/40 p-4 text-left">
           <h3 className="font-heading text-lg font-bold text-foreground">Want to track this repair online?</h3>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -237,7 +244,7 @@ export default function PublicBookingForm() {
             <h2 className="font-heading text-base font-extrabold">Scheduling</h2>
             <div className="grid gap-2">
               <Field label={field("preferred_date").label || "Preferred date"}>
-                <Input type="date" value={form.preferred_date} onChange={(e) => set("preferred_date", e.target.value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
+                <PreferredDateField value={form.preferred_date} onChange={(value) => set("preferred_date", value)} disabled={form.asap} className={form.asap ? "opacity-50" : ""} />
               </Field>
               <Field label={field("preferred_time_window").label || "Preferred time"}>
                 <Select value={form.preferred_time_window} onValueChange={(v) => set("preferred_time_window", v)}>

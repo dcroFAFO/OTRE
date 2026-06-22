@@ -10,6 +10,7 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import SEO from "@/components/SEO";
+import { isStaff } from "@/config/permissions";
 
 const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
 
@@ -19,11 +20,12 @@ function authParams() {
   return {
     email: params.get("email") || "",
     next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
+    customerFlow: params.get("customerFlow") === "1",
   };
 }
 
 export default function Register() {
-  const { email: initialEmail, next } = authParams();
+  const { email: initialEmail, next, customerFlow } = authParams();
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,15 +34,21 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
 
-  // Already signed in? Skip straight to the portal.
+  // Already signed in? Customer booking links should not reuse a staff session.
   useEffect(() => {
     base44.auth
       .isAuthenticated()
-      .then((authed) => {
-        if (authed) window.location.href = next;
+      .then(async (authed) => {
+        if (!authed) return;
+        const currentUser = await base44.auth.me();
+        if (customerFlow && isStaff(currentUser?.role)) {
+          await base44.auth.logout(window.location.href);
+          return;
+        }
+        window.location.href = next;
       })
       .catch(() => {});
-  }, [next]);
+  }, [next, customerFlow]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
