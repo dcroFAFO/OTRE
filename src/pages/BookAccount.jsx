@@ -73,7 +73,7 @@ export default function BookAccount() {
             </section>
 
             <section className="rounded-3xl border border-border bg-card p-6 shadow-xl sm:p-8">
-              <h2 className="font-heading text-2xl font-extrabold">Choose how to continue</h2>
+              <h2 className="font-heading text-2xl font-extrabold">Sign into </h2>
               <p className="mt-2 text-sm text-muted-foreground">Account customers can manage bookings, quotes, invoices and updates from the portal.</p>
 
               <div className="mt-6 mx-auto flex w-full max-w-[380px] flex-col items-center gap-3">
@@ -144,7 +144,7 @@ export default function BookAccount() {
                 </div>
               </div>
 
-              <div className="my-6 h-px bg-border" />
+              <div className="my-6 h-px bg-border hidden" />
 
               <Button asChild className="h-11 w-full rounded-xl">
                 <Link to={registerHref} className="hidden">Not a member yet? Create a free account now <ArrowRight className="h-4 w-4" /></Link>
