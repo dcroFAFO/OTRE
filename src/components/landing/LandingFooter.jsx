@@ -38,7 +38,11 @@ export default function LandingFooter() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2"><Clock className="h-4 w-4 mt-0.5" /> <span>Monday – Sunday, 11:00 AM – 7:30 PM</span></li>
           </ul>
-          <Link to="/portal" className="mt-4 inline-block text-sm font-medium text-accent">{app.landing.portalLabel} →</Link>
+          <div className="mt-4 flex flex-col gap-2">
+            <Link to="/portal" className="text-sm font-medium text-accent">{app.landing.portalLabel} →</Link>
+            <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors">About us →</Link>
+            <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors">Contact →</Link>
+          </div>
         </div>
       </div>
       <div className="border-t border-border py-5 text-center text-xs text-muted-foreground/70">

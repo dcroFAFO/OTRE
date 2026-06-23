@@ -28,6 +28,10 @@
     },
     "uploaded_by_name": {
       "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
     }
   },
   "required": [

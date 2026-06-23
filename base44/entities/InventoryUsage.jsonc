@@ -50,6 +50,10 @@
     "product_sku": {
       "type": "string",
       "description": "Linked e-store Product SKU"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
     }
   },
   "required": [
