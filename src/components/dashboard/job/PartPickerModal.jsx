@@ -35,7 +35,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState({});
   const [adding, setAdding] = useState(false);
-  const [expanded, setExpanded] = useState({ Tyres: true });
+  const [expanded, setExpanded] = useState({});
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["estore-products"],
@@ -112,15 +112,17 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
                     {group.products.map((p) => {
                       const isSel = !!selected[p.id];
                       return (
-                        <div key={p.id} className={cn("p-2.5 text-sm transition-colors", isSel && "bg-accent/5")}>
+                        <div key={p.id} onClick={() => toggle(p)} className={cn("p-2.5 text-sm transition-colors cursor-pointer hover:bg-secondary/50", isSel && "bg-accent/5 hover:bg-accent/10")}>
                           <div className="flex items-center gap-2.5">
-                            <button onClick={() => toggle(p)} className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border", isSel ? "border-accent bg-accent text-accent-foreground" : "border-input")}>{isSel && <Check className="h-3.5 w-3.5" />}</button>
+                            <span onClick={(e) => e.stopPropagation()} className="contents">
+                              <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border pointer-events-none", isSel ? "border-accent bg-accent text-accent-foreground" : "border-input")}>{isSel && <Check className="h-3.5 w-3.5" />}</span>
+                            </span>
                             {p.image_url ? <img src={p.image_url} alt={p.name} className="h-8 w-8 rounded-lg object-cover shrink-0 bg-secondary" /> : <div className="h-8 w-8 rounded-lg bg-secondary shrink-0 grid place-items-center"><Package className="h-4 w-4 text-muted-foreground" /></div>}
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-foreground line-clamp-1">{p.name}</p>
                               {p.sku && <p className="text-[11px] text-muted-foreground font-mono">{p.sku}</p>}
                             </div>
-                            {isSel && <Input type="number" min={1} value={selected[p.id].qty} onChange={(e) => setQty(p.id, e.target.value)} className="h-7 w-14 px-1.5 py-0 text-xs" />}
+                            {isSel && <Input type="number" min={1} value={selected[p.id].qty} onClick={(e) => e.stopPropagation()} onChange={(e) => { e.stopPropagation(); setQty(p.id, e.target.value); }} className="h-7 w-14 px-1.5 py-0 text-xs" />}
                             <span className="font-heading font-bold tabular-nums shrink-0">${(p.price ?? 0).toFixed(2)}</span>
                           </div>
                         </div>

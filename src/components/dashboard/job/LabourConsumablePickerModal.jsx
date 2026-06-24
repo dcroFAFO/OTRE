@@ -85,15 +85,13 @@ export default function LabourConsumablePickerModal({ open, onOpenChange, onAdd 
               const isSelected = !!selected[item.name];
               const draft = selected[item.name] || item;
               return (
-                <div key={item.name} className={cn("rounded-xl border border-border p-3 text-sm", isSelected && "border-primary bg-primary/5")}>
+                <div key={item.name} onClick={() => toggleItem(item)} className={cn("rounded-xl border border-border p-3 text-sm cursor-pointer transition-colors hover:bg-secondary/50", isSelected && "border-primary bg-primary/5 hover:bg-primary/10")}>
                   <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleItem(item)}
-                      className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border", isSelected ? "border-primary bg-primary text-primary-foreground" : "border-input")}
-                    >
-                      {isSelected && <Check className="h-3.5 w-3.5" />}
-                    </button>
+                    <span onClick={(e) => e.stopPropagation()} className="contents">
+                      <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border pointer-events-none", isSelected ? "border-primary bg-primary text-primary-foreground" : "border-input")}>
+                        {isSelected && <Check className="h-3.5 w-3.5" />}
+                      </span>
+                    </span>
                     <Wrench className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-foreground">{item.name}</p>
@@ -103,7 +101,7 @@ export default function LabourConsumablePickerModal({ open, onOpenChange, onAdd 
                   </div>
 
                   {isSelected && (
-                    <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                    <div onClick={(e) => e.stopPropagation()} className="mt-3 grid gap-2 sm:grid-cols-4">
                       <div className="space-y-1 sm:col-span-4">
                         <Label className="text-xs">Description</Label>
                         <Input value={draft.description} onChange={(e) => updateSelected(item.name, { description: e.target.value })} className="h-8" />
