@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
         <!-- Header -->
         <tr>
           <td style="background:${color};padding:28px 32px;">
-            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">On The Run Electrics</p>
             <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">${heading}</h1>
           </td>
         </tr>
@@ -170,13 +170,13 @@ Deno.serve(async (req) => {
             </table>
 
             ${feedbackBlock}
-            <p style="margin:0;font-size:14px;color:#64748b;">Questions? Reply to this email or call us on <strong>(03) 9000 1234</strong>.</p>
+            <p style="margin:0;font-size:14px;color:#64748b;">Questions? Reply to this email or call us on <strong>0415 505 908</strong>.</p>
           </td>
         </tr>
         <!-- Footer -->
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">On The Run Electrics · 11 Lucinda Street Woolloongabba QLD · 0415 505 908 · hello@ontherunelectrics.com.au</p>
           </td>
         </tr>
       </table>
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
         to,
         subject: `${subject}${reference}`,
         body: htmlBody,
-        from_name: "OTR Scooters",
+        from_name: "On The Run Electrics",
       });
     }
 
