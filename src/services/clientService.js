@@ -75,3 +75,58 @@ export async function fetchClientHistory(customerId) {
   const res = await base44.functions.invoke("customerHistory", { customer_id: customerId });
   return res.data;
 }
+
+// ── Scooter / asset helpers ──────────────────────────────────────────────────
+
+export async function listCustomerScooters(customerId) {
+  if (!customerId) return [];
+  return base44.entities.Scooter.filter({ customer_id: customerId }, "make", 100);
+}
+
+export async function createScooter(customerId, data, actor) {
+  const scooter = await base44.entities.Scooter.create({ ...data, customer_id: customerId });
+  await logAudit({
+    eventType: "customer_update",
+    actor,
+    summary: `Scooter added: ${[data.make, data.model].filter(Boolean).join(" ")}`,
+    metadata: { customer_id: customerId },
+  });
+  return scooter;
+}
+
+export async function updateScooter(scooterId, data, customerName, actor) {
+  const updated = await base44.entities.Scooter.update(scooterId, data);
+  await logAudit({
+    eventType: "customer_update",
+    actor,
+    summary: `${customerName || "Customer"}: scooter updated — ${[data.make, data.model].filter(Boolean).join(" ")}`,
+    metadata: { scooter_id: scooterId },
+  });
+  return updated;
+}
+
+export async function deleteScooter(scooterId, customerName, actor) {
+  await base44.entities.Scooter.delete(scooterId);
+  await logAudit({
+    eventType: "customer_update",
+    actor,
+    summary: `${customerName || "Customer"}: scooter removed`,
+    metadata: { scooter_id: scooterId },
+  });
+}
+
+// Check if an email or phone already belongs to a DIFFERENT customer
+export async function checkDuplicateContact(email, phone, excludeCustomerId) {
+  const results = { emailConflict: null, phoneConflict: null };
+  if (email) {
+    const byEmail = await base44.entities.Customer.filter({ email: email.trim().toLowerCase() });
+    const other = byEmail.filter((c) => c.id !== excludeCustomerId);
+    if (other.length > 0) results.emailConflict = other[0];
+  }
+  if (phone) {
+    const byPhone = await base44.entities.Customer.filter({ phone_e164: phone });
+    const other = byPhone.filter((c) => c.id !== excludeCustomerId);
+    if (other.length > 0) results.phoneConflict = other[0];
+  }
+  return results;
+}

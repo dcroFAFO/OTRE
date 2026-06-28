@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Wrench, Receipt, History, ExternalLink, Mail, Phone, User,
-  Bike, Calendar, CreditCard, ChevronRight
+  Bike, Calendar, CreditCard, Pencil
 } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +15,12 @@ const fmt = (d) => {
   try { return format(new Date(d), "d MMM yyyy"); } catch { return "—"; }
 };
 
-export default function CustomerHistoryPanel({ job }) {
+const STAFF_ROLES = new Set(["admin", "employee", "technician", "staff"]);
+
+export default function CustomerHistoryPanel({ job, actor }) {
   const customerId = job.customer_id;
   const email = job.customer_email;
+  const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 
   const { data, isLoading } = useQuery({
     queryKey: ["customerProfile", customerId || email],
@@ -36,21 +39,40 @@ export default function CustomerHistoryPanel({ job }) {
         jobs.map((j) => base44.entities.Invoice.filter({ job_id: j.id }, "-created_date", 10))
       )).flat();
 
-      // Collect unique scooters/assets from jobs
-      const assetMap = {};
-      jobs.forEach((j) => {
-        const key = j.asset_id || j.scooter_id || (j.intake?.make && j.intake?.model ? `${j.intake.make}-${j.intake.model}` : null);
-        if (key && !assetMap[key]) {
-          assetMap[key] = {
-            label: j.asset_label || j.scooter_label || [j.intake?.make, j.intake?.model].filter(Boolean).join(" ") || "Unknown",
-            make: j.intake?.make,
-            model: j.intake?.model,
-            serial: j.intake?.serial_number,
-            lastSeen: j.created_date,
-          };
-        }
-      });
-      const assets = Object.values(assetMap);
+      // Scooters from the Scooter entity (staff-managed), falling back to job-derived
+      let assets = [];
+      if (customerId) {
+        try {
+          const scooterRecords = await base44.entities.Scooter.filter({ customer_id: customerId });
+          if (scooterRecords.length > 0) {
+            assets = scooterRecords.map((s) => ({
+              label: [s.make, s.model].filter(Boolean).join(" ") || "Unknown",
+              make: s.make,
+              model: s.model,
+              serial: s.serial_number,
+              year: s.year,
+              notes: s.notes,
+            }));
+          }
+        } catch {}
+      }
+      // Fall back to job-derived assets if none in Scooter entity
+      if (assets.length === 0) {
+        const assetMap = {};
+        jobs.forEach((j) => {
+          const key = j.asset_id || j.scooter_id || (j.intake?.make && j.intake?.model ? `${j.intake.make}-${j.intake.model}` : null);
+          if (key && !assetMap[key]) {
+            assetMap[key] = {
+              label: j.asset_label || j.scooter_label || [j.intake?.make, j.intake?.model].filter(Boolean).join(" ") || "Unknown",
+              make: j.intake?.make,
+              model: j.intake?.model,
+              serial: j.intake?.serial_number,
+              lastSeen: j.created_date,
+            };
+          }
+        });
+        assets = Object.values(assetMap);
+      }
 
       return { jobs, invoices, assets };
     },
@@ -77,10 +99,15 @@ export default function CustomerHistoryPanel({ job }) {
           <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
             <User className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-heading font-bold text-base truncate">{job.customer_name || "Unknown customer"}</p>
             <p className="text-xs text-muted-foreground">Customer profile</p>
           </div>
+          {isStaff && (
+            <Link to="/admin/clients" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Link>
+          )}
         </div>
 
         <div className="divide-y divide-border">

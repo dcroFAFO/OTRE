@@ -123,7 +123,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     )}
                   </TabsContent>
                   <TabsContent value="customer" className="mt-0">
-                    {safeTab === "customer" && <CustomerHistoryPanel job={job} />}
+                    {safeTab === "customer" && <CustomerHistoryPanel job={job} actor={actor} />}
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
                     {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
