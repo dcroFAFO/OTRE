@@ -1,4 +1,4 @@
-// Configuration for the admin Client / Customer management system.
+// Configuration for the admin customer management system.
 // Reuses the app's existing badge tones (slate/violet/amber/emerald/rose/accent).
 
 export const CLIENT_STATUSES = [
@@ -14,8 +14,8 @@ export const CLIENT_STATUSES = [
 
 export const CLIENT_TAGS = [
   { key: "vip", label: "VIP", color: "accent" },
-  { key: "active_client", label: "Active Client", color: "emerald" },
-  { key: "past_client", label: "Past Client", color: "slate" },
+  { key: "active_client", label: "Active Customer", color: "emerald" },
+  { key: "past_client", label: "Past Customer", color: "slate" },
   { key: "high_priority", label: "High Priority", color: "rose" },
   { key: "needs_attention", label: "Needs Attention", color: "amber" },
 ];
