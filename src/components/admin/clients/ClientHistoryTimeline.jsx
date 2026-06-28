@@ -14,7 +14,7 @@ export default function ClientHistoryTimeline({ timeline, loading }) {
     return (
       <div className="text-center py-8">
         <Inbox className="h-7 w-7 text-muted-foreground/30 mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">No history recorded for this client yet.</p>
+        <p className="text-sm text-muted-foreground">No history recorded for this customer yet.</p>
       </div>
     );
   }

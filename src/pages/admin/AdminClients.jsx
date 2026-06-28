@@ -20,10 +20,10 @@ export default function AdminClients() {
   const [selected, setSelected] = useState(null);
 
   const { data: clients, isLoading: loadingClients, error, refetch } = useQuery({
-    queryKey: ["adminClients"],
+    queryKey: ["adminCustomers"],
     queryFn: listClients,
     initialData: [],
-    enabled: hasAtLeastRole(user?.role, "admin"),
+    enabled: hasAtLeastRole(user?.role, "technician"),
   });
 
   const filtered = useMemo(() => {
@@ -43,7 +43,7 @@ export default function AdminClients() {
     return [...list].sort(sorters[filters.sort] || sorters.newest);
   }, [clients, filters]);
 
-  const seo = <SEO title="Client Admin | OTR Scooters" description="Private admin area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
+  const seo = <SEO title="Customers | OTR Scooters" description="Private staff area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
 
   if (isLoading) {
     return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;
@@ -53,15 +53,15 @@ export default function AdminClients() {
     <>
     {seo}
     <RequireCapability
-      minRole="admin"
-      deniedTitle="Admin access only"
-      deniedMessage="You don't have permission to view client management."
+      minRole="technician"
+      deniedTitle="Staff access only"
+      deniedMessage="You don't have permission to view customer management."
     >
     <DashboardShell user={user}>
       <div className="space-y-5">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold tracking-tight">Clients & Customers</h1>
-          <p className="text-muted-foreground text-sm">Manage customer accounts, status, tags and full history in one place.</p>
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight">Customers</h1>
+          <p className="text-muted-foreground text-sm">Manage customer accounts, contact details, linked scooters and full history in one place.</p>
         </div>
 
         <ClientSummaryCards clients={clients} />
@@ -70,7 +70,7 @@ export default function AdminClients() {
         {error ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-6 text-center">
             <AlertTriangle className="h-6 w-6 text-rose-500 mx-auto mb-2" />
-            <p className="text-sm text-rose-700">Couldn't load clients. Please refresh and try again.</p>
+            <p className="text-sm text-rose-700">Couldn't load customers. Please refresh and try again.</p>
           </div>
         ) : loadingClients ? (
           <div className="py-16 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>
@@ -78,7 +78,7 @@ export default function AdminClients() {
           <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
             <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
-              {clients.length === 0 ? "No customers yet. They appear here once created via bookings or jobs." : "No clients match your filters."}
+              {clients.length === 0 ? "No customers yet. They appear here once created via bookings or jobs." : "No customers match your filters."}
             </p>
             {clients.length > 0 && <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setFilters(EMPTY_CLIENT_FILTERS)}>Clear filters</Button>}
           </div>
@@ -91,7 +91,10 @@ export default function AdminClients() {
           open={!!selected}
           onClose={() => setSelected(null)}
           actor={user}
-          onChange={refetch}
+          onChange={(updated) => {
+            if (updated) setSelected((current) => current?.id === updated.id ? { ...current, ...updated } : current);
+            refetch();
+          }}
         />
       </div>
     </DashboardShell>

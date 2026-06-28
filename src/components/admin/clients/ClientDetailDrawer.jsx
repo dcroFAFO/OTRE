@@ -65,7 +65,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <h2 className="font-heading text-xl font-extrabold flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary-foreground/70" /> {client.full_name}
+                  <User className="h-5 w-5 text-primary-foreground/70" /> {client.full_name || client.name || "Customer"}
                 </h2>
               </div>
               <ClientStatusBadge value={client.status || "active"} />
@@ -86,9 +86,9 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
 
           <Tabs defaultValue="profile" className="p-5">
             <TabsList className="w-full">
-              <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
+              <TabsTrigger value="profile" className="flex-1">Account</TabsTrigger>
               <TabsTrigger value="notes" className="flex-1">Notes</TabsTrigger>
-              <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
+              <TabsTrigger value="history" className="flex-1">Timeline</TabsTrigger>
             </TabsList>
 
             {/* Profile / edit */}
@@ -96,7 +96,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
               <CustomerEditPanel
                 customer={client}
                 actor={actor}
-                onChange={() => { onChange?.(); loadHistory(); }}
+                onChange={(updated) => { onChange?.(updated); loadHistory(); }}
               />
             </TabsContent>
 

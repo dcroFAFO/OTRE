@@ -15,6 +15,7 @@ export default function DashboardShell({ user, children }) {
   const { data: { business, app } } = usePlatformConfig();
 
   const isAdmin = hasAtLeastRole(user?.role, "admin");
+  const canManageCustomers = hasAtLeastRole(user?.role, "technician");
   const canViewLog = hasCapability(user?.role, CAPABILITIES.LOG_VIEW);
 
   const nav = [
@@ -23,8 +24,8 @@ export default function DashboardShell({ user, children }) {
   { to: "/dashboard/invoices", label: "Invoices", icon: Receipt },
   { to: "/dashboard/inventory", label: "Inventory", icon: Package },
   { to: "/dashboard/templates", label: "Templates", icon: FileText },
-  ...(isAdmin ? [
-  { to: "/admin/clients", label: "Clients", icon: Contact }] :
+  ...(canManageCustomers ? [
+  { to: "/admin/clients", label: "Customers", icon: Contact }] :
   [])];
 
   const adminNav = [

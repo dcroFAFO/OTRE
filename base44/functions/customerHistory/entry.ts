@@ -9,7 +9,8 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'admin') return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    const staffRoles = new Set(['admin', 'employee', 'technician', 'staff']);
+    if (!staffRoles.has(String(user.role || '').toLowerCase())) return Response.json({ error: 'Forbidden: Staff access required' }, { status: 403 });
 
     const { customer_id } = await req.json();
     if (!customer_id) return Response.json({ error: 'customer_id is required' }, { status: 400 });
@@ -19,19 +20,22 @@ Deno.serve(async (req) => {
     if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
     const email = (customer.email || "").toLowerCase();
+    const stableCustomerId = customer.customer_id || customer.id;
 
-    // Pull linked records. Jobs link by customer_id or customer_email.
-    const [jobsById, jobsByEmail, notes, feedback, audits] = await Promise.all([
-      svc.Job.filter({ customer_id }, "-created_date", 200).catch(() => []),
+    // Pull linked records. Jobs link by stable customer_id, account id, or customer_email.
+    const [jobsByStableId, jobsByAccountId, jobsByEmail, notes, feedback, auditsByCustomerId, auditsByField] = await Promise.all([
+      svc.Job.filter({ customer_id: stableCustomerId }, "-created_date", 200).catch(() => []),
+      svc.Job.filter({ customer_account_id: customer.id }, "-created_date", 200).catch(() => []),
       email ? svc.Job.filter({ customer_email: customer.email }, "-created_date", 200).catch(() => []) : [],
       svc.CustomerNote.filter({ customer_id }, "-created_date", 200).catch(() => []),
       email ? svc.Feedback.filter({ submitted_by_email: customer.email }, "-created_date", 100).catch(() => []) : [],
       svc.AuditEvent.filter({ event_type: "customer_update", metadata: { customer_id } }, "-created_date", 200).catch(() => []),
+      svc.AuditEvent.filter({ event_type: "customer_update", customer_id }, "-created_date", 200).catch(() => []),
     ]);
 
     // Merge + dedupe jobs
     const jobMap = {};
-    [...jobsById, ...jobsByEmail].forEach((j) => { jobMap[j.id] = j; });
+    [...jobsByStableId, ...jobsByAccountId, ...jobsByEmail].forEach((j) => { jobMap[j.id] = j; });
     const jobs = Object.values(jobMap);
 
     // Invoices linked to those jobs
@@ -43,7 +47,9 @@ Deno.serve(async (req) => {
     }
 
     // Customer-scoped audit (status / tag / profile changes)
-    const customerAudits = (audits || []).filter((a) => a.metadata?.customer_id === customer_id);
+    const auditMap = {};
+    [...(auditsByCustomerId || []), ...(auditsByField || [])].forEach((a) => { auditMap[a.id] = a; });
+    const customerAudits = Object.values(auditMap).filter((a) => a.customer_id === customer_id || a.metadata?.customer_id === customer_id || a.metadata?.stable_customer_id === stableCustomerId);
 
     // Build a normalised timeline
     const events = [];

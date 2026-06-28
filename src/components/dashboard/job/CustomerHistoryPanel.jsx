@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import { Badge } from "@/components/ui/badge";
+import CustomerEditPanel from "@/components/admin/clients/CustomerEditPanel";
+import { resolveCustomerForJob } from "@/services/clientService";
 import { format } from "date-fns";
 
 const fmt = (d) => {
@@ -22,14 +24,17 @@ export default function CustomerHistoryPanel({ job, actor }) {
   const email = job.customer_email;
   const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["customerProfile", customerId || email],
-    enabled: !!(customerId || email),
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["customerProfile", job.id, customerId || email],
+    enabled: !!job?.id,
     staleTime: 60 * 1000,
     queryFn: async () => {
+      const customer = await resolveCustomerForJob(job);
+      const resolvedCustomerId = customer?.customer_id || customer?.id || customerId;
+      const resolvedEmail = customer?.email || email;
       const [byId, byEmail] = await Promise.all([
-        customerId ? base44.entities.Job.filter({ customer_id: customerId }, "-created_date", 100) : [],
-        email ? base44.entities.Job.filter({ customer_email: email }, "-created_date", 100) : [],
+        resolvedCustomerId ? base44.entities.Job.filter({ customer_id: resolvedCustomerId }, "-created_date", 100) : [],
+        resolvedEmail ? base44.entities.Job.filter({ customer_email: resolvedEmail }, "-created_date", 100) : [],
       ]);
       const map = {};
       [...byId, ...byEmail].forEach((j) => { map[j.id] = j; });
@@ -41,9 +46,9 @@ export default function CustomerHistoryPanel({ job, actor }) {
 
       // Scooters from the Scooter entity (staff-managed), falling back to job-derived
       let assets = [];
-      if (customerId) {
+      if (resolvedCustomerId) {
         try {
-          const scooterRecords = await base44.entities.Scooter.filter({ customer_id: customerId });
+          const scooterRecords = await base44.entities.Scooter.filter({ customer_id: resolvedCustomerId });
           if (scooterRecords.length > 0) {
             assets = scooterRecords.map((s) => ({
               label: [s.make, s.model].filter(Boolean).join(" ") || "Unknown",
@@ -74,7 +79,7 @@ export default function CustomerHistoryPanel({ job, actor }) {
         assets = Object.values(assetMap);
       }
 
-      return { jobs, invoices, assets };
+      return { customer, jobs, invoices, assets };
     },
   });
 
@@ -82,6 +87,7 @@ export default function CustomerHistoryPanel({ job, actor }) {
     return <div className="flex justify-center py-10"><div className="w-6 h-6 border-4 border-border border-t-primary rounded-full animate-spin" /></div>;
   }
 
+  const customer = data?.customer;
   const jobs = data?.jobs || [];
   const invoices = data?.invoices || [];
   const assets = data?.assets || [];
@@ -100,34 +106,35 @@ export default function CustomerHistoryPanel({ job, actor }) {
             <User className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-heading font-bold text-base truncate">{job.customer_name || "Unknown customer"}</p>
+            <p className="font-heading font-bold text-base truncate">{customer?.full_name || job.customer_name || "Unknown customer"}</p>
             <p className="text-xs text-muted-foreground">Customer profile</p>
           </div>
-          {isStaff && (
-            <Link to="/admin/clients" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
-              <Pencil className="h-3.5 w-3.5" /> Edit
-            </Link>
-          )}
         </div>
 
         <div className="divide-y divide-border">
-          {job.customer_email && (
+          {(customer?.email || job.customer_email) && (
             <div className="flex items-center gap-2.5 py-2 text-sm">
               <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <a href={`mailto:${job.customer_email}`} className="text-primary hover:underline truncate">
-                {job.customer_email}
+              <a href={`mailto:${customer?.email || job.customer_email}`} className="text-primary hover:underline truncate">
+                {customer?.email || job.customer_email}
               </a>
             </div>
           )}
-          {job.customer_phone && (
+          {(customer?.phone_display || customer?.phone || job.customer_phone) && (
             <div className="flex items-center gap-2.5 py-2 text-sm">
               <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <a href={`tel:${job.customer_phone}`} className="hover:underline">
-                {job.customer_phone}
+              <a href={`tel:${customer?.phone || job.customer_phone}`} className="hover:underline">
+                {customer?.phone_display || customer?.phone || job.customer_phone}
               </a>
             </div>
           )}
         </div>
+
+        {isStaff && customer && (
+          <div className="rounded-lg border border-border bg-secondary/20 p-3">
+            <CustomerEditPanel customer={customer} actor={actor} onChange={refetch} />
+          </div>
+        )}
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2 pt-1">

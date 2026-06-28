@@ -14,8 +14,10 @@ export default function ClientTable({ clients, onView }) {
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Contact</th>
               <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Scooters</th>
+              <th className="px-4 py-3 font-semibold">Jobs</th>
               <th className="px-4 py-3 font-semibold">Tags</th>
-              <th className="px-4 py-3 font-semibold">Signed up</th>
+              <th className="px-4 py-3 font-semibold">Created</th>
               <th className="px-4 py-3 font-semibold text-right">Actions</th>
             </tr>
           </thead>
@@ -30,6 +32,11 @@ export default function ClientTable({ clients, onView }) {
                   <p className="text-[11px] text-muted-foreground">{c.phone || ""}</p>
                 </td>
                 <td className="px-4 py-3"><ClientStatusBadge value={c.status || "active"} /></td>
+                <td className="px-4 py-3 max-w-[180px]">
+                  <p className="text-sm">{c.scooter_count || 0}</p>
+                  {(c.scooters || []).length > 0 && <p className="text-[11px] text-muted-foreground truncate">{c.scooters.join(", ")}</p>}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{c.job_count || 0}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1 max-w-[160px]">
                     {(c.tags || []).slice(0, 2).map((t) => <ClientTagBadge key={t} value={t} />)}

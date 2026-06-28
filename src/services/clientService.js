@@ -7,11 +7,18 @@ import { CLIENT_STATUS_MAP, CLIENT_TAG_MAP } from "@/config/clientConfig";
 // unified history timeline can surface status / tag / profile changes.
 
 export async function listClients() {
-  return base44.entities.Customer.list("-updated_date", 500);
+  const res = await base44.functions.invoke("customerActions", { action: "list" });
+  return res.data.customers || [];
 }
 
 export async function getClient(id) {
-  return base44.entities.Customer.get(id);
+  const res = await base44.functions.invoke("customerActions", { action: "get", customer_id: id });
+  return res.data.customer;
+}
+
+export async function resolveCustomerForJob(job) {
+  const res = await base44.functions.invoke("customerActions", { action: "resolveForJob", job_id: job?.id, job });
+  return res.data.customer;
 }
 
 function tagLabels(tags = []) {
@@ -20,32 +27,12 @@ function tagLabels(tags = []) {
 
 // Update profile fields with field-level audit summaries.
 export async function updateClient(customer, changes, actor) {
-  const updated = await base44.entities.Customer.update(customer.id, {
-    ...changes,
-    last_activity_date: new Date().toISOString(),
+  const res = await base44.functions.invoke("customerActions", {
+    action: "update",
+    customer_id: customer.id,
+    changes,
   });
-
-  // Build a readable summary of what changed
-  const parts = [];
-  if (changes.status && changes.status !== customer.status) {
-    parts.push(`status → ${CLIENT_STATUS_MAP[changes.status]?.label || changes.status}`);
-  }
-  if (changes.tags && JSON.stringify(changes.tags) !== JSON.stringify(customer.tags || [])) {
-    parts.push(`tags → ${tagLabels(changes.tags) || "none"}`);
-  }
-  ["full_name", "email", "phone"].forEach((f) => {
-    if (changes[f] !== undefined && changes[f] !== customer[f]) parts.push(`${f.replace(/_/g, " ")} updated`);
-  });
-
-  if (parts.length) {
-    await logAudit({
-      eventType: "customer_update",
-      actor,
-      summary: `${customer.full_name}: ${parts.join(", ")}`,
-      metadata: { customer_id: customer.id },
-    });
-  }
-  return updated;
+  return res.data.customer;
 }
 
 // Internal notes (admin-only). Each is timestamped + author-stamped.
@@ -60,8 +47,8 @@ export async function addClientNote(customer, body, actor) {
     author_id: actor?.id || null,
     author_name: actor?.full_name || "Admin",
   });
-  await base44.entities.Customer.update(customer.id, { last_activity_date: new Date().toISOString() });
-  await logAudit({
+  await base44.entities.Customer.update(customer.id, { last_activity_date: new Date().toISOString() }).catch(() => null);
+  await logAudit({ 
     eventType: "customer_update",
     actor,
     summary: `${customer.full_name}: internal note added`,
@@ -84,49 +71,26 @@ export async function listCustomerScooters(customerId) {
 }
 
 export async function createScooter(customerId, data, actor) {
-  const scooter = await base44.entities.Scooter.create({ ...data, customer_id: customerId });
-  await logAudit({
-    eventType: "customer_update",
-    actor,
-    summary: `Scooter added: ${[data.make, data.model].filter(Boolean).join(" ")}`,
-    metadata: { customer_id: customerId },
-  });
-  return scooter;
+  const res = await base44.functions.invoke("customerActions", { action: "saveScooter", customer_id: customerId, data });
+  return res.data.scooter;
 }
 
 export async function updateScooter(scooterId, data, customerName, actor) {
-  const updated = await base44.entities.Scooter.update(scooterId, data);
-  await logAudit({
-    eventType: "customer_update",
-    actor,
-    summary: `${customerName || "Customer"}: scooter updated — ${[data.make, data.model].filter(Boolean).join(" ")}`,
-    metadata: { scooter_id: scooterId },
-  });
-  return updated;
+  const res = await base44.functions.invoke("customerActions", { action: "saveScooter", scooter_id: scooterId, customer_id: data.customer_id, data });
+  return res.data.scooter;
 }
 
 export async function deleteScooter(scooterId, customerName, actor) {
-  await base44.entities.Scooter.delete(scooterId);
-  await logAudit({
-    eventType: "customer_update",
-    actor,
-    summary: `${customerName || "Customer"}: scooter removed`,
-    metadata: { scooter_id: scooterId },
-  });
+  await base44.functions.invoke("customerActions", { action: "deleteScooter", scooter_id: scooterId });
 }
 
 // Check if an email or phone already belongs to a DIFFERENT customer
 export async function checkDuplicateContact(email, phone, excludeCustomerId) {
-  const results = { emailConflict: null, phoneConflict: null };
-  if (email) {
-    const byEmail = await base44.entities.Customer.filter({ email: email.trim().toLowerCase() });
-    const other = byEmail.filter((c) => c.id !== excludeCustomerId);
-    if (other.length > 0) results.emailConflict = other[0];
-  }
-  if (phone) {
-    const byPhone = await base44.entities.Customer.filter({ phone_e164: phone });
-    const other = byPhone.filter((c) => c.id !== excludeCustomerId);
-    if (other.length > 0) results.phoneConflict = other[0];
-  }
-  return results;
+  const res = await base44.functions.invoke("customerActions", {
+    action: "checkDuplicateContact",
+    email,
+    phone,
+    exclude_customer_id: excludeCustomerId,
+  });
+  return res.data;
 }

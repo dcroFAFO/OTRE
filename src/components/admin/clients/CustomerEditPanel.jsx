@@ -165,9 +165,10 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
   }, [customer?.id]);
 
   const loadScooters = async () => {
-    if (!customer?.customer_id) return;
+    const customerKey = customer?.customer_id || customer?.id;
+    if (!customerKey) return;
     setLoadingScooters(true);
-    try { setScooters(await listCustomerScooters(customer.customer_id)); }
+    try { setScooters(await listCustomerScooters(customerKey)); }
     catch (e) { logError("Load scooters failed", e); }
     finally { setLoadingScooters(false); }
   };
@@ -206,7 +207,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
 
     setSaving(true);
     try {
-      await updateClient(customer, {
+      const updated = await updateClient(customer, {
         full_name: form.full_name.trim(),
         email: form.email?.trim().toLowerCase() || customer.email,
         phone: form.phone || customer.phone,
@@ -215,10 +216,11 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
         status: form.status,
         tags: form.tags,
       }, actor);
+      setForm({ full_name: updated.full_name || "", email: updated.email || "", phone: updated.phone_display || updated.phone || "", status: updated.status || "active", tags: updated.tags || [] });
       toast.success("Customer updated");
       setEditing(false);
       setFieldErrors({});
-      onChange?.();
+      onChange?.(updated);
     } catch (e) {
       logError("Save customer failed", e);
       toast.error("Failed to save — please try again");
@@ -229,7 +231,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
     if (newData?._new) {
       // Actually create the new scooter now
       try {
-        await createScooter(customer.customer_id, { make: newData.make, model: newData.model, year: newData.year, serial_number: newData.serial_number, notes: newData.notes }, actor);
+        await createScooter(customer.customer_id || customer.id, { make: newData.make, model: newData.model, year: newData.year, serial_number: newData.serial_number, notes: newData.notes }, actor);
         toast.success("Scooter added");
         setPendingNewScooter(null);
         await loadScooters();
