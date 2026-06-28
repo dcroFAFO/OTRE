@@ -3,10 +3,16 @@
   "type": "object",
   "properties": {
     "customer_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Linked Customer.customer_id stable account identifier."
+    },
+    "customer_account_id": {
+      "type": "string",
+      "description": "Linked Customer entity record id when available."
     },
     "job_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Comma-separated linked Job entity ids."
     },
     "make": {
       "type": "string"
@@ -20,8 +26,24 @@
     "serial_number": {
       "type": "string"
     },
+    "colour": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "battery_voltage": {
+      "type": "string"
+    },
+    "odometer_km": {
+      "type": "number"
+    },
     "notes": {
       "type": "string"
+    },
+    "last_service_date": {
+      "type": "string",
+      "format": "date"
     }
   },
   "required": [
@@ -29,15 +51,22 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "employee",
-            "technician"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "employee",
+                "technician"
+              ]
+            }
+          }
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
         }
-      }
+      ]
     },
     "read": {
       "$or": [
@@ -54,6 +83,9 @@
         },
         {
           "data.customer_id": "{{user.data.customer_id}}"
+        },
+        {
+          "data.customer_account_id": "{{user.data.customer_account_id}}"
         }
       ]
     },
@@ -72,6 +104,9 @@
         },
         {
           "data.customer_id": "{{user.data.customer_id}}"
+        },
+        {
+          "data.customer_account_id": "{{user.data.customer_account_id}}"
         }
       ]
     },
