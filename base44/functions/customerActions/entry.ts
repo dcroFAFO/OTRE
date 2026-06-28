@@ -3,7 +3,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 
 function isStaff(user) {
-  return STAFF_ROLES.has(String(user?.role || '').toLowerCase());
+  return STAFF_ROLES.has(String(user?.role || user?.data?.role || '').toLowerCase());
+}
+
+function userField(user, key) {
+  return user?.[key] ?? user?.data?.[key] ?? '';
+}
+
+function isCustomerUserRecord(user) {
+  if (!user?.id || isStaff(user) || user?.is_service) return false;
+  const explicitCustomer = userField(user, 'is_customer') === true;
+  const hasCustomerLink = !!(userField(user, 'customer_id') || userField(user, 'job_id'));
+  return explicitCustomer || hasCustomerLink;
 }
 
 function cleanEmail(value) {
@@ -141,17 +152,142 @@ async function updateLinkedJobs(entities, customer, previousEmail, changes) {
   }
 }
 
+async function ensureCustomerRecord(entities, source) {
+  const email = cleanEmail(source.email);
+  const stableId = source.customer_id || source.profile_id || source.user_id || source.id;
+  const matches = [
+    ...(stableId ? await entities.Customer.filter({ customer_id: stableId }, '-updated_date', 1).catch(() => []) : []),
+    ...(source.user_id ? await entities.Customer.filter({ user_id: source.user_id }, '-updated_date', 1).catch(() => []) : []),
+    ...(email ? await entities.Customer.filter({ email }, '-updated_date', 1).catch(() => []) : []),
+  ];
+  const customer = matches.find(Boolean);
+  const data = {
+    customer_id: stableId,
+    full_name: source.full_name || source.name || source.display_name || email || 'Customer',
+    name: source.name || source.full_name || source.display_name || email || 'Customer',
+    email,
+    phone: source.phone || source.phone_e164 || source.phone_display || '',
+    phone_e164: source.phone_e164 || normalizePhone(source.phone) || '',
+    phone_display: source.phone_display || source.phone || source.phone_e164 || '',
+    user_id: source.user_id || customer?.user_id || '',
+    status: customer?.status || source.status || 'active',
+    tags: Array.isArray(customer?.tags) ? customer.tags : ['customer'],
+    last_activity_date: customer?.last_activity_date || source.last_activity_date || new Date().toISOString(),
+  };
+  if (customer) {
+    const updates = {};
+    for (const [key, value] of Object.entries(data)) {
+      if ((value || value === '') && customer[key] !== value) updates[key] = value;
+    }
+    return Object.keys(updates).length ? await entities.Customer.update(customer.id, updates) : customer;
+  }
+  return await entities.Customer.create({ ...data, createdAt: source.createdAt || source.created_date || new Date().toISOString() });
+}
+
 async function listCustomers(entities) {
-  const [customers, scooters, jobs] = await Promise.all([
-    entities.Customer.list('-updated_date', 500).catch(() => []),
+  const [rawCustomers, profiles, users, scooters, jobs] = await Promise.all([
+    entities.Customer.list('-updated_date', 1000).catch(() => []),
+    entities.CustomerProfile.list('-updated_at', 1000).catch(() => []),
+    entities.User.list('-updated_date', 1000).catch(() => []),
     entities.Scooter.list('-updated_date', 1000).catch(() => []),
     entities.Job.list('-updated_date', 1000).catch(() => []),
   ]);
 
-  return customers.map((customer) => {
+  const customersByKey = new Map();
+  const remember = (customer) => {
+    if (!customer?.id) return customer;
+    customersByKey.set(customer.id, customer);
+    if (customer.customer_id) customersByKey.set(customer.customer_id, customer);
+    if (customer.email) customersByKey.set(`email:${cleanEmail(customer.email)}`, customer);
+    if (customer.user_id) customersByKey.set(`user:${customer.user_id}`, customer);
+    return customer;
+  };
+  rawCustomers.forEach(remember);
+
+  const existingFor = (source) => {
+    const email = cleanEmail(source.email);
+    return (source.customer_id && customersByKey.get(source.customer_id))
+      || (source.user_id && customersByKey.get(`user:${source.user_id}`))
+      || (email && customersByKey.get(`email:${email}`))
+      || null;
+  };
+  const createFromSource = async (source) => {
+    const found = existingFor(source);
+    if (found) return remember(found);
+    const email = cleanEmail(source.email);
+    const phone = source.phone || source.phone_e164 || source.phone_display || '';
+    const phoneE164 = source.phone_e164 || normalizePhone(phone) || '';
+    const fullName = source.full_name || source.name || source.display_name || email || 'Customer';
+    const created = await entities.Customer.create({
+      customer_id: source.customer_id || source.profile_id || source.user_id || crypto.randomUUID(),
+      full_name: fullName,
+      name: source.name || fullName,
+      email,
+      phone: phoneE164 || phone,
+      phone_e164: phoneE164,
+      phone_display: source.phone_display || phone || phoneE164,
+      user_id: source.user_id || '',
+      status: 'active',
+      tags: ['customer'],
+      createdAt: source.createdAt || source.created_date || new Date().toISOString(),
+      last_activity_date: source.last_activity_date || source.updated_date || new Date().toISOString(),
+    });
+    return remember(created);
+  };
+
+  for (const user of users.filter(isCustomerUserRecord)) {
+    await createFromSource({
+      user_id: user.id,
+      customer_id: userField(user, 'customer_id') || user.id,
+      full_name: user.full_name,
+      name: user.full_name,
+      email: user.email,
+      phone: user.phone || user.phone_number || userField(user, 'phone'),
+      phone_e164: user.phone_e164 || userField(user, 'phone_e164'),
+      phone_display: user.phone_display || userField(user, 'phone_display'),
+      created_date: user.created_date,
+      last_activity_date: user.updated_date,
+    });
+  }
+
+  for (const profile of profiles) {
+    await createFromSource({
+      profile_id: profile.id,
+      user_id: profile.auth_user_id,
+      customer_id: profile.id,
+      full_name: profile.full_name || profile.display_name || profile.name,
+      name: profile.name || profile.display_name || profile.full_name,
+      email: profile.email,
+      phone: profile.phone_e164,
+      phone_e164: profile.phone_e164,
+      phone_display: profile.phone_e164,
+      created_date: profile.created_date || profile.created_at,
+      last_activity_date: profile.updated_date || profile.updated_at,
+    });
+  }
+
+  const staffUsers = users.filter(isStaff);
+  const staffUserIds = new Set(staffUsers.map((user) => user.id).filter(Boolean));
+  const staffEmails = new Set(staffUsers.map((user) => cleanEmail(user.email)).filter(Boolean));
+  const byId = [...new Map([...customersByKey.values()].map((customer) => [customer.id, customer])).values()]
+    .filter((customer) => customer.email || customer.full_name || customer.name)
+    .filter((customer) => !staffUserIds.has(customer.user_id) && !staffEmails.has(cleanEmail(customer.email)));
+  const byIdentity = new Map();
+  const scoreCustomer = (customer) => Number(!!customer.user_id) * 4 + Number(!!customer.job_id) * 2 + Number(!!customer.customer_id);
+  for (const customer of byId) {
+    const key = customer.email ? `email:${cleanEmail(customer.email)}` : customer.user_id ? `user:${customer.user_id}` : `customer:${customer.customer_id || customer.id}`;
+    const current = byIdentity.get(key);
+    if (!current || scoreCustomer(customer) > scoreCustomer(current) || String(customer.updated_date || '') > String(current.updated_date || '')) {
+      byIdentity.set(key, customer);
+    }
+  }
+  const uniqueCustomers = [...byIdentity.values()]
+    .sort((a, b) => String(b.last_activity_date || b.updated_date || b.created_date || '').localeCompare(String(a.last_activity_date || a.updated_date || a.created_date || '')));
+
+  return uniqueCustomers.map((customer) => {
     const stableId = customer.customer_id || customer.id;
     const customerScooters = scooters.filter((s) => s.customer_id === stableId || s.customer_id === customer.id);
-    const customerJobs = jobs.filter((j) => j.customer_id === stableId || j.customer_account_id === customer.id || (customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email)));
+    const customerJobs = jobs.filter((j) => j.customer_id === stableId || j.customer_profile_id === stableId || j.customer_account_id === customer.id || j.customer_user_id === customer.user_id || (customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email)));
     const latestJobDate = customerJobs.reduce((latest, job) => {
       const date = job.updated_date || job.created_date || '';
       return date > latest ? date : latest;
@@ -161,6 +297,7 @@ async function listCustomers(entities) {
       scooter_count: customerScooters.length,
       scooters: customerScooters.slice(0, 3).map((s) => [s.make, s.model].filter(Boolean).join(' ') || s.model || 'Scooter'),
       job_count: customerJobs.length,
+      last_job_date: latestJobDate,
       last_activity_date: customer.last_activity_date || latestJobDate || customer.updated_date,
     };
   });

@@ -257,7 +257,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
         <p className="text-sm font-semibold text-foreground">Profile</p>
         {canEdit && !editing && (
           <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => setEditing(true)}>
-            <Pencil className="h-3 w-3" /> Edit
+            <Pencil className="h-3 w-3" /> Edit Customer
           </Button>
         )}
         {canEdit && editing && (

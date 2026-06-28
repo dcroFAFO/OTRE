@@ -6,18 +6,21 @@
 export const ROLES = {
   ADMIN: "admin",
   TECHNICIAN: "technician",
+  EMPLOYEE: "employee",
   CUSTOMER: "customer",
 };
 
 export const ROLE_RANK = {
   admin: 100,
   technician: 50,
+  employee: 50,
   customer: 10,
 };
 
 export const ROLE_META = {
   admin: { key: "admin", label: "Admin", badgeClass: "bg-blue-100 text-blue-700", staff: true },
   technician: { key: "technician", label: "Technician", badgeClass: "bg-amber-100 text-amber-700", staff: true },
+  employee: { key: "employee", label: "Employee", badgeClass: "bg-emerald-100 text-emerald-700", staff: true },
   customer: { key: "customer", label: "Customer", badgeClass: "bg-slate-100 text-slate-600", staff: false },
 };
 
