@@ -112,8 +112,8 @@ function normalizeLineItems(items, usageRecords = []) {
   return (Array.isArray(items) ? items : []).map((item) => {
     const description = clean(item.description, "Line item");
     const matchedCode = usageCodeByName.get(description.toLowerCase()) || "";
-    const qty = Number(item.qty ?? item.quantity);
-    const unitPrice = Number(item.unit_price ?? item.unitPrice);
+    const qty = Number(item.qty ?? item.quantity) || 1;
+    const unitPrice = Number(item.unit_price ?? item.customer_unit_price ?? item.unitPrice) || 0;
     const taxRate = Number(item.tax_rate ?? item.taxRate ?? item.tax ?? 0) || 0;
     const discountAmount = Number(item.discount_amount ?? item.discountAmount ?? 0) || 0;
     const category = normaliseCategory(item.category || item.kind);
@@ -124,6 +124,12 @@ function normalizeLineItems(items, usageRecords = []) {
       quantity: qty,
       unit_price: unitPrice,
       unitPrice,
+      internal_cost_price: Number(item.internal_cost_price ?? item.cost_price) || 0,
+      markup_percentage: Number(item.markup_percentage) || (category === "part" ? 20 : 0),
+      customer_unit_price: Number(item.customer_unit_price ?? unitPrice) || 0,
+      customer_line_total: Math.round(unitPrice * qty * 100) / 100,
+      is_custom_misc_part: !!item.is_custom_misc_part,
+      staff_notes: clean(item.staff_notes || item.note),
       tax_rate: taxRate,
       tax: taxRate,
       discount_amount: discountAmount,
@@ -142,14 +148,24 @@ function buildLineItems({ invoiceDraft, quote, usageRecords }) {
 
   const partItems = (usageRecords || [])
     .filter((usage) => !String(usage.item_id || "").startsWith("labour-"))
-    .map((usage) => ({
-      description: usage.item_name || "Part",
-      qty: Number(usage.qty_used),
-      unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
-      category: "part",
-      sku: usage.product_sku || usage.item_id || "",
-      source_usage_id: usage.id,
-    }));
+    .map((usage) => {
+      const qty = Number(usage.qty_used) || 1;
+      const unitPrice = Number(usage.unit_sell) || Math.round((Number(usage.unit_cost) || 0) * 1.2 * 100) / 100;
+      return {
+        description: usage.item_name || "Part",
+        qty,
+        unit_price: unitPrice,
+        internal_cost_price: Number(usage.unit_cost) || 0,
+        markup_percentage: Number(usage.markup_percentage) || 20,
+        customer_unit_price: unitPrice,
+        customer_line_total: Math.round(unitPrice * qty * 100) / 100,
+        is_custom_misc_part: !!usage.is_custom_misc_part,
+        staff_notes: usage.note || "",
+        category: "part",
+        sku: usage.product_sku || usage.item_id || "",
+        source_usage_id: usage.id,
+      };
+    });
 
   const labourAndConsumables = (quote?.line_items || [])
     .filter((item) => normaliseCategory(item.category || item.kind) !== "part")
@@ -350,6 +366,9 @@ function invoicePayload(job, invoice, invoiceDraft, lineItems) {
       description: item.description,
       qty: item.qty,
       unit_price: item.unit_price,
+      customer_unit_price: item.customer_unit_price || item.unit_price,
+      customer_line_total: item.customer_line_total || lineTotal(item),
+      is_custom_misc_part: !!item.is_custom_misc_part,
       tax_rate: item.tax_rate,
       discount_amount: item.discount_amount,
       kind: item.category,

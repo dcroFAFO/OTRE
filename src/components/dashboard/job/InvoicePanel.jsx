@@ -10,12 +10,21 @@ import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
 import { AlertCircle, CheckCircle2, Clock, Copy, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Trash2, Wrench } from "lucide-react";
 import { toast } from "sonner";
+import { PARTS_MARKUP_PERCENT, getUsageCustomerUnitPrice, roundMoney } from "@/lib/partsPricing";
 
 function normalizeDraftItem(item = {}) {
+  const qty = Number(item.qty) || 1;
+  const unitPrice = Number(item.unit_price ?? item.customer_unit_price) || 0;
   return {
     description: item.description || "Line item",
-    qty: Number(item.qty) || 1,
-    unit_price: Number(item.unit_price) || 0,
+    qty,
+    unit_price: unitPrice,
+    internal_cost_price: Number(item.internal_cost_price ?? item.cost_price) || 0,
+    markup_percentage: Number(item.markup_percentage) || (item.kind === "part" ? PARTS_MARKUP_PERCENT : 0),
+    customer_unit_price: Number(item.customer_unit_price ?? unitPrice) || 0,
+    customer_line_total: roundMoney(unitPrice * qty),
+    is_custom_misc_part: !!item.is_custom_misc_part,
+    staff_notes: item.staff_notes || item.note || "",
     tax_rate: Number(item.tax_rate) || 0,
     discount_amount: Number(item.discount_amount) || 0,
     kind: item.kind || "item",
@@ -62,10 +71,18 @@ function validateInvoiceDraft(job, items) {
 
 function usageToLineItem(usage) {
   const isLabour = String(usage.item_id || "").startsWith("labour-");
+  const customerUnitPrice = getUsageCustomerUnitPrice(usage);
+  const qty = Number(usage.qty_used) || 1;
   return normalizeDraftItem({
     description: usage.item_name || "Part",
-    qty: usage.qty_used,
-    unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
+    qty,
+    unit_price: customerUnitPrice,
+    internal_cost_price: Number(usage.unit_cost) || 0,
+    markup_percentage: Number(usage.markup_percentage) || PARTS_MARKUP_PERCENT,
+    customer_unit_price: customerUnitPrice,
+    customer_line_total: roundMoney(customerUnitPrice * qty),
+    is_custom_misc_part: !!usage.is_custom_misc_part,
+    staff_notes: usage.note || "",
     kind: isLabour ? "labour" : "part",
     sku: usage.product_sku || usage.item_id || "",
     source_usage_id: usage.id,
@@ -105,10 +122,15 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       seen.add(item.id);
       return true;
     });
+    const usageById = new Map(usage.map((item) => [item.id, item]));
     setInvoice(inv);
     setQuote(q);
     setUsageRecords(usage);
-    setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
+    setDraftItems((inv?.line_items || []).map((item) => {
+      const usage = usageById.get(item.source_usage_id);
+      if (!usage || item.kind !== "part") return normalizeDraftItem(item);
+      return normalizeDraftItem({ ...item, internal_cost_price: usage.unit_cost, markup_percentage: usage.markup_percentage, is_custom_misc_part: usage.is_custom_misc_part, staff_notes: usage.note });
+    }));
     setInternalNotes(inv?.internalCostingNotes || "");
     setFinaliseStatus(inv?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
     setLoading(false);
@@ -356,10 +378,13 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
                     {canEdit && invoice && (
                       <div className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-4">
                         <Input type="number" step="0.01" value={item.qty} onChange={(e) => updateDraft(i, { qty: e.target.value })} className="h-7 text-xs" placeholder="Qty" />
-                        <Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateDraft(i, { unit_price: e.target.value })} className="h-7 text-xs" placeholder="Unit" />
+                        <Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateDraft(i, { unit_price: e.target.value, customer_unit_price: e.target.value })} className="h-7 text-xs" placeholder="Customer price" />
                         <Input type="number" step="0.01" value={item.tax_rate} onChange={(e) => updateDraft(i, { tax_rate: e.target.value })} className="h-7 text-xs" placeholder="Tax %" />
                         <Input type="number" step="0.01" value={item.discount_amount} onChange={(e) => updateDraft(i, { discount_amount: e.target.value })} className="h-7 text-xs" placeholder="Discount" />
                       </div>
+                    )}
+                    {canEdit && item.kind === "part" && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">Cost price {(Number(item.internal_cost_price) || 0).toFixed(2)} · Customer price {(Number(item.unit_price) || 0).toFixed(2)}</p>
                     )}
                   </td>
                   <td className="px-2 py-2.5 text-center text-muted-foreground">{item.qty}</td>

@@ -65,6 +65,12 @@
       "type": "string",
       "description": "Linked e-store Product SKU"
     },
+    "category_key": {
+      "type": "string"
+    },
+    "category_label": {
+      "type": "string"
+    },
     "description": {
       "type": "string",
       "maxLength": 1000

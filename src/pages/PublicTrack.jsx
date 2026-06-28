@@ -158,5 +158,19 @@ function Card({ title, icon: Icon, children }) {
 }
 
 function LineItems({ items, currency }) {
-  return <div className="rounded-xl border border-border divide-y divide-border">{items.map((li, i) => <div key={i} className="flex items-center justify-between px-3 py-2 text-sm"><span>{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</span><span className="font-medium">{money(lineTotal(li), currency)}</span></div>)}</div>;
+  return (
+    <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+      <div className="grid grid-cols-[1fr_48px_82px_82px] gap-2 bg-secondary/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+        <span>Item</span><span className="text-center">Qty</span><span className="text-right">Unit</span><span className="text-right">Total</span>
+      </div>
+      {items.map((li, i) => (
+        <div key={i} className="grid grid-cols-[1fr_48px_82px_82px] gap-2 px-3 py-2 text-sm">
+          <span>{li.description}</span>
+          <span className="text-center text-muted-foreground">{Number(li.qty) || 1}</span>
+          <span className="text-right text-muted-foreground">{money(li.unit_price, currency)}</span>
+          <span className="text-right font-medium">{money(lineTotal(li), currency)}</span>
+        </div>
+      ))}
+    </div>
+  );
 }

@@ -5,6 +5,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 const CURRENCY = "AUD";
 const LABOUR_RATE = 80; // $/hour
 const MIN_HOURS = 1;
+const PARTS_MARKUP_PERCENT = 20;
+const PARTS_MARKUP_MULTIPLIER = 1.2;
+
+const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
+const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
 
 async function sendQuoteEmail({ job, quote }) {
   const apiKey = Deno.env.get("RESEND_API_KEY");
@@ -211,13 +216,21 @@ Deno.serve(async (req) => {
           await db.Job.update(job.id, { quote_status: "draft" });
         }
 
-        const newItems = parts.map((p) => ({
-          description: p.retailer ? `${p.name} (${p.retailer})` : p.name,
-          qty: Number(p.qty) || 1,
-          unit_price: Number(p.typical_price) || 0,
-          kind: "part",
-          sku: p.sku || p.product_sku || p.product_code || "",
-        }));
+        const newItems = parts.map((p) => {
+          const qty = Math.max(0.01, Number(p.qty) || 1);
+          const costPrice = roundMoney(p.cost_price ?? p.price ?? 0);
+          const customerUnitPrice = roundMoney(p.customer_price ?? p.typical_price ?? customerPriceFromCost(costPrice));
+          return {
+            description: String(p.name || p.description || "Part").trim(),
+            qty,
+            unit_price: customerUnitPrice,
+            customer_unit_price: customerUnitPrice,
+            customer_line_total: roundMoney(customerUnitPrice * qty),
+            is_custom_misc_part: !!p.is_custom_misc_part,
+            kind: "part",
+            sku: p.sku || p.product_sku || p.product_code || "",
+          };
+        });
 
         const line_items = [...(quote.line_items || []), ...newItems];
         const parts_estimate = line_items

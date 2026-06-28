@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { Sparkles, Plus, CalendarDays, Save, Wrench, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getJobQuote, saveQuote } from "@/services/quoteService";
+import { getUsageLineTotal } from "@/lib/partsPricing";
 import { aiService } from "@/services/aiService";
 import { DEFAULT_QUOTE_TEMPLATE } from "@/config/platformConfig";
 import LabourConsumablePickerModal from "@/components/dashboard/job/LabourConsumablePickerModal";
@@ -67,7 +68,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
   const lineItems = quote?.line_items || [];
   const labourItems = lineItems.filter((li) => li.kind !== "part");
   const labourTotal = labourItems.reduce((sum, item) => sum + lineTotal(item), 0);
-  const partsTotal = partUsages.reduce((sum, item) => sum + (Number(item.unit_sell) || 0) * (Number(item.qty_used) || 1), 0);
+  const partsTotal = partUsages.reduce((sum, item) => sum + getUsageLineTotal(item), 0);
   const total = partsTotal + labourTotal;
 
   const saveWithItems = async (items = lineItems, nextForm = form) => {
@@ -78,7 +79,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
       id: quote?.id,
       line_items: items,
       labour_estimate: totals.labour,
-      parts_estimate: totals.parts,
+      parts_estimate: totals.parts + partsTotal,
       recommended_repair: undefined,
     }, actor);
     setQuote(q);

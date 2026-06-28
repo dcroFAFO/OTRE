@@ -228,10 +228,20 @@ function lineTotal(item) {
 function LineItems({ items, currency = "AUD" }) {
   return (
     <table className="w-full text-sm border-t border-border pt-2">
+      <thead>
+        <tr className="text-xs text-muted-foreground">
+          <th className="py-1.5 text-left font-medium">Item</th>
+          <th className="py-1.5 text-center font-medium">Qty</th>
+          <th className="py-1.5 text-right font-medium">Unit</th>
+          <th className="py-1.5 text-right font-medium">Total</th>
+        </tr>
+      </thead>
       <tbody>
         {items.map((li, i) => (
           <tr key={i} className="border-b border-border/50 last:border-0">
-            <td className="py-1.5 text-muted-foreground">{li.qty > 1 ? `${li.qty}× ` : ""}{li.description}</td>
+            <td className="py-1.5 text-muted-foreground">{li.description}</td>
+            <td className="py-1.5 text-center text-muted-foreground">{Number(li.qty) || 1}</td>
+            <td className="py-1.5 text-right text-muted-foreground">{currency} ${(Number(li.unit_price) || 0).toFixed(2)}</td>
             <td className="py-1.5 text-right font-medium">{currency} ${lineTotal(li).toFixed(2)}</td>
           </tr>
         ))}

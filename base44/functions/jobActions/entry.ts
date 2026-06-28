@@ -316,6 +316,8 @@ Deno.serve(async (req) => {
             source: "inventory",
             product_id: isMisc ? "" : part.id,
             product_sku: part.sku || "",
+            category_key: part.category_key || "",
+            category_label: part.category_label || "",
           });
         }));
         await logAudit({

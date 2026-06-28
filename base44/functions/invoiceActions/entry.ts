@@ -8,18 +8,31 @@ const CURRENCY = "AUD";
 const DEFAULT_STATUS = "outstanding";
 const INTERNAL_VISIBILITY = "internal";
 const CUSTOMER_VISIBILITY = "customer_visible";
+const PARTS_MARKUP_PERCENT = 20;
+const PARTS_MARKUP_MULTIPLIER = 1.2;
+
+const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
+const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
 
 function normalizeLineItems(items) {
-  return (Array.isArray(items) ? items : []).map((item) => ({
-    description: item.description || "Line item",
-    qty: Number(item.qty) || 1,
-    unit_price: Number(item.unit_price) || 0,
-    tax_rate: Number(item.tax_rate) || 0,
-    discount_amount: Number(item.discount_amount) || 0,
-    kind: item.kind || "item",
-    sku: item.sku || "",
-    source_usage_id: item.source_usage_id || "",
-  }));
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const qty = Number(item.qty) || 1;
+    const unitPrice = Number(item.unit_price ?? item.customer_unit_price) || 0;
+    return {
+      description: item.description || "Line item",
+      qty,
+      unit_price: unitPrice,
+      customer_unit_price: Number(item.customer_unit_price ?? unitPrice) || 0,
+      customer_line_total: roundMoney(unitPrice * qty),
+      is_custom_misc_part: !!item.is_custom_misc_part,
+      tax_rate: Number(item.tax_rate) || 0,
+      discount_amount: Number(item.discount_amount) || 0,
+      kind: item.kind || "item",
+      category: item.category || item.kind || "item",
+      sku: item.sku || "",
+      source_usage_id: item.source_usage_id || "",
+    };
+  });
 }
 
 function lineTotal(item) {
@@ -175,14 +188,24 @@ Deno.serve(async (req) => {
         const existingItems = invoice.line_items || [];
         const existingKeys = new Set(existingItems.map((item) => `${item.source_usage_id || ""}|${item.description || ""}`));
         const newItems = usages
-          .map((usage) => ({
-            description: usage.item_name || "Part",
-            qty: Number(usage.qty_used) || 1,
-            unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
-            kind: "part",
-            sku: usage.product_sku || usage.item_id || "",
-            source_usage_id: usage.id,
-          }))
+          .map((usage) => {
+            const qty = Number(usage.qty_used) || 1;
+            const customerUnitPrice = Number(usage.unit_sell) || customerPriceFromCost(usage.unit_cost || 0);
+            return {
+              description: usage.item_name || "Part",
+              qty,
+              unit_price: customerUnitPrice,
+              internal_cost_price: Number(usage.unit_cost) || 0,
+              markup_percentage: Number(usage.markup_percentage) || PARTS_MARKUP_PERCENT,
+              customer_unit_price: customerUnitPrice,
+              customer_line_total: roundMoney(customerUnitPrice * qty),
+              is_custom_misc_part: !!usage.is_custom_misc_part,
+              staff_notes: usage.note || "",
+              kind: "part",
+              sku: usage.product_sku || usage.item_id || "",
+              source_usage_id: usage.id,
+            };
+          })
           .filter((item) => !existingKeys.has(`${item.source_usage_id}|${item.description}`));
 
         if (newItems.length === 0) return Response.json({ error: "Selected parts are already on the invoice" }, { status: 400 });
