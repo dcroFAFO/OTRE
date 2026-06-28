@@ -1,15 +1,15 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Wrench, Receipt, History, ExternalLink, Mail, Phone, User,
-  Bike, Calendar, CreditCard, Pencil
+  Bike, CreditCard
 } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import { Badge } from "@/components/ui/badge";
 import CustomerEditPanel from "@/components/admin/clients/CustomerEditPanel";
-import { resolveCustomerForJob } from "@/services/clientService";
+import { resolveCustomerForJob, fetchClientHistory } from "@/services/clientService";
 import { format } from "date-fns";
 
 const fmt = (d) => {
@@ -25,61 +25,17 @@ export default function CustomerHistoryPanel({ job, actor }) {
   const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["customerProfile", job.id, customerId || email],
+    queryKey: ["customerProfile", job.id, job.customer_id, job.customer_account_id, job.customer_user_id, job.asset_id, job.updated_date || job.updatedAt || email],
     enabled: !!job?.id,
     staleTime: 60 * 1000,
     queryFn: async () => {
       const customer = await resolveCustomerForJob(job);
-      const resolvedCustomerId = customer?.customer_id || customer?.id || customerId;
-      const resolvedEmail = customer?.email || email;
-      const [byId, byEmail] = await Promise.all([
-        resolvedCustomerId ? base44.entities.Job.filter({ customer_id: resolvedCustomerId }, "-created_date", 100) : [],
-        resolvedEmail ? base44.entities.Job.filter({ customer_email: resolvedEmail }, "-created_date", 100) : [],
-      ]);
-      const map = {};
-      [...byId, ...byEmail].forEach((j) => { map[j.id] = j; });
-      const jobs = Object.values(map).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+      const history = customer?.id ? await fetchClientHistory(customer.id) : null;
+      const jobs = history?.linked?.jobs || [];
+      const invoices = history?.linked?.invoices || [];
+      const assets = history?.linked?.scooters || [];
 
-      const invoices = (await Promise.all(
-        jobs.map((j) => base44.entities.Invoice.filter({ job_id: j.id }, "-created_date", 10))
-      )).flat();
-
-      // Scooters from the Scooter entity (staff-managed), falling back to job-derived
-      let assets = [];
-      if (resolvedCustomerId) {
-        try {
-          const scooterRecords = await base44.entities.Scooter.filter({ customer_id: resolvedCustomerId });
-          if (scooterRecords.length > 0) {
-            assets = scooterRecords.map((s) => ({
-              label: [s.make, s.model].filter(Boolean).join(" ") || "Unknown",
-              make: s.make,
-              model: s.model,
-              serial: s.serial_number,
-              year: s.year,
-              notes: s.notes,
-            }));
-          }
-        } catch {}
-      }
-      // Fall back to job-derived assets if none in Scooter entity
-      if (assets.length === 0) {
-        const assetMap = {};
-        jobs.forEach((j) => {
-          const key = j.asset_id || j.scooter_id || (j.intake?.make && j.intake?.model ? `${j.intake.make}-${j.intake.model}` : null);
-          if (key && !assetMap[key]) {
-            assetMap[key] = {
-              label: j.asset_label || j.scooter_label || [j.intake?.make, j.intake?.model].filter(Boolean).join(" ") || "Unknown",
-              make: j.intake?.make,
-              model: j.intake?.model,
-              serial: j.intake?.serial_number,
-              lastSeen: j.created_date,
-            };
-          }
-        });
-        assets = Object.values(assetMap);
-      }
-
-      return { customer, jobs, invoices, assets };
+      return { customer, jobs, invoices, assets, history };
     },
   });
 
@@ -90,7 +46,7 @@ export default function CustomerHistoryPanel({ job, actor }) {
   const customer = data?.customer;
   const jobs = data?.jobs || [];
   const invoices = data?.invoices || [];
-  const assets = data?.assets || [];
+  const currentJob = jobs.find((item) => item.id === job.id) || job;
 
   const totalSpend = invoices
     .filter((i) => i.status !== "cancelled")
@@ -132,7 +88,13 @@ export default function CustomerHistoryPanel({ job, actor }) {
 
         {isStaff && customer && (
           <div className="rounded-lg border border-border bg-secondary/20 p-3">
-            <CustomerEditPanel customer={customer} actor={actor} onChange={refetch} />
+            <CustomerEditPanel
+              customer={customer}
+              actor={actor}
+              linkedAssetId={currentJob.asset_id || job.asset_id}
+              linkedAssetLabel={currentJob.asset_label || job.asset_label || job.scooter_make_model || job.scooter_details}
+              onChange={refetch}
+            />
           </div>
         )}
 
@@ -144,39 +106,18 @@ export default function CustomerHistoryPanel({ job, actor }) {
         </div>
       </div>
 
-      {/* ── Scooters / Assets ── */}
-      {assets.length > 0 && (
-        <section className="space-y-2">
-          <SectionHeading icon={<Bike className="h-3.5 w-3.5" />} title="Scooters / Assets" />
-          <div className="space-y-1.5">
-            {assets.map((a, i) => (
-              <div key={i} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5">
-                <Bike className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{a.label}</p>
-                  {a.serial && <p className="text-xs text-muted-foreground">SN: {a.serial}</p>}
-                </div>
-                {a.lastSeen && (
-                  <span className="text-[11px] text-muted-foreground shrink-0">{fmt(a.lastSeen)}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* ── Job history ── */}
       <section className="space-y-2">
         <SectionHeading icon={<History className="h-3.5 w-3.5" />} title="Job history" count={jobs.length} />
 
         {jobs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No previous jobs.</p>
+          <p className="text-sm text-muted-foreground">No jobs found for this customer yet.</p>
         ) : (
           <ol className="space-y-2">
             {jobs.map((j) => {
               const jobInvoices = invoices.filter((i) => i.job_id === j.id);
               const isCurrent = j.id === job.id;
-              const assetLabel = j.asset_label || j.scooter_label || [j.intake?.make, j.intake?.model].filter(Boolean).join(" ");
+              const assetLabel = j.asset_label || j.scooter_label || j.scooter_make_model || [j.intake?.make, j.intake?.model].filter(Boolean).join(" ");
               return (
                 <li
                   key={j.id}
@@ -199,8 +140,8 @@ export default function CustomerHistoryPanel({ job, actor }) {
                         </p>
                       )}
 
-                      {j.issue_description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">{j.issue_description}</p>
+                      {(j.issue_summary || j.issue_description || j.service_type) && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{j.issue_summary || j.issue_description || j.service_type}</p>
                       )}
 
                       {jobInvoices.length > 0 && (

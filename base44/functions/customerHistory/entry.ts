@@ -10,6 +10,20 @@ function cleanPhone(value) {
   return String(value || '').trim().replace(/[^\d+]/g, '');
 }
 
+function cleanText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+  let cleaned = cleanPhone(value);
+  if (!cleaned) return '';
+  if (cleaned.startsWith('+61')) cleaned = cleaned.slice(3);
+  else if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
+  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+  const phone = `+61${cleaned.replace(/\D/g, '')}`;
+  return /^\+614\d{8}$/.test(phone) ? phone : cleanPhone(value);
+}
+
 function moneyTotal(items = []) {
   return items.reduce((sum, item) => sum + Number(item.amount || item.total || 0), 0);
 }
@@ -25,15 +39,27 @@ function uniq(records) {
 async function findRelatedJobs(svc, customer) {
   const stableId = customer.customer_id || customer.id;
   const email = cleanEmail(customer.email);
-  const phone = cleanPhone(customer.phone_e164 || customer.phone || customer.phone_display);
+  const phone = normalizePhone(customer.phone_e164 || customer.phone || customer.phone_display);
   const batches = await Promise.all([
     svc.Job.filter({ customer_id: stableId }, '-created_date', 200).catch(() => []),
+    svc.Job.filter({ customerId: stableId }, '-created_date', 200).catch(() => []),
     svc.Job.filter({ customer_account_id: customer.id }, '-created_date', 200).catch(() => []),
     customer.user_id ? svc.Job.filter({ customer_user_id: customer.user_id }, '-created_date', 200).catch(() => []) : [],
     email ? svc.Job.filter({ customer_email: customer.email }, '-created_date', 200).catch(() => []) : [],
     phone ? svc.Job.filter({ customer_phone_e164: phone }, '-created_date', 200).catch(() => []) : [],
+    svc.Job.list('-created_date', 1000).catch(() => []),
   ]);
-  return uniq(batches.flat());
+  const all = uniq(batches.flat());
+  return all.filter((job) => {
+    if (job.customer_id && job.customer_id !== stableId && job.customer_id !== customer.id) return false;
+    if (job.customer_account_id && job.customer_account_id !== customer.id) return false;
+    if (job.customer_user_id && customer.user_id && job.customer_user_id !== customer.user_id) return false;
+    if (job.customer_id === stableId || job.customer_id === customer.id || job.customerId === stableId || job.customer_account_id === customer.id || (customer.user_id && job.customer_user_id === customer.user_id)) return true;
+    const jobEmail = cleanEmail(job.customer_email || job.booking_submission?.customerEmail || job.intake?.customerEmail);
+    const jobPhone = normalizePhone(job.customer_phone_e164 || job.customer_phone || job.customer_phone_display || job.booking_submission?.customerPhoneE164 || job.booking_submission?.customerPhone || job.intake?.customerPhoneE164 || job.intake?.customerPhone);
+    const hasLegacyMatch = (email && jobEmail === email) || (phone && jobPhone === phone);
+    return hasLegacyMatch && !job.customer_id && !job.customer_account_id && !job.customer_user_id;
+  });
 }
 
 async function findRelatedInvoices(svc, customer, jobs) {
@@ -48,6 +74,44 @@ async function findRelatedInvoices(svc, customer, jobs) {
   return invoices.filter((invoice) => !invoice.job_id || jobIds.has(invoice.job_id) || invoice.customer_id === stableId || invoice.customer_id === customer.id);
 }
 
+function assetDataFromJob(job) {
+  const make = job.intake?.make || job.intake?.scooterMake || job.booking_submission?.scooterMake || job.booking_submission?.scooterBrand || '';
+  const model = job.intake?.model || job.intake?.scooterModel || job.booking_submission?.scooterModel || (!make ? (job.scooter_make_model || job.scooter_details || '') : '');
+  const serial_number = job.intake?.serial_number || job.booking_submission?.serial_number || '';
+  const label = [make, model].filter(Boolean).join(' ') || job.asset_label || job.scooter_make_model || job.scooter_details || '';
+  return { make, model, serial_number, label };
+}
+
+function scooterMatchesJob(scooter, data) {
+  if (data.serial_number && cleanText(scooter.serial_number) === cleanText(data.serial_number)) return true;
+  const scooterLabel = cleanText([scooter.make, scooter.model].filter(Boolean).join(' '));
+  return !!data.label && scooterLabel === cleanText(data.label);
+}
+
+async function ensureJobAssets(svc, customer, jobs) {
+  const stableId = customer.customer_id || customer.id;
+  const [byStable, byAccount] = await Promise.all([
+    svc.Scooter.filter({ customer_id: stableId }, 'make', 100).catch(() => []),
+    svc.Scooter.filter({ customer_account_id: customer.id }, 'make', 100).catch(() => []),
+  ]);
+  const scooters = uniq([...byStable, ...byAccount]);
+  for (const job of jobs) {
+    if (job.asset_id) continue;
+    const data = assetDataFromJob(job);
+    if (!data.serial_number && !data.model) continue;
+    let scooter = scooters.find((item) => scooterMatchesJob(item, data));
+    if (!scooter) {
+      scooter = await svc.Scooter.create({ customer_id: stableId, customer_account_id: customer.id, job_id: job.id, make: data.make, model: data.model, serial_number: data.serial_number }).catch(() => null);
+      if (scooter) scooters.push(scooter);
+    }
+    if (scooter) {
+      await svc.Job.update(job.id, { asset_id: scooter.id, asset_label: [scooter.make, scooter.model].filter(Boolean).join(' ') || data.label }).catch(() => null);
+      job.asset_id = scooter.id;
+      job.asset_label = [scooter.make, scooter.model].filter(Boolean).join(' ') || data.label;
+    }
+  }
+}
+
 async function findRelatedScooters(svc, customer, jobs) {
   const stableId = customer.customer_id || customer.id;
   const [byStable, byAccount] = await Promise.all([
@@ -56,7 +120,8 @@ async function findRelatedScooters(svc, customer, jobs) {
   ]);
   const scooters = uniq([...byStable, ...byAccount]);
   return scooters.map((scooter) => {
-    const relatedJobs = jobs.filter((job) => job.asset_id === scooter.id || job.asset_label === [scooter.make, scooter.model].filter(Boolean).join(' '));
+    const label = [scooter.make, scooter.model].filter(Boolean).join(' ');
+    const relatedJobs = jobs.filter((job) => job.asset_id === scooter.id || cleanText(job.asset_label || job.scooter_make_model || job.scooter_details) === cleanText(label));
     const lastServiceDate = relatedJobs.reduce((latest, job) => {
       const date = job.scheduled_date || job.created_date || '';
       return date > latest ? date : latest;
@@ -76,11 +141,26 @@ Deno.serve(async (req) => {
     if (!customer_id) return Response.json({ error: 'customer_id is required' }, { status: 400 });
 
     const svc = base44.asServiceRole.entities;
-    const customer = await svc.Customer.get(customer_id);
+    let customer = await svc.Customer.get(customer_id).catch(() => null);
+    if (!customer) {
+      const matches = await svc.Customer.filter({ customer_id }, '-updated_date', 1).catch(() => []);
+      customer = matches[0] || null;
+    }
     if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
     const stableCustomerId = customer.customer_id || customer.id;
     const jobs = await findRelatedJobs(svc, customer);
+    await Promise.all(jobs.filter((job) => !job.customer_id || !job.customer_account_id).map((job) => svc.Job.update(job.id, {
+      customer_id: job.customer_id || stableCustomerId,
+      customerId: job.customerId || stableCustomerId,
+      customer_account_id: job.customer_account_id || customer.id,
+      customer_name: job.customer_name || customer.full_name || customer.name || '',
+      customer_email: job.customer_email || customer.email || '',
+      customer_phone: job.customer_phone || customer.phone || customer.phone_e164 || '',
+      customer_phone_e164: job.customer_phone_e164 || customer.phone_e164 || '',
+      customer_phone_display: job.customer_phone_display || customer.phone_display || customer.phone || '',
+    }).catch(() => null)));
+    await ensureJobAssets(svc, customer, jobs);
     const [invoices, quotes, scooters, notes, feedback, auditsByCustomerId, auditsByField] = await Promise.all([
       findRelatedInvoices(svc, customer, jobs),
       Promise.all(jobs.map((job) => svc.Quote.filter({ job_id: job.id }, '-created_date', 20).catch(() => []))).then((groups) => groups.flat()),
@@ -114,7 +194,8 @@ Deno.serve(async (req) => {
         status: job.status || job.job_status || 'requested',
         asset_id: job.asset_id || '',
         asset_label: asset ? [asset.make, asset.model].filter(Boolean).join(' ') : (job.asset_label || job.scooter_make_model || job.scooter_details || ''),
-        service_type: job.service_type || job.job_type || '',
+        issue_summary: job.issue_summary || job.issueDescription || job.issue_description || job.booking_submission?.scooterIssueSummary || '',
+        service_type: job.service_type || job.job_type || job.issue_summary || '',
         created_date: job.created_date || job.createdAt || job.created_at || '',
         scheduled_date: job.scheduled_date || job.intake?.date || '',
         completed_date: job.completed_date || (job.status === 'completed' ? job.updated_date : ''),

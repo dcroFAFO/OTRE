@@ -140,6 +140,7 @@ async function linkJobToCustomer(entities, job, customer) {
   const stableId = customer.customer_id || customer.id;
   await entities.Job.update(job.id, {
     customer_id: stableId,
+    customerId: stableId,
     customer_account_id: customer.id,
     customer_name: customerName(customer),
     customer_email: customer.email || '',
@@ -180,6 +181,7 @@ async function updateLinkedJobs(entities, customer, previousEmail, changes) {
     customer_phone_e164: changes.phone_e164 || '',
     customer_phone_display: changes.phone_display || changes.phone || '',
     customer_id: stableId,
+    customerId: stableId,
     customer_account_id: customer.id,
   };
 
@@ -336,8 +338,16 @@ async function listCustomers(entities) {
 
   return uniqueCustomers.map((customer) => {
     const stableId = customer.customer_id || customer.id;
-    const customerScooters = scooters.filter((s) => s.customer_id === stableId || s.customer_id === customer.id);
-    const customerJobs = jobs.filter((j) => j.customer_id === stableId || j.customer_profile_id === stableId || j.customer_account_id === customer.id || (customer.user_id && j.customer_user_id === customer.user_id) || (customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email)));
+    const normalizedPhone = normalizePhone(customer.phone_e164 || customer.phone || customer.phone_display);
+    const customerScooters = scooters.filter((s) => s.customer_id === stableId || s.customer_id === customer.id || s.customer_account_id === customer.id);
+    const customerJobs = jobs.filter((j) => {
+      if (j.customer_id && j.customer_id !== stableId && j.customer_id !== customer.id) return false;
+      if (j.customer_account_id && j.customer_account_id !== customer.id) return false;
+      if (j.customer_id === stableId || j.customerId === stableId || j.customer_profile_id === stableId || j.customer_account_id === customer.id || (customer.user_id && j.customer_user_id === customer.user_id)) return true;
+      const emailMatches = customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email);
+      const phoneMatches = normalizedPhone && normalizePhone(j.customer_phone_e164 || j.customer_phone || j.customer_phone_display) === normalizedPhone;
+      return (emailMatches || phoneMatches) && !j.customer_id && !j.customer_account_id && !j.customer_user_id;
+    });
     const latestJobDate = customerJobs.reduce((latest, job) => {
       const date = job.updated_date || job.created_date || '';
       return date > latest ? date : latest;
@@ -370,14 +380,25 @@ async function listScootersForCustomer(entities, customerId) {
   const customer = await entities.Customer.get(customerId);
   if (!customer) throw new Error('Customer not found');
   const stableId = customer.customer_id || customer.id;
-  const [byStable, byAccount, jobs] = await Promise.all([
+  const email = cleanEmail(customer.email);
+  const phone = normalizePhone(customer.phone_e164 || customer.phone || customer.phone_display);
+  const [byStable, byAccount, jobsByStable, jobsByAccount, jobsByEmail, jobsByPhone] = await Promise.all([
     entities.Scooter.filter({ customer_id: stableId }, 'make', 100).catch(() => []),
     entities.Scooter.filter({ customer_account_id: customer.id }, 'make', 100).catch(() => []),
+    entities.Job.filter({ customer_id: stableId }, '-created_date', 200).catch(() => []),
     entities.Job.filter({ customer_account_id: customer.id }, '-created_date', 200).catch(() => []),
+    email ? entities.Job.filter({ customer_email: customer.email }, '-created_date', 200).catch(() => []) : [],
+    phone ? entities.Job.filter({ customer_phone_e164: phone }, '-created_date', 200).catch(() => []) : [],
   ]);
+  const jobs = [...new Map([...jobsByStable, ...jobsByAccount, ...jobsByEmail, ...jobsByPhone].filter((job) => {
+    if (job.customer_id && job.customer_id !== stableId && job.customer_id !== customer.id) return false;
+    if (job.customer_account_id && job.customer_account_id !== customer.id) return false;
+    return true;
+  }).map((job) => [job.id, job])).values()];
   const scooters = [...new Map([...byStable, ...byAccount].map((s) => [s.id, s])).values()];
   return scooters.map((scooter) => {
-    const relatedJobs = jobs.filter((job) => job.asset_id === scooter.id || cleanText(job.asset_label) === cleanText([scooter.make, scooter.model].filter(Boolean).join(' ')));
+    const label = [scooter.make, scooter.model].filter(Boolean).join(' ');
+    const relatedJobs = jobs.filter((job) => job.asset_id === scooter.id || cleanText(job.asset_label || job.scooter_make_model || job.scooter_details) === cleanText(label));
     const lastServiceDate = relatedJobs.reduce((latest, job) => {
       const date = job.scheduled_date || job.created_date || '';
       return date > latest ? date : latest;

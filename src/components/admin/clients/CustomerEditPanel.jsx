@@ -32,7 +32,7 @@ function blankScooter() {
 }
 
 // ── Single scooter row (view + edit) ────────────────────────────────────────
-function ScooterRow({ scooter, customerName, actor, onUpdated, onDeleted }) {
+function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, onUpdated, onDeleted }) {
   const [editing, setEditing] = useState(!scooter.id); // new rows open in edit mode
   const [form, setForm] = useState({ make: scooter.make || "", model: scooter.model || "", year: scooter.year || "", serial_number: scooter.serial_number || "", colour: scooter.colour || scooter.color || "", notes: scooter.notes || "" });
   const [saving, setSaving] = useState(false);
@@ -78,7 +78,10 @@ function ScooterRow({ scooter, customerName, actor, onUpdated, onDeleted }) {
       <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 group">
         <Bike className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{[scooter.make, scooter.model].filter(Boolean).join(" ") || "Unknown"}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-sm font-medium">{[scooter.make, scooter.model].filter(Boolean).join(" ") || "Unknown"}</p>
+            {linkedToCurrentJob && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Linked to this job</span>}
+          </div>
           <p className="text-xs text-muted-foreground">{[scooter.serial_number && `SN: ${scooter.serial_number}`, scooter.year, scooter.colour || scooter.color].filter(Boolean).join(" · ")}</p>
           <p className="text-xs text-muted-foreground">{Number(scooter.related_job_count || 0)} related jobs{scooter.last_service_date ? ` · Last service ${scooter.last_service_date}` : ""}</p>
           {scooter.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{scooter.notes}</p>}
@@ -149,7 +152,7 @@ function ScooterRow({ scooter, customerName, actor, onUpdated, onDeleted }) {
 }
 
 // ── Main CustomerEditPanel ───────────────────────────────────────────────────
-export default function CustomerEditPanel({ customer, actor, onChange }) {
+export default function CustomerEditPanel({ customer, actor, onChange, linkedAssetId = "", linkedAssetLabel = "" }) {
   const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 
   const [editing, setEditing] = useState(false);
@@ -254,6 +257,8 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
   if (!customer || !form) return null;
 
   const canEdit = isStaff;
+  const linkedAssetKey = String(linkedAssetId || "").trim();
+  const linkedAssetText = String(linkedAssetLabel || "").trim().toLowerCase();
 
   return (
     <div className="space-y-4">
@@ -353,16 +358,21 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
           <div className="flex justify-center py-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="space-y-2">
-            {scooters.map((s) => (
-              <ScooterRow
-                key={s.id}
-                scooter={s}
-                customerName={customer.full_name}
-                actor={actor}
-                onUpdated={handleScooterUpdated}
-                onDeleted={async () => { await loadScooters(); onChange?.(); }}
-              />
-            ))}
+            {scooters.map((s) => {
+              const assetLabel = [s.make, s.model].filter(Boolean).join(" ");
+              const linkedToCurrentJob = (linkedAssetKey && s.id === linkedAssetKey) || (linkedAssetText && assetLabel.toLowerCase() === linkedAssetText);
+              return (
+                <ScooterRow
+                  key={s.id}
+                  scooter={s}
+                  customerName={customer.full_name}
+                  actor={actor}
+                  linkedToCurrentJob={linkedToCurrentJob}
+                  onUpdated={handleScooterUpdated}
+                  onDeleted={async () => { await loadScooters(); onChange?.(); }}
+                />
+              );
+            })}
             {scooters.length === 0 && !pendingNewScooter && (
               <p className="text-xs text-muted-foreground py-1">No scooters linked to this customer yet.</p>
             )}
