@@ -45,7 +45,7 @@ export const DEFAULT_APP_SETTINGS = {
     journeyEyebrow: "How it works",
     journeyTitle: "How It Works",
     journeyBody: "Tell us what is wrong with your scooter and book your repair online. Bring your scooter in for inspection, and we will assess the issue, complete the required work, and keep you updated as the job progresses. Once your repair is underway, you can track the status of your job online, so you know where things are at without needing to chase updates. When your scooter is ready, we will let you know it is time for pickup.",
-    portalLabel: "Job Tracking",
+    portalLabel: "Login",
   },
   dashboard: {
     nav: {
