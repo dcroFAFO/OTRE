@@ -67,7 +67,8 @@ export async function fetchClientHistory(customerId) {
 
 export async function listCustomerScooters(customerId) {
   if (!customerId) return [];
-  return base44.entities.Scooter.filter({ customer_id: customerId }, "make", 100);
+  const res = await base44.functions.invoke("customerActions", { action: "listScooters", customer_id: customerId });
+  return res.data.scooters || [];
 }
 
 export async function createScooter(customerId, data, actor) {
