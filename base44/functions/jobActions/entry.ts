@@ -33,7 +33,11 @@ const LEGACY_STATUS_MAP = {
 const READY_STATUS = "ready_for_pickup";
 const CANCELLED_STATUS = "cancelled";
 const REOPEN_STATUS = "booked";
+const PARTS_MARKUP_PERCENT = 20;
+const PARTS_MARKUP_MULTIPLIER = 1.2;
 
+const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
+const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
 const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status || "requested";
 const isCanonicalStatus = (status) => JOB_STATUSES.includes(status);
 
@@ -98,14 +102,24 @@ const addUninvoicedPartsToInvoice = async (base44, job) => {
   const existingUsageIds = new Set(existingItems.map((item) => item.source_usage_id).filter(Boolean));
   const newItems = usages
     .filter((usage) => usage.id && usage.invoice_id !== invoice.id && !existingUsageIds.has(usage.id))
-    .map((usage) => ({
-      description: usage.item_name || "Part",
-      qty: Number(usage.qty_used) || 1,
-      unit_price: Number(usage.unit_sell || usage.unit_cost || 0),
-      kind: String(usage.item_id || "").startsWith("labour-") ? "labour" : "part",
-      sku: usage.product_sku || usage.item_id || "",
-      source_usage_id: usage.id,
-    }));
+    .map((usage) => {
+      const customerUnitPrice = Number(usage.unit_sell) || customerPriceFromCost(usage.unit_cost || 0);
+      const qty = Number(usage.qty_used) || 1;
+      return {
+        description: usage.item_name || "Part",
+        qty,
+        unit_price: customerUnitPrice,
+        internal_cost_price: Number(usage.unit_cost) || 0,
+        markup_percentage: Number(usage.markup_percentage) || PARTS_MARKUP_PERCENT,
+        customer_unit_price: customerUnitPrice,
+        customer_line_total: roundMoney(customerUnitPrice * qty),
+        is_custom_misc_part: !!usage.is_custom_misc_part,
+        staff_notes: usage.note || "",
+        kind: String(usage.item_id || "").startsWith("labour-") ? "labour" : "part",
+        sku: usage.product_sku || usage.item_id || "",
+        source_usage_id: usage.id,
+      };
+    });
 
   if (newItems.length === 0) return { addedCount: 0, invoice };
 
@@ -281,21 +295,29 @@ Deno.serve(async (req) => {
         const parts = Array.isArray(params.parts) ? params.parts : [];
         if (parts.length === 0) return Response.json({ error: "No parts selected" }, { status: 400 });
 
-        result = await Promise.all(parts.map((part) =>
-          base44.asServiceRole.entities.InventoryUsage.create({
+        result = await Promise.all(parts.map((part) => {
+          const qty = Math.max(0.01, Number(part.qty) || 1);
+          const costPrice = roundMoney(part.cost_price ?? part.price ?? 0);
+          const customerUnitPrice = roundMoney(part.customer_price ?? customerPriceFromCost(costPrice));
+          const isMisc = !!part.is_custom_misc_part;
+          return base44.asServiceRole.entities.InventoryUsage.create({
             job_id: job.id,
             invoice_id: job.invoice_id || "",
             customer_id: job.customer_id || "",
-            item_id: part.id,
-            item_name: part.name,
-            qty_used: Math.max(1, Number(part.qty) || 1),
-            unit_cost: 0,
-            unit_sell: Number(part.price) || 0,
+            item_id: isMisc ? `misc-${crypto.randomUUID()}` : part.id,
+            item_name: String(part.name || "Part").trim(),
+            qty_used: qty,
+            unit_cost: costPrice,
+            unit_sell: customerUnitPrice,
+            markup_percentage: PARTS_MARKUP_PERCENT,
+            customer_line_total: roundMoney(customerUnitPrice * qty),
+            is_custom_misc_part: isMisc,
+            note: part.note || "",
             source: "inventory",
-            product_id: part.id,
+            product_id: isMisc ? "" : part.id,
             product_sku: part.sku || "",
-          })
-        ));
+          });
+        }));
         await logAudit({
           eventType: "parts_added",
           summary: `Added ${parts.length} part(s) to job`,

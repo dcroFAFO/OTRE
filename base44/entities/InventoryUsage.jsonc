@@ -25,11 +25,25 @@
     },
     "unit_cost": {
       "type": "number",
-      "default": 0
+      "default": 0,
+      "description": "Internal staff-only cost price."
     },
     "unit_sell": {
       "type": "number",
+      "default": 0,
+      "description": "Customer-facing unit price after markup."
+    },
+    "markup_percentage": {
+      "type": "number",
+      "default": 20
+    },
+    "customer_line_total": {
+      "type": "number",
       "default": 0
+    },
+    "is_custom_misc_part": {
+      "type": "boolean",
+      "default": false
     },
     "note": {
       "type": "string"

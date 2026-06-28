@@ -66,7 +66,29 @@
             "type": "number"
           },
           "unit_price": {
+            "type": "number",
+            "description": "Customer-facing unit price."
+          },
+          "internal_cost_price": {
+            "type": "number",
+            "description": "Internal staff-only cost price."
+          },
+          "markup_percentage": {
+            "type": "number",
+            "default": 20
+          },
+          "customer_unit_price": {
             "type": "number"
+          },
+          "customer_line_total": {
+            "type": "number"
+          },
+          "is_custom_misc_part": {
+            "type": "boolean",
+            "default": false
+          },
+          "staff_notes": {
+            "type": "string"
           },
           "tax_rate": {
             "type": "number",
@@ -83,6 +105,9 @@
           "sku": {
             "type": "string",
             "description": "SKU or product code for parts."
+          },
+          "source_usage_id": {
+            "type": "string"
           }
         }
       }

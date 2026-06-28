@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import PartPickerModal from "@/components/dashboard/job/PartPickerModal";
 import { addInventoryParts, removeInventoryPart, removeInventoryParts } from "@/services/jobService";
+import { getUsageCustomerUnitPrice, getUsageLineTotal } from "@/lib/partsPricing";
 
 
 const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
@@ -46,7 +47,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
 
   const selectedUsages = usages.filter((usage) => selectedIds.includes(usage.id));
   const allSelected = usages.length > 0 && selectedIds.length === usages.length;
-  const totalSell = usages.reduce((s, u) => s + (u.unit_sell || 0) * u.qty_used, 0);
+  const totalSell = usages.reduce((s, u) => s + getUsageLineTotal(u), 0);
 
   const toggleAll = (checked) => setSelectedIds(checked ? usages.map((usage) => usage.id) : []);
   const toggleOne = (usageId, checked) => setSelectedIds((current) =>
@@ -117,10 +118,11 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
                     <span className="text-foreground truncate">
                       {u.qty_used > 1 ? `${u.qty_used}× ` : ""}{u.item_name}
                       {u.note && <span className="text-muted-foreground text-xs ml-1.5">— {u.note}</span>}
+                      {canEdit && <span className="block text-[11px] text-muted-foreground">Cost price ${(Number(u.unit_cost) || 0).toFixed(2)} · Customer price {getUsageCustomerUnitPrice(u).toFixed(2)}</span>}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium tabular-nums">${((u.unit_sell || 0) * u.qty_used).toFixed(2)}</span>
+                    <span className="font-medium tabular-nums">${getUsageLineTotal(u).toFixed(2)}</span>
                     {canEdit && (
                       <button
                         onClick={(e) => {
