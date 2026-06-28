@@ -31,7 +31,7 @@ export default function ProfileSetup() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [phoneError, setPhoneError] = useState(null);
-  const [form, setForm] = useState({ display_name: "", full_name: "", phone: "", scooter_make: "", scooter_model: "", scooter_make_model: "", asset_custom_make: "", asset_custom_model: "" });
+  const [form, setForm] = useState({ display_name: "", full_name: "", phone: "", scooter_make: "", scooter_model: "", scooter_make_model: "", asset_custom_make: "", asset_custom_model: "", serial_number: "", colour: "", notes: "" });
 
   useEffect(() => {
     base44.auth.me().then((me) => {
@@ -61,6 +61,9 @@ export default function ProfileSetup() {
         scooter_model: form.scooter_model === "Other model" ? form.asset_custom_model : form.scooter_model,
         scooter_make_model: form.scooter_make_model,
         default_scooter_make_model: form.scooter_make_model,
+        serial_number: form.serial_number.trim(),
+        colour: form.colour.trim(),
+        notes: form.notes.trim(),
       },
     });
     window.location.href = nextPath();
@@ -96,6 +99,20 @@ export default function ProfileSetup() {
                 customModel={form.asset_custom_model}
                 onChange={({ make, model, customMake, customModel, label }) => setForm((f) => ({ ...f, scooter_make: make, scooter_model: model, asset_custom_make: customMake, asset_custom_model: customModel, scooter_make_model: label }))}
               />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Serial / frame number</Label>
+                <Input value={form.serial_number} onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))} placeholder="Optional" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Colour</Label>
+                <Input value={form.colour} onChange={(e) => setForm((f) => ({ ...f, colour: e.target.value }))} placeholder="Optional" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Scooter notes</Label>
+              <Input value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Accessories, damage, or useful notes" />
             </div>
           </div>
 

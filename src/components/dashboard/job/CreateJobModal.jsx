@@ -209,7 +209,7 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
     try {
       const res = await base44.functions.invoke("staffCreateJob", {
         intake,
-        linked_customer_id: linkedCustomer?.customer_id || null,
+        linked_customer_id: linkedCustomer?.id || linkedCustomer?.customer_id || null,
         template: selectedTemplate ? { checklist: selectedTemplate.checklist, parts_required: selectedTemplate.parts_required } : null,
       });
       const job = res.data?.job;

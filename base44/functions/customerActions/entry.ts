@@ -39,6 +39,56 @@ function customerName(customer) {
   return customer?.full_name || customer?.name || customer?.display_name || 'Customer';
 }
 
+function addIdList(existing, nextId) {
+  const ids = String(existing || '').split(',').map((id) => id.trim()).filter(Boolean);
+  if (nextId && !ids.includes(nextId)) ids.push(nextId);
+  return ids.join(',');
+}
+
+function cleanText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function scooterMatches(a, b) {
+  const aSerial = cleanText(a.serial_number);
+  const bSerial = cleanText(b.serial_number);
+  if (aSerial && bSerial && aSerial === bSerial) return true;
+  return !!cleanText(a.model) && cleanText(a.make) === cleanText(b.make) && cleanText(a.model) === cleanText(b.model);
+}
+
+async function findOrCreateScooterForCustomer(entities, customer, data = {}, jobId = '') {
+  const stableId = customer.customer_id || customer.id;
+  const accountId = customer.id;
+  const payload = {
+    make: data.make || data.scooterMake || data.scooterBrand || '',
+    model: data.model || data.scooterModel || '',
+    year: data.year || '',
+    serial_number: data.serial_number || data.serialNumber || '',
+    colour: data.colour || data.color || '',
+    color: data.color || data.colour || '',
+    battery_voltage: data.battery_voltage || '',
+    odometer_km: data.odometer_km ? Number(data.odometer_km) : undefined,
+    notes: data.notes || data.physical_condition || data.initial_issue_notes || '',
+  };
+  if (!payload.make && !payload.model && !payload.serial_number) return null;
+  const [byStable, byAccount] = await Promise.all([
+    entities.Scooter.filter({ customer_id: stableId }, '-updated_date', 100).catch(() => []),
+    entities.Scooter.filter({ customer_account_id: accountId }, '-updated_date', 100).catch(() => []),
+  ]);
+  const scooters = [...new Map([...byStable, ...byAccount].map((s) => [s.id, s])).values()];
+  const existing = scooters.find((s) => scooterMatches(s, payload));
+  if (existing) {
+    const updates = { customer_id: stableId, customer_account_id: accountId };
+    if (jobId) updates.job_id = addIdList(existing.job_id, jobId);
+    for (const key of ['make', 'model', 'year', 'serial_number', 'colour', 'color', 'battery_voltage', 'notes']) {
+      if (payload[key] && !existing[key]) updates[key] = payload[key];
+    }
+    if (payload.odometer_km && !existing.odometer_km) updates.odometer_km = payload.odometer_km;
+    return Object.keys(updates).length ? await entities.Scooter.update(existing.id, updates) : existing;
+  }
+  return await entities.Scooter.create({ ...payload, customer_id: stableId, customer_account_id: accountId, job_id: jobId || '' });
+}
+
 async function findCustomerForJob(entities, job) {
   const candidateIds = [job.customer_account_id, job.customerId, job.customer_id, job.customer_profile_id].filter(Boolean);
   for (const id of candidateIds) {
@@ -287,7 +337,7 @@ async function listCustomers(entities) {
   return uniqueCustomers.map((customer) => {
     const stableId = customer.customer_id || customer.id;
     const customerScooters = scooters.filter((s) => s.customer_id === stableId || s.customer_id === customer.id);
-    const customerJobs = jobs.filter((j) => j.customer_id === stableId || j.customer_profile_id === stableId || j.customer_account_id === customer.id || j.customer_user_id === customer.user_id || (customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email)));
+    const customerJobs = jobs.filter((j) => j.customer_id === stableId || j.customer_profile_id === stableId || j.customer_account_id === customer.id || (customer.user_id && j.customer_user_id === customer.user_id) || (customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email)));
     const latestJobDate = customerJobs.reduce((latest, job) => {
       const date = job.updated_date || job.created_date || '';
       return date > latest ? date : latest;
@@ -316,24 +366,50 @@ async function checkDuplicateContact(entities, email, phone, excludeCustomerId) 
   return results;
 }
 
+async function listScootersForCustomer(entities, customerId) {
+  const customer = await entities.Customer.get(customerId);
+  if (!customer) throw new Error('Customer not found');
+  const stableId = customer.customer_id || customer.id;
+  const [byStable, byAccount, jobs] = await Promise.all([
+    entities.Scooter.filter({ customer_id: stableId }, 'make', 100).catch(() => []),
+    entities.Scooter.filter({ customer_account_id: customer.id }, 'make', 100).catch(() => []),
+    entities.Job.filter({ customer_account_id: customer.id }, '-created_date', 200).catch(() => []),
+  ]);
+  const scooters = [...new Map([...byStable, ...byAccount].map((s) => [s.id, s])).values()];
+  return scooters.map((scooter) => {
+    const relatedJobs = jobs.filter((job) => job.asset_id === scooter.id || cleanText(job.asset_label) === cleanText([scooter.make, scooter.model].filter(Boolean).join(' ')));
+    const lastServiceDate = relatedJobs.reduce((latest, job) => {
+      const date = job.scheduled_date || job.created_date || '';
+      return date > latest ? date : latest;
+    }, scooter.last_service_date || '');
+    return { ...scooter, related_job_count: relatedJobs.length, last_service_date: lastServiceDate };
+  });
+}
+
 async function saveScooter(entities, actor, payload) {
   const data = payload.data || {};
   const existing = payload.scooter_id ? await entities.Scooter.get(payload.scooter_id).catch(() => null) : null;
-  const customerId = payload.customer_id || existing?.customer_id;
+  const customerId = payload.customer_id || existing?.customer_account_id || existing?.customer_id;
   if (!customerId) throw new Error('customer_id is required');
   if (!String(data.model || '').trim()) throw new Error('Scooter model is required');
+  const customer = await entities.Customer.get(customerId).catch(async () => {
+    const matches = await entities.Customer.filter({ customer_id: customerId }, '-updated_date', 1).catch(() => []);
+    return matches[0] || null;
+  });
+  if (!customer) throw new Error('Customer not found');
+  const stableId = customer.customer_id || customer.id;
   const scooter = payload.scooter_id
-    ? await entities.Scooter.update(payload.scooter_id, data)
-    : await entities.Scooter.create({ ...data, customer_id: customerId });
+    ? await entities.Scooter.update(payload.scooter_id, { ...data, customer_id: stableId, customer_account_id: customer.id })
+    : await findOrCreateScooterForCustomer(entities, customer, data);
   await entities.AuditEvent.create({
     event_type: 'customer_update',
-    customer_id: customerId,
+    customer_id: customer.id,
     actor_id: actor?.id || null,
     actor_name: actor?.full_name || actor?.email || 'Staff',
     actor_role: actor?.role || '',
     summary: `Scooter ${payload.scooter_id ? 'updated' : 'added'}: ${[data.make, data.model].filter(Boolean).join(' ')}`,
     visibility: 'internal',
-    metadata: { customer_id: customerId, scooter_id: scooter.id },
+    metadata: { customer_id: customer.id, stable_customer_id: stableId, scooter_id: scooter.id },
   }).catch(() => null);
   return scooter;
 }
@@ -408,6 +484,7 @@ Deno.serve(async (req) => {
     if (action === 'get') return Response.json({ customer: await entities.Customer.get(payload.customer_id) });
     if (action === 'resolveForJob') return Response.json({ customer: await resolveCustomerForJob(entities, payload.job_id, payload.job) });
     if (action === 'update') return Response.json({ customer: await updateCustomer(entities, user, payload.customer_id, payload.changes || {}) });
+    if (action === 'listScooters') return Response.json({ scooters: await listScootersForCustomer(entities, payload.customer_id) });
     if (action === 'saveScooter') return Response.json({ scooter: await saveScooter(entities, user, payload) });
     if (action === 'deleteScooter') { await removeScooter(entities, user, payload); return Response.json({ success: true }); }
     if (action === 'checkDuplicateContact') return Response.json(await checkDuplicateContact(entities, payload.email, payload.phone, payload.exclude_customer_id));

@@ -28,13 +28,13 @@ function isValidEmail(email) {
 }
 
 function blankScooter() {
-  return { make: "", model: "", year: "", serial_number: "", notes: "" };
+  return { make: "", model: "", year: "", serial_number: "", colour: "", notes: "" };
 }
 
 // ── Single scooter row (view + edit) ────────────────────────────────────────
 function ScooterRow({ scooter, customerName, actor, onUpdated, onDeleted }) {
   const [editing, setEditing] = useState(!scooter.id); // new rows open in edit mode
-  const [form, setForm] = useState({ make: scooter.make || "", model: scooter.model || "", year: scooter.year || "", serial_number: scooter.serial_number || "", notes: scooter.notes || "" });
+  const [form, setForm] = useState({ make: scooter.make || "", model: scooter.model || "", year: scooter.year || "", serial_number: scooter.serial_number || "", colour: scooter.colour || scooter.color || "", notes: scooter.notes || "" });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const models = form.make ? (SCOOTER_BRANDS[form.make] || []) : [];
@@ -79,7 +79,8 @@ function ScooterRow({ scooter, customerName, actor, onUpdated, onDeleted }) {
         <Bike className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{[scooter.make, scooter.model].filter(Boolean).join(" ") || "Unknown"}</p>
-          <p className="text-xs text-muted-foreground">{[scooter.serial_number && `SN: ${scooter.serial_number}`, scooter.year].filter(Boolean).join(" · ")}</p>
+          <p className="text-xs text-muted-foreground">{[scooter.serial_number && `SN: ${scooter.serial_number}`, scooter.year, scooter.colour || scooter.color].filter(Boolean).join(" · ")}</p>
+          <p className="text-xs text-muted-foreground">{Number(scooter.related_job_count || 0)} related jobs{scooter.last_service_date ? ` · Last service ${scooter.last_service_date}` : ""}</p>
           {scooter.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{scooter.notes}</p>}
         </div>
         <button type="button" onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary transition-opacity">
@@ -125,6 +126,10 @@ function ScooterRow({ scooter, customerName, actor, onUpdated, onDeleted }) {
           <Label className="text-xs">Serial / frame no.</Label>
           <Input value={form.serial_number} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" className="h-8 text-xs" />
         </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Colour</Label>
+          <Input value={form.colour} onChange={(e) => set("colour", e.target.value)} placeholder="Black" className="h-8 text-xs" />
+        </div>
         <div className="col-span-2 space-y-1">
           <Label className="text-xs">Notes</Label>
           <Input value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Any relevant notes..." className="h-8 text-xs" />
@@ -165,7 +170,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
   }, [customer?.id]);
 
   const loadScooters = async () => {
-    const customerKey = customer?.customer_id || customer?.id;
+    const customerKey = customer?.id;
     if (!customerKey) return;
     setLoadingScooters(true);
     try { setScooters(await listCustomerScooters(customerKey)); }
@@ -231,7 +236,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
     if (newData?._new) {
       // Actually create the new scooter now
       try {
-        await createScooter(customer.customer_id || customer.id, { make: newData.make, model: newData.model, year: newData.year, serial_number: newData.serial_number, notes: newData.notes }, actor);
+        await createScooter(customer.id, { make: newData.make, model: newData.model, year: newData.year, serial_number: newData.serial_number, colour: newData.colour, color: newData.colour, notes: newData.notes }, actor);
         toast.success("Scooter added");
         setPendingNewScooter(null);
         await loadScooters();
@@ -254,7 +259,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
     <div className="space-y-4">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-foreground">Profile</p>
+        <p className="text-sm font-semibold text-foreground">Account details</p>
         {canEdit && !editing && (
           <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => setEditing(true)}>
             <Pencil className="h-3 w-3" /> Edit Customer
@@ -287,6 +292,7 @@ export default function CustomerEditPanel({ customer, actor, onChange }) {
           )}
         </div>
 
+        <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact details</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">Email</Label>

@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
     // Create the invoice as a draft (outstanding status per settings)
     const invoice = await base44.asServiceRole.entities.Invoice.create({
       job_id: jobId,
+      customer_id: data.customer_id || data.customer_account_id || '',
       number: invoiceNumber,
       amount: invoiceAmount,
       currency,

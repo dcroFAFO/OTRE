@@ -7,6 +7,7 @@ import { Mail, Phone, CalendarDays, Loader2, User, Receipt, Wrench, MessageSquar
 import { ClientStatusBadge } from "./ClientStatusBadge";
 import ClientHistoryTimeline from "./ClientHistoryTimeline";
 import CustomerEditPanel from "./CustomerEditPanel";
+import CustomerRelatedRecords from "./CustomerRelatedRecords";
 import { listClientNotes, addClientNote, fetchClientHistory } from "@/services/clientService";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
@@ -58,7 +59,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0">
+      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto p-0">
         <div className="flex flex-col">
           {/* Header */}
           <div className="bg-primary text-primary-foreground p-5">
@@ -79,7 +80,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
               <div className="mt-4 flex gap-4 text-xs">
                 <Stat icon={Wrench} label="Jobs" value={history.counts.jobs} />
                 <Stat icon={Receipt} label="Invoices" value={history.counts.invoices} />
-                <Stat icon={MessageSquare} label="Feedback" value={history.counts.feedback} />
+                <Stat icon={MessageSquare} label="Assets" value={history.counts.scooters || 0} />
               </div>
             )}
           </div>
@@ -87,6 +88,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
           <Tabs defaultValue="profile" className="p-5">
             <TabsList className="w-full">
               <TabsTrigger value="profile" className="flex-1">Account</TabsTrigger>
+              <TabsTrigger value="related" className="flex-1">Jobs & Invoices</TabsTrigger>
               <TabsTrigger value="notes" className="flex-1">Notes</TabsTrigger>
               <TabsTrigger value="history" className="flex-1">Timeline</TabsTrigger>
             </TabsList>
@@ -98,6 +100,10 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
                 actor={actor}
                 onChange={(updated) => { onChange?.(updated); loadHistory(); }}
               />
+            </TabsContent>
+
+            <TabsContent value="related" className="mt-4">
+              {loadingHistory ? <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : <CustomerRelatedRecords history={history} />}
             </TabsContent>
 
             {/* Internal notes */}

@@ -1,16 +1,76 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-// Builds a unified, real history timeline for one customer by pulling from
-// existing records only — Jobs, Invoices, Feedback, AuditEvents, CustomerNotes.
-// No fabricated history. Admin-only.
+const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
+
+function cleanEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function cleanPhone(value) {
+  return String(value || '').trim().replace(/[^\d+]/g, '');
+}
+
+function moneyTotal(items = []) {
+  return items.reduce((sum, item) => sum + Number(item.amount || item.total || 0), 0);
+}
+
+function lineItemsTotal(items = []) {
+  return items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.unit_price || 0)) - Number(item.discount_amount || 0), 0);
+}
+
+function uniq(records) {
+  return [...new Map(records.filter(Boolean).map((record) => [record.id, record])).values()];
+}
+
+async function findRelatedJobs(svc, customer) {
+  const stableId = customer.customer_id || customer.id;
+  const email = cleanEmail(customer.email);
+  const phone = cleanPhone(customer.phone_e164 || customer.phone || customer.phone_display);
+  const batches = await Promise.all([
+    svc.Job.filter({ customer_id: stableId }, '-created_date', 200).catch(() => []),
+    svc.Job.filter({ customer_account_id: customer.id }, '-created_date', 200).catch(() => []),
+    customer.user_id ? svc.Job.filter({ customer_user_id: customer.user_id }, '-created_date', 200).catch(() => []) : [],
+    email ? svc.Job.filter({ customer_email: customer.email }, '-created_date', 200).catch(() => []) : [],
+    phone ? svc.Job.filter({ customer_phone_e164: phone }, '-created_date', 200).catch(() => []) : [],
+  ]);
+  return uniq(batches.flat());
+}
+
+async function findRelatedInvoices(svc, customer, jobs) {
+  const stableId = customer.customer_id || customer.id;
+  const jobIds = new Set(jobs.map((job) => job.id));
+  const batches = await Promise.all([
+    svc.Invoice.filter({ customer_id: stableId }, '-created_date', 200).catch(() => []),
+    svc.Invoice.filter({ customer_id: customer.id }, '-created_date', 200).catch(() => []),
+    ...jobs.map((job) => svc.Invoice.filter({ job_id: job.id }, '-created_date', 50).catch(() => [])),
+  ]);
+  const invoices = uniq(batches.flat());
+  return invoices.filter((invoice) => !invoice.job_id || jobIds.has(invoice.job_id) || invoice.customer_id === stableId || invoice.customer_id === customer.id);
+}
+
+async function findRelatedScooters(svc, customer, jobs) {
+  const stableId = customer.customer_id || customer.id;
+  const [byStable, byAccount] = await Promise.all([
+    svc.Scooter.filter({ customer_id: stableId }, 'make', 100).catch(() => []),
+    svc.Scooter.filter({ customer_account_id: customer.id }, 'make', 100).catch(() => []),
+  ]);
+  const scooters = uniq([...byStable, ...byAccount]);
+  return scooters.map((scooter) => {
+    const relatedJobs = jobs.filter((job) => job.asset_id === scooter.id || job.asset_label === [scooter.make, scooter.model].filter(Boolean).join(' '));
+    const lastServiceDate = relatedJobs.reduce((latest, job) => {
+      const date = job.scheduled_date || job.created_date || '';
+      return date > latest ? date : latest;
+    }, scooter.last_service_date || '');
+    return { ...scooter, related_job_count: relatedJobs.length, last_service_date: lastServiceDate };
+  });
+}
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    const staffRoles = new Set(['admin', 'employee', 'technician', 'staff']);
-    if (!staffRoles.has(String(user.role || '').toLowerCase())) return Response.json({ error: 'Forbidden: Staff access required' }, { status: 403 });
+    if (!STAFF_ROLES.has(String(user.role || '').toLowerCase())) return Response.json({ error: 'Forbidden: Staff access required' }, { status: 403 });
 
     const { customer_id } = await req.json();
     if (!customer_id) return Response.json({ error: 'customer_id is required' }, { status: 400 });
@@ -19,90 +79,87 @@ Deno.serve(async (req) => {
     const customer = await svc.Customer.get(customer_id);
     if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
-    const email = (customer.email || "").toLowerCase();
     const stableCustomerId = customer.customer_id || customer.id;
-
-    // Pull linked records. Jobs link by stable customer_id, account id, or customer_email.
-    const [jobsByStableId, jobsByAccountId, jobsByEmail, notes, feedback, auditsByCustomerId, auditsByField] = await Promise.all([
-      svc.Job.filter({ customer_id: stableCustomerId }, "-created_date", 200).catch(() => []),
-      svc.Job.filter({ customer_account_id: customer.id }, "-created_date", 200).catch(() => []),
-      email ? svc.Job.filter({ customer_email: customer.email }, "-created_date", 200).catch(() => []) : [],
-      svc.CustomerNote.filter({ customer_id }, "-created_date", 200).catch(() => []),
-      email ? svc.Feedback.filter({ submitted_by_email: customer.email }, "-created_date", 100).catch(() => []) : [],
-      svc.AuditEvent.filter({ event_type: "customer_update", metadata: { customer_id } }, "-created_date", 200).catch(() => []),
-      svc.AuditEvent.filter({ event_type: "customer_update", customer_id }, "-created_date", 200).catch(() => []),
+    const jobs = await findRelatedJobs(svc, customer);
+    const [invoices, quotes, scooters, notes, feedback, auditsByCustomerId, auditsByField] = await Promise.all([
+      findRelatedInvoices(svc, customer, jobs),
+      Promise.all(jobs.map((job) => svc.Quote.filter({ job_id: job.id }, '-created_date', 20).catch(() => []))).then((groups) => groups.flat()),
+      findRelatedScooters(svc, customer, jobs),
+      svc.CustomerNote.filter({ customer_id }, '-created_date', 200).catch(() => []),
+      customer.email ? svc.Feedback.filter({ submitted_by_email: customer.email }, '-created_date', 100).catch(() => []) : [],
+      svc.AuditEvent.filter({ event_type: 'customer_update', customer_id }, '-created_date', 200).catch(() => []),
+      svc.AuditEvent.filter({ event_type: 'customer_update', metadata: { customer_id } }, '-created_date', 200).catch(() => []),
     ]);
 
-    // Merge + dedupe jobs
-    const jobMap = {};
-    [...jobsByStableId, ...jobsByAccountId, ...jobsByEmail].forEach((j) => { jobMap[j.id] = j; });
-    const jobs = Object.values(jobMap);
+    const jobById = Object.fromEntries(jobs.map((job) => [job.id, job]));
+    const invoicesByJob = invoices.reduce((map, invoice) => {
+      if (!invoice.job_id) return map;
+      map[invoice.job_id] = [...(map[invoice.job_id] || []), invoice];
+      return map;
+    }, {});
+    const quotesByJob = quotes.reduce((map, quote) => {
+      if (!quote.job_id) return map;
+      map[quote.job_id] = [...(map[quote.job_id] || []), quote];
+      return map;
+    }, {});
+    const scooterById = Object.fromEntries(scooters.map((scooter) => [scooter.id, scooter]));
 
-    // Invoices linked to those jobs
-    const jobIds = jobs.map((j) => j.id);
-    let invoices = [];
-    for (const jid of jobIds) {
-      const inv = await svc.Invoice.filter({ job_id: jid }, "-created_date", 20).catch(() => []);
-      invoices.push(...inv.map((i) => ({ ...i, _job: jobs.find((j) => j.id === jid) })));
-    }
+    const relatedJobs = jobs.map((job) => {
+      const jobInvoices = invoicesByJob[job.id] || [];
+      const jobQuotes = quotesByJob[job.id] || [];
+      const asset = scooterById[job.asset_id];
+      return {
+        id: job.id,
+        reference: job.reference || job.job_id || job.id,
+        status: job.status || job.job_status || 'requested',
+        asset_id: job.asset_id || '',
+        asset_label: asset ? [asset.make, asset.model].filter(Boolean).join(' ') : (job.asset_label || job.scooter_make_model || job.scooter_details || ''),
+        service_type: job.service_type || job.job_type || '',
+        created_date: job.created_date || job.createdAt || job.created_at || '',
+        scheduled_date: job.scheduled_date || job.intake?.date || '',
+        completed_date: job.completed_date || (job.status === 'completed' ? job.updated_date : ''),
+        quoted_total: moneyTotal(jobQuotes) || jobQuotes.reduce((sum, quote) => sum + Number(quote.total || 0) + lineItemsTotal(quote.line_items || []), 0),
+        invoiced_total: moneyTotal(jobInvoices),
+      };
+    });
 
-    // Customer-scoped audit (status / tag / profile changes)
+    const relatedInvoices = invoices.map((invoice) => {
+      const job = jobById[invoice.job_id];
+      const total = Number(invoice.amount || invoice.total || lineItemsTotal(invoice.line_items || []) || 0);
+      const paid = ['paid', 'settled', 'completed'].includes(String(invoice.status || '').toLowerCase());
+      return {
+        id: invoice.id,
+        number: invoice.number || invoice.invoice_id || invoice.id,
+        job_id: invoice.job_id || '',
+        job_reference: job?.reference || job?.job_id || invoice.job_id || '',
+        status: invoice.status || 'outstanding',
+        issue_date: invoice.invoiceSentAt || invoice.created_date || '',
+        due_date: invoice.due_date || invoice.dueDate || '',
+        paid_date: invoice.paid_date || '',
+        amount: total,
+        currency: invoice.currency || 'AUD',
+        outstanding_balance: paid ? 0 : Number(invoice.outstanding_balance ?? invoice.balance_due ?? total),
+      };
+    });
+
     const auditMap = {};
-    [...(auditsByCustomerId || []), ...(auditsByField || [])].forEach((a) => { auditMap[a.id] = a; });
-    const customerAudits = Object.values(auditMap).filter((a) => a.customer_id === customer_id || a.metadata?.customer_id === customer_id || a.metadata?.stable_customer_id === stableCustomerId);
+    [...(auditsByCustomerId || []), ...(auditsByField || [])].forEach((audit) => { auditMap[audit.id] = audit; });
+    const customerAudits = Object.values(auditMap).filter((audit) => audit.customer_id === customer_id || audit.metadata?.customer_id === customer_id || audit.metadata?.stable_customer_id === stableCustomerId);
 
-    // Build a normalised timeline
     const events = [];
-    const push = (e) => { if (e.date) events.push(e); };
-
-    push({ kind: "signup", icon: "UserPlus", title: "Account created", date: customer.created_date, meta: customer.account_type });
-
-    jobs.forEach((j) => push({
-      kind: "job", icon: "Wrench",
-      title: `${j.job_type || "Service"} — ${j.issue_description || j.reference || "Job"}`,
-      subtitle: `Status: ${(j.status || "").replace(/_/g, " ")}`,
-      date: j.created_date, link: `/dashboard/jobs?id=${j.id}`,
-    }));
-
-    invoices.forEach((i) => push({
-      kind: "invoice", icon: "Receipt",
-      title: `Invoice ${i.number || ""} — ${i.currency || "AUD"} ${Number(i.amount || 0).toFixed(2)}`,
-      subtitle: `Status: ${i.status || "outstanding"}`,
-      date: i.paid_date || i.created_date,
-    }));
-
-    feedback.forEach((f) => push({
-      kind: "feedback", icon: "MessageSquare",
-      title: `Feedback: ${f.subject}`,
-      subtitle: `${f.feedback_type} · ${f.status}`,
-      date: f.created_date,
-    }));
-
-    notes.forEach((n) => push({
-      kind: "note", icon: "StickyNote",
-      title: "Internal note",
-      subtitle: n.body,
-      author: n.author_name,
-      date: n.created_date,
-    }));
-
-    customerAudits.forEach((a) => push({
-      kind: "audit", icon: "RefreshCw",
-      title: a.summary || "Account updated",
-      author: a.actor_name,
-      date: a.created_date,
-    }));
-
+    const push = (event) => { if (event.date) events.push(event); };
+    push({ kind: 'signup', icon: 'UserPlus', title: 'Account created', date: customer.created_date, meta: customer.account_type });
+    relatedJobs.forEach((job) => push({ kind: 'job', icon: 'Wrench', title: `${job.reference} — ${job.service_type || 'Service'}`, subtitle: `Status: ${String(job.status).replace(/_/g, ' ')}`, date: job.created_date, link: `/dashboard/jobs?id=${job.id}` }));
+    relatedInvoices.forEach((invoice) => push({ kind: 'invoice', icon: 'Receipt', title: `Invoice ${invoice.number} — ${invoice.currency} ${Number(invoice.amount || 0).toFixed(2)}`, subtitle: `Status: ${invoice.status}`, date: invoice.paid_date || invoice.issue_date, link: `/dashboard/invoices?id=${invoice.id}` }));
+    feedback.forEach((item) => push({ kind: 'feedback', icon: 'MessageSquare', title: `Feedback: ${item.subject}`, subtitle: `${item.feedback_type} · ${item.status}`, date: item.created_date }));
+    notes.forEach((note) => push({ kind: 'note', icon: 'StickyNote', title: 'Internal note', subtitle: note.body, author: note.author_name, date: note.created_date }));
+    customerAudits.forEach((audit) => push({ kind: 'audit', icon: 'RefreshCw', title: audit.summary || 'Account updated', author: audit.actor_name, date: audit.created_date }));
     events.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return Response.json({
       customer,
-      counts: { jobs: jobs.length, invoices: invoices.length, feedback: feedback.length, notes: notes.length },
-      linked: {
-        jobs: jobs.map((j) => ({ id: j.id, reference: j.reference, status: j.status, issue: j.issue_description, type: j.job_type, date: j.created_date })),
-        invoices: invoices.map((i) => ({ id: i.id, number: i.number, amount: i.amount, currency: i.currency, status: i.status, date: i.paid_date || i.created_date })),
-        feedback: feedback.map((f) => ({ id: f.id, subject: f.subject, type: f.feedback_type, status: f.status, date: f.created_date })),
-      },
+      counts: { jobs: relatedJobs.length, invoices: relatedInvoices.length, scooters: scooters.length, feedback: feedback.length, notes: notes.length },
+      linked: { jobs: relatedJobs, invoices: relatedInvoices, scooters, feedback: feedback.map((item) => ({ id: item.id, subject: item.subject, type: item.feedback_type, status: item.status, date: item.created_date })) },
       timeline: events,
     });
   } catch (error) {
