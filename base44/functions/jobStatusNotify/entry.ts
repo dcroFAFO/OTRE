@@ -34,6 +34,18 @@ async function sendSms({ to, body }) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Converts AU local numbers (04xx...) or loosely formatted numbers to E.164 so SMS aren't silently skipped.
+function normalizePhoneE164(value) {
+  let cleaned = String(value || "").trim().replace(/[^\d+]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("+61")) cleaned = cleaned.slice(3);
+  else if (cleaned.startsWith("+")) return cleaned; // non-AU international number, use as-is
+  else if (cleaned.startsWith("61")) cleaned = cleaned.slice(2);
+  if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+  const phone = `+61${cleaned}`;
+  return /^\+614\d{8}$/.test(phone) ? phone : "";
+}
+
 function appBaseUrl(req) {
   const origin = req.headers.get("origin");
   if (origin) return origin;
@@ -107,7 +119,7 @@ Deno.serve(async (req) => {
     }
 
     const email = data.customer_email;
-    const phone = data.customer_phone_e164 || (data.customer_phone && String(data.customer_phone).trim().startsWith("+") ? String(data.customer_phone).replace(/\s+/g, "").trim() : "");
+    const phone = normalizePhoneE164(data.customer_phone_e164 || data.customer_phone);
     if (!email && !phone) {
       return Response.json({ skipped: "no customer email or phone" });
     }

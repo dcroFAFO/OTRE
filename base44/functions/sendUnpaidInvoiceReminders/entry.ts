@@ -60,7 +60,7 @@ const sendEmail = async ({ to, customerName, invoice, job }) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'On The Run Electrics <invoices@base44.app>',
+      from: 'On The Run Electrics <hello@ontherunelectrics.com.au>',
       to,
       subject: `Payment reminder for invoice ${invoiceNumber}`,
       html: body,
