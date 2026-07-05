@@ -1,13 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import SEO from "@/components/SEO";
 import LandingNav from "@/components/landing/LandingNav";
 import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import GoogleIcon from "@/components/GoogleIcon";
-import { ArrowRight, CheckCircle2, LogIn, Mail, Phone, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
+import { ArrowRight, CheckCircle2, LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
 
 const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
@@ -29,12 +28,8 @@ const providers = [
 
 
 export default function BookAccount() {
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPhone, setSignupPhone] = useState("");
-  const emailParam = signupEmail.trim() ? `&email=${encodeURIComponent(signupEmail.trim())}` : "";
-  const phoneParam = signupPhone.trim() ? `&phone=${encodeURIComponent(signupPhone.trim())}` : "";
-  const loginHref = `/login?next=${encodeURIComponent(BOOK_NEXT)}${emailParam}`;
-  const registerHref = `/register?next=${encodeURIComponent(SETUP_NEXT)}&customerFlow=1${emailParam}${phoneParam}`;
+  const loginHref = `/login?next=${encodeURIComponent(BOOK_NEXT)}`;
+  const registerHref = `/register?next=${encodeURIComponent(SETUP_NEXT)}&customerFlow=1`;
 
   const oauth = (provider) => {
     base44.auth.loginWithProvider(provider, SETUP_NEXT);
@@ -124,39 +119,22 @@ export default function BookAccount() {
                     <span className="h-px flex-1 bg-border" />
                   </div>
 
-                  <div className="space-y-3 rounded-2xl border border-border bg-background/70 p-4">
-                    <h3 className="font-heading text-base font-extrabold">Sign up using email</h3>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                      <Input type="email" placeholder="Email address" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} className="h-11 rounded-xl bg-card pl-10" />
-                    </div>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                      <Input type="tel" placeholder="Phone number" value={signupPhone} onChange={(e) => setSignupPhone(e.target.value)} className="h-11 rounded-xl bg-card pl-10" />
-                    </div>
-                    <Button asChild className="h-11 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90">
-                      <Link to={registerHref}>Sign Up Now <ArrowRight className="h-4 w-4" /></Link>
-                    </Button>
-                  </div>
+                  <Button asChild className="h-12 w-full rounded-2xl bg-accent px-4 text-base font-semibold text-accent-foreground shadow-soft hover:bg-accent/90">
+                    <Link to={registerHref}>Sign Up Now <ArrowRight className="h-4 w-4" /></Link>
+                  </Button>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <Button asChild variant="outline" className="h-auto justify-start rounded-2xl border-border bg-background/70 p-4 text-left shadow-soft hover:bg-secondary/70">
+                <div className="mt-3 flex w-full flex-col gap-3">
+                  <Button asChild variant="outline" className="h-12 w-full justify-start rounded-2xl border-border bg-background/70 px-4 text-base font-semibold shadow-soft hover:bg-secondary/70">
                     <Link to={loginHref}>
                       <LogIn className="h-5 w-5 text-accent" />
-                      <span>
-                        <span className="block font-heading font-extrabold">Already have an account?</span>
-                        <span className="mt-1 block text-xs font-normal text-muted-foreground">Sign in to book from your portal.</span>
-                      </span>
+                      <span className="flex-1 text-center">Already have an account? Sign in</span>
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-auto justify-start rounded-2xl border-border bg-background/70 p-4 text-left shadow-soft hover:bg-secondary/70">
+                  <Button asChild variant="outline" className="h-12 w-full justify-start rounded-2xl border-border bg-background/70 px-4 text-base font-semibold shadow-soft hover:bg-secondary/70">
                     <Link to="/book/guest">
                       <ArrowRight className="h-5 w-5 text-accent" />
-                      <span>
-                        <span className="block font-heading font-extrabold">Continue as guest</span>
-                        <span className="mt-1 block text-xs font-normal text-muted-foreground">Submit a repair request without an account.</span>
-                      </span>
+                      <span className="flex-1 text-center">Continue as guest</span>
                     </Link>
                   </Button>
                 </div>
