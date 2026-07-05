@@ -26,9 +26,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import Overview from '@/pages/dashboard/Overview';
 import Jobs from '@/pages/dashboard/Jobs';
 import Calendar from '@/pages/dashboard/Calendar';
-import Inventory from '@/pages/dashboard/Inventory';
 import Invoices from '@/pages/dashboard/Invoices';
-import Templates from '@/pages/dashboard/Templates';
 import Notifications from '@/pages/dashboard/Notifications';
 import Parts from '@/pages/dashboard/Parts';
 import AdminFeedback from '@/pages/admin/AdminFeedback';
@@ -83,9 +81,7 @@ const AuthenticatedApp = () => {
         <Route index element={<Overview />} />
         <Route path="jobs" element={<Jobs />} />
         <Route path="calendar" element={<Calendar />} />
-        <Route path="inventory" element={<Inventory />} />
         <Route path="invoices" element={<Invoices />} />
-        <Route path="templates" element={<Templates />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="parts" element={<Parts />} />
       </Route>
@@ -96,7 +92,7 @@ const AuthenticatedApp = () => {
       </Route>
       <Route path="/customers" element={<Navigate to="/admin/clients" replace />} />
       <Route path="/job-board" element={<Navigate to="/dashboard/jobs" replace />} />
-      <Route path="/parts-catalogue" element={<Navigate to="/dashboard/inventory" replace />} />
+      <Route path="/parts-catalogue" element={<Navigate to="/dashboard/parts" replace />} />
       <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="/admin/clients" element={<AdminClients />} />
       <Route path="/admin/activity" element={<AdminActivityLog />} />

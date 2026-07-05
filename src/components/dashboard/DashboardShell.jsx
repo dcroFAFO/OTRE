@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Package, FileText, Bell, MessageSquare, Contact, ShoppingBag, Activity, Receipt } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, Bell, MessageSquare, Contact, ShoppingBag, Activity, Receipt, Settings, Bike, BadgeDollarSign } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -22,11 +22,12 @@ export default function DashboardShell({ user, children }) {
   { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
   { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
   { to: "/dashboard/invoices", label: "Invoices", icon: Receipt },
-  { to: "/dashboard/inventory", label: "Inventory", icon: Package },
-  { to: "/dashboard/templates", label: "Templates", icon: FileText },
   ...(canManageCustomers ? [
-  { to: "/admin/clients", label: "Customers", icon: Contact }] :
-  [])];
+  { to: "/admin/clients", label: "Customers", icon: Contact, children: [
+  { to: "/asset-management", label: "Asset Management", icon: Bike }] }] :
+  []),
+  { to: "/settings", label: "Settings", icon: Settings, children: [
+  { to: "/service-pricing", label: "Service Pricing", icon: BadgeDollarSign }] }];
 
   const adminNav = [
   ...(canViewLog ? [{ to: "/admin/activity", label: "Activity Log", icon: Activity }] : []),
@@ -54,6 +55,13 @@ export default function DashboardShell({ user, children }) {
             active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary")}>
                 <n.icon className="h-4.5 w-4.5" /> {n.label}
               </Link>
+              {n.children?.map((c) => (
+                <Link key={c.to} to={c.to} onClick={() => setOpen(false)}
+                className={cn("flex items-center gap-3 rounded-xl py-2 pl-9 pr-3 text-[13px] font-medium transition-colors",
+                pathname === c.to ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary")}>
+                  <c.icon className="h-4 w-4" /> {c.label}
+                </Link>
+              ))}
               {idx === 0 && <JobsNavItem label={app.dashboard.nav.jobs} onNavigate={() => setOpen(false)} />}
             </React.Fragment>);
 
