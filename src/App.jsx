@@ -3,7 +3,7 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -35,6 +35,9 @@ import AdminFeedback from '@/pages/admin/AdminFeedback';
 import AdminClients from '@/pages/admin/AdminClients';
 import AdminActivityLog from '@/pages/admin/AdminActivityLog';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
+import SystemSettings from '@/pages/settings/SystemSettings';
+import AssetManagement from '@/pages/AssetManagement';
+import ServicePricing from '@/pages/ServicePricing';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -86,6 +89,14 @@ const AuthenticatedApp = () => {
         <Route path="notifications" element={<Notifications />} />
         <Route path="parts" element={<Parts />} />
       </Route>
+      <Route element={<DashboardLayout />}>
+        <Route path="/settings" element={<SystemSettings />} />
+        <Route path="/asset-management" element={<AssetManagement />} />
+        <Route path="/service-pricing" element={<ServicePricing />} />
+      </Route>
+      <Route path="/customers" element={<Navigate to="/admin/clients" replace />} />
+      <Route path="/job-board" element={<Navigate to="/dashboard/jobs" replace />} />
+      <Route path="/parts-catalogue" element={<Navigate to="/dashboard/inventory" replace />} />
       <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="/admin/clients" element={<AdminClients />} />
       <Route path="/admin/activity" element={<AdminActivityLog />} />

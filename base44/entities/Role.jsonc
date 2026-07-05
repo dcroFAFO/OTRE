@@ -1,26 +1,19 @@
 {
-  "name": "ServiceItem",
+  "name": "Role",
   "type": "object",
   "properties": {
-    "name": {
+    "key": {
       "type": "string"
     },
-    "category": {
-      "type": "string"
-    },
-    "category_key": {
+    "label": {
       "type": "string"
     },
     "description": {
       "type": "string"
     },
-    "icon": {
-      "type": "string"
-    },
-    "price": {
-      "type": "number",
-      "default": 0,
-      "description": "Standard customer-facing price for this service (0 = quote on assessment)."
+    "is_staff": {
+      "type": "boolean",
+      "default": false
     },
     "order": {
       "type": "number",
@@ -32,7 +25,8 @@
     }
   },
   "required": [
-    "name"
+    "key",
+    "label"
   ],
   "rls": {
     "create": {
@@ -40,7 +34,11 @@
         "role": "admin"
       }
     },
-    "read": null,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "update": {
       "user_condition": {
         "role": "admin"
