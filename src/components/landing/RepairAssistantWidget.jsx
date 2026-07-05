@@ -3,7 +3,7 @@ import { Bot, Loader2, MessageCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
-import { createBookingRequest } from "@/services/bookingService";
+import { createBookingRequest, sendBookingVerificationCode, verifyBookingCode } from "@/services/bookingService";
 import { BRAND_NAMES, SCOOTER_BRANDS } from "@/config/scooterBrands";
 import { normalizePhoneToE164 } from "@/lib/phone";
 
@@ -36,6 +36,9 @@ function computeStage(c) {
   if (!c.name) return "name";
   if (!c.email) return "email";
   if (!c.phone) return "phone";
+  if (!c.otpChannel) return "otp_channel";
+  if (!c.otpVerified) return "otp_code";
+  if (c.hasActiveJob && !c.jobChoice) return "job_choice";
   return "submit";
 }
 
@@ -49,6 +52,9 @@ function promptFor(stage, context) {
     case "name": return "Thanks! Can I get your name for the booking?";
     case "email": return "And your email address?";
     case "phone": return "Lastly, your mobile number?";
+    case "otp_channel": return "To confirm it's really you, would you like a verification code by text or email?";
+    case "otp_code": return context.otpChannel === "email" ? "Enter the 6-digit code we emailed you." : "Enter the 6-digit code we texted you.";
+    case "job_choice": return "Is this about your current job, or is this a new job?";
     default: return "";
   }
 }
@@ -57,7 +63,7 @@ export default function RepairAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", text: OPENING }]);
   const [input, setInput] = useState("");
-  const [context, setContext] = useState({ issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "" });
+  const [context, setContext] = useState({ issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, hasActiveJob: false, activeJob: null, jobChoice: "", existingCustomerName: "" });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [unread, setUnread] = useState(0);
@@ -171,6 +177,61 @@ export default function RepairAssistantWidget() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: clean }]);
 
+    if (stage === "otp_channel") {
+      const channel = /email/i.test(clean) ? "email" : "sms";
+      setLoading(true);
+      try {
+        await sendBookingVerificationCode({ name: context.name, email: context.email, phone: context.phone, channel });
+        setContext((prev) => ({ ...prev, otpChannel: channel }));
+        setMessages((prev) => [...prev, { role: "assistant", text: channel === "email" ? "We've emailed you a 6-digit code — enter it below." : "We've texted you a 6-digit code — enter it below." }]);
+      } catch {
+        setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, we couldn't send a verification code just now. Please try again." }]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (stage === "otp_code") {
+      setLoading(true);
+      try {
+        const res = await verifyBookingCode({ email: context.email, phone: context.phone, code: clean });
+        const nextContext = {
+          ...context,
+          otpVerified: true,
+          hasActiveJob: !!res.active_job,
+          activeJob: res.active_job || null,
+          existingCustomerName: res.existing ? (res.customer_name || "") : "",
+        };
+        setContext(nextContext);
+        setMessages((prev) => [...prev, { role: "assistant", text: res.existing ? `Thanks — you're verified! We found your details on file${res.customer_name ? ` for ${res.customer_name}` : ""}.` : "Thanks — you're verified!" }]);
+        if (res.active_job) {
+          setMessages((prev) => [...prev, { role: "assistant", text: `Is this enquiry about your current job (ref ${res.active_job.reference || res.active_job.id}), or is it a new job?` }]);
+        } else {
+          await submitBooking(nextContext);
+        }
+      } catch {
+        setMessages((prev) => [...prev, { role: "assistant", text: "That code wasn't right or has expired. Please try again." }]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (stage === "job_choice") {
+      const wantsCurrent = /current|existing/i.test(clean);
+      const nextContext = { ...context, jobChoice: wantsCurrent ? "current" : "new" };
+      setContext(nextContext);
+      if (wantsCurrent) {
+        setMessages((prev) => [...prev, { role: "assistant", text: `No problem — your current job (ref ${context.activeJob?.reference || context.activeJob?.id}) is already in our system, so our team will follow up with you on that job directly.` }]);
+        setResult({ existingJobOnly: true });
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", text: "Got it — let's get that new booking submitted." }]);
+        await submitBooking(nextContext);
+      }
+      return;
+    }
+
     const next = { ...context };
     if (stage === "issue") {
       next.issue = clean;
@@ -222,6 +283,8 @@ export default function RepairAssistantWidget() {
     if (stage === "make") return BRAND_NAMES;
     if (stage === "model") return SCOOTER_BRANDS[context.make] || [];
     if (stage === "safety") return [SAFETY_NO, SAFETY_YES];
+    if (stage === "otp_channel") return ["Text me a code", "Email me a code"];
+    if (stage === "job_choice") return ["This current job", "A new job"];
     return [];
   }, [stage, context.make]);
 
