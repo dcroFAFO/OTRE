@@ -207,11 +207,8 @@ Deno.serve(async (req) => {
     if (rawToken) { const tokenHash = await sha256(rawToken); await base44.asServiceRole.entities.PublicJobAccess.create({ jobId: job.id, job_id: job.id, tokenHash, token_hash: tokenHash, permissions: DEFAULT_PERMISSIONS, createdAt: now }); }
     await base44.asServiceRole.entities.AuditEvent.create({ event_type: 'booking_created', job_id: job.id, customer_id: customerRecord?.id || stableCustomerId, actor_name: form.customer_name, actor_role: customerUserId ? 'customer_account' : 'guest_customer', summary: `Booking request received from ${form.customer_name}`, visibility: 'system', metadata: { customer_id: customerRecord?.id || '', stable_customer_id: stableCustomerId, scooter_id: scooter?.id || '' } }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
 
-    const origin = originFrom(req);
-    const portalLink = customerUserId ? `${origin}/portal` : null;
     const managePath = customerUserId ? '/portal' : null;
     const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
-    await base44.asServiceRole.functions.invoke('notifyNewBooking', { event: { type: 'create', entity_name: 'Job', entity_id: job.id }, data: { ...job, manage_link: portalLink } }).catch((notifyErr) => console.error('[createBooking] notifyNewBooking invoke failed:', notifyErr.message));
     return Response.json({ reference: job.reference, managePath, accountPath, job_id: job.id, customer_profile_id: profile.id, customer_account_id: customerRecord?.id || '', asset_id: scooter?.id || '', linked: !!customerUserId });
   } catch (error) {
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
