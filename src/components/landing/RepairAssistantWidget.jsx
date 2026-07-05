@@ -8,7 +8,7 @@ import { BRAND_NAMES, SCOOTER_BRANDS } from "@/config/scooterBrands";
 import { normalizePhoneToE164 } from "@/lib/phone";
 
 const QUICK_REPLIES = ["Won’t turn on", "Won’t charge", "Flat tyre or puncture", "Brake issue", "Error code", "Reduced range", "Strange noise", "General service"];
-const OPENING = "Hi, I’m the On The Run Electrics repair assistant. Tell me what’s happening with your scooter and I’ll get a repair booking started for you.";
+const OPENING = "Hi, I’m the On The Run Electrics repair assistant. Are you starting a new job, or following up on an existing one?";
 const SAFETY_YES = "Yes, please note details below";
 const SAFETY_NO = "No urgent safety concerns";
 const OTHER_MODEL = "Other model";
@@ -27,6 +27,14 @@ function categoryFrom(text = "") {
 }
 
 function computeStage(c) {
+  if (!c.intent) return "intent";
+  if (c.intent === "existing") {
+    if (!c.email) return "existing_email";
+    if (!c.phone) return "existing_phone";
+    if (!c.otpChannel) return "otp_channel";
+    if (!c.otpVerified) return "otp_code";
+    return "existing_done";
+  }
   if (!c.issue) return "issue";
   if (!c.make) return "make";
   if (c.make === "Other" && !c.model) return "model_custom";
@@ -38,12 +46,12 @@ function computeStage(c) {
   if (!c.phone) return "phone";
   if (!c.otpChannel) return "otp_channel";
   if (!c.otpVerified) return "otp_code";
-  if (c.hasActiveJob && !c.jobChoice) return "job_choice";
   return "submit";
 }
 
 function promptFor(stage, context) {
   switch (stage) {
+    case "issue": return "Tell me what's happening with your scooter and I'll get a repair booking started for you.";
     case "make": return "Thanks. What make is your scooter?";
     case "model": return `Got it — and which ${context.make} model?`;
     case "model_custom": return "No worries — what's the make and model?";
@@ -52,9 +60,10 @@ function promptFor(stage, context) {
     case "name": return "Thanks! Can I get your name for the booking?";
     case "email": return "And your email address?";
     case "phone": return "Lastly, your mobile number?";
+    case "existing_email": return "No problem — what's the email address on your account?";
+    case "existing_phone": return "And what's the mobile number on file?";
     case "otp_channel": return "To confirm it's really you, would you like a verification code by text or email?";
     case "otp_code": return context.otpChannel === "email" ? "Enter the 6-digit code we emailed you." : "Enter the 6-digit code we texted you.";
-    case "job_choice": return "Is this about your current job, or is this a new job?";
     default: return "";
   }
 }
@@ -63,7 +72,7 @@ export default function RepairAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", text: OPENING }]);
   const [input, setInput] = useState("");
-  const [context, setContext] = useState({ issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, hasActiveJob: false, activeJob: null, jobChoice: "", existingCustomerName: "" });
+  const [context, setContext] = useState({ intent: "", issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, hasActiveJob: false, activeJob: null, existingCustomerName: "" });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [unread, setUnread] = useState(0);
@@ -160,12 +169,12 @@ export default function RepairAssistantWidget() {
     busyRef.current = true;
     try {
 
-    if (stage === "email" && !EMAIL_PATTERN.test(clean)) {
+    if ((stage === "email" || stage === "existing_email") && !EMAIL_PATTERN.test(clean)) {
       setMessages((prev) => [...prev, { role: "user", text: clean }, { role: "assistant", text: "That email doesn't look quite right — could you double check it?" }]);
       setInput("");
       return;
     }
-    if (stage === "phone") {
+    if (stage === "phone" || stage === "existing_phone") {
       const normalized = normalizePhoneToE164(clean);
       if (!normalized.is_valid) {
         setMessages((prev) => [...prev, { role: "user", text: clean }, { role: "assistant", text: "That doesn't look like a valid Australian mobile number — could you try again?" }]);
@@ -176,6 +185,16 @@ export default function RepairAssistantWidget() {
 
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: clean }]);
+
+    if (stage === "intent") {
+      const wantsExisting = /existing|follow/i.test(clean);
+      const nextContext = { ...context, intent: wantsExisting ? "existing" : "new" };
+      setContext(nextContext);
+      const nextStage = computeStage(nextContext);
+      setMessages((prev) => [...prev, { role: "assistant", text: promptFor(nextStage, nextContext) }]);
+      setTimeout(() => inputRef.current?.focus(), 50);
+      return;
+    }
 
     if (stage === "otp_channel") {
       const channel = /email/i.test(clean) ? "email" : "sms";
@@ -204,30 +223,21 @@ export default function RepairAssistantWidget() {
           existingCustomerName: res.existing ? (res.customer_name || "") : "",
         };
         setContext(nextContext);
-        setMessages((prev) => [...prev, { role: "assistant", text: res.existing ? `Thanks — you're verified! We found your details on file${res.customer_name ? ` for ${res.customer_name}` : ""}.` : "Thanks — you're verified!" }]);
-        if (res.active_job) {
-          setMessages((prev) => [...prev, { role: "assistant", text: `Is this enquiry about your current job (ref ${res.active_job.reference || res.active_job.id}), or is it a new job?` }]);
+        if (context.intent === "existing") {
+          if (res.active_job) {
+            setMessages((prev) => [...prev, { role: "assistant", text: `Thanks — you're verified! Your current job (ref ${res.active_job.reference || res.active_job.id}) is ${res.active_job.status ? res.active_job.status.replace(/_/g, " ") : "in progress"}. Our team will follow up with you directly, and you can check its status any time in the customer portal.` }]);
+          } else {
+            setMessages((prev) => [...prev, { role: "assistant", text: "Thanks — you're verified! We couldn't find an active job on file for these details — if you'd like to start a new job instead, just refresh the chat." }]);
+          }
+          setResult({ existingJobOnly: true });
         } else {
+          setMessages((prev) => [...prev, { role: "assistant", text: res.existing ? `Thanks — you're verified! We found your details on file${res.customer_name ? ` for ${res.customer_name}` : ""}.` : "Thanks — you're verified!" }]);
           await submitBooking(nextContext);
         }
       } catch {
         setMessages((prev) => [...prev, { role: "assistant", text: "That code wasn't right or has expired. Please try again." }]);
       } finally {
         setLoading(false);
-      }
-      return;
-    }
-
-    if (stage === "job_choice") {
-      const wantsCurrent = /current|existing/i.test(clean);
-      const nextContext = { ...context, jobChoice: wantsCurrent ? "current" : "new" };
-      setContext(nextContext);
-      if (wantsCurrent) {
-        setMessages((prev) => [...prev, { role: "assistant", text: `No problem — your current job (ref ${context.activeJob?.reference || context.activeJob?.id}) is already in our system, so our team will follow up with you on that job directly.` }]);
-        setResult({ existingJobOnly: true });
-      } else {
-        setMessages((prev) => [...prev, { role: "assistant", text: "Got it — let's get that new booking submitted." }]);
-        await submitBooking(nextContext);
       }
       return;
     }
@@ -252,9 +262,9 @@ export default function RepairAssistantWidget() {
       next.safetyPending = false;
     } else if (stage === "name") {
       next.name = clean;
-    } else if (stage === "email") {
+    } else if (stage === "email" || stage === "existing_email") {
       next.email = clean;
-    } else if (stage === "phone") {
+    } else if (stage === "phone" || stage === "existing_phone") {
       next.phone = clean;
     }
     setContext(next);
@@ -279,12 +289,12 @@ export default function RepairAssistantWidget() {
   };
 
   const quickReplies = useMemo(() => {
+    if (stage === "intent") return ["Start a new job", "Follow up on an existing job"];
     if (stage === "issue") return QUICK_REPLIES;
     if (stage === "make") return BRAND_NAMES;
     if (stage === "model") return SCOOTER_BRANDS[context.make] || [];
     if (stage === "safety") return [SAFETY_NO, SAFETY_YES];
     if (stage === "otp_channel") return ["Text me a code", "Email me a code"];
-    if (stage === "job_choice") return ["This current job", "A new job"];
     return [];
   }, [stage, context.make]);
 
