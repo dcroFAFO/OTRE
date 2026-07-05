@@ -83,14 +83,23 @@ async function handleSend(entities, body) {
   return Response.json({ sent: true, channel });
 }
 
-async function findActiveJobForCustomer(entities, customer) {
+async function findActiveJobsForCustomer(entities, customer) {
   const stableId = customer.customer_id || customer.id;
   const [byStable, byAccount] = await Promise.all([
     entities.Job.filter({ customer_id: stableId }, '-created_date', 50).catch(() => []),
     entities.Job.filter({ customer_account_id: customer.id }, '-created_date', 50).catch(() => []),
   ]);
   const jobs = [...new Map([...byStable, ...byAccount].map((j) => [j.id, j])).values()];
-  return jobs.find((job) => !ACTIVE_STATUSES_EXCLUDED.has(String(job.status || '').toLowerCase())) || null;
+  return jobs
+    .filter((job) => !ACTIVE_STATUSES_EXCLUDED.has(String(job.status || '').toLowerCase()))
+    .map((job) => ({
+      id: job.id,
+      reference: job.reference || '',
+      status: job.status || '',
+      asset_label: job.asset_label || job.scooter_make_model || job.scooterDetails || '',
+      service_type: job.service_type || job.service_category_key || '',
+      issue_description: job.issue_description || job.issueDescription || '',
+    }));
 }
 
 async function findExistingCustomer(entities, email, phone) {
@@ -123,14 +132,15 @@ async function handleVerify(entities, body) {
   await entities.PhoneVerification.update(record.id, { consumed_at: new Date().toISOString(), attempts: (record.attempts || 0) + 1 });
 
   const existingCustomer = await findExistingCustomer(entities, email, phone);
-  let activeJob = null;
-  if (existingCustomer) activeJob = await findActiveJobForCustomer(entities, existingCustomer);
+  let activeJobs = [];
+  if (existingCustomer) activeJobs = await findActiveJobsForCustomer(entities, existingCustomer);
 
   return Response.json({
     verified: true,
     existing: !!existingCustomer,
     customer_name: existingCustomer?.full_name || existingCustomer?.name || '',
-    active_job: activeJob ? { id: activeJob.id, reference: activeJob.reference || '', status: activeJob.status || '', issue_description: activeJob.issue_description || '' } : null,
+    active_jobs: activeJobs,
+    active_job: activeJobs[0] || null,
   });
 }
 

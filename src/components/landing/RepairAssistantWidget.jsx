@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { createBookingRequest, sendBookingVerificationCode, verifyBookingCode } from "@/services/bookingService";
 import { BRAND_NAMES, SCOOTER_BRANDS } from "@/config/scooterBrands";
 import { normalizePhoneToE164 } from "@/lib/phone";
+import RepairAssistantJobCard from "@/components/landing/RepairAssistantJobCard";
 
 const QUICK_REPLIES = ["Won’t turn on", "Won’t charge", "Flat tyre or puncture", "Brake issue", "Error code", "Reduced range", "Strange noise", "General service"];
 const OPENING = "Hi, I’m the On The Run Electrics repair assistant. Are you starting a new job, or following up on an existing one?";
@@ -33,6 +34,8 @@ function computeStage(c) {
     if (!c.phone) return "existing_phone";
     if (!c.otpChannel) return "otp_channel";
     if (!c.otpVerified) return "otp_code";
+    if (c.activeJobs.length > 0 && !c.selectedJobId) return "job_cards";
+    if (c.selectedJobId) return "job_actions";
     return "existing_done";
   }
   if (!c.issue) return "issue";
@@ -72,7 +75,7 @@ export default function RepairAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", text: OPENING }]);
   const [input, setInput] = useState("");
-  const [context, setContext] = useState({ intent: "", issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, hasActiveJob: false, activeJob: null, existingCustomerName: "" });
+  const [context, setContext] = useState({ intent: "", issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, activeJobs: [], selectedJobId: "", existingCustomerName: "" });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [unread, setUnread] = useState(0);
@@ -218,18 +221,19 @@ export default function RepairAssistantWidget() {
         const nextContext = {
           ...context,
           otpVerified: true,
-          hasActiveJob: !!res.active_job,
-          activeJob: res.active_job || null,
+          activeJobs: res.active_jobs || [],
           existingCustomerName: res.existing ? (res.customer_name || "") : "",
         };
         setContext(nextContext);
         if (context.intent === "existing") {
-          if (res.active_job) {
-            setMessages((prev) => [...prev, { role: "assistant", text: `Thanks — you're verified! Your current job (ref ${res.active_job.reference || res.active_job.id}) is ${res.active_job.status ? res.active_job.status.replace(/_/g, " ") : "in progress"}. Our team will follow up with you directly, and you can check its status any time in the customer portal.` }]);
+          const firstName = (nextContext.existingCustomerName || "").split(" ")[0];
+          const greeting = firstName ? `Thanks, ${firstName} — you're verified!` : "Thanks — you're verified!";
+          if (nextContext.activeJobs.length > 0) {
+            setMessages((prev) => [...prev, { role: "assistant", text: `${greeting} Here ${nextContext.activeJobs.length === 1 ? "is your active job" : "are your active jobs"} — tap one below to select it.` }]);
           } else {
-            setMessages((prev) => [...prev, { role: "assistant", text: "Thanks — you're verified! We couldn't find an active job on file for these details — if you'd like to start a new job instead, just refresh the chat." }]);
+            setMessages((prev) => [...prev, { role: "assistant", text: `${greeting} We couldn't find an active job on file for these details — if you'd like to start a new job instead, just refresh the chat.` }]);
+            setResult({ existingJobOnly: true });
           }
-          setResult({ existingJobOnly: true });
         } else {
           setMessages((prev) => [...prev, { role: "assistant", text: res.existing ? `Thanks — you're verified! We found your details on file${res.customer_name ? ` for ${res.customer_name}` : ""}.` : "Thanks — you're verified!" }]);
           await submitBooking(nextContext);
@@ -239,6 +243,17 @@ export default function RepairAssistantWidget() {
       } finally {
         setLoading(false);
       }
+      return;
+    }
+
+    if (stage === "job_actions") {
+      const job = context.activeJobs.find((j) => j.id === context.selectedJobId);
+      if (/status/i.test(clean)) {
+        setMessages((prev) => [...prev, { role: "assistant", text: `Your job${job?.reference ? ` (ref ${job.reference})` : ""} for your ${job?.asset_label || "scooter"} is currently: ${(job?.status || "in progress").replace(/_/g, " ")}.` }]);
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", text: "No problem — our team will follow up with you about this job directly." }]);
+      }
+      setResult({ existingJobOnly: true });
       return;
     }
 
@@ -295,8 +310,15 @@ export default function RepairAssistantWidget() {
     if (stage === "model") return SCOOTER_BRANDS[context.make] || [];
     if (stage === "safety") return [SAFETY_NO, SAFETY_YES];
     if (stage === "otp_channel") return ["Text me a code", "Email me a code"];
+    if (stage === "job_actions") return ["Check job status", "Something else"];
     return [];
   }, [stage, context.make]);
+
+  const selectJob = (job) => {
+    if (busyRef.current) return;
+    setContext((prev) => ({ ...prev, selectedJobId: job.id }));
+    setMessages((prev) => [...prev, { role: "user", text: `Selected job ${job.reference || job.asset_label}` }]);
+  };
 
   const showTextInput = !result;
 
@@ -360,6 +382,16 @@ export default function RepairAssistantWidget() {
           <div ref={bottomRef} />
         </div>
       </div>
+
+      {stage === "job_cards" && !loading && (
+        <div className="border-t border-border px-4 py-3">
+          <div className="grid grid-cols-2 gap-2">
+            {context.activeJobs.map((job) => (
+              <RepairAssistantJobCard key={job.id} job={job} onSelect={selectJob} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {quickReplies.length > 0 && !loading && (
         <div className="border-t border-border px-4 py-3">
