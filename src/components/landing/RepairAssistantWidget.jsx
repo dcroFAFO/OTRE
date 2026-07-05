@@ -62,6 +62,7 @@ export default function RepairAssistantWidget() {
   const [result, setResult] = useState(null);
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -119,7 +120,9 @@ export default function RepairAssistantWidget() {
 
   const send = async (rawText) => {
     const clean = String(rawText || "").trim();
-    if (!clean || loading || result) return;
+    if (!clean || busyRef.current || result) return;
+    busyRef.current = true;
+    try {
 
     if (stage === "email" && !EMAIL_PATTERN.test(clean)) {
       setMessages((prev) => [...prev, { role: "user", text: clean }, { role: "assistant", text: "That email doesn't look quite right — could you double check it?" }]);
@@ -179,6 +182,9 @@ export default function RepairAssistantWidget() {
     }
     setMessages((prev) => [...prev, { role: "assistant", text: promptFor(nextStage, next) }]);
     setTimeout(() => inputRef.current?.focus(), 50);
+    } finally {
+      busyRef.current = false;
+    }
   };
 
   const quickReplies = useMemo(() => {
