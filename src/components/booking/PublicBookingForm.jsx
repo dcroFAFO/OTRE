@@ -6,18 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
 import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import PhoneNumberField from "@/components/booking/PhoneNumberField";
-import PreferredDateField from "@/components/booking/PreferredDateField";
 import BookingStepIndicator from "@/components/booking/BookingStepIndicator";
-import RideableToggle from "@/components/booking/RideableToggle";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { normalizePhoneToE164 } from "@/lib/phone";
-import { CheckCircle2, Loader2, Upload, ArrowLeft, ArrowRight } from "lucide-react";
+import { CheckCircle2, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
 
@@ -32,10 +29,7 @@ const EMPTY = {
   asset_model: "",
   asset_custom_make: "",
   asset_custom_model: "",
-  preferred_date: "",
-  preferred_time_window: "Anytime",
   rideable: true,
-  asap: false,
   consent: false,
   scooter_issue_summary: "",
   scooter_make_model: "",
@@ -80,12 +74,9 @@ export default function PublicBookingForm({ guestOnly = false }) {
   const { data: { services } } = usePlatformConfig();
   const [form, setForm] = useState(() => ({ ...EMPTY, ...getBookingPrefill() }));
   const [step, setStep] = useState(1);
-  const [photoUrl, setPhotoUrl] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [errors, setErrors] = useState({});
-  const [dateValid, setDateValid] = useState(true);
 
   const set = (k, v) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -109,15 +100,8 @@ export default function PublicBookingForm({ guestOnly = false }) {
     const nextErrors = {};
     if (!form.asset_label.trim()) nextErrors.asset_label = "Please select your scooter make and model.";
     if (form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand) nextErrors.asset_label = `The selected model doesn't belong to ${form.asset_make}.`;
-    setErrors((current) => ({ ...current, ...nextErrors }));
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const validateStep3 = () => {
-    const nextErrors = {};
     if (!form.issue_type) nextErrors.issue_type = "Please select the repair type.";
     if (isOther && !form.issue_description.trim()) nextErrors.issue_description = "Please describe the issue.";
-    if (!dateValid) nextErrors.preferred_date = "Enter a valid date";
     if (!form.consent) nextErrors.consent = "Please confirm we can contact you about this booking.";
     setErrors((current) => ({ ...current, ...nextErrors }));
     return Object.keys(nextErrors).length === 0;
@@ -125,23 +109,13 @@ export default function PublicBookingForm({ guestOnly = false }) {
 
   const goNext = () => {
     if (step === 1 && validateStep1()) setStep(2);
-    else if (step === 2 && validateStep2()) setStep(3);
   };
   const goBack = () => setStep((s) => Math.max(1, s - 1));
-
-  const handlePhoto = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setPhotoUrl(file_url);
-    setUploading(false);
-  };
 
   const submit = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    if (!validateStep3()) return;
+    if (!validateStep2()) return;
 
     setSubmitting(true);
     try {
@@ -153,7 +127,6 @@ export default function PublicBookingForm({ guestOnly = false }) {
         phone_e164: normalizedPhone.phone_e164,
         customer_phone_e164: normalizedPhone.phone_e164,
         issue_description,
-        photo_url: photoUrl,
       });
       setDone(result);
     } finally {
@@ -229,7 +202,7 @@ export default function PublicBookingForm({ guestOnly = false }) {
 
         {step === 2 && (
           <section className="space-y-2.5">
-            <h2 className="font-heading text-base font-extrabold">Scooter Details</h2>
+            <h2 className="font-heading text-base font-extrabold">Scooter & Issue</h2>
             <div className="grid gap-2">
               <Field label={field("asset_label").label || "Scooter"} required error={errors.asset_label}>
                 <AssetBrandPicker
@@ -243,17 +216,6 @@ export default function PublicBookingForm({ guestOnly = false }) {
                   }}
                 />
               </Field>
-              <Field label={field("rideable").label || "Is it rideable?"}>
-                <RideableToggle value={form.rideable} onChange={(v) => set("rideable", v)} />
-              </Field>
-            </div>
-          </section>
-        )}
-
-        {step === 3 && (
-          <section className="space-y-2.5">
-            <h2 className="font-heading text-base font-extrabold">Issue & Schedule</h2>
-            <div className="grid gap-2">
               <Field label={field("issue_description").label || "Issue"} required error={errors.issue_type || errors.issue_description}>
                 <Select value={form.issue_type} onValueChange={(v) => {
                   set("issue_type", v);
@@ -267,32 +229,6 @@ export default function PublicBookingForm({ guestOnly = false }) {
                 </Select>
                 {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" />}
               </Field>
-              <Field label={field("photo").label || "Photo"}>
-                <label className="flex h-9 items-center gap-2 cursor-pointer rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground hover:border-accent transition-colors">
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  {photoUrl ? "Photo uploaded ✓" : "Upload photo"}
-                  <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                </label>
-              </Field>
-              <Field label={field("preferred_date").label || "Preferred date"} error={errors.preferred_date}>
-                <PreferredDateField
-                  value={form.preferred_date}
-                  onChange={(value) => set("preferred_date", value)}
-                  onValidityChange={setDateValid}
-                  disabled={form.asap}
-                  className={form.asap ? "opacity-50" : ""}
-                />
-              </Field>
-              <Field label={field("preferred_time_window").label || "Preferred time"}>
-                <Select value={form.preferred_time_window} onValueChange={(v) => set("preferred_time_window", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{(field("preferred_time_window").options || []).map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Checkbox checked={form.asap} onCheckedChange={(v) => setForm((f) => ({ ...f, asap: !!v, preferred_date: v ? "" : f.preferred_date }))} />
-                <span>ASAP</span>
-              </label>
               <div className="space-y-1">
                 <label className="flex items-start gap-2 text-xs text-muted-foreground">
                   <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
@@ -317,7 +253,7 @@ export default function PublicBookingForm({ guestOnly = false }) {
             <ArrowLeft className="h-4 w-4" /> Back
           </Button>
         )}
-        {step < 3 ? (
+        {step < 2 ? (
           <Button type="button" onClick={goNext} className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground">
             Next <ArrowRight className="h-4 w-4" />
           </Button>

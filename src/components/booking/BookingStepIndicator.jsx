@@ -1,7 +1,7 @@
 import React from "react";
 import { Check } from "lucide-react";
 
-const STEPS = ["Your Details", "Scooter", "Issue & Schedule"];
+const STEPS = ["Your Details", "Scooter & Issue"];
 
 export default function BookingStepIndicator({ step }) {
   return (
