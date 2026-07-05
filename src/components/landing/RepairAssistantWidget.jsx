@@ -54,19 +54,49 @@ function promptFor(stage, context) {
 }
 
 export default function RepairAssistantWidget() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", text: OPENING }]);
   const [input, setInput] = useState("");
   const [context, setContext] = useState({ issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [unread, setUnread] = useState(0);
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
   const busyRef = useRef(false);
+  const readCountRef = useRef(0);
+  const autoOpenRef = useRef(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Auto-open on first scroll or after 10 seconds, whichever comes first.
+  useEffect(() => {
+    const trigger = () => {
+      if (autoOpenRef.current) return;
+      autoOpenRef.current = true;
+      setOpen(true);
+    };
+    const timer = setTimeout(trigger, 10000);
+    const onScroll = () => trigger();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  // Track unread assistant messages while the widget is minimised.
+  useEffect(() => {
+    if (open) {
+      readCountRef.current = messages.length;
+      setUnread(0);
+    } else {
+      const diff = messages.length - readCountRef.current;
+      setUnread(diff > 0 ? diff : 0);
+    }
+  }, [messages, open]);
 
   const stage = useMemo(() => computeStage(context), [context]);
 
@@ -195,12 +225,31 @@ export default function RepairAssistantWidget() {
     return [];
   }, [stage, context.make]);
 
-  const showTextInput = !["make", "model", "safety"].includes(stage) && !result;
+  const showTextInput = !result;
+
+  const handleOpen = () => {
+    autoOpenRef.current = true;
+    setOpen(true);
+  };
 
   if (!open) {
+    if (unread > 0) {
+      return (
+        <button
+          onClick={handleOpen}
+          className="fixed bottom-4 right-4 z-40 grid h-14 w-14 animate-in fade-in slide-in-from-bottom-3 duration-500 place-items-center rounded-full bg-accent text-accent-foreground shadow-xl shadow-slate-900/20 transition hover:bg-accent/90 sm:bottom-5 sm:right-5"
+          aria-label={`Open scooter repair assistant — ${unread} unread message${unread === 1 ? "" : "s"}`}
+        >
+          <Bot className="h-6 w-6" />
+          <span className="absolute -right-1 -top-1 grid h-6 min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground ring-2 ring-card">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        </button>
+      );
+    }
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-3 duration-500 items-center gap-2 rounded-full border border-accent/30 bg-card px-4 py-3 text-sm font-bold text-foreground shadow-xl shadow-slate-900/10 transition hover:border-accent hover:bg-accent/10 sm:bottom-5 sm:right-5"
         aria-label="Open scooter repair assistant"
       >
