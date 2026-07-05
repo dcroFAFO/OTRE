@@ -12,13 +12,14 @@ import { DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import PhoneNumberField from "@/components/booking/PhoneNumberField";
 import PreferredDateField from "@/components/booking/PreferredDateField";
+import BookingStepIndicator from "@/components/booking/BookingStepIndicator";
+import RideableToggle from "@/components/booking/RideableToggle";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { normalizePhoneToE164 } from "@/lib/phone";
-import { CheckCircle2, Loader2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Upload, ArrowLeft, ArrowRight } from "lucide-react";
 
 const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
-const options = (key) => field(key).options || [];
 
 const EMPTY = {
   customer_name: "",
@@ -78,6 +79,7 @@ function getBookingPrefill() {
 export default function PublicBookingForm({ guestOnly = false }) {
   const { data: { services } } = usePlatformConfig();
   const [form, setForm] = useState(() => ({ ...EMPTY, ...getBookingPrefill() }));
+  const [step, setStep] = useState(1);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -91,27 +93,41 @@ export default function PublicBookingForm({ guestOnly = false }) {
   };
   const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
   const isOther = form.issue_type === "Other";
-  const issueValid = form.issue_type && (!isOther || form.issue_description.trim());
 
-  const validateForm = () => {
+  const validateStep1 = () => {
     const nextErrors = {};
     if (!form.customer_name.trim()) nextErrors.customer_name = "Please enter your name.";
     if (!form.customer_email.trim()) nextErrors.customer_email = "Please enter your email.";
     if (!form.phone.trim()) nextErrors.phone = "Please enter your phone number.";
-
     const normalizedPhone = normalizePhoneToE164(form.phone);
     if (form.phone.trim() && !normalizedPhone.is_valid) nextErrors.phone = "Enter a valid Australian mobile number";
-    if (!dateValid) nextErrors.preferred_date = "Enter a valid date";
+    setErrors((current) => ({ ...current, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
 
+  const validateStep2 = () => {
+    const nextErrors = {};
     if (!form.asset_label.trim()) nextErrors.asset_label = "Please select your scooter make and model.";
     if (form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand) nextErrors.asset_label = `The selected model doesn't belong to ${form.asset_make}.`;
+    setErrors((current) => ({ ...current, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const nextErrors = {};
     if (!form.issue_type) nextErrors.issue_type = "Please select the repair type.";
     if (isOther && !form.issue_description.trim()) nextErrors.issue_description = "Please describe the issue.";
+    if (!dateValid) nextErrors.preferred_date = "Enter a valid date";
     if (!form.consent) nextErrors.consent = "Please confirm we can contact you about this booking.";
-
-    setErrors(nextErrors);
-    return { isValid: Object.keys(nextErrors).length === 0, normalizedPhone };
+    setErrors((current) => ({ ...current, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
   };
+
+  const goNext = () => {
+    if (step === 1 && validateStep1()) setStep(2);
+    else if (step === 2 && validateStep2()) setStep(3);
+  };
+  const goBack = () => setStep((s) => Math.max(1, s - 1));
 
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -125,12 +141,11 @@ export default function PublicBookingForm({ guestOnly = false }) {
   const submit = async (e) => {
     e.preventDefault();
     if (submitting) return;
-
-    const { isValid, normalizedPhone } = validateForm();
-    if (!isValid) return;
+    if (!validateStep3()) return;
 
     setSubmitting(true);
     try {
+      const normalizedPhone = normalizePhoneToE164(form.phone);
       const issue_description = isOther ? form.issue_description.trim() : form.issue_type;
       const result = await createBookingRequest({
         ...form,
@@ -192,8 +207,10 @@ export default function PublicBookingForm({ guestOnly = false }) {
 
   return (
     <form onSubmit={submit} noValidate aria-busy={submitting} className="rounded-2xl border border-border bg-card p-4 shadow-xl space-y-3 lg:p-5">
+      <BookingStepIndicator step={step} />
+
       <div className={submitting ? "space-y-3 opacity-60 pointer-events-none" : "space-y-3"}>
-        <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+        {step === 1 && (
           <section className="space-y-2.5">
             <h2 className="font-heading text-base font-extrabold">Your Details</h2>
             <div className="grid gap-2">
@@ -206,6 +223,14 @@ export default function PublicBookingForm({ guestOnly = false }) {
                 onChange={(e) => set("phone", e.target.value)}
                 error={errors.phone}
               />
+            </div>
+          </section>
+        )}
+
+        {step === 2 && (
+          <section className="space-y-2.5">
+            <h2 className="font-heading text-base font-extrabold">Scooter Details</h2>
+            <div className="grid gap-2">
               <Field label={field("asset_label").label || "Scooter"} required error={errors.asset_label}>
                 <AssetBrandPicker
                   make={form.asset_make}
@@ -217,13 +242,17 @@ export default function PublicBookingForm({ guestOnly = false }) {
                     setErrors((current) => ({ ...current, asset_label: null }));
                   }}
                 />
-
+              </Field>
+              <Field label={field("rideable").label || "Is it rideable?"}>
+                <RideableToggle value={form.rideable} onChange={(v) => set("rideable", v)} />
               </Field>
             </div>
           </section>
+        )}
 
+        {step === 3 && (
           <section className="space-y-2.5">
-            <h2 className="font-heading text-base font-extrabold">Repair Details</h2>
+            <h2 className="font-heading text-base font-extrabold">Issue & Schedule</h2>
             <div className="grid gap-2">
               <Field label={field("issue_description").label || "Issue"} required error={errors.issue_type || errors.issue_description}>
                 <Select value={form.issue_type} onValueChange={(v) => {
@@ -238,12 +267,6 @@ export default function PublicBookingForm({ guestOnly = false }) {
                 </Select>
                 {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" />}
               </Field>
-              <Field label={field("rideable").label || "Is it rideable?"}>
-                <Select value={form.rideable ? "yes" : "no"} onValueChange={(v) => set("rideable", v === "yes")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{options("rideable").map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
               <Field label={field("photo").label || "Photo"}>
                 <label className="flex h-9 items-center gap-2 cursor-pointer rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground hover:border-accent transition-colors">
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
@@ -251,12 +274,6 @@ export default function PublicBookingForm({ guestOnly = false }) {
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
                 </label>
               </Field>
-            </div>
-          </section>
-
-          <section className="space-y-2.5">
-            <h2 className="font-heading text-base font-extrabold">Scheduling</h2>
-            <div className="grid gap-2">
               <Field label={field("preferred_date").label || "Preferred date"} error={errors.preferred_date}>
                 <PreferredDateField
                   value={form.preferred_date}
@@ -269,24 +286,23 @@ export default function PublicBookingForm({ guestOnly = false }) {
               <Field label={field("preferred_time_window").label || "Preferred time"}>
                 <Select value={form.preferred_time_window} onValueChange={(v) => set("preferred_time_window", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{options("preferred_time_window").map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(field("preferred_time_window").options || []).map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Checkbox checked={form.asap} onCheckedChange={(v) => setForm((f) => ({ ...f, asap: !!v, preferred_date: v ? "" : f.preferred_date }))} />
                 <span>ASAP</span>
               </label>
+              <div className="space-y-1">
+                <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
+                  <span>I agree to be contacted about this booking and understand my booking details should be kept private.</span>
+                </label>
+                {errors.consent && <p className="text-xs text-destructive">{errors.consent}</p>}
+              </div>
             </div>
           </section>
-        </div>
-
-        <div className="space-y-1">
-          <label className="flex items-start gap-2 text-xs text-muted-foreground">
-            <Checkbox checked={form.consent} onCheckedChange={(v) => set("consent", !!v)} className="mt-0.5" />
-            <span>I agree to be contacted about this booking and understand my booking details should be kept private.</span>
-          </label>
-          {errors.consent && <p className="text-xs text-destructive">{errors.consent}</p>}
-        </div>
+        )}
       </div>
 
       {submitting && (
@@ -295,9 +311,22 @@ export default function PublicBookingForm({ guestOnly = false }) {
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg disabled:cursor-not-allowed">
-        {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Submitting repair request…</> : "Submit Repair Request"}
-      </Button>
+      <div className="flex gap-2">
+        {step > 1 && (
+          <Button type="button" variant="outline" onClick={goBack} disabled={submitting} className="flex-1">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
+        )}
+        {step < 3 ? (
+          <Button type="button" onClick={goNext} className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground">
+            Next <ArrowRight className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button type="submit" disabled={submitting} className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground disabled:cursor-not-allowed">
+            {submitting ? <><Loader2 className="h-5 w-5 animate-spin" /> Submitting…</> : "Submit Repair Request"}
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
