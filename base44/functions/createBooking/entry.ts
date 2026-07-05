@@ -164,40 +164,6 @@ async function resolveBookingScooter(base44, customer, booking) {
   return await base44.asServiceRole.entities.Scooter.create({ ...data, customer_id: stableId, customer_account_id: customer.id });
 }
 
-async function sendMail({ to, subject, body }) {
-  const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) return null;
-  const res = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'OTR Scooters <hello@ontherunelectrics.com.au>', to: [to], subject, html: body }) });
-  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
-  return res.json();
-}
-
-async function sendSms({ to, body }) {
-  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const from = Deno.env.get('TWILIO_FROM_NUMBER');
-  if (!accountSid || !authToken || !from || !to) return null;
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, { method: 'POST', headers: { Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ From: from, To: to, Body: body }) });
-  if (!res.ok) throw new Error(`Twilio SMS failed: ${await res.text()}`);
-  return res.json();
-}
-
-function customerConfirmationSms(job, manageLink) {
-  const reference = job.reference ? ` (${job.reference})` : '';
-  return manageLink
-    ? `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. View it in your customer portal: ${manageLink}`
-    : `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. We will review it and keep you updated.`;
-}
-
-function customerConfirmationHtml(job, manageLink) {
-  const assetLabel = job.asset_label || '—';
-  const firstName = (job.customer_name || 'there').split(' ')[0];
-  const reference = job.reference || '—';
-  const portalButton = manageLink ? `<table cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:10px;background:#0ea5e9;"><a href="${manageLink}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">View in Customer Portal</a></td></tr></table>` : '';
-  const accountNote = manageLink ? 'You can manage this repair from your customer portal.' : 'We will send repair updates to the email address or mobile number on this booking.';
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);"><tr><td style="background:#0f172a;padding:28px 32px;"><p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p><h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Booking Confirmed</h1></td></tr><tr><td style="padding:32px;"><p style="margin:0 0 16px;font-size:15px;color:#1e293b;line-height:1.6;">Hi ${firstName},</p><p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">Your repair request has been submitted. We will review the details and send updates as the job progresses.</p><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:16px 20px;margin-bottom:24px;"><tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Reference:</strong> ${reference}</td></tr><tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Scooter:</strong> ${assetLabel}</td></tr>${job.issue_description ? `<tr><td style="padding:6px 0;font-size:14px;color:#1e293b;"><strong>Issue reported:</strong> ${job.issue_description}</td></tr>` : ''}</table>${portalButton}<p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">${accountNote}</p></td></tr></table></td></tr></table></body></html>`;
-}
-
 Deno.serve(async (req) => {
   const requestMeta = { fn: 'createBooking' };
   try {
@@ -245,8 +211,7 @@ Deno.serve(async (req) => {
     const portalLink = customerUserId ? `${origin}/portal` : null;
     const managePath = customerUserId ? '/portal' : null;
     const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
-    await sendMail({ to: email, subject: `Booking confirmed${job.reference ? ` (${job.reference})` : ''} — OTR Scooters`, body: customerConfirmationHtml(job, portalLink) }).catch((mailErr) => console.warn('[createBooking] customer confirmation email skipped:', mailErr.message));
-    await sendSms({ to: phone, body: customerConfirmationSms(job, portalLink) }).catch((smsErr) => console.warn('[createBooking] customer confirmation SMS skipped:', smsErr.message));
+    await base44.asServiceRole.functions.invoke('notifyNewBooking', { event: { type: 'create', entity_name: 'Job', entity_id: job.id }, data: { ...job, manage_link: portalLink } }).catch((notifyErr) => console.error('[createBooking] notifyNewBooking invoke failed:', notifyErr.message));
     return Response.json({ reference: job.reference, managePath, accountPath, job_id: job.id, customer_profile_id: profile.id, customer_account_id: customerRecord?.id || '', asset_id: scooter?.id || '', linked: !!customerUserId });
   } catch (error) {
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));

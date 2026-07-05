@@ -109,12 +109,14 @@ function staffBookingHtml(job) {
 </html>`;
 }
 
-function customerConfirmationSms(job) {
+function customerConfirmationSms(job, manageLink) {
   const reference = job.reference ? ` (${job.reference})` : "";
-  return `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. Our team will contact you shortly to confirm the appointment.`;
+  return manageLink
+    ? `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. View it in your customer portal: ${manageLink}`
+    : `On The Run Electrics: Thanks, we've received your scooter repair booking${reference}. Our team will contact you shortly to confirm the appointment.`;
 }
 
-function customerConfirmationHtml(job) {
+function customerConfirmationHtml(job, manageLink) {
   const assetLabel = job.asset_label || job.scooter_label || "—";
   const firstName = (job.customer_name || "there").split(" ")[0];
   const reference = job.reference || "—";
@@ -144,6 +146,7 @@ function customerConfirmationHtml(job) {
             <li>Once we have your scooter, a technician will diagnose the issue and send you a quote.</li>
             <li>After you approve the quote, we'll complete the repair and let you know when it's ready for pickup.</li>
           </ol>
+          ${manageLink ? `<table cellpadding="0" cellspacing="0" style="margin:0 0 16px;"><tr><td style="border-radius:10px;background:#0ea5e9;"><a href="${manageLink}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">View in Customer Portal</a></td></tr></table>` : ""}
           <p style="margin:0;font-size:14px;color:#475569;line-height:1.6;">You can track your job progress at any time via your <a href="https://ontherunelectrics.com.au/portal" style="color:#0ea5e9;text-decoration:none;">customer portal</a>.</p>
           <p style="margin:16px 0 0;font-size:14px;color:#475569;line-height:1.6;">Questions? Reply to this email or call us and we'll be happy to help.</p>
         </td></tr>
@@ -190,24 +193,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Public bookings send customer confirmation from createBooking so the private tracking link can be included.
-    if (data.source !== "public_booking") {
-      if (data.customer_email) {
-        if (staffRecipients.length > 0) await sleep(600);
-        await sendMail({
-          to: data.customer_email,
-          subject: `Booking confirmed${reference} — ${BUSINESS.name}`,
-          body: customerConfirmationHtml(data),
-          from_name: BUSINESS.name,
-        });
-      }
-      const smsTo = normalizePhoneE164(data.customer_phone_e164 || data.customer_phone);
-      if (smsTo) {
-        await sendSms({
-          to: smsTo,
-          body: customerConfirmationSms(data),
-        }).catch((smsErr) => console.warn("[notifyNewBooking] customer confirmation SMS skipped:", smsErr.message));
-      }
+    // Customer confirmation for all booking sources (public + staff-created). manageLink included when the customer has a portal account.
+    const manageLink = data.manage_link || data.portal_link || null;
+    if (data.customer_email) {
+      if (staffRecipients.length > 0) await sleep(600);
+      await sendMail({
+        to: data.customer_email,
+        subject: `Booking confirmed${reference} — ${BUSINESS.name}`,
+        body: customerConfirmationHtml(data, manageLink),
+        from_name: BUSINESS.name,
+      });
+    }
+    const smsTo = normalizePhoneE164(data.customer_phone_e164 || data.customer_phone);
+    if (smsTo) {
+      await sendSms({
+        to: smsTo,
+        body: customerConfirmationSms(data, manageLink),
+      }).catch((smsErr) => console.warn("[notifyNewBooking] customer confirmation SMS skipped:", smsErr.message));
     }
 
     const allRecipients = [...staffRecipients, ...(data.customer_email ? [data.customer_email] : []), ...(data.customer_phone ? [data.customer_phone] : [])];
