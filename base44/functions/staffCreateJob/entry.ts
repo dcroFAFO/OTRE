@@ -26,22 +26,6 @@ function scooterMatches(a, b) {
   return !!cleanText(a.model) && cleanText(a.make) === cleanText(b.make) && cleanText(a.model) === cleanText(b.model);
 }
 
-async function sendMail({ to, subject, body }) {
-  const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) { console.warn('RESEND_API_KEY not set — skipping email'); return; }
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 'On The Run Electrics <hello@ontherunelectrics.com.au>', to: [to], subject, html: body }),
-  });
-  if (!res.ok) console.error('Email send failed:', await res.text());
-}
-
-function customerWelcomeHtml({ name, reference }) {
-  const firstName = (name || 'there').split(' ')[0];
-  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:32px;"><div style="max-width:560px;margin:auto;background:white;border-radius:12px;padding:32px;"><h1>Your repair job has been created</h1><p>Hi ${firstName},</p><p>A repair job has been created for your scooter. Your job reference is <strong>${reference}</strong>.</p><p>Our team will be in touch shortly.</p></div></body></html>`;
-}
-
 async function resolveCustomer(entities, { linkedCustomerId, name, email, phone }) {
   let customer = null;
   if (linkedCustomerId) {
