@@ -1,0 +1,108 @@
+{
+  "name": "SocialConnection",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Stable customer identifier this connection belongs to."
+    },
+    "customer_account_id": {
+      "type": "string",
+      "description": "Linked Customer entity record id."
+    },
+    "auth_user_id": {
+      "type": "string",
+      "description": "Authenticated app user id who owns this connection."
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "facebook",
+        "instagram",
+        "tiktok",
+        "youtube",
+        "x_twitter",
+        "linkedin",
+        "website"
+      ]
+    },
+    "handle": {
+      "type": "string",
+      "description": "Display handle or username, e.g. @myhandle"
+    },
+    "profile_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_connected",
+        "manual",
+        "connected",
+        "pending",
+        "disabled"
+      ],
+      "default": "manual",
+      "description": "manual = customer saved their profile details manually. connected/pending reserved for future OAuth integrations."
+    },
+    "external_account_id": {
+      "type": "string",
+      "description": "Reserved for future OAuth integrations."
+    },
+    "token_meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Placeholder for future OAuth token metadata (expiry, scopes). Never store real access tokens here."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "platform"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "data.auth_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

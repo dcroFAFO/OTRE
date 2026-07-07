@@ -15,6 +15,7 @@ import Contact from '@/pages/Contact';
 import GuestBooking from '@/pages/GuestBooking';
 import ProfileSetup from '@/pages/ProfileSetup';
 import Portal from '@/pages/Portal';
+import PortalSettings from '@/pages/PortalSettings';
 import Store from '@/pages/Store';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -69,6 +70,7 @@ const AuthenticatedApp = () => {
       <Route path="/book/guest" element={<GuestBooking />} />
       <Route path="/profile-setup" element={<ProfileSetup />} />
       <Route path="/portal" element={<Portal />} />
+      <Route path="/portal/settings" element={<PortalSettings />} />
       <Route path="/store" element={<Store />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />

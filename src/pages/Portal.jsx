@@ -91,7 +91,10 @@ export default function Portal() {
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-4xl px-5 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2"><span className="grid place-items-center h-8 w-8 rounded-lg bg-accent/15 text-accent"><Zap className="h-4 w-4" /></span><span className="font-heading font-extrabold">{business.name}</span></Link>
-          <button onClick={() => base44.auth.logout()} className="text-sm text-muted-foreground hover:text-foreground">Sign out</button>
+          <div className="flex items-center gap-4">
+            <Link to="/portal/settings" className="text-sm text-muted-foreground hover:text-foreground">Settings</Link>
+            <button onClick={() => base44.auth.logout()} className="text-sm text-muted-foreground hover:text-foreground">Sign out</button>
+          </div>
         </div>
       </header>
 
