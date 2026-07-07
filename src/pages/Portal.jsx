@@ -20,6 +20,7 @@ export default function Portal() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [showBooking, setShowBooking] = useState(false);
   const [tutorialDone, setTutorialDone] = useState(false);
+  const [pendingJob, setPendingJob] = useState(null);
   const qc = useQueryClient();
 
   const { data: jobs = [] } = useQuery({
@@ -81,6 +82,8 @@ export default function Portal() {
     );
   }
 
+  const tutorialActive = !showBooking && !user.hasSeenCustomerPortalTutorial && !tutorialDone;
+
   return (
     <>
     {portalSeo}
@@ -116,7 +119,7 @@ export default function Portal() {
         </div>
       </main>
 
-      <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
+      <CustomerJobModal job={selectedJob} open={!!selectedJob && !tutorialActive} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
       <CustomerBookingModal
         open={showBooking}
         onClose={() => setShowBooking(false)}
@@ -127,12 +130,22 @@ export default function Portal() {
         onManage={async (jobId) => {
           if (!jobId) return;
           const job = await base44.entities.Job.get(jobId).catch(() => null);
-          if (job) setSelectedJob(job);
+          if (!job) return;
+          // If the tutorial hasn't been seen yet, it takes priority — hold the
+          // job and let the tutorial controller open it when the tour finishes.
+          if (!user.hasSeenCustomerPortalTutorial && !tutorialDone) setPendingJob(job);
+          else setSelectedJob(job);
         }}
       />
 
-      {!showBooking && !user.hasSeenCustomerPortalTutorial && !tutorialDone && (
-        <PortalTutorial onDone={() => setTutorialDone(true)} />
+      {tutorialActive && (
+        <PortalTutorial
+          onDone={(completed) => {
+            setTutorialDone(true);
+            if (completed && pendingJob) setSelectedJob(pendingJob);
+            setPendingJob(null);
+          }}
+        />
       )}
 
       <SupportChat user={user} />

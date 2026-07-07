@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, Wrench, CreditCard } from "lucide-react";
@@ -7,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import TutorialBubble from "@/components/portal/tutorial/TutorialBubble";
 
 // All data in this file is mock/tutorial-only. Nothing here reads or writes real records.
+// This is intentionally NOT a real Dialog — it's a midground mock so the tutorial
+// bubble can always float above it in the foreground layer.
 
 const MILESTONES = ["Booking Received", "Job Booked", "Repair Underway", "Ready for Pickup", "Invoice Issued", "Paid", "Completed"];
 
@@ -98,9 +99,9 @@ function HistoryMock() {
 }
 
 const BUBBLES = {
-  status: { title: "Track your job status", text: "This is where you can check the status of your job — watch it move through each stage from booking to completion. (This is just a demo — your real job isn't changing.)" },
-  invoices: { title: "Review and settle invoices", text: "The Invoices tab is where you can review invoices from our technicians and securely pay any outstanding balance. (These are example invoices.)" },
-  history: { title: "Your ride's log book", text: "The History tab tracks every job on your ride — like a mechanic's log book for your scooter. (These are example jobs.)" },
+  status: { title: "Track your job status", text: "This is where you can check the status of your job — watch it move through each stage from booking to completion." },
+  invoices: { title: "Review and settle invoices", text: "The Invoices tab is where you can review invoices from our technicians and securely pay any outstanding balance." },
+  history: { title: "Your ride's log book", text: "The History tab tracks every job on your ride — like a mechanic's log book for your scooter." },
 };
 
 export default function TutorialMockJobModal({ step, onNext, onClose }) {
@@ -108,28 +109,36 @@ export default function TutorialMockJobModal({ step, onNext, onClose }) {
   const bubble = BUBBLES[tab];
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-heading text-lg font-extrabold">
-            <span>Xiaomi Pro 2</span>
+    <div className="fixed inset-0 z-[90]">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" />
+
+      {/* Midground: mock job details modal */}
+      <div className="absolute inset-0 flex items-start justify-center overflow-hidden p-4 pt-[6vh] pb-48">
+        <div className="flex max-h-full w-full max-w-lg flex-col rounded-3xl border border-border/50 bg-background p-6 shadow-2xl sm:p-8">
+          <div className="flex items-center gap-2">
+            <h2 className="font-heading text-lg font-extrabold">Xiaomi Pro 2</h2>
             <span className="text-xs font-normal text-muted-foreground">#OTR-DEMO</span>
-          </DialogTitle>
-        </DialogHeader>
-        <Tabs value={tab} className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="mb-1 grid w-full grid-cols-3">
-            <TabsTrigger value="status" className="pointer-events-none text-xs">Status</TabsTrigger>
-            <TabsTrigger value="invoices" className="pointer-events-none text-xs">Invoices</TabsTrigger>
-            <TabsTrigger value="history" className="pointer-events-none text-xs">History</TabsTrigger>
-          </TabsList>
-          <div className="flex-1 overflow-y-auto pr-1">
-            {tab === "status" && <StatusAnimation />}
-            {tab === "invoices" && <InvoicesMock />}
-            {tab === "history" && <HistoryMock />}
           </div>
-        </Tabs>
-        <TutorialBubble title={bubble.title} text={bubble.text} onNext={onNext} onClose={onClose} nextLabel={tab === "history" ? "Finish" : "Next"} className="mt-2 max-w-none" />
-      </DialogContent>
-    </Dialog>
+          <Tabs value={tab} className="mt-4 flex min-h-0 flex-1 flex-col">
+            <TabsList className="mb-1 grid w-full grid-cols-3">
+              <TabsTrigger value="status" className="pointer-events-none text-xs">Status</TabsTrigger>
+              <TabsTrigger value="invoices" className="pointer-events-none text-xs">Invoices</TabsTrigger>
+              <TabsTrigger value="history" className="pointer-events-none text-xs">History</TabsTrigger>
+            </TabsList>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              {tab === "status" && <StatusAnimation />}
+              {tab === "invoices" && <InvoicesMock />}
+              {tab === "history" && <HistoryMock />}
+            </div>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Foreground: floating tutorial bubble, always above the mock modal */}
+      <div className="absolute inset-x-0 bottom-6 z-[100] flex justify-center px-4">
+        <TutorialBubble arrow="up" title={bubble.title} text={bubble.text} onNext={onNext} onClose={onClose} nextLabel={tab === "history" ? "Finish" : "Next"} />
+      </div>
+    </div>
   );
 }
