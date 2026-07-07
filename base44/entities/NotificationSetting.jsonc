@@ -1,0 +1,52 @@
+{
+  "name": "NotificationSetting",
+  "type": "object",
+  "properties": {
+    "notify_status_change": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email customers and staff when job status changes"
+    },
+    "notify_new_booking": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email customers and staff when a new booking is created"
+    },
+    "notify_invoice": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email customers and staff on invoice received / settled"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
