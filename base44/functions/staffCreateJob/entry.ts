@@ -160,8 +160,6 @@ Deno.serve(async (req) => {
     if (scooter?.id) await entities.Scooter.update(scooter.id, { job_id: addIdList(scooter.job_id, job.id), last_service_date: intake.date || scooter.last_service_date || '' }).catch(() => null);
     await entities.Customer.update(customer.id, { job_id: addIdList(customer.job_id, job.id), last_activity_date: now }).catch(() => null);
 
-    if (isNewCustomer && email) await sendMail({ to: email, subject: `Your repair job has been created — On The Run Electrics (${reference})`, body: customerWelcomeHtml({ name: intake.customerName, reference }) }).catch((err) => console.warn('Welcome email failed:', err.message));
-
     console.log(`[staffCreateJob] Job ${job.id} created for customer ${stableCustomerId} by ${user.full_name}`);
     return Response.json({ success: true, job, customer_id: stableCustomerId, customer_account_id: customer.id, asset_id: scooter?.id || '', is_new_customer: isNewCustomer, reference });
   } catch (error) {
