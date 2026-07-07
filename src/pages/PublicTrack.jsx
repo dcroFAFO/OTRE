@@ -5,7 +5,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import StatusPill from "@/components/shared/StatusPill";
-import { AlertCircle, CreditCard, FileText, Loader2, MessageSquare, Upload } from "lucide-react";
+import { AlertCircle, CreditCard, Loader2, MessageSquare, Upload } from "lucide-react";
 
 function money(value, currency = "AUD") {
   return `${currency} ${(Number(value) || 0).toFixed(2)}`;
@@ -107,18 +107,6 @@ export default function PublicTrack() {
                   <StatusPill value={data.job.status} />
                 </div>
               </div>
-
-              {data.quote && (
-                <Card title="Estimate" icon={FileText}>
-                  <div className="space-y-3">
-                    {data.quote.diagnosis_notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap"><strong className="text-foreground">Diagnosis:</strong> {data.quote.diagnosis_notes}</p>}
-                    {data.quote.recommended_repair && <p className="text-sm text-muted-foreground whitespace-pre-wrap"><strong className="text-foreground">Recommended repair:</strong> {data.quote.recommended_repair}</p>}
-                    {(data.quote.line_items || []).length > 0 && <LineItems items={data.quote.line_items} currency={data.quote.currency} />}
-                    <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3"><span className="text-sm font-medium">Estimate total</span><strong>{money(data.quote.total, data.quote.currency)}</strong></div>
-
-                  </div>
-                </Card>
-              )}
 
               {data.invoice && (
                 <Card title="Invoice" icon={CreditCard}>

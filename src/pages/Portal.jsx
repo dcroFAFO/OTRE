@@ -51,7 +51,7 @@ export default function Portal() {
     if (params.get("book") === "1") setShowBooking(true);
   }, [user]);
 
-  const portalSeo = <SEO title="Customer Portal | OTR Scooters" description="Secure customer portal for tracking scooter repairs, approving quotes, checking invoices and managing repair bookings." canonical="/portal" noindex />;
+  const portalSeo = <SEO title="Customer Portal | On The Run Electrics" description="Secure customer portal for tracking scooter repairs, viewing and paying invoices, and managing repair bookings." canonical="/portal" noindex />;
 
   if (isLoading) return <>{portalSeo}<Spinner /></>;
 
@@ -97,7 +97,7 @@ export default function Portal() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-heading text-2xl font-extrabold tracking-tight">Your {app.terminology.jobPlural}</h1>
-            <p className="text-muted-foreground text-sm">Track progress and approve quotes online.</p>
+            <p className="text-muted-foreground text-sm">Track progress and view your invoices online.</p>
           </div>
           <Button onClick={() => setShowBooking(true)} className="gap-2 rounded-xl">
             <Plus className="h-4 w-4" /> New booking
