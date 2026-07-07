@@ -247,10 +247,9 @@ Deno.serve(async (req) => {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
         if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
-        const emailResult = await base44.functions.invoke("sendInvoiceEmail", { jobId: job.id });
-        const latestInvoice = await base44.asServiceRole.entities.Invoice.get(invoice.id);
-        await logAudit({ eventType: "invoice_sent_to_customer", summary: `Invoice sent to ${job.customer_email || "customer"}`, visibility: "customer" });
-        return Response.json({ ...latestInvoice, email: emailResult.data || emailResult });
+        result = await makeInvoiceVisible(base44, invoice);
+        await logAudit({ eventType: "invoice_sent_to_customer", summary: "Invoice made available to the customer in the portal", visibility: "customer" });
+        break;
       }
       case "set_payment_status": {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
