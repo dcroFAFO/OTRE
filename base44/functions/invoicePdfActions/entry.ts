@@ -1,9 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { jsPDF } from 'npm:jspdf@4.2.1';
-import Stripe from 'npm:stripe@17.5.0';
-
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { apiVersion: '2024-12-18.acacia' });
-const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
 
 const DEFAULT_BUSINESS = {
   name: "On The Run Electrics",
@@ -39,65 +35,6 @@ async function getBusiness(base44) {
   } catch {
     return DEFAULT_BUSINESS;
   }
-}
-
-async function sendMail({ to, subject, html, fromName, fileName, pdfBase64 }) {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) throw new Error("RESEND_API_KEY not set");
-  const recipients = String(to).split(",").map((e) => e.trim()).filter(Boolean);
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: `${fromName || DEFAULT_BUSINESS.name} <hello@ontherunelectrics.com.au>`,
-      to: recipients,
-      subject,
-      html,
-      attachments: [{ filename: fileName, content: pdfBase64 }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
-  return res.json();
-}
-
-async function createPaymentUrl({ base44, req, invoice, job }) {
-  if (blockingStatuses.has(invoice.status)) return null;
-  const amount = Math.round((Number(invoice.amount) || 0) * 100);
-  if (amount <= 0) return null;
-
-  const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://app.base44.com';
-  const metadata = {
-    base44_app_id: Deno.env.get('BASE44_APP_ID') || '',
-    invoice_id: invoice.id,
-    job_id: invoice.job_id || '',
-    customer_id: invoice.customer_id || '',
-  };
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    customer_email: job.customer_email || undefined,
-    line_items: [{
-      quantity: 1,
-      price_data: {
-        currency: String(invoice.currency || 'AUD').toLowerCase(),
-        unit_amount: amount,
-        product_data: {
-          name: invoice.number ? `Invoice ${invoice.number}` : 'Invoice payment',
-          description: job.reference ? `Job ${job.reference}` : 'Invoice payment',
-        },
-      },
-    }],
-    success_url: `${origin}/portal?payment=success&invoice=${encodeURIComponent(invoice.id)}`,
-    cancel_url: `${origin}/portal?payment=cancelled&invoice=${encodeURIComponent(invoice.id)}`,
-    metadata,
-    payment_intent_data: { metadata },
-  });
-
-  await base44.asServiceRole.entities.Invoice.update(invoice.id, {
-    payment_provider: 'stripe',
-    payment_intent_ref: session.id,
-  });
-  return session.url;
 }
 
 function normaliseCategory(value) {
@@ -439,28 +376,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: "Invoice could not be generated." }, { status: 500 });
       }
 
-      const total = Number(savedInvoice.amount) || lineItems.reduce((sum, item) => sum + lineTotal(item), 0);
-      let paymentUrl = null;
-      try {
-        paymentUrl = await createPaymentUrl({ base44, req, invoice: savedInvoice, job });
-      } catch (paymentError) {
-        console.warn("[invoicePdfActions] payment link skipped", paymentError.message);
-      }
-
-      try {
-        await sendMail({
-          to: job.customer_email,
-          subject: `Tax invoice ${savedInvoice.number} from ${business.name}`,
-          fromName: business.name,
-          fileName,
-          pdfBase64,
-          html: `<p>Hi ${job.customer_name || "there"},</p><p>Please find your tax invoice attached for job ${job.reference || job.id}.</p><p><strong>Total due:</strong> ${money(savedInvoice.currency || "AUD", total)}</p>${paymentUrl ? `<p><a href="${paymentUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;">Pay securely with Stripe</a></p>` : ""}<p>Regards,<br>${business.name}</p>`,
-        });
-      } catch (emailError) {
-        console.error("[invoicePdfActions] email sending failed", JSON.stringify({ ...requestMeta, invoiceId: savedInvoice.id, message: emailError.message, stack: emailError.stack }));
-        return Response.json({ error: "Email sending failed." }, { status: 500 });
-      }
-
+      // No email is sent — the invoice is finalised and made visible in the customer portal only.
       const now = new Date().toISOString();
       const visibleInvoice = await base44.asServiceRole.entities.Invoice.update(savedInvoice.id, {
         invoiceVisibility: "customer_visible",
@@ -474,21 +390,21 @@ Deno.serve(async (req) => {
         status: ["ready_for_pickup", "paid", "completed"].includes(job.status) ? job.status : "invoice_sent",
       });
       await base44.asServiceRole.entities.AuditEvent.create({
-        event_type: "invoice_pdf_emailed",
+        event_type: "invoice_finalised",
         job_id: job.job_id || job.id,
         customer_id: job.customer_id || "",
         actor_id: user.id,
         actor_name: user.full_name || "System",
         actor_role: user.role || "system",
-        summary: `Tax invoice PDF emailed to ${job.customer_email}`,
+        summary: "Tax invoice finalised and made visible to the customer",
         visibility: "customer",
       });
-      return Response.json({ sent: true, to: job.customer_email, fileName, invoice: visibleInvoice });
+      return Response.json({ sent: true, fileName, invoice: visibleInvoice });
     }
 
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
   } catch (error) {
     console.error("[invoicePdfActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    return Response.json({ error: requestMeta.action === "email" ? "Email sending failed." : "Invoice could not be generated." }, { status: 500 });
+    return Response.json({ error: "Invoice could not be generated." }, { status: 500 });
   }
 });

@@ -27,7 +27,6 @@ import Overview from '@/pages/dashboard/Overview';
 import Jobs from '@/pages/dashboard/Jobs';
 import Calendar from '@/pages/dashboard/Calendar';
 import Invoices from '@/pages/dashboard/Invoices';
-import Notifications from '@/pages/dashboard/Notifications';
 import Parts from '@/pages/dashboard/Parts';
 import AdminFeedback from '@/pages/admin/AdminFeedback';
 import AdminClients from '@/pages/admin/AdminClients';
@@ -82,7 +81,6 @@ const AuthenticatedApp = () => {
         <Route path="jobs" element={<Jobs />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="invoices" element={<Invoices />} />
-        <Route path="notifications" element={<Notifications />} />
         <Route path="parts" element={<Parts />} />
       </Route>
       <Route element={<DashboardLayout />}>

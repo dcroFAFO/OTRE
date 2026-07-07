@@ -256,7 +256,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       await emailInvoicePdf(job, draft, invoiceNotes, pdfRevision);
       await loadInvoiceData();
       setFinaliseStatus(ASYNC_STATES.SENT);
-      toast.success("Invoice sent to customer.");
+      toast.success("Invoice finalised and visible to the customer.");
       onChange?.();
     } catch (err) {
       const message = staffErrorMessage(err, "Email sending failed.");
