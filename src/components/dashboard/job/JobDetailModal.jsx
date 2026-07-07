@@ -2,11 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Bike, Calendar, User,
-  CreditCard, AlertTriangle, Hash, ArrowLeft,
-  ClipboardList, StickyNote, LockKeyhole, History, Paperclip, MoreHorizontal
-} from "lucide-react";
+import { Bike, Calendar, User, CreditCard, AlertTriangle, Hash } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import BillingPanel from "./BillingPanel";
@@ -16,8 +12,8 @@ import AuditTimeline from "./AuditTimeline";
 import AttachmentsPanel from "./AttachmentsPanel";
 import IntakePanel from "./IntakePanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
+import MobileJobWorkspace from "./mobile/MobileJobWorkspace";
 import { can } from "@/config/permissions";
-import { cn } from "@/lib/utils";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import {
   getVisibleJobTabs,
@@ -26,7 +22,7 @@ import {
 } from "@/config/jobDetailsTabConfig";
 import { format } from "date-fns";
 
-// Tab label map
+// Tab label map (desktop modal only — mobile uses its own workspace tabs)
 const TAB_LABELS = {
   intake: "Intake",
   billing: "Billing",
@@ -37,26 +33,14 @@ const TAB_LABELS = {
   files: "Files",
 };
 
-const TAB_ICONS = {
-  intake: ClipboardList,
-  billing: CreditCard,
-  customer: User,
-  notes: StickyNote,
-  private: LockKeyhole,
-  timeline: History,
-  files: Paperclip,
-};
-
-const PRIMARY_MOBILE_TABS = ["intake", "billing", "customer", "notes"];
-
 function useMobileJobWorkspace() {
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 1023px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const media = window.matchMedia("(max-width: 1023px)");
+    const media = window.matchMedia("(max-width: 767px)");
     const update = () => setIsMobile(media.matches);
     update();
     media.addEventListener("change", update);
@@ -96,26 +80,32 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
   if (!open) return null;
 
-  const detailProps = {
-    loadError,
-    job,
-    load,
-    actor,
-    canManage,
-    visibleTabs,
-    safeTab,
-    setActiveTab,
-    quoteReadOnly,
-    invoiceReadOnly,
-    role,
-    bump,
-    refreshKey,
-  };
-
   if (isMobileWorkspace) {
+    if (loadError) {
+      return (
+        <div className="lg:hidden fixed inset-0 z-50 bg-background flex flex-col items-center justify-center gap-3 text-muted-foreground">
+          <p className="text-sm">Failed to load job. Please try again.</p>
+          <button onClick={load} className="text-xs underline hover:text-foreground">Retry</button>
+        </div>
+      );
+    }
+    if (!job) {
+      return (
+        <div className="lg:hidden fixed inset-0 z-50 bg-background flex items-center justify-center">
+          <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
+        </div>
+      );
+    }
     return (
       <MobileJobWorkspace
-        {...detailProps}
+        job={job}
+        actor={actor}
+        canManage={canManage}
+        role={role}
+        bump={bump}
+        refreshKey={refreshKey}
+        quoteReadOnly={quoteReadOnly}
+        invoiceReadOnly={invoiceReadOnly}
         onClose={onClose}
       />
     );
@@ -124,244 +114,82 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 rounded-lg">
-        <JobDetailContent {...detailProps} />
+        {loadError ? (
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
+            <p className="text-sm">Failed to load job. Please try again.</p>
+            <button onClick={load} className="text-xs underline hover:text-foreground">Retry</button>
+          </div>
+        ) : !job ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            <JobModalHeader job={job} />
+
+            {canManage && (
+              <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
+            )}
+
+            <div className="flex-1 overflow-y-auto">
+              <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+                <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10">
+                  <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap justify-start">
+                    {visibleTabs.map((tab) => (
+                      <ModalTab
+                        key={tab}
+                        value={tab}
+                        label={TAB_LABELS[tab]}
+                        badge={
+                          tab === "billing" && job.payment_status && job.payment_status !== "unpaid"
+                            ? job.payment_status
+                            : tab === "intake" && job.intake?.intake_date
+                            ? "✓"
+                            : null
+                        }
+                      />
+                    ))}
+                  </TabsList>
+                </div>
+
+                <div className="p-5 flex-1 pb-safe">
+                  <TabsContent value="intake" className="mt-0">
+                    {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
+                  </TabsContent>
+                  <TabsContent value="billing" className="mt-0">
+                    {safeTab === "billing" && (
+                      <BillingPanel
+                        job={job}
+                        actor={actor}
+                        canEdit={canManage}
+                        quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
+                        invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
+                        onChange={bump}
+                      />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="customer" className="mt-0">
+                    {safeTab === "customer" && <CustomerHistoryPanel job={job} actor={actor} />}
+                  </TabsContent>
+                  <TabsContent value="notes" className="mt-0">
+                    {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
+                  </TabsContent>
+                  <TabsContent value="private" className="mt-0">
+                    {safeTab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
+                  </TabsContent>
+                  <TabsContent value="timeline" className="mt-0">
+                    {safeTab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
+                  </TabsContent>
+                  <TabsContent value="files" className="mt-0">
+                    {safeTab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function JobDetailContent({
-  loadError,
-  job,
-  load,
-  actor,
-  canManage,
-  visibleTabs,
-  safeTab,
-  setActiveTab,
-  quoteReadOnly,
-  invoiceReadOnly,
-  role,
-  bump,
-  refreshKey,
-  isMobile = false,
-}) {
-  if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
-        <p className="text-sm">Failed to load job. Please try again.</p>
-        <button onClick={load} className="text-xs underline hover:text-foreground">Retry</button>
-      </div>
-    );
-  }
-
-  if (!job) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <JobModalHeader job={job} />
-
-      {canManage && !isMobile && (
-        <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
-      )}
-
-      <div className="flex-1 overflow-y-auto">
-        <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          {!isMobile && (
-            <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10">
-              <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap justify-start">
-                {visibleTabs.map((tab) => (
-                  <ModalTab
-                    key={tab}
-                    value={tab}
-                    label={TAB_LABELS[tab]}
-                    badge={
-                      tab === "billing" && job.payment_status && job.payment_status !== "unpaid"
-                        ? job.payment_status
-                        : tab === "intake" && job.intake?.intake_date
-                        ? "✓"
-                        : null
-                    }
-                  />
-                ))}
-              </TabsList>
-            </div>
-          )}
-
-          <div className={cn("p-5 flex-1", isMobile ? "px-4 pb-28" : "pb-safe")}>
-            <TabsContent value="intake" className="mt-0">
-              {safeTab === "intake" && (
-                <>
-                  {isMobile && canManage && (
-                    <>
-                      <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="schedule" />
-                      <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />
-                    </>
-                  )}
-                  <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-                </>
-              )}
-            </TabsContent>
-            <TabsContent value="billing" className="mt-0">
-              {safeTab === "billing" && (
-                <>
-                  {isMobile && canManage && (
-                    <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="invoice" />
-                  )}
-                  <BillingPanel
-                    job={job}
-                    actor={actor}
-                    canEdit={canManage}
-                    quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
-                    invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
-                    onChange={bump}
-                  />
-                </>
-              )}
-            </TabsContent>
-            <TabsContent value="customer" className="mt-0">
-              {safeTab === "customer" && (
-                <>
-                  {isMobile && canManage && (
-                    <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="customer" />
-                  )}
-                  <CustomerHistoryPanel job={job} actor={actor} />
-                </>
-              )}
-            </TabsContent>
-            <TabsContent value="notes" className="mt-0">
-              {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
-            </TabsContent>
-            <TabsContent value="private" className="mt-0">
-              {safeTab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
-            </TabsContent>
-            <TabsContent value="timeline" className="mt-0">
-              {safeTab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
-            </TabsContent>
-            <TabsContent value="files" className="mt-0">
-              {safeTab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
-    </>
-  );
-}
-
-function MobileJobWorkspace({ onClose, visibleTabs, safeTab, setActiveTab, ...contentProps }) {
-  return (
-    <div className="lg:hidden fixed inset-0 z-50 bg-background text-foreground flex flex-col">
-      <div className="h-14 shrink-0 flex items-center justify-between gap-3 px-4 bg-card border-b border-border">
-        <button
-          onClick={onClose}
-          className="-ml-2 flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-foreground"
-          aria-label="Back to jobs"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          Jobs
-        </button>
-        <span className="min-w-0 flex-1 truncate text-center text-sm font-heading font-bold">Job Workspace</span>
-        <span className="w-12" aria-hidden />
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <JobDetailContent
-          {...contentProps}
-          visibleTabs={visibleTabs}
-          safeTab={safeTab}
-          setActiveTab={setActiveTab}
-          isMobile
-        />
-      </div>
-
-      {contentProps.job && (
-        <MobileJobTabBar
-          visibleTabs={visibleTabs}
-          activeTab={safeTab}
-          onChange={setActiveTab}
-        />
-      )}
-    </div>
-  );
-}
-
-function MobileJobTabBar({ visibleTabs, activeTab, onChange }) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const primaryTabs = PRIMARY_MOBILE_TABS.filter((tab) => visibleTabs.includes(tab));
-  const moreTabs = visibleTabs.filter((tab) => !primaryTabs.includes(tab));
-  const moreActive = moreTabs.includes(activeTab);
-
-  const selectTab = (tab) => {
-    onChange(tab);
-    setMoreOpen(false);
-  };
-
-  return (
-    <>
-      {moreOpen && moreTabs.length > 0 && (
-        <div className="fixed inset-x-3 bottom-20 z-50 rounded-2xl border border-border bg-card p-2 shadow-gentle mb-safe">
-          <div className="grid grid-cols-3 gap-1.5">
-            {moreTabs.map((tab) => {
-              const Icon = TAB_ICONS[tab] || MoreHorizontal;
-              const active = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => selectTab(tab)}
-                  className={cn(
-                    "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition-colors",
-                    active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary"
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  {TAB_LABELS[tab]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur pb-safe" aria-label="Job navigation">
-        <div className="grid grid-cols-5">
-          {primaryTabs.map((tab) => {
-            const Icon = TAB_ICONS[tab] || ClipboardList;
-            const active = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => selectTab(tab)}
-                className={cn(
-                  "flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-                  active ? "text-accent" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                {TAB_LABELS[tab]}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => setMoreOpen((open) => !open)}
-            className={cn(
-              "flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-              moreActive || moreOpen ? "text-accent" : "text-muted-foreground"
-            )}
-            aria-expanded={moreOpen}
-            aria-label="More job sections"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-            More
-          </button>
-        </div>
-      </nav>
-    </>
   );
 }
 

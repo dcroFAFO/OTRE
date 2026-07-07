@@ -80,6 +80,33 @@
     "notes": {
       "type": "string",
       "description": "Customer notes"
+    },
+    "referral_code": {
+      "type": "string",
+      "description": "This customer's own referral code they can share with friends."
+    },
+    "referred_by_customer_id": {
+      "type": "string",
+      "description": "Customer.id of the customer who referred this customer, if any."
+    },
+    "referral_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "completed"
+      ],
+      "default": "none",
+      "description": "Placeholder referral reward status, tracked manually by staff for now."
+    },
+    "referral_eligible": {
+      "type": "boolean",
+      "default": false,
+      "description": "Placeholder flag for staff to mark a customer as eligible for their referral reward."
+    },
+    "referral_notes": {
+      "type": "string",
+      "description": "Staff-only referral notes. Never shown to customers."
     }
   },
   "required": [
