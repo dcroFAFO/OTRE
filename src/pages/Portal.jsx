@@ -10,6 +10,7 @@ import JobCard from "@/components/shared/JobCard";
 import CustomerJobModal from "@/components/portal/CustomerJobModal";
 import SupportChat from "@/components/portal/SupportChat";
 import CustomerBookingModal from "@/components/portal/CustomerBookingModal";
+import PortalTutorial from "@/components/portal/tutorial/PortalTutorial";
 import { Button } from "@/components/ui/button";
 import SEO from "@/components/SEO";
 
@@ -18,6 +19,7 @@ export default function Portal() {
   const { data: { business, app } } = usePlatformConfig();
   const [selectedJob, setSelectedJob] = useState(null);
   const [showBooking, setShowBooking] = useState(false);
+  const [tutorialDone, setTutorialDone] = useState(false);
   const qc = useQueryClient();
 
   const { data: jobs = [] } = useQuery({
@@ -34,9 +36,11 @@ export default function Portal() {
   const { data: customerProfile = null, isLoading: isLoadingCustomerProfile } = useQuery({
     queryKey: ["customerProfile", user?.id],
     queryFn: async () => {
-      await base44.functions.invoke("claimCustomerJobs", {}).catch(() => null);
       const profiles = await base44.entities.CustomerProfile.filter({ auth_user_id: user.id }, "-updated_date", 1);
-      return profiles[0] || null;
+      if (profiles[0]) return profiles[0];
+      await base44.functions.invoke("claimCustomerJobs", {}).catch(() => null);
+      const retry = await base44.entities.CustomerProfile.filter({ auth_user_id: user.id }, "-updated_date", 1);
+      return retry[0] || null;
     },
     enabled: !!user && !isStaff(user.role),
   });
@@ -113,7 +117,23 @@ export default function Portal() {
       </main>
 
       <CustomerJobModal job={selectedJob} open={!!selectedJob} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
-      <CustomerBookingModal open={showBooking} onClose={() => setShowBooking(false)} user={user} profile={customerProfile} profileLoading={isLoadingCustomerProfile} onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} />
+      <CustomerBookingModal
+        open={showBooking}
+        onClose={() => setShowBooking(false)}
+        user={user}
+        profile={customerProfile}
+        profileLoading={isLoadingCustomerProfile}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })}
+        onManage={async (jobId) => {
+          if (!jobId) return;
+          const job = await base44.entities.Job.get(jobId).catch(() => null);
+          if (job) setSelectedJob(job);
+        }}
+      />
+
+      {!showBooking && !user.hasSeenCustomerPortalTutorial && !tutorialDone && (
+        <PortalTutorial onDone={() => setTutorialDone(true)} />
+      )}
 
       <SupportChat user={user} />
     </div>

@@ -30,13 +30,16 @@ export default function ProfileSetup() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [phoneError, setPhoneError] = useState(null);
   const [form, setForm] = useState({ display_name: "", full_name: "", phone: "", scooter_make: "", scooter_model: "", scooter_make_model: "", asset_custom_make: "", asset_custom_model: "", serial_number: "", colour: "", notes: "" });
 
   useEffect(() => {
     base44.auth.me().then((me) => {
       setUser(me);
-      setForm((current) => ({ ...current, display_name: me.full_name || "", full_name: me.full_name || "" }));
+      // Prefill from the OAuth provider only when actually available.
+      const oauthPhone = String(me.phone || me.phone_e164 || "").replace(/^\+61/, "0");
+      setForm((current) => ({ ...current, display_name: me.full_name || "", full_name: me.full_name || "", phone: oauthPhone }));
     }).catch(() => base44.auth.redirectToLogin(window.location.href)).finally(() => setLoading(false));
   }, []);
 
@@ -50,6 +53,8 @@ export default function ProfileSetup() {
       return;
     }
     setSaving(true);
+    setSaveError(null);
+    try {
     await base44.functions.invoke("claimCustomerJobs", {
       profile: {
         display_name: form.display_name.trim(),
@@ -67,13 +72,18 @@ export default function ProfileSetup() {
       },
     });
     window.location.href = nextPath();
+    } catch (err) {
+      console.error("Profile save failed:", err);
+      setSaveError("Sorry — we couldn't save your profile just now. Please try again.");
+      setSaving(false);
+    }
   };
 
   if (loading) return <main className="min-h-screen grid place-items-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></main>;
 
   return (
     <>
-      <SEO title="Set Up Your Profile | OTR Scooters" description="Set up your customer profile before booking a repair." canonical="/profile-setup" noindex />
+      <SEO title="Set Up Your Profile | On The Run Electrics" description="Set up your customer profile before booking a repair." canonical="/profile-setup" noindex />
       <main className="min-h-screen bg-background px-5 py-10 text-foreground">
         <form onSubmit={submit} className="mx-auto max-w-xl rounded-3xl border border-border bg-card p-6 shadow-xl sm:p-8">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-accent/15 text-accent"><UserRound className="h-6 w-6" /></span>
@@ -116,8 +126,9 @@ export default function ProfileSetup() {
             </div>
           </div>
 
+          {saveError && <p className="mt-4 text-sm text-destructive">{saveError}</p>}
           <Button type="submit" disabled={saving || !form.display_name.trim() || !scooterComplete(form)} className="mt-6 w-full h-11 rounded-xl">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue to book a job"}
+            {saving ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving your profile…</span> : "Continue to book a job"}
           </Button>
         </form>
       </main>

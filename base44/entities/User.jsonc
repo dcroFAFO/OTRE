@@ -42,6 +42,11 @@
       "type": "boolean",
       "default": true,
       "description": "Whether this user should be treated as a customer account."
+    },
+    "hasSeenCustomerPortalTutorial": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this customer has completed or dismissed the one-time portal onboarding tutorial."
     }
   },
   "required": []

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { getStatus, normalizeStatusKey } from "@/config/jobConfig";
-import { Loader2, CheckCircle2, Circle, Clock, Wrench, FileText, Receipt, CreditCard } from "lucide-react";
+import { Loader2, CheckCircle2, Circle, Clock, Wrench, Receipt, CreditCard } from "lucide-react";
 import { startInvoicePayment } from "@/services/paymentService";
 import SignatureCapture from "@/components/portal/SignatureCapture";
 
@@ -104,38 +104,6 @@ function HistoryTab({ userEmail }) {
   );
 }
 
-function QuotesTab({ job }) {
-  const { data: quotes = [], isLoading } = useQuery({
-    queryKey: ["portalQuotes", job.id],
-    queryFn: () => base44.entities.Quote.filter({ job_id: job.id }, "-created_date", 10),
-  });
-  const visibleQuotes = quotes.filter((q) => ["sent", "approved", "rejected"].includes(q.status));
-
-  if (isLoading) return <Loader2 className="h-5 w-5 animate-spin mx-auto mt-8 text-muted-foreground" />;
-  if (!visibleQuotes.length) return <div className="py-8 text-center text-muted-foreground text-sm"><FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />No estimate available yet. We'll notify you when one is ready.</div>;
-
-  return (
-    <div className="space-y-4 py-2">
-      {visibleQuotes.map((q) => (
-        <div key={q.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-foreground">Repair Estimate</span>
-            <span className="text-xs font-semibold capitalize text-muted-foreground">{q.status}</span>
-          </div>
-          {q.diagnosis_notes && <Field label="Diagnosis">{q.diagnosis_notes}</Field>}
-          {q.recommended_repair && <Field label="Recommended Repair">{q.recommended_repair}</Field>}
-          {q.line_items?.length > 0 && <LineItems items={q.line_items} currency={q.currency} />}
-          <div className="flex items-center justify-between pt-1 border-t border-border">
-            <span className="text-sm font-semibold">Estimate Total</span>
-            <span className="text-base font-bold text-foreground">{q.currency || "AUD"} ${Number(q.total || 0).toFixed(2)}</span>
-          </div>
-          <p className="text-xs text-muted-foreground pt-1">This estimate is for your information. Our team will contact you if anything changes.</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function InvoiceTab({ invoices = [], isLoading }) {
   const [paying, setPaying] = useState(null);
   const visible = invoices.filter((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
@@ -178,12 +146,12 @@ function InvoiceTab({ invoices = [], isLoading }) {
 
 export default function CustomerJobModal({ job, open, onClose, userEmail }) {
   const [tab, setTab] = useState("status");
+  // All invoices issued to this customer — RLS restricts results to their own customer-visible invoices.
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ["portalInvoiceCheck", job?.id],
-    queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }, "-created_date", 10),
-    enabled: !!job?.id,
+    queryKey: ["portalInvoices", userEmail],
+    queryFn: () => base44.entities.Invoice.list("-created_date", 50),
+    enabled: open,
   });
-  const hasInvoice = invoices.some((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
 
   if (!job) return null;
 
@@ -197,16 +165,14 @@ export default function CustomerJobModal({ job, open, onClose, userEmail }) {
           </DialogTitle>
         </DialogHeader>
         <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className={`grid w-full ${hasInvoice ? "grid-cols-4" : "grid-cols-3"} mb-1`}>
+          <TabsList className="grid w-full grid-cols-3 mb-1">
             <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
-            <TabsTrigger value="quotes" className="text-xs">Estimate</TabsTrigger>
-            {hasInvoice && <TabsTrigger value="invoice" className="text-xs">Invoice</TabsTrigger>}
+            <TabsTrigger value="invoice" className="text-xs">Invoices</TabsTrigger>
             <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
           </TabsList>
           <div className="overflow-y-auto flex-1 pr-1">
             <TabsContent value="status" className="mt-0">{tab === "status" && <StatusTab job={job} />}</TabsContent>
-            <TabsContent value="quotes" className="mt-0">{tab === "quotes" && <QuotesTab job={job} />}</TabsContent>
-            {hasInvoice && <TabsContent value="invoice" className="mt-0">{tab === "invoice" && <InvoiceTab invoices={invoices} isLoading={invoicesLoading} />}</TabsContent>}
+            <TabsContent value="invoice" className="mt-0">{tab === "invoice" && <InvoiceTab invoices={invoices} isLoading={invoicesLoading} />}</TabsContent>
             <TabsContent value="history" className="mt-0">{tab === "history" && <HistoryTab userEmail={userEmail} />}</TabsContent>
           </div>
         </Tabs>

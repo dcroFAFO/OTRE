@@ -71,7 +71,7 @@ const NOTIFY_STATUSES = {
   completed: {
     subject: "Your scooter job is complete ✅",
     heading: "Job Completed",
-    message: "Your scooter job has been marked as completed. Thank you for choosing OTR Scooters — we hope to see you again!",
+    message: "Your scooter job has been marked as completed. Thank you for choosing On The Run Electrics — we hope to see you again!",
     sms: "Your scooter job is complete. Thank you for choosing On The Run Electrics.",
     color: "#2563eb",
   },
@@ -85,7 +85,7 @@ const NOTIFY_STATUSES = {
   paid: {
     subject: "Payment received — thank you! ✅",
     heading: "Payment Confirmed",
-    message: "We've received your payment in full. Thank you for choosing OTR Scooters — we'd love to know how we did.",
+    message: "We've received your payment in full. Thank you for choosing On The Run Electrics — we'd love to know how we did.",
     sms: "Payment received - thank you. Your scooter repair payment has been confirmed.",
     color: "#16a34a",
     includeFeedback: true,
