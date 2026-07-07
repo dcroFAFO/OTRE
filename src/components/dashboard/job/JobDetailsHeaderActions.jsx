@@ -48,7 +48,16 @@ const WORKFLOW_EVENTS = [
 
 const TERMINAL = ["completed", "cancelled"];
 
-export default function JobDetailsHeaderActions({ job, actor, onChange }) {
+// Groups events by lifecycle step, used to show only the relevant tools
+// within each mobile tab instead of one giant always-visible action bar.
+const EVENT_GROUPS = {
+  schedule: ["booked", "repair_in_progress"],
+  repair: ["waiting_on_parts", "ready_for_pickup"],
+  invoice: ["invoice_sent", "paid", "completed"],
+  customer: ["on_hold", "cancelled"],
+};
+
+export default function JobDetailsHeaderActions({ job, actor, onChange, context = null }) {
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   // Waiting-reason modal state
@@ -119,33 +128,50 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
     }
   };
 
+  const allowedKeys = context ? EVENT_GROUPS[context] || [] : null;
   const visibleEvents = WORKFLOW_EVENTS.filter((ev) => {
     if (isTerminal) return false;
+    if (allowedKeys && !allowedKeys.includes(ev.key)) return false;
     if (ev.applicableStatuses === null) return true;
     return ev.applicableStatuses.includes(currentStatus);
   });
 
+  const showReschedule = !context || context === "schedule";
+  const showCopyLink = !context || context === "customer";
+  const showReopen = (!context || context === "customer") && isTerminal;
+
+  if (context && visibleEvents.length === 0 && !showReschedule && !showCopyLink && !showReopen) {
+    return null;
+  }
+
   return (
     <>
-      <div className="bg-card border-b border-border px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
+      <div className={cn(
+        "bg-card border-b border-border flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0",
+        context ? "rounded-xl border px-3 py-2.5 mb-3" : "px-4 sm:px-5 py-3"
+      )}>
         {/* Reschedule */}
-        <ReschedulePicker
-          job={job}
-          busy={busy === "date"}
-          onReschedule={runUtil("date", (v) => rescheduleJob(job, v))}
-        />
+        {showReschedule && (
+          <ReschedulePicker
+            job={job}
+            busy={busy === "date"}
+            onReschedule={runUtil("date", (v) => rescheduleJob(job, v))}
+          />
+        )}
 
-        <button
-          onClick={copyManageLink}
-          disabled={busy === "manage_link"}
-          className="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-          title="Copy the customer portal account link"
-        >
-          {busy === "manage_link" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
-          {copiedManageLink ? "Copied manage link" : "Copy manage link"}
-        </button>
+        {showCopyLink && (
+          <button
+            onClick={copyManageLink}
+            disabled={busy === "manage_link"}
+            className="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+            title="Copy the customer portal account link"
+          >
+            {busy === "manage_link" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+            {copiedManageLink ? "Copied manage link" : "Copy manage link"}
+          </button>
+        )}
 
-        <div className="flex-1" />
+        {!context && <div className="flex-1" />}
 
         {/* Workflow event buttons */}
         <div className="flex flex-wrap items-center gap-2">
@@ -159,7 +185,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
             />
           ))}
 
-          {isTerminal && (
+          {showReopen && (
             <WorkflowButton
               label="Reopen job"
               icon={RotateCcw}

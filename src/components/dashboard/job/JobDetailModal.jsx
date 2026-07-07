@@ -167,7 +167,7 @@ function JobDetailContent({
     <>
       <JobModalHeader job={job} />
 
-      {canManage && (
+      {canManage && !isMobile && (
         <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
       )}
 
@@ -196,22 +196,44 @@ function JobDetailContent({
 
           <div className={cn("p-5 flex-1", isMobile ? "px-4 pb-28" : "pb-safe")}>
             <TabsContent value="intake" className="mt-0">
-              {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
+              {safeTab === "intake" && (
+                <>
+                  {isMobile && canManage && (
+                    <>
+                      <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="schedule" />
+                      <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />
+                    </>
+                  )}
+                  <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                </>
+              )}
             </TabsContent>
             <TabsContent value="billing" className="mt-0">
               {safeTab === "billing" && (
-                <BillingPanel
-                  job={job}
-                  actor={actor}
-                  canEdit={canManage}
-                  quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
-                  invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
-                  onChange={bump}
-                />
+                <>
+                  {isMobile && canManage && (
+                    <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="invoice" />
+                  )}
+                  <BillingPanel
+                    job={job}
+                    actor={actor}
+                    canEdit={canManage}
+                    quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
+                    invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
+                    onChange={bump}
+                  />
+                </>
               )}
             </TabsContent>
             <TabsContent value="customer" className="mt-0">
-              {safeTab === "customer" && <CustomerHistoryPanel job={job} actor={actor} />}
+              {safeTab === "customer" && (
+                <>
+                  {isMobile && canManage && (
+                    <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="customer" />
+                  )}
+                  <CustomerHistoryPanel job={job} actor={actor} />
+                </>
+              )}
             </TabsContent>
             <TabsContent value="notes" className="mt-0">
               {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
