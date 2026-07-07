@@ -67,7 +67,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-4xl w-full h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 rounded-none sm:rounded-lg">
         {loadError ? (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
             <p className="text-sm">Failed to load job. Please try again.</p>
@@ -87,8 +87,8 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
             <div className="flex-1 overflow-y-auto">
               <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-                <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10 overflow-x-auto">
-                  <TabsList className="h-auto gap-0 bg-transparent p-0 flex-nowrap">
+                <div className="border-b border-border px-3 sm:px-5 pt-1.5 bg-background sticky top-0 z-10">
+                  <TabsList className="h-auto gap-0 bg-transparent p-0 flex-wrap justify-start">
                     {visibleTabs.map((tab) => (
                       <ModalTab
                         key={tab}
@@ -106,7 +106,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsList>
                 </div>
 
-                <div className="p-5 flex-1">
+                <div className="p-4 sm:p-5 flex-1 pb-safe">
                   <TabsContent value="intake" className="mt-0">
                     {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
                   </TabsContent>
@@ -160,7 +160,7 @@ function JobModalHeader({ job }) {
   return (
     <div className="bg-primary text-primary-foreground px-5 py-3 shrink-0">
       {/* Top row */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5 sm:flex-nowrap sm:items-center">
         <div className="min-w-0">
           <h2 className="font-heading text-base font-extrabold flex items-center gap-2 truncate">
             <User className="h-4 w-4 text-primary-foreground/70 shrink-0" />
@@ -176,7 +176,7 @@ function JobModalHeader({ job }) {
             <span className="truncate">{job.asset_label || "—"}</span>
           </p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           <StatusPill value={job.status} className="bg-white/10 text-primary-foreground border-white/20" />
           {job.scheduled_date && (
             <span className="flex items-center gap-1 text-xs text-primary-foreground/80 whitespace-nowrap">
@@ -209,7 +209,7 @@ function ModalTab({ value, label, badge }) {
   return (
     <TabsTrigger
       value={value}
-      className="relative rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-2 px-3 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground transition-colors"
+      className="relative rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent pb-2 pt-2 sm:pt-0 px-3 min-h-11 sm:min-h-0 text-sm font-medium text-muted-foreground data-[state=active]:text-foreground transition-colors"
     >
       {label}
       {badge && (

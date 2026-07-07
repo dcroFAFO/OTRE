@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { hasAtLeastRole, roleLabel, roleBadgeClass, hasCapability, CAPABILITIES } from "@/config/roles";
 import PartsNavItem from "./PartsNavItem";
 import JobsNavItem from "./JobsNavItem";
+import MobileTabBar from "./MobileTabBar";
 
 
 export default function DashboardShell({ user, children }) {
@@ -101,7 +102,7 @@ export default function DashboardShell({ user, children }) {
 
       {/* Mobile top bar */}
       <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-card border-b border-border">
-        <button onClick={() => setOpen(true)}><Menu className="h-6 w-6" /></button>
+        <button onClick={() => setOpen(true)} className="-ml-2 p-2" aria-label="Open menu"><Menu className="h-6 w-6" /></button>
         <span className="font-heading font-bold">{business.name}</span>
         <span className="w-6" />
       </div>
@@ -115,8 +116,10 @@ export default function DashboardShell({ user, children }) {
       }
 
       <main className="lg:pl-64">
-        <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">{children}</div>
+        <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 pb-28 lg:pb-8">{children}</div>
       </main>
+
+      <MobileTabBar onMore={() => setOpen(true)} />
     </div>);
 
 }

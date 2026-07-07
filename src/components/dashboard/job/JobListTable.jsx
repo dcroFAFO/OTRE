@@ -31,7 +31,50 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+    <>
+    {/* Mobile: stacked cards — no horizontal scrolling */}
+    <div className="sm:hidden space-y-2">
+      {jobs.map((j) => {
+        const isSelected = selectedIds.includes(j.id);
+        return (
+          <div
+            key={j.id}
+            onClick={() => onOpen(j.id)}
+            className={cn(
+              "rounded-2xl border border-border bg-card p-3.5 shadow-sm cursor-pointer",
+              j.payment_status === "outstanding" && "border-l-2 border-l-rose-400",
+              isSelected && "bg-accent/10 border-accent/40"
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <span onClick={(e) => e.stopPropagation()} className="grid h-6 w-6 place-items-center shrink-0">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleOne(j.id, { stopPropagation: () => {} })}
+                    aria-label={`Select job for ${j.customer_name}`}
+                  />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{j.customer_name || "—"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{j.intake?.make || j.asset_label || j.scooter_label || "—"}</p>
+                </div>
+              </div>
+              <StatusPill value={j.status || "requested"} kind="job" />
+            </div>
+            {j.issue_description && <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{j.issue_description}</p>}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <ServiceTypeBadge job={j} />
+              <span>Booked {fmtDate(j.created_date)}</span>
+              <span>Expected {fmtDate(j.scheduled_date)}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Desktop / tablet: full table */}
+    <div className="hidden sm:block rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -95,6 +138,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
         </table>
       </div>
     </div>
+    </>
   );
 }
 

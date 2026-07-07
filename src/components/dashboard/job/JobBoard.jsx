@@ -7,8 +7,11 @@ import { toast } from "sonner";
 
 const BOARD_STATUSES = JOB_STATUSES;
 
-export default function JobBoard({ jobs, onJobClick, onInvalidate }) {
-  const columns = useMemo(() => BOARD_STATUSES, []);
+export default function JobBoard({ jobs, onJobClick, onInvalidate, statusKeys }) {
+  const columns = useMemo(
+    () => (statusKeys ? BOARD_STATUSES.filter((s) => statusKeys.includes(s.key)) : BOARD_STATUSES),
+    [statusKeys]
+  );
   const [boardJobs, setBoardJobs] = useState(jobs);
 
   useEffect(() => {

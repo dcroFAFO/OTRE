@@ -5,6 +5,7 @@ import JobFilters, { EMPTY_FILTERS } from "@/components/dashboard/JobFilters";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import JobListTable from "@/components/dashboard/job/JobListTable";
 import JobBoard from "@/components/dashboard/job/JobBoard";
+import LifecycleTabs, { LIFECYCLE_GROUPS } from "@/components/dashboard/job/LifecycleTabs";
 import BulkActionsBar from "@/components/dashboard/job/BulkActionsBar";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
@@ -77,6 +78,7 @@ export default function Jobs() {
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [view, setView] = useState("board");
+  const [lifecycle, setLifecycle] = useState("all");
 
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("id");
@@ -96,6 +98,13 @@ export default function Jobs() {
     });
   }, [jobs, filters.q, filters.status, filters.service_type, filters.priority, view]);
 
+  // Display-only lifecycle grouping — filters which statuses are shown.
+  const lifecycleStatuses = LIFECYCLE_GROUPS.find((g) => g.key === lifecycle)?.statuses || null;
+  const visibleJobs = useMemo(
+    () => (lifecycleStatuses ? filtered.filter((j) => lifecycleStatuses.includes(normalizeStatusKey(j.status))) : filtered),
+    [filtered, lifecycleStatuses]
+  );
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -105,7 +114,7 @@ export default function Jobs() {
             {DEFAULT_APP_SETTINGS.dashboard.nav.jobs}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
+            {visibleJobs.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
           </p>
         </div>
       </div>
@@ -113,20 +122,22 @@ export default function Jobs() {
       {isStaffRole(user.role) ? (
         <button
           onClick={() => setCreateModal(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/20 px-4 py-2.5 font-semibold hover:bg-accent/90 transition-colors text-base">
+          className="fixed bottom-20 lg:bottom-5 right-5 z-40 mb-safe lg:mb-0 flex items-center gap-2 rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/20 px-4 py-3 lg:py-2.5 font-semibold hover:bg-accent/90 transition-colors text-base">
           
           <Plus className="h-4 w-4" />
           New Job
         </button>
       ) : null}
 
+      <LifecycleTabs jobs={filtered} value={lifecycle} onChange={setLifecycle} />
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <JobFilters filters={filters} setFilters={setFilters} />
         <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
-          <Button size="sm" variant={view === "board" ? "default" : "ghost"} onClick={() => setView("board")} className="gap-1.5">
+          <Button size="sm" variant={view === "board" ? "default" : "ghost"} onClick={() => setView("board")} className="gap-1.5 h-10 sm:h-8">
             <LayoutGrid className="h-4 w-4" /> Board
           </Button>
-          <Button size="sm" variant={view === "list" ? "default" : "ghost"} onClick={() => setView("list")} className="gap-1.5">
+          <Button size="sm" variant={view === "list" ? "default" : "ghost"} onClick={() => setView("list")} className="gap-1.5 h-10 sm:h-8">
             <List className="h-4 w-4" /> List
           </Button>
         </div>
@@ -141,7 +152,7 @@ export default function Jobs() {
         />
       )}
 
-      {filtered.length === 0 ?
+      {visibleJobs.length === 0 ?
       <div className="rounded-2xl border border-dashed border-border bg-card py-16 text-center shadow-sm">
           <SlidersHorizontal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No jobs to show here.</p>
@@ -149,13 +160,14 @@ export default function Jobs() {
 
       view === "board" ? (
         <JobBoard
-          jobs={filtered}
+          jobs={visibleJobs}
+          statusKeys={lifecycleStatuses}
           onJobClick={open}
           onInvalidate={invalidate}
         />
       ) : (
         <JobListTable
-          jobs={filtered}
+          jobs={visibleJobs}
           onOpen={open}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}

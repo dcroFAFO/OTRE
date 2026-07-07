@@ -127,7 +127,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
 
   return (
     <>
-      <div className="bg-card border-b border-border px-5 py-3 flex flex-wrap items-center gap-3 shrink-0">
+      <div className="bg-card border-b border-border px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
         {/* Reschedule */}
         <ReschedulePicker
           job={job}
@@ -138,7 +138,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange }) {
         <button
           onClick={copyManageLink}
           disabled={busy === "manage_link"}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
           title="Copy the customer portal account link"
         >
           {busy === "manage_link" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
@@ -250,7 +250,7 @@ function WorkflowButton({ label, icon: Icon, onClick, busy, variant = "default" 
       onClick={onClick}
       disabled={busy}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50",
+        "flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50",
         styles[variant]
       )}
     >
