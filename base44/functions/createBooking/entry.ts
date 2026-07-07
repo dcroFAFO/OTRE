@@ -154,6 +154,7 @@ async function sendBookingRequestNotifications(base44, jobId) {
 
   if (!job.bookingRequestSmsSentAt && job.customer_phone_e164) {
     try {
+      console.log('[notify] sending booking_request_sms', JSON.stringify({ type: 'sms', provider: 'twilio', version: BOOKING_NOTIFY_VERSION, to: job.customer_phone_e164, job_id: job.id, reference, customer_id: job.customer_id || '', at: new Date().toISOString() }));
       await sendBookingRequestSms(
         job.customer_phone_e164,
         `Hi, ${name}. We've just received your ${service} booking request for your ${scooter}. One of our technicians will be in contact with you as soon as possible. Thanks, On The Run Electrics.`
@@ -166,6 +167,7 @@ async function sendBookingRequestNotifications(base44, jobId) {
 
   if (!job.bookingRequestEmailSentAt && job.customer_email) {
     try {
+      console.log('[notify] sending booking_request_email', JSON.stringify({ type: 'email', provider: 'resend', version: BOOKING_NOTIFY_VERSION, from: 'On The Run Electrics', to: job.customer_email, subject: `Booking Request Received | ${reference}`, job_id: job.id, reference, customer_id: job.customer_id || '', at: new Date().toISOString() }));
       const html = `
 <p>Hi ${name},</p>
 <p>Thanks for your booking request. We&rsquo;ve received your details and our team will review everything shortly.</p>
