@@ -10,7 +10,7 @@ import {
 
 export const JOB_STATUSES = [
   { key: "requested", label: "Requested", group: "intake", color: "slate", is_default_intake: true },
-  { key: "booked", label: "Booked", group: "active", color: "indigo" },
+  { key: "booked", label: "Job Scheduled", group: "active", color: "indigo" },
   { key: "repair_in_progress", label: "Repair In Progress", group: "active", color: "teal" },
   { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "ready_for_pickup", label: "Ready for Pickup", group: "done", color: "emerald" },

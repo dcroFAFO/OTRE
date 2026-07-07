@@ -9,7 +9,14 @@ import TutorialBubble from "@/components/portal/tutorial/TutorialBubble";
 // This is intentionally NOT a real Dialog — it's a midground mock so the tutorial
 // bubble can always float above it in the foreground layer.
 
-const MILESTONES = ["Booking Received", "Job Booked", "Repair Underway", "Ready for Pickup", "Invoice Issued", "Paid", "Completed"];
+const MILESTONES = [
+  { label: "Booking Received", active: "border-red-500 bg-red-500 text-white", done: "border-red-300 bg-red-50 text-red-600" },
+  { label: "Job Scheduled", active: "border-blue-500 bg-blue-500 text-white", done: "border-blue-300 bg-blue-50 text-blue-600" },
+  { label: "Repair Underway", active: "border-amber-500 bg-amber-500 text-white", done: "border-amber-300 bg-amber-50 text-amber-600" },
+  { label: "Ready for Pickup", active: "border-emerald-500 bg-emerald-500 text-white", done: "border-emerald-300 bg-emerald-50 text-emerald-600" },
+  { label: "Invoice Issued", active: "border-violet-500 bg-violet-500 text-white", done: "border-violet-300 bg-violet-50 text-violet-600" },
+  { label: "Completed", active: "border-teal-500 bg-teal-500 text-white", done: "border-teal-300 bg-teal-50 text-teal-600" },
+];
 
 const MOCK_INVOICES = [
   { id: "m1", number: "INV-1042", amount: 145, status: "paid", date: "12 Mar 2026" },
@@ -32,16 +39,16 @@ function StatusAnimation() {
   }, []);
   return (
     <ol className="py-2">
-      {MILESTONES.map((label, i) => {
+      {MILESTONES.map((m, i) => {
         const done = i < active;
         const current = i === active;
         return (
-          <li key={label} className="relative flex gap-4 pb-4 last:pb-0">
+          <li key={m.label} className="relative flex gap-4 pb-4 last:pb-0">
             {i < MILESTONES.length - 1 && <div className={`absolute bottom-0 left-[13px] top-7 w-0.5 ${done || current ? "bg-primary/40" : "bg-border"}`} />}
-            <div className={`relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-colors duration-500 ${current ? "border-primary bg-primary text-primary-foreground" : done ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}>
+            <div className={`relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-colors duration-500 ${current ? m.active : done ? m.done : "border-border bg-background text-muted-foreground"}`}>
               {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : current ? <Wrench className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5 opacity-40" />}
             </div>
-            <p className={`pt-1 text-sm font-medium ${current ? "text-foreground" : done ? "text-foreground/70" : "text-muted-foreground"}`}>{label}</p>
+            <p className={`pt-1 text-sm font-medium ${current ? "text-foreground" : done ? "text-foreground/70" : "text-muted-foreground"}`}>{m.label}</p>
           </li>
         );
       })}

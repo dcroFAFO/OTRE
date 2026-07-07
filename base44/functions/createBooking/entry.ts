@@ -105,6 +105,92 @@ async function currentUser(base44) {
   try { return await base44.auth.me(); } catch (_) { return null; }
 }
 
+// ---------------------------------------------------------------------------
+// Booking request notification flow — the ONLY customer notification path.
+// Runs once, after the job is created, persisted, and linked. Hard de-duped
+// via bookingRequestSmsSentAt / bookingRequestEmailSentAt on the Job record.
+// ---------------------------------------------------------------------------
+const BOOKING_NOTIFY_VERSION = 'booking_request_received_v1';
+
+function serviceTypeLabel(key) {
+  const label = String(key || '').replace(/_/g, ' ').trim();
+  return label || 'general repair';
+}
+
+async function sendBookingRequestSms(to, body) {
+  const sid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const token = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const from = Deno.env.get('TWILIO_FROM_NUMBER');
+  if (!sid || !token || !from) throw new Error('Twilio is not configured');
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${btoa(`${sid}:${token}`)}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ From: from, To: to, Body: body }),
+  });
+  if (!res.ok) throw new Error(`Twilio send failed: ${await res.text()}`);
+}
+
+async function sendBookingRequestEmail(to, subject, html) {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  if (!apiKey) throw new Error('RESEND_API_KEY not set');
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'On The Run Electrics <hello@ontherunelectrics.com.au>', to: [to], subject, html }),
+  });
+  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
+}
+
+async function sendBookingRequestNotifications(base44, jobId) {
+  // Re-read the persisted job so dedup flags reflect the latest stored state
+  // (protects against retries, double submits, and race conditions).
+  const job = await base44.asServiceRole.entities.Job.get(jobId);
+  if (!job) return;
+
+  const name = job.customer_name || 'there';
+  const service = serviceTypeLabel(job.service_type);
+  const scooter = job.asset_label || job.scooter_make_model || 'scooter';
+  const reference = job.reference || job.job_id || job.id;
+
+  if (!job.bookingRequestSmsSentAt && job.customer_phone_e164) {
+    try {
+      await sendBookingRequestSms(
+        job.customer_phone_e164,
+        `Hi, ${name}. We've just received your ${service} booking request for your ${scooter}. One of our technicians will be in contact with you as soon as possible. Thanks, On The Run Electrics.`
+      );
+      await base44.asServiceRole.entities.Job.update(job.id, { bookingRequestSmsSentAt: new Date().toISOString(), bookingRequestNotificationVersion: BOOKING_NOTIFY_VERSION });
+    } catch (smsErr) {
+      console.warn('[createBooking] booking request SMS failed:', smsErr.message);
+    }
+  }
+
+  if (!job.bookingRequestEmailSentAt && job.customer_email) {
+    try {
+      const html = `
+<p>Hi ${name},</p>
+<p>Thanks for your booking request. We&rsquo;ve received your details and our team will review everything shortly.</p>
+<p><strong>Booking details</strong></p>
+<p>Reference: ${reference}<br>
+Scooter: ${scooter}<br>
+Service requested: ${service}</p>
+<p><strong>What happens next?</strong></p>
+<p>Our team will review your request and confirm a suitable drop-off date and time.</p>
+<p>Once your scooter is with us, a technician will inspect it and let you know the recommended next steps.</p>
+<p>When the work is complete, we&rsquo;ll send you a text to let you know your ride is ready for pickup.</p>
+<p>You can track your job progress at any time through your customer portal.</p>
+<p>Questions? Reply to this email or call us on 0415 505 908 and we&rsquo;ll be happy to help.</p>
+<p>On The Run Electrics<br>
+11 Lucinda Street, Woolloongabba QLD<br>
+0415 505 908<br>
+<a href="mailto:hello@ontherunelectrics.com.au">hello@ontherunelectrics.com.au</a></p>`;
+      await sendBookingRequestEmail(job.customer_email, `Booking Request Received | ${reference}`, html);
+      await base44.asServiceRole.entities.Job.update(job.id, { bookingRequestEmailSentAt: new Date().toISOString(), bookingRequestNotificationVersion: BOOKING_NOTIFY_VERSION });
+    } catch (emailErr) {
+      console.warn('[createBooking] booking request email failed:', emailErr.message);
+    }
+  }
+}
+
 async function findOrCreateProfile(base44, { name, email, phone, user, now }) {
   let profile = null;
   const emailMatches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 1).catch(() => []);
@@ -206,6 +292,10 @@ Deno.serve(async (req) => {
     if (submittedBooking.files.length > 0) await Promise.all(submittedBooking.files.map((fileUrl, index) => base44.asServiceRole.entities.Attachment.create({ job_id: job.id, customer_id: stableCustomerId, file_url: fileUrl, file_name: `booking_upload_${index + 1}`, kind: 'photo', visibility: 'customer', uploaded_by_name: submittedBooking.customerName })));
     if (rawToken) { const tokenHash = await sha256(rawToken); await base44.asServiceRole.entities.PublicJobAccess.create({ jobId: job.id, job_id: job.id, tokenHash, token_hash: tokenHash, permissions: DEFAULT_PERMISSIONS, createdAt: now }); }
     await base44.asServiceRole.entities.AuditEvent.create({ event_type: 'booking_created', job_id: job.id, customer_id: customerRecord?.id || stableCustomerId, actor_name: form.customer_name, actor_role: customerUserId ? 'customer_account' : 'guest_customer', summary: `Booking request received from ${form.customer_name}`, visibility: 'system', metadata: { customer_id: customerRecord?.id || '', stable_customer_id: stableCustomerId, scooter_id: scooter?.id || '' } }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
+
+    // Single booking request notification flow — runs once, after the job is
+    // fully created and linked. Never blocks the booking on send failure.
+    await sendBookingRequestNotifications(base44, job.id).catch((notifyErr) => console.warn('[createBooking] booking request notifications failed:', notifyErr.message));
 
     const managePath = customerUserId ? '/portal' : null;
     const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;

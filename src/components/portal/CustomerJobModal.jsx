@@ -10,14 +10,14 @@ import { Loader2, CheckCircle2, Circle, Clock, Wrench, Receipt, CreditCard } fro
 import { startInvoicePayment } from "@/services/paymentService";
 import SignatureCapture from "@/components/portal/SignatureCapture";
 
+// Distinct logo/theme colour per customer-facing milestone (literal Tailwind classes).
 const MILESTONES = [
-  { key: "requested", label: "Booking Received" },
-  { key: "booked", label: "Job Booked" },
-  { key: "repair_in_progress", label: "Repair Underway" },
-  { key: "ready_for_pickup", label: "Ready for Pickup" },
-  { key: "invoice_sent", label: "Invoice Issued" },
-  { key: "paid", label: "Paid" },
-  { key: "completed", label: "Completed" },
+  { key: "requested", label: "Booking Received", active: "border-red-500 bg-red-500 text-white", done: "border-red-300 bg-red-50 text-red-600" },
+  { key: "booked", label: "Job Scheduled", active: "border-blue-500 bg-blue-500 text-white", done: "border-blue-300 bg-blue-50 text-blue-600" },
+  { key: "repair_in_progress", label: "Repair Underway", active: "border-amber-500 bg-amber-500 text-white", done: "border-amber-300 bg-amber-50 text-amber-600" },
+  { key: "ready_for_pickup", label: "Ready for Pickup", active: "border-emerald-500 bg-emerald-500 text-white", done: "border-emerald-300 bg-emerald-50 text-emerald-600" },
+  { key: "invoice_sent", label: "Invoice Issued", active: "border-violet-500 bg-violet-500 text-white", done: "border-violet-300 bg-violet-50 text-violet-600" },
+  { key: "completed", label: "Completed", active: "border-teal-500 bg-teal-500 text-white", done: "border-teal-300 bg-teal-50 text-teal-600" },
 ];
 
 function normalizedStatus(status) {
@@ -26,6 +26,8 @@ function normalizedStatus(status) {
 
 function getMilestoneIndex(statusKey) {
   const status = normalizedStatus(statusKey);
+  // Paid collapses into Completed in the customer-facing timeline.
+  if (status === "paid") return MILESTONES.length - 1;
   const direct = MILESTONES.findIndex((m) => m.key === status);
   if (direct !== -1) return direct;
   if (status === "waiting_on_parts" || status === "on_hold") return 2;
@@ -60,7 +62,7 @@ function StatusTab({ job }) {
           return (
             <li key={m.key} className="flex gap-4 pb-6 last:pb-0 relative">
               {i < MILESTONES.length - 1 && <div className={`absolute left-[15px] top-8 bottom-0 w-0.5 ${done || active ? "bg-primary/40" : "bg-border"}`} />}
-              <div className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : done ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}>
+              <div className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${active ? m.active : done ? m.done : "border-border bg-background text-muted-foreground"}`}>
                 {done ? <CheckCircle2 className="h-4 w-4" /> : active ? <Wrench className="h-4 w-4" /> : <Circle className="h-4 w-4 opacity-40" />}
               </div>
               <div className="pt-0.5">
@@ -75,10 +77,26 @@ function StatusTab({ job }) {
   );
 }
 
+function jobBalance(job, invoices) {
+  const jobInvoices = invoices.filter((inv) => inv.job_id === job.id && inv.invoiceVisibility === "customer_visible" && inv.status && inv.status !== "draft");
+  if (!jobInvoices.length) return "Balance unavailable";
+  const owing = jobInvoices.filter((inv) => inv.status !== "paid" && inv.status !== "refunded").reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  if (owing > 0) return `Owing: $${owing.toFixed(2)}`;
+  const paid = jobInvoices.filter((inv) => inv.status === "paid").reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  if (paid > 0) return `Paid: $${paid.toFixed(2)}`;
+  return "Balance: $0.00";
+}
+
 function HistoryTab({ userEmail }) {
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["portalHistory", userEmail],
     queryFn: () => base44.entities.Job.filter({ customer_email: userEmail, archived: false }, "-created_date", 50),
+    enabled: !!userEmail,
+  });
+  // RLS restricts results to the customer's own customer-visible invoices.
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["portalHistoryInvoices", userEmail],
+    queryFn: () => base44.entities.Invoice.list("-created_date", 100),
     enabled: !!userEmail,
   });
 
@@ -89,12 +107,14 @@ function HistoryTab({ userEmail }) {
     <ul className="space-y-3 py-2">
       {jobs.map((j) => {
         const statusDef = getStatus(j.status);
+        const balance = jobBalance(j, invoices);
         return (
           <li key={j.id} className="rounded-xl border border-border bg-card px-4 py-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{j.asset_label || j.scooter_label || "Scooter"}</p>
               <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{j.issue_description || "—"}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{j.reference} · {new Date(j.created_date).toLocaleDateString()}</p>
+              <p className={`text-xs font-semibold mt-1 ${balance.startsWith("Owing") ? "text-rose-600" : balance.startsWith("Paid") ? "text-emerald-600" : "text-muted-foreground"}`}>{balance}</p>
             </div>
             <Badge variant="outline" className="shrink-0 text-xs capitalize">{statusDef?.label || j.status}</Badge>
           </li>

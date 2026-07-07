@@ -123,6 +123,20 @@
     "private_notes": {
       "type": "string"
     },
+    "bookingRequestSmsSentAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set once the booking request confirmation SMS has been sent. Prevents duplicate sends."
+    },
+    "bookingRequestEmailSentAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set once the booking request confirmation email has been sent. Prevents duplicate sends."
+    },
+    "bookingRequestNotificationVersion": {
+      "type": "string",
+      "description": "Notification flow version used for the booking request confirmation, e.g. booking_request_received_v1."
+    },
     "booking_submission": {
       "type": "object",
       "additionalProperties": true,

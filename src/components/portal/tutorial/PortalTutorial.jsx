@@ -33,12 +33,14 @@ export default function PortalTutorial({ onDone }) {
   }
 
   if (step === 1) {
+    // Light dim only — job cards behind must stay clearly visible.
     return (
-      <div className="fixed inset-0 z-[90] bg-foreground/40 p-4 backdrop-blur-sm">
-        <div className="absolute inset-x-0 top-1/3 z-[100] flex justify-center px-4">
+      <div className="fixed inset-0 z-[90] bg-foreground/10 p-4">
+        <div className="absolute inset-x-0 top-[40%] z-[100] flex justify-center px-4">
           <TutorialBubble
+            arrow="up"
             title="Your jobs live here"
-            text="Each repair or service shows as a job card on this page. Tap a card any time to see its full details, status, invoices and history."
+            text="Each repair or service shows as a job card just above. Tap a card any time to see its full details, status, invoices and history."
             onNext={next}
             onClose={close}
           />
