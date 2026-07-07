@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // Emails the customer when a customer-visible attachment (photo/document) is added to their job.
 
-const BUSINESS = { name: "OTR Scooters", footer: "OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com", phone: "(03) 9000 1234" };
+const BUSINESS = { name: "On The Run Electrics", footer: "On The Run Electrics · 11 Lucinda Street Woolloongabba QLD · 0415 505 908 · hello@ontherunelectrics.com.au", phone: "0415 505 908" };
 
 async function sendMail({ to, subject, body, from_name }) {
   const apiKey = Deno.env.get("RESEND_API_KEY");

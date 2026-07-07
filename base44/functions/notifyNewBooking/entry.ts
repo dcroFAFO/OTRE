@@ -177,10 +177,26 @@ Deno.serve(async (req) => {
     }
     if (!data) return Response.json({ skipped: "no job data" });
 
-    // Idempotency guard — never send booking confirmations twice for the same job.
-    if (data.booking_submission?.confirmationSentAt) {
+    // Always re-fetch the latest job so concurrent triggers see up-to-date sent markers.
+    const jobId = event?.entity_id || data.id;
+    if (jobId) {
+      const fresh = await base44.asServiceRole.entities.Job.get(jobId).catch(() => null);
+      if (fresh) data = fresh;
+    }
+
+    // De-duplication guard — approved notification version only, never send twice per channel.
+    const NOTIFICATION_VERSION = "otr-electrics-v2";
+    const submission = { ...(data.booking_submission || {}) };
+    const emailAlreadySent = !!(submission.confirmationEmailSentAt || submission.confirmationSentAt);
+    const smsAlreadySent = !!(submission.confirmationSmsSentAt || submission.confirmationSentAt);
+    if (emailAlreadySent && smsAlreadySent) {
       return Response.json({ skipped: "confirmation already sent for this job" });
     }
+    const persistMarkers = async () => {
+      if (!jobId) return;
+      await base44.asServiceRole.entities.Job.update(jobId, { booking_submission: submission })
+        .catch((markErr) => console.warn("[notifyNewBooking] sent-marker update skipped:", markErr.message));
+    };
 
     const settings = await getSettings(base44);
     if (settings && settings.notify_new_booking === false) {
@@ -191,41 +207,52 @@ Deno.serve(async (req) => {
     const reference = data.reference ? ` (${data.reference})` : "";
 
     // Customer confirmation first — exactly one email and one SMS per booking.
-    if (data.customer_email) {
+    // Each channel persists its own sent marker immediately after a successful send.
+    if (!emailAlreadySent && data.customer_email) {
       await sendMail({
         to: data.customer_email,
         subject: `Booking Request Received | ${data.reference || ""}`.trim(),
         body: customerConfirmationHtml(data),
         from_name: BUSINESS.name,
       });
+      submission.confirmationEmailSentAt = new Date().toISOString();
+      submission.confirmationNotificationVersion = NOTIFICATION_VERSION;
+      await persistMarkers();
     }
     const smsTo = normalizePhoneE164(data.customer_phone_e164 || data.customer_phone);
-    if (smsTo) {
-      await sendSms({
-        to: smsTo,
-        body: customerConfirmationSms(data),
-      }).catch((smsErr) => console.warn("[notifyNewBooking] customer confirmation SMS skipped:", smsErr.message));
+    if (!smsAlreadySent && smsTo) {
+      try {
+        await sendSms({ to: smsTo, body: customerConfirmationSms(data) });
+        submission.confirmationSmsSentAt = new Date().toISOString();
+        submission.confirmationNotificationVersion = NOTIFICATION_VERSION;
+        await persistMarkers();
+      } catch (smsErr) {
+        console.warn("[notifyNewBooking] customer confirmation SMS skipped:", smsErr.message);
+      }
     }
 
-    // Mark confirmation as sent immediately so retries or duplicate triggers never re-send.
-    const jobId = event?.entity_id || data.id;
-    if (jobId) {
-      await base44.asServiceRole.entities.Job.update(jobId, {
-        booking_submission: { ...(data.booking_submission || {}), confirmationSentAt: new Date().toISOString() },
-      }).catch((markErr) => console.warn("[notifyNewBooking] sent-marker update skipped:", markErr.message));
+    // Legacy compatibility marker so any older code path also sees the confirmation as sent.
+    if (!submission.confirmationSentAt) {
+      submission.confirmationSentAt = new Date().toISOString();
+      await persistMarkers();
     }
 
-    // Staff operational alert
+    // Staff operational alert — failures logged, never rethrown, so automation retries
+    // can't be triggered after customer confirmations have gone out.
     let first = true;
     for (const to of staffRecipients) {
       if (!first) await sleep(600);
       first = false;
-      await sendMail({
-        to,
-        subject: `New booking request${reference}`,
-        body: staffBookingHtml(data),
-        from_name: BUSINESS.name,
-      });
+      try {
+        await sendMail({
+          to,
+          subject: `New booking request${reference}`,
+          body: staffBookingHtml(data),
+          from_name: BUSINESS.name,
+        });
+      } catch (staffErr) {
+        console.warn("[notifyNewBooking] staff alert skipped for", to, ":", staffErr.message);
+      }
     }
 
     const allRecipients = [...staffRecipients, ...(data.customer_email ? [data.customer_email] : []), ...(smsTo ? [smsTo] : [])];

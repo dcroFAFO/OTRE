@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
         <tr>
           <td style="background:#16a34a;padding:28px 32px;">
-            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">OTR Scooters</p>
+            <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">On The Run Electrics</p>
             <h1 style="margin:8px 0 0;color:#ffffff;font-size:24px;font-weight:700;">Repair Checklist Complete</h1>
           </td>
         </tr>
@@ -100,12 +100,12 @@ Deno.serve(async (req) => {
             <p style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;">Completed Steps (${checklist.length})</p>
             <table width="100%" cellpadding="0" cellspacing="0">${rows}</table>
 
-            <p style="margin:24px 0 0;font-size:14px;color:#64748b;">Questions? Reply to this email or call us on <strong>(03) 9000 1234</strong>.</p>
+            <p style="margin:24px 0 0;font-size:14px;color:#64748b;">Questions? Reply to this email or call us on <strong>0415 505 908</strong>.</p>
           </td>
         </tr>
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">OTR Scooters · 12 Workshop Lane, Melbourne VIC · hello@otrscooters.com</p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">On The Run Electrics · 11 Lucinda Street Woolloongabba QLD · 0415 505 908 · hello@ontherunelectrics.com.au</p>
           </td>
         </tr>
       </table>
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         to,
         subject: `Repair checklist completed${reference}`,
         body: htmlBody,
-        from_name: "OTR Scooters",
+        from_name: "On The Run Electrics",
       });
     }
 
