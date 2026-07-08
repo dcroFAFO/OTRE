@@ -33,14 +33,17 @@ const TAB_LABELS = {
   files: "Files",
 };
 
+// Matches the "lg:hidden" breakpoint used by DashboardShell/MobileJobWorkspace
+// so the full-screen mobile workspace is used whenever the app is already in
+// its mobile/tablet navigation mode, instead of falling back to the desktop modal.
 function useMobileJobWorkspace() {
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1023px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const media = window.matchMedia("(max-width: 767px)");
+    const media = window.matchMedia("(max-width: 1023px)");
     const update = () => setIsMobile(media.matches);
     update();
     media.addEventListener("change", update);
