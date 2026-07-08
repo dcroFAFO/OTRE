@@ -19,6 +19,12 @@ function normalizePhone(value) {
   return `+61${cleaned.replace(/\D/g, '')}`;
 }
 
+function generateReferralCode(seed) {
+  const base = String(seed || Math.random()).replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || 'ABCD';
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `OTR-${base}${rand}`.slice(0, 14);
+}
+
 function scooterMatches(a, b) {
   const aSerial = cleanText(a.serial_number);
   const bSerial = cleanText(b.serial_number);
@@ -73,6 +79,21 @@ Deno.serve(async (req) => {
 
     if (body.action === 'get') {
       const [scooters, connections] = await Promise.all([listScooters(db, ctx), listConnections(db, ctx, user.id)]);
+
+      // Lazily assign a referral code the first time a customer with an
+      // account record loads their settings. No emails/SMS are sent here —
+      // this only persists the code so it can be shared/displayed.
+      let referral = {
+        referral_code: ctx.customer?.referral_code || '',
+        referral_status: ctx.customer?.referral_status || 'none',
+        referral_eligible: !!ctx.customer?.referral_eligible,
+      };
+      if (ctx.customer && !referral.referral_code) {
+        const code = generateReferralCode(ctx.customer.id);
+        await db.Customer.update(ctx.customer.id, { referral_code: code }).catch(() => null);
+        referral = { ...referral, referral_code: code };
+      }
+
       return Response.json({
         profile: {
           name: ctx.profile?.display_name || ctx.profile?.full_name || ctx.customer?.full_name || user.full_name || '',
@@ -82,6 +103,7 @@ Deno.serve(async (req) => {
         },
         scooters,
         connections,
+        referral,
       });
     }
 
