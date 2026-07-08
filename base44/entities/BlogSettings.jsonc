@@ -1,0 +1,81 @@
+{
+  "name": "BlogSettings",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "account_id": {
+      "type": "string"
+    },
+    "blog_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "blog_name": {
+      "type": "string",
+      "default": "Blog"
+    },
+    "blog_description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "default_author_name": {
+      "type": "string"
+    },
+    "default_author_bio": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "default_author_avatar_url": {
+      "type": "string"
+    },
+    "default_blog_route": {
+      "type": "string",
+      "default": "/blog"
+    },
+    "posts_per_page": {
+      "type": "number",
+      "default": 9
+    },
+    "show_author_box": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_related_posts": {
+      "type": "boolean",
+      "default": true
+    },
+    "enable_ai_generation": {
+      "type": "boolean",
+      "default": true
+    },
+    "enable_scheduled_publishing": {
+      "type": "boolean",
+      "default": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "data.user_id": "{{user.id}}"
+    },
+    "update": {
+      "data.user_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.user_id": "{{user.id}}"
+    }
+  }
+}

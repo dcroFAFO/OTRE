@@ -37,6 +37,17 @@ import FeedbackButton from '@/components/feedback/FeedbackButton';
 import SystemSettings from '@/pages/settings/SystemSettings';
 import AssetManagement from '@/pages/AssetManagement';
 import ServicePricing from '@/pages/ServicePricing';
+import BlogIndex from '@/pages/blog/BlogIndex';
+import BlogPostPage from '@/pages/blog/BlogPostPage';
+import BlogCategoryPage from '@/pages/blog/BlogCategoryPage';
+import BlogTagPage from '@/pages/blog/BlogTagPage';
+import BlogDashboard from '@/pages/blog-admin/BlogDashboard';
+import BlogPosts from '@/pages/blog-admin/BlogPosts';
+import BlogEditor from '@/pages/blog-admin/BlogEditor';
+import BlogGenerator from '@/pages/blog-admin/BlogGenerator';
+import BlogTaxonomy from '@/pages/blog-admin/BlogTaxonomy';
+import BlogSettings from '@/pages/blog-admin/BlogSettings';
+import BlogLogs from '@/pages/blog-admin/BlogLogs';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -74,6 +85,10 @@ const AuthenticatedApp = () => {
       <Route path="/portal/settings" element={<PortalSettings />} />
       <Route path="/portal/account" element={<PortalAccount />} />
       <Route path="/store" element={<Store />} />
+      <Route path="/blog" element={<BlogIndex />} />
+      <Route path="/blog/:slug" element={<BlogPostPage />} />
+      <Route path="/blog/category/:slug" element={<BlogCategoryPage />} />
+      <Route path="/blog/tag/:slug" element={<BlogTagPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -86,6 +101,13 @@ const AuthenticatedApp = () => {
         <Route path="calendar" element={<Calendar />} />
         <Route path="invoices" element={<Invoices />} />
         <Route path="parts" element={<Parts />} />
+        <Route path="blog" element={<BlogDashboard />} />
+        <Route path="blog/posts" element={<BlogPosts />} />
+        <Route path="blog/posts/:id" element={<BlogEditor />} />
+        <Route path="blog/generate" element={<BlogGenerator />} />
+        <Route path="blog/taxonomy" element={<BlogTaxonomy />} />
+        <Route path="blog/settings" element={<BlogSettings />} />
+        <Route path="blog/logs" element={<BlogLogs />} />
       </Route>
       <Route element={<DashboardLayout />}>
         <Route path="/settings" element={<SystemSettings />} />

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, MessageSquare, Contact, ShoppingBag, Activity, Receipt, Settings, Bike, BadgeDollarSign } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, MessageSquare, Contact, ShoppingBag, Activity, Receipt, Settings, Bike, BadgeDollarSign, FileText } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,12 @@ export default function DashboardShell({ user, children }) {
   { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
   { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
   { to: "/dashboard/invoices", label: "Invoices", icon: Receipt },
+  { to: "/dashboard/blog", label: "Blog", icon: FileText, children: [
+  { to: "/dashboard/blog/posts", label: "Posts", icon: FileText },
+  { to: "/dashboard/blog/generate", label: "AI Generator", icon: Zap },
+  { to: "/dashboard/blog/taxonomy", label: "Categories & Tags", icon: ListChecks },
+  { to: "/dashboard/blog/settings", label: "Blog Settings", icon: Settings },
+  { to: "/dashboard/blog/logs", label: "Blog Logs", icon: Activity }] },
   ...(canManageCustomers ? [
   { to: "/admin/clients", label: "Customers", icon: Contact, children: [
   { to: "/asset-management", label: "Asset Management", icon: Bike }] }] :

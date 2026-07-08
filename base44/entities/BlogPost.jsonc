@@ -1,0 +1,117 @@
+{
+  "name": "BlogPost",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "account_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "excerpt": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "content_markdown": {
+      "type": "string"
+    },
+    "content_html": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "scheduled",
+        "published",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "target_keyword": {
+      "type": "string"
+    },
+    "category_id": {
+      "type": "string"
+    },
+    "tag_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "author_bio": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "author_avatar_url": {
+      "type": "string"
+    },
+    "featured_image_url": {
+      "type": "string"
+    },
+    "featured_image_alt": {
+      "type": "string"
+    },
+    "meta_title": {
+      "type": "string"
+    },
+    "meta_description": {
+      "type": "string",
+      "maxLength": 320
+    },
+    "canonical_url": {
+      "type": "string"
+    },
+    "reading_time_minutes": {
+      "type": "number",
+      "default": 1
+    },
+    "word_count": {
+      "type": "number",
+      "default": 0
+    },
+    "scheduled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "user_id",
+    "title",
+    "slug"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "data.user_id": "{{user.id}}"
+    },
+    "update": {
+      "data.user_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.user_id": "{{user.id}}"
+    }
+  }
+}
