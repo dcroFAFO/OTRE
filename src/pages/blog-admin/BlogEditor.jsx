@@ -21,7 +21,7 @@ export default function BlogEditor() {
   const [post, setPost] = useState(null);
   useEffect(() => { if (data) setPost(isNew ? emptyPost(user, data.settings) : data.posts.find((p) => p.id === id)); }, [data, id, isNew, user]);
   const saveMutation = useMutation({ mutationFn: async () => isNew ? createBlogPost(post) : updateBlogPost(id, post), onSuccess: (res) => { qc.invalidateQueries({ queryKey: ["blogAdmin"] }); if (isNew) navigate(`/dashboard/blog/posts/${res.post.id}`); } });
-  const publishMutation = useMutation({ mutationFn: async () => { const saved = isNew ? await createBlogPost(post) : await updateBlogPost(id, post); return publishBlogPostNow(saved.post.id); }, onSuccess: () => qc.invalidateQueries({ queryKey: ["blogAdmin"] }) });
+  const publishMutation = useMutation({ mutationFn: async () => { const saved = isNew ? await createBlogPost(post) : await updateBlogPost(id, post); return publishBlogPostNow(saved.post.id); }, onSuccess: (res) => { qc.invalidateQueries({ queryKey: ["blogAdmin"] }); if (isNew) navigate(`/dashboard/blog/posts/${res.post.id}`); } });
   const scheduleMutation = useMutation({ mutationFn: async () => { const saved = isNew ? await createBlogPost(post) : await updateBlogPost(id, post); return scheduleBlogPost(saved.post.id, post.scheduled_at); }, onSuccess: (res) => { qc.invalidateQueries({ queryKey: ["blogAdmin"] }); if (isNew) navigate(`/dashboard/blog/posts/${res.post.id}`); } });
   const cancelMutation = useMutation({ mutationFn: () => cancelScheduledBlogPost(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["blogAdmin"] }) });
   const words = useMemo(() => String(post?.content_markdown || "").trim().split(/\s+/).filter(Boolean).length, [post]);
