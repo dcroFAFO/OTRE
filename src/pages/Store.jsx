@@ -43,8 +43,8 @@ function StoreInner() {
 
   const storeTitle = activeCategory ? `${activeLabel} | OTR Scooter Store` : "Scooter Parts & Accessories | OTR Scooters";
   const storeDescription = activeCategory
-    ? `Browse ${activeLabel.toLowerCase()} for electric scooter repairs, maintenance and upgrades from OTR Scooters.`
-    : "Shop electric scooter parts, accessories and service items from OTR Scooters, with products selected for reliable repairs and maintenance.";
+    ? `Browse ${activeLabel.toLowerCase()} selected by OTR Scooters for reliable electric scooter repairs, servicing, maintenance and upgrades.`
+    : "Shop electric scooter parts, accessories and service items selected by OTR Scooters for reliable repairs, servicing and maintenance.";
 
   return (
     <>

@@ -10,8 +10,8 @@ export default function Contact() {
   return (
     <>
       <SEO
-        title="Contact Us | On The Run Electrics"
-        description="Get in touch with On The Run Electrics. Call, email or visit our Wooloongabba workshop for electric scooter repairs and servicing in Brisbane."
+        title="Contact OTR Scooters | Brisbane Repair Shop"
+        description="Contact OTR Scooters for electric scooter repairs in Brisbane. Call, email or visit our Wooloongabba workshop for service advice and bookings."
         canonical="/contact"
       />
       <main className="min-h-screen bg-background text-foreground">

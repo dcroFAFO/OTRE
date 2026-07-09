@@ -7,8 +7,8 @@ export default function GuestBooking() {
   return (
     <>
       <SEO
-        title="Guest Repair Booking | On The Run Electrics"
-        description="Submit your electric scooter repair details as a guest."
+        title="Guest Repair Booking | OTR Scooters"
+        description="Submit an electric scooter repair request as a guest so the OTR Scooters team can review your issue and follow up by email or SMS."
         canonical="/book/guest"
         noindex
       />

@@ -11,8 +11,8 @@ export default function About() {
   return (
     <>
       <SEO
-        title="About Us | On The Run Electrics"
-        description="Learn about On The Run Electrics — Brisbane's trusted electric scooter repair shop. Expert technicians, transparent pricing, and fast turnaround."
+        title="About OTR Scooters | Brisbane Repairs"
+        description="Meet OTR Scooters, Brisbane's electric scooter repair specialists offering expert diagnostics, transparent quotes and rider-focused service."
         canonical="/about"
       />
       <main className="min-h-screen bg-background text-foreground">

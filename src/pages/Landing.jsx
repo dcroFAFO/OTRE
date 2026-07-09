@@ -19,7 +19,7 @@ export default function Landing() {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: "On The Run Electrics",
-    description: "Electric scooter repairs, servicing, diagnostics and maintenance.",
+    description: "Electric scooter repairs, servicing, diagnostics and maintenance in Brisbane.",
     url: typeof window !== "undefined" ? window.location.origin : "/",
     serviceType: "Electric scooter repair",
   };
@@ -27,8 +27,8 @@ export default function Landing() {
   return (
     <>
       <SEO
-        title="Electric Scooter Repairs | On The Run Electrics"
-        description="Fast, reliable electric scooter repairs, servicing, diagnostics and maintenance to keep your ride safe and road-ready."
+        title="Electric Scooter Repairs Brisbane | OTR Scooters"
+        description="Book electric scooter repairs in Brisbane with OTR Scooters. Get expert diagnostics, servicing, tyre repairs and transparent job tracking."
         canonical="/"
         ogType="website"
         structuredData={localBusinessSchema}

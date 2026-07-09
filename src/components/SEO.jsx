@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 
 const SITE_NAME = "OTR Scooters";
 const DEFAULT_TITLE = "OTR Scooters | Electric Scooter Repairs";
-const DEFAULT_DESCRIPTION = "Book expert electric scooter repairs, diagnostics, servicing, parts and sales with transparent quotes and online job tracking.";
+const DEFAULT_DESCRIPTION = "Book expert electric scooter repairs, servicing and diagnostics with OTR Scooters, including transparent quotes and online job tracking.";
 const DEFAULT_IMAGE = undefined;
 
 function absoluteUrl(value) {
@@ -31,6 +31,10 @@ export default function SEO({
   const pageDescription = description;
   const canonicalUrl = absoluteUrl(canonical || (typeof window !== "undefined" ? window.location.pathname : "/"));
   const shareImage = absoluteUrl(twitterImage || ogImage);
+  const pageOgTitle = ogTitle || pageTitle;
+  const pageOgDescription = ogDescription || pageDescription;
+  const pageTwitterTitle = twitterTitle || pageOgTitle;
+  const pageTwitterDescription = twitterDescription || pageOgDescription;
   const schemas = Array.isArray(structuredData) ? structuredData : structuredData ? [structuredData] : [];
 
   return (
@@ -41,15 +45,16 @@ export default function SEO({
       {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
       <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:locale" content="en_AU" />
       <meta property="og:type" content={ogType} />
-      <meta property="og:title" content={ogTitle || pageTitle} />
-      {pageDescription && <meta property="og:description" content={ogDescription || pageDescription} />}
+      <meta property="og:title" content={pageOgTitle} />
+      {pageOgDescription && <meta property="og:description" content={pageOgDescription} />}
       {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
       {shareImage && <meta property="og:image" content={shareImage} />}
 
       <meta name="twitter:card" content={shareImage ? "summary_large_image" : "summary"} />
-      <meta name="twitter:title" content={twitterTitle || ogTitle || pageTitle} />
-      {pageDescription && <meta name="twitter:description" content={twitterDescription || ogDescription || pageDescription} />}
+      <meta name="twitter:title" content={pageTwitterTitle} />
+      {pageTwitterDescription && <meta name="twitter:description" content={pageTwitterDescription} />}
       {shareImage && <meta name="twitter:image" content={shareImage} />}
 
       {schemas.map((schema, index) => (
