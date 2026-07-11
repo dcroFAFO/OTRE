@@ -4,6 +4,7 @@ import { Minus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/** @type {React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<typeof OTPInput> & React.RefAttributes<HTMLInputElement>>} */
 const InputOTP = React.forwardRef(({ className, containerClassName, ...props }, ref) => (
   <OTPInput
     ref={ref}
@@ -13,11 +14,19 @@ const InputOTP = React.forwardRef(({ className, containerClassName, ...props }, 
 ))
 InputOTP.displayName = "InputOTP"
 
+/** @type {React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<"div"> & React.RefAttributes<HTMLDivElement>>} */
 const InputOTPGroup = React.forwardRef(({ className, ...props }, ref) => (
   <div ref={ref} className={cn("flex items-center", className)} {...props} />
 ))
 InputOTPGroup.displayName = "InputOTPGroup"
 
+/**
+ * @typedef {React.ComponentPropsWithoutRef<"div"> &
+ *   { index: number } &
+ *   React.RefAttributes<HTMLDivElement>} InputOTPSlotProps
+ */
+
+/** @type {React.ForwardRefExoticComponent<InputOTPSlotProps>} */
 const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext)
   const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index]
@@ -43,6 +52,7 @@ const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
 })
 InputOTPSlot.displayName = "InputOTPSlot"
 
+/** @type {React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<"div"> & React.RefAttributes<HTMLDivElement>>} */
 const InputOTPSeparator = React.forwardRef(({ ...props }, ref) => (
   <div ref={ref} role="separator" {...props}>
     <Minus />

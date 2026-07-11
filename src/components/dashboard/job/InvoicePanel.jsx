@@ -91,7 +91,7 @@ function usageToLineItem(usage) {
 
 export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly = false }) {
   const [invoice, setInvoice] = useState(null);
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState(null);
   const [usageRecords, setUsageRecords] = useState([]);
   const [sending, setSending] = useState(false);
