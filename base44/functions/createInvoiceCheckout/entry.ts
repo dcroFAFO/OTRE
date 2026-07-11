@@ -1,24 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.5.0';
+import { authorizeInvoiceCheckout } from '../_shared/authorization.ts';
 import { validateInvoiceCheckout } from './domain.ts';
 
 Deno.serve(async (req) => {
   try {
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-    if (!stripeKey) return Response.json({ error: 'Stripe is not configured.' }, { status: 500 });
-
-    const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { invoiceId } = await req.json().catch(() => ({}));
     if (!invoiceId) return Response.json({ error: 'invoiceId is required' }, { status: 400 });
 
     const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
     if (!invoice) return Response.json({ error: 'Invoice not found' }, { status: 404 });
+    const job = invoice.job_id ? await base44.asServiceRole.entities.Job.get(invoice.job_id).catch(() => null) : null;
+    if (!authorizeInvoiceCheckout(user, invoice, job).allowed) {
+      return Response.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
     const checkout = validateInvoiceCheckout(invoice);
     if (!checkout.ok) return Response.json({ error: checkout.error }, { status: 400 });
     const amount = checkout.amount;
 
-    const job = invoice.job_id ? await base44.asServiceRole.entities.Job.get(invoice.job_id).catch(() => null) : null;
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeKey) return Response.json({ error: 'Stripe is not configured.' }, { status: 500 });
+    const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
+
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://app.base44.com';
     const successUrl = `${origin}/portal?payment=success&invoice=${encodeURIComponent(invoice.id)}`;
     const cancelUrl = `${origin}/portal?payment=cancelled&invoice=${encodeURIComponent(invoice.id)}`;

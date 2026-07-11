@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { authorizeStaff } from '../_shared/authorization.ts';
 import {
   CURRENCY,
   CUSTOMER_VISIBILITY,
@@ -31,6 +32,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authorizeStaff(user).allowed) return Response.json({ error: "Forbidden" }, { status: 403 });
     requestMeta.userId = user.id;
 
     const { action, jobId, ...params } = await req.json();
@@ -50,8 +52,6 @@ Deno.serve(async (req) => {
       }
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || (user.is_customer === false || user.data?.is_customer === false);
-
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
       base44.asServiceRole.entities.AuditEvent.create({
         event_type: eventType,
@@ -88,7 +88,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "copy_quote": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
         const quote = quotes[0];
         if (!quote) return Response.json({ error: "No estimate or costing found for this job" }, { status: 404 });
@@ -128,7 +127,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "add_parts_to_invoice": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const usageIds = Array.isArray(params.usageIds) ? params.usageIds : [];
         if (usageIds.length === 0) return Response.json({ error: "No parts selected" }, { status: 400 });
 
@@ -168,7 +166,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "update_line_items": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
         if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
         const lineItems = normalizeInvoiceLineItems(params.lineItems);
@@ -182,7 +179,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "set_visibility": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
         if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
         const nextVisibility = params.invoiceVisibility === CUSTOMER_VISIBILITY ? CUSTOMER_VISIBILITY : INTERNAL_VISIBILITY;
@@ -195,7 +191,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "send_to_customer": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
         if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
         result = await makeInvoiceVisible(base44, invoice);
@@ -203,7 +198,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "set_payment_status": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const { invoiceId, status } = params;
         const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });

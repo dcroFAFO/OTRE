@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { authorizeStaff } from '../_shared/authorization.ts';
 import {
   buildLabourLineItem,
   buildQuotePartItems,
@@ -18,6 +19,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authorizeStaff(user).allowed) return Response.json({ error: "Forbidden" }, { status: 403 });
     requestMeta.userId = user.id;
 
     const { action, jobId, ...params } = await req.json();

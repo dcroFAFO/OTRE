@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { authorizeStaff } from '../_shared/authorization.ts';
 import {
   CANCELLED_STATUS,
   READY_STATUS,
@@ -101,6 +102,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authorizeStaff(user).allowed) return Response.json({ error: "Forbidden" }, { status: 403 });
     requestMeta.userId = user.id;
 
     const { action, jobId, ...params } = await req.json();
@@ -120,8 +122,6 @@ Deno.serve(async (req) => {
       }
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
-
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || (user.is_customer === false || user.data?.is_customer === false);
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
       base44.asServiceRole.entities.AuditEvent.create({
@@ -232,7 +232,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "save_private_notes": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         result = await base44.asServiceRole.entities.Job.update(job.id, { private_notes: params.privateNotes || "" });
         await logAudit({ eventType: "private_notes_updated", summary: params.privateNotes ? "Private notes updated" : "Private notes deleted", visibility: "internal" })
           .catch((auditError) => console.warn("[jobActions] private notes audit skipped:", auditError.message));
@@ -256,7 +255,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "add_inventory_parts": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const parts = Array.isArray(params.parts) ? params.parts : [];
         if (parts.length === 0) return Response.json({ error: "No parts selected" }, { status: 400 });
 
@@ -294,7 +292,6 @@ Deno.serve(async (req) => {
       }
       case "remove_inventory_part":
       case "remove_inventory_parts": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const usageIds = action === "remove_inventory_parts"
           ? (Array.isArray(params.usageIds) ? params.usageIds : [])
           : (params.usageId ? [params.usageId] : []);
@@ -332,10 +329,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "list_activity": {
-        if (!isStaff && job.customer_id !== user.customer_id && job.customer_id !== user.data?.customer_id) {
-          return Response.json({ error: "Forbidden" }, { status: 403 });
-        }
-
         const jobKeys = [job.id, job.job_id].filter(Boolean);
         const auditLists = await Promise.all(jobKeys.map((key) =>
           base44.asServiceRole.entities.AuditEvent.filter({ job_id: key }, "-created_date", 200)

@@ -7,6 +7,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import RequireCapability from '@/components/auth/RequireCapability';
+import { CAPABILITIES } from '@/config/roles';
 import ScrollToTop from './components/ScrollToTop';
 import Landing from '@/pages/Landing';
 import BookAccount from '@/pages/BookAccount';
@@ -100,7 +102,15 @@ const AuthenticatedApp = () => {
         <Route path="jobs" element={<Jobs />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="invoices" element={<Invoices />} />
-        <Route path="parts" element={<Parts />} />
+        <Route path="parts" element={(
+          <RequireCapability
+            minRole="admin"
+            deniedTitle="Admin access only"
+            deniedMessage="You don't have permission to manage the parts catalogue."
+          >
+            <Parts />
+          </RequireCapability>
+        )} />
         <Route path="blog" element={<BlogDashboard />} />
         <Route path="blog/posts" element={<BlogPosts />} />
         <Route path="blog/posts/:id" element={<BlogEditor />} />
@@ -117,9 +127,33 @@ const AuthenticatedApp = () => {
       <Route path="/customers" element={<Navigate to="/admin/clients" replace />} />
       <Route path="/job-board" element={<Navigate to="/dashboard/jobs" replace />} />
       <Route path="/parts-catalogue" element={<Navigate to="/dashboard/parts" replace />} />
-      <Route path="/admin/feedback" element={<AdminFeedback />} />
-      <Route path="/admin/clients" element={<AdminClients />} />
-      <Route path="/admin/activity" element={<AdminActivityLog />} />
+      <Route path="/admin/feedback" element={(
+        <RequireCapability
+          minRole="admin"
+          deniedTitle="Admin access only"
+          deniedMessage="You don't have permission to view feedback management."
+        >
+          <AdminFeedback />
+        </RequireCapability>
+      )} />
+      <Route path="/admin/clients" element={(
+        <RequireCapability
+          minRole="technician"
+          deniedTitle="Staff access only"
+          deniedMessage="You don't have permission to view customer management."
+        >
+          <AdminClients />
+        </RequireCapability>
+      )} />
+      <Route path="/admin/activity" element={(
+        <RequireCapability
+          capability={CAPABILITIES.LOG_VIEW}
+          deniedTitle="Activity log restricted"
+          deniedMessage="You don't have permission to view the activity log."
+        >
+          <AdminActivityLog />
+        </RequireCapability>
+      )} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

@@ -260,12 +260,15 @@ function matches(recordValue, filter = {}) {
 function entity(name) {
   return {
     async list(_sort, limit = 500) {
+      record(`entity.${name}.list`, { limit });
       return clone(collection(name).slice(0, limit));
     },
     async filter(filter = {}, _sort, limit = 500) {
+      record(`entity.${name}.filter`, { filter, limit });
       return clone(collection(name).filter((item) => matches(item, filter)).slice(0, limit));
     },
     async get(id) {
+      record(`entity.${name}.get`, { id });
       const item = collection(name).find((candidate) => candidate.id === id);
       if (!item) throw new Error(`${name} ${id} not found`);
       return clone(item);

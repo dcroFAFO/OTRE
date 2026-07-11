@@ -6,7 +6,7 @@ import RequireCapability from "@/components/auth/RequireCapability";
 import ActivityLogFilters, { EMPTY_ACTIVITY_FILTERS } from "@/components/admin/activity/ActivityLogFilters";
 import ActivityLogTable from "@/components/admin/activity/ActivityLogTable";
 import { listAllAudit } from "@/services/auditService";
-import { CAPABILITIES } from "@/config/roles";
+import { CAPABILITIES, hasCapability } from "@/config/roles";
 import { Button } from "@/components/ui/button";
 import { Activity, AlertTriangle } from "lucide-react";
 import { subDays, startOfDay, isAfter } from "date-fns";
@@ -19,6 +19,7 @@ export default function AdminActivityLog() {
   const { data: events, isLoading: loadingEvents, error } = useQuery({
     queryKey: ["adminActivityLog"],
     queryFn: () => listAllAudit(1000),
+    enabled: hasCapability(user?.role, CAPABILITIES.LOG_VIEW),
     initialData: [],
   });
 

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { jsPDF } from 'npm:jspdf@4.2.1';
+import { authorizeStaff } from '../_shared/authorization.ts';
 
 const DEFAULT_BUSINESS = {
   name: "On The Run Electrics",
@@ -336,8 +337,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || user.is_customer === false || user.data?.is_customer === false;
-    if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+    if (!authorizeStaff(user).allowed) return Response.json({ error: "Forbidden" }, { status: 403 });
 
     const { action, jobId, invoiceId, invoiceDraft = null, notes = "", regenerateCount = 0 } = await req.json();
     requestMeta.action = action;
