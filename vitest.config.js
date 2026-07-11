@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   test: {
+    allowOnly: false,
     clearMocks: true,
     environment: "jsdom",
     globals: false,
