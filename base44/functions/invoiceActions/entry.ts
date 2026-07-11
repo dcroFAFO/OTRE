@@ -1,49 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import {
+  CURRENCY,
+  CUSTOMER_VISIBILITY,
+  DEFAULT_STATUS,
+  INTERNAL_VISIBILITY,
+  invoiceTotal,
+  normalizeInvoiceLineItems,
+  PREFIX,
+  resolveInvoiceAmount,
+  usageToInvoiceLineItem,
+} from './domain.ts';
 
 // Invoice creation and payment status transitions run server-side,
 // keeping the job's payment fields and audit trail in sync atomically.
-
-const PREFIX = "INV";
-const CURRENCY = "AUD";
-const DEFAULT_STATUS = "outstanding";
-const INTERNAL_VISIBILITY = "internal";
-const CUSTOMER_VISIBILITY = "customer_visible";
-const PARTS_MARKUP_PERCENT = 20;
-const PARTS_MARKUP_MULTIPLIER = 1.2;
-
-const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
-const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
-
-function normalizeLineItems(items) {
-  return (Array.isArray(items) ? items : []).map((item) => {
-    const qty = Number(item.qty) || 1;
-    const unitPrice = Number(item.unit_price ?? item.customer_unit_price) || 0;
-    return {
-      description: item.description || "Line item",
-      qty,
-      unit_price: unitPrice,
-      customer_unit_price: Number(item.customer_unit_price ?? unitPrice) || 0,
-      customer_line_total: roundMoney(unitPrice * qty),
-      is_custom_misc_part: !!item.is_custom_misc_part,
-      tax_rate: Number(item.tax_rate) || 0,
-      discount_amount: Number(item.discount_amount) || 0,
-      kind: item.kind || "item",
-      category: item.category || item.kind || "item",
-      sku: item.sku || "",
-      source_usage_id: item.source_usage_id || "",
-    };
-  });
-}
-
-function lineTotal(item) {
-  const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
-  const tax = base * ((Number(item.tax_rate) || 0) / 100);
-  return base + tax - (Number(item.discount_amount) || 0);
-}
-
-function invoiceTotal(items) {
-  return normalizeLineItems(items).reduce((sum, item) => sum + lineTotal(item), 0);
-}
 
 async function makeInvoiceVisible(base44, invoice) {
   const now = new Date().toISOString();
@@ -101,9 +70,8 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "create": {
-        const lineItems = normalizeLineItems(params.lineItems);
-        const calculatedAmount = invoiceTotal(lineItems);
-        const amount = calculatedAmount || Number(params.amount) || 0;
+        const lineItems = normalizeInvoiceLineItems(params.lineItems);
+        const amount = resolveInvoiceAmount(lineItems, params.amount);
         result = await base44.asServiceRole.entities.Invoice.create({
           job_id: job.id,
           customer_id: job.customer_id || "",
@@ -125,11 +93,11 @@ Deno.serve(async (req) => {
         const quote = quotes[0];
         if (!quote) return Response.json({ error: "No estimate or costing found for this job" }, { status: 404 });
 
-        const lineItems = normalizeLineItems((quote.line_items || []).map((item) => ({
+        const lineItems = normalizeInvoiceLineItems((quote.line_items || []).map((item) => ({
           ...item,
           sku: item.sku || item.product_sku || item.product_code || item.code || "",
         })));
-        const amount = Number(quote.total) || invoiceTotal(lineItems);
+        const amount = resolveInvoiceAmount(lineItems, quote.total);
         const existing = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
         const invoiceData = {
           quote_id: quote.id,
@@ -188,30 +156,13 @@ Deno.serve(async (req) => {
         const existingItems = invoice.line_items || [];
         const existingKeys = new Set(existingItems.map((item) => `${item.source_usage_id || ""}|${item.description || ""}`));
         const newItems = usages
-          .map((usage) => {
-            const qty = Number(usage.qty_used) || 1;
-            const customerUnitPrice = Number(usage.unit_sell) || customerPriceFromCost(usage.unit_cost || 0);
-            return {
-              description: usage.item_name || "Part",
-              qty,
-              unit_price: customerUnitPrice,
-              internal_cost_price: Number(usage.unit_cost) || 0,
-              markup_percentage: Number(usage.markup_percentage) || PARTS_MARKUP_PERCENT,
-              customer_unit_price: customerUnitPrice,
-              customer_line_total: roundMoney(customerUnitPrice * qty),
-              is_custom_misc_part: !!usage.is_custom_misc_part,
-              staff_notes: usage.note || "",
-              kind: "part",
-              sku: usage.product_sku || usage.item_id || "",
-              source_usage_id: usage.id,
-            };
-          })
+          .map(usageToInvoiceLineItem)
           .filter((item) => !existingKeys.has(`${item.source_usage_id}|${item.description}`));
 
         if (newItems.length === 0) return Response.json({ error: "Selected parts are already on the invoice" }, { status: 400 });
         const line_items = [...existingItems, ...newItems];
         const amount = invoiceTotal(line_items);
-        result = await base44.asServiceRole.entities.Invoice.update(invoice.id, { line_items: normalizeLineItems(line_items), amount });
+        result = await base44.asServiceRole.entities.Invoice.update(invoice.id, { line_items: normalizeInvoiceLineItems(line_items), amount });
         await Promise.all(usages.map((usage) => base44.asServiceRole.entities.InventoryUsage.update(usage.id, { invoice_id: invoice.id })));
         await logAudit({ eventType: "parts_added_to_invoice", summary: `Added ${newItems.length} part(s) to internal invoice`, visibility: "internal" });
         break;
@@ -220,7 +171,7 @@ Deno.serve(async (req) => {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
         if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
-        const lineItems = normalizeLineItems(params.lineItems);
+        const lineItems = normalizeInvoiceLineItems(params.lineItems);
         const amount = invoiceTotal(lineItems);
         result = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
           line_items: lineItems,

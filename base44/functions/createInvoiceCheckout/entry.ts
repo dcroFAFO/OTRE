@@ -1,7 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.5.0';
-
-const blockingStatuses = new Set(['paid', 'refunded', 'cancelled', 'void']);
+import { validateInvoiceCheckout } from './domain.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -15,10 +14,9 @@ Deno.serve(async (req) => {
 
     const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
     if (!invoice) return Response.json({ error: 'Invoice not found' }, { status: 404 });
-    if (blockingStatuses.has(invoice.status)) return Response.json({ error: 'This invoice cannot be paid online.' }, { status: 400 });
-
-    const amount = Math.round((Number(invoice.amount) || 0) * 100);
-    if (amount <= 0) return Response.json({ error: 'Invoice amount must be greater than zero.' }, { status: 400 });
+    const checkout = validateInvoiceCheckout(invoice);
+    if (!checkout.ok) return Response.json({ error: checkout.error }, { status: 400 });
+    const amount = checkout.amount;
 
     const job = invoice.job_id ? await base44.asServiceRole.entities.Job.get(invoice.job_id).catch(() => null) : null;
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || 'https://app.base44.com';

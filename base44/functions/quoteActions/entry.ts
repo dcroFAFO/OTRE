@@ -1,17 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import {
+  buildLabourLineItem,
+  buildQuotePartItems,
+  CURRENCY,
+  normalizeLabourHours,
+  prepareQuoteData,
+  summarizeQuoteLineItems,
+} from './domain.ts';
 
 // All quote business logic (totals, status transitions, job sync, audit) runs server-side.
-
-const CURRENCY = "AUD";
-const LABOUR_RATE = 80; // $/hour
-const MIN_HOURS = 1;
-const PARTS_MARKUP_PERCENT = 20;
-const PARTS_MARKUP_MULTIPLIER = 1.2;
-
-const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
-const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
-
-const labourFromHours = (hours) => Math.max(MIN_HOURS, Number(hours) || 0) * LABOUR_RATE;
 
 Deno.serve(async (req) => {
   // requestMeta is filled in as parsing progresses so the catch block can log
@@ -67,12 +64,8 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "save": {
-        const data = params.data || {};
-        // When labour_hours is supplied, labour cost is computed from it.
-        if (data.labour_hours != null && data.labour_hours !== "") {
-          data.labour_estimate = labourFromHours(data.labour_hours);
-        }
-        const total = (Number(data.labour_estimate) || 0) + (Number(data.parts_estimate) || 0);
+        const data = prepareQuoteData(params.data);
+        const total = data.total;
         if (data.id) {
           result = await db.Quote.update(data.id, { ...data, total });
         } else {
@@ -105,7 +98,7 @@ Deno.serve(async (req) => {
         break;
       }
       case "add_parts": {
-        const parts = params.parts || [];
+        const parts = Array.isArray(params.parts) ? params.parts : [];
         let quote = await getJobQuote();
         if (!quote) {
           quote = await db.Quote.create({
@@ -120,30 +113,9 @@ Deno.serve(async (req) => {
           await db.Job.update(job.id, { quote_status: "draft" });
         }
 
-        const newItems = parts.map((p) => {
-          const qty = Math.max(0.01, Number(p.qty) || 1);
-          const costPrice = roundMoney(p.cost_price ?? p.price ?? 0);
-          const customerUnitPrice = roundMoney(p.customer_price ?? p.typical_price ?? customerPriceFromCost(costPrice));
-          return {
-            description: String(p.name || p.description || "Part").trim(),
-            qty,
-            unit_price: customerUnitPrice,
-            customer_unit_price: customerUnitPrice,
-            customer_line_total: roundMoney(customerUnitPrice * qty),
-            is_custom_misc_part: !!p.is_custom_misc_part,
-            kind: "part",
-            sku: p.sku || p.product_sku || p.product_code || "",
-          };
-        });
-
+        const newItems = buildQuotePartItems(parts);
         const line_items = [...(quote.line_items || []), ...newItems];
-        const parts_estimate = line_items
-          .filter((li) => li.kind === "part")
-          .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
-        const labour_estimate = line_items
-          .filter((li) => li.kind === "labour")
-          .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
-        const total = labour_estimate + parts_estimate;
+        const { parts_estimate, labour_estimate, total } = summarizeQuoteLineItems(line_items);
 
         result = await db.Quote.update(quote.id, { line_items, parts_estimate, labour_estimate, total });
         await logAudit({
@@ -155,8 +127,7 @@ Deno.serve(async (req) => {
       }
       case "add_labour": {
         const { hours } = params;
-        const hrs = Math.max(0.25, Number(hours) || 1);
-        const unit_price = labourFromHours(hrs) / hrs; // = LABOUR_RATE
+        const hrs = normalizeLabourHours(hours);
         let quote = await getJobQuote();
         if (!quote) {
           quote = await db.Quote.create({
@@ -170,14 +141,11 @@ Deno.serve(async (req) => {
           });
           await db.Job.update(job.id, { quote_status: "draft" });
         }
-        const newItem = { description: `Labour (${hrs}hr${hrs !== 1 ? "s" : ""} @ $${LABOUR_RATE}/hr)`, qty: 1, unit_price: hrs * LABOUR_RATE, kind: "labour" };
+        const newItem = buildLabourLineItem(hrs);
         const line_items = [...(quote.line_items || []), newItem];
-        const labour_estimate = line_items
-          .filter((li) => li.kind === "labour")
-          .reduce((s, li) => s + (Number(li.unit_price) || 0) * (Number(li.qty) || 1), 0);
-        const total = labour_estimate + (Number(quote.parts_estimate) || 0);
-        result = await db.Quote.update(quote.id, { line_items, labour_estimate, total });
-        await logAudit({ eventType: "quote_generated", summary: `Added labour: ${hrs}hr(s)`, newValue: `${CURRENCY} ${total.toFixed(2)}` });
+        const totals = summarizeQuoteLineItems(line_items);
+        result = await db.Quote.update(quote.id, { line_items, ...totals });
+        await logAudit({ eventType: "quote_generated", summary: `Added labour: ${hrs}hr(s)`, newValue: `${CURRENCY} ${totals.total.toFixed(2)}` });
         break;
       }
       case "ai_draft": {

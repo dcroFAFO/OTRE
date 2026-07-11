@@ -1,48 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import {
+  CANCELLED_STATUS,
+  READY_STATUS,
+  REOPEN_STATUS,
+  statusLabel,
+  validateStatusTransition,
+} from './domain.ts';
 
 // All job mutations (status, scheduling, checklist, notes) run
 // server-side here, with audit events written in the same request.
 
-const JOB_STATUSES = [
-  "requested",
-  "booked",
-  "repair_in_progress",
-  "waiting_on_parts",
-  "ready_for_pickup",
-  "invoice_sent",
-  "paid",
-  "completed",
-  "cancelled",
-  "on_hold",
-];
-
-const LEGACY_STATUS_MAP = {
-  quote_required: "requested",
-  quote_sent: "booked",
-  pending_confirmation: "on_hold",
-  quote_approved: "booked",
-  active: "repair_in_progress",
-  technician_assigned: "booked",
-  waiting_parts: "waiting_on_parts",
-  waiting_supplier: "on_hold",
-  waiting_customer: "on_hold",
-  invoice_outstanding: "invoice_sent",
-  in_progress: "repair_in_progress",
-};
-
-const READY_STATUS = "ready_for_pickup";
-const CANCELLED_STATUS = "cancelled";
-const REOPEN_STATUS = "booked";
 const PARTS_MARKUP_PERCENT = 20;
 const PARTS_MARKUP_MULTIPLIER = 1.2;
 
 const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
-const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status || "requested";
-const isCanonicalStatus = (status) => JOB_STATUSES.includes(status);
-
-const statusLabel = (key) =>
-  String(key || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
 const findJobInvoice = async (base44, job) => {
   if (job.invoice_id) {
@@ -170,11 +142,9 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "change_status": {
-        const nextStatus = normalizeStatus(params.newStatus);
-        const currentStatus = normalizeStatus(job.status);
-        if (!isCanonicalStatus(nextStatus)) {
-          return Response.json({ error: `Invalid job status: ${params.newStatus}` }, { status: 400 });
-        }
+        const transition = validateStatusTransition(job, params.newStatus);
+        if (!transition.ok) return Response.json({ error: transition.error }, { status: 400 });
+        const { currentStatus, nextStatus } = transition;
         if (currentStatus === nextStatus && job.status === nextStatus) { result = job; break; }
         result = await base44.entities.Job.update(job.id, { status: nextStatus });
         await logAudit({
@@ -215,6 +185,8 @@ Deno.serve(async (req) => {
         break;
       }
       case "mark_ready": {
+        const transition = validateStatusTransition(job, READY_STATUS);
+        if (!transition.ok) return Response.json({ error: transition.error }, { status: 400 });
         result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
         const readyJob = { ...job, ...result };
@@ -235,11 +207,15 @@ Deno.serve(async (req) => {
         break;
       }
       case "cancel": {
+        const transition = validateStatusTransition(job, CANCELLED_STATUS);
+        if (!transition.ok) return Response.json({ error: transition.error }, { status: 400 });
         result = await base44.entities.Job.update(job.id, { status: CANCELLED_STATUS });
         await logAudit({ eventType: "job_cancelled", summary: "Job cancelled", visibility: "customer" });
         break;
       }
       case "reopen": {
+        const transition = validateStatusTransition(job, REOPEN_STATUS, { reopen: true });
+        if (!transition.ok) return Response.json({ error: transition.error }, { status: 400 });
         result = await base44.entities.Job.update(job.id, { status: REOPEN_STATUS });
         await logAudit({ eventType: "job_reopened", summary: "Job reopened" });
         break;

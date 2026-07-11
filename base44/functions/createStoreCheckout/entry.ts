@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.5.0';
+import { buildOrderItems } from './domain.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -20,34 +21,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Shipping address is required for delivery.' }, { status: 400 });
     }
 
-    const productIds = items.map((item) => item.product_id).filter(Boolean);
+    const productIds = [...new Set(items.map((item) => item.product_id).filter(Boolean))];
     const products = [];
     for (const productId of productIds) {
       const product = await base44.asServiceRole.entities.Product.get(productId).catch(() => null);
-      if (product?.active) products.push(product);
+      if (product) products.push(product);
     }
 
-    const productById = new Map(products.map((product) => [product.id, product]));
-    const orderItems = items.map((item) => {
-      const product = productById.get(item.product_id);
-      if (!product) return null;
-      const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
-      return {
-        product_id: product.id,
-        name: product.name,
-        sku: product.sku || '',
-        qty,
-        price: Number(product.price || 0),
-      };
-    }).filter(Boolean);
-
-    if (orderItems.length === 0) {
-      return Response.json({ error: 'No valid products found in your cart.' }, { status: 400 });
-    }
-
-    const total = orderItems.reduce((sum, item) => sum + item.qty * item.price, 0);
-    const amount = Math.round(total * 100);
-    if (amount <= 0) return Response.json({ error: 'Order total must be greater than zero.' }, { status: 400 });
+    const cart = buildOrderItems(items, products);
+    if (!cart.ok) return Response.json({ error: cart.error }, { status: 400 });
+    const orderItems = cart.items;
+    const total = cart.total;
 
     const reference = `ORD-${Date.now().toString().slice(-6)}`;
     const order = await base44.asServiceRole.entities.Order.create({
