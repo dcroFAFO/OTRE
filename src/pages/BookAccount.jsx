@@ -27,7 +27,7 @@ export default function BookAccount() {
 
   return (
     <>
-      <SEO title="Book a Scooter Repair | OTR Scooters" description="Choose a secure booking option for your electric scooter repair, including customer account booking or a quick guest repair request." canonical="/book" noindex />
+      <SEO title="Book an Electric Scooter Repair | On The Run Electrics" description="Book an electric scooter repair in Brisbane with On The Run Electrics. Choose account booking or submit a quick guest repair request online." canonical="/book" />
       <main className="min-h-screen bg-background text-foreground">
         <LandingParallaxBackground />
         <LandingNav />

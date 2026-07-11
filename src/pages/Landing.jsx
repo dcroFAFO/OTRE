@@ -15,20 +15,37 @@ import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://ontherunelectrics.com.au";
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: "On The Run Electrics",
-    description: "Electric scooter repairs, servicing, diagnostics and maintenance in Brisbane.",
-    url: typeof window !== "undefined" ? window.location.origin : "/",
-    serviceType: "Electric scooter repair",
+    description: "Brisbane electric scooter repair specialists offering diagnostics, servicing and maintenance.",
+    url: siteUrl,
+    areaServed: { "@type": "City", name: "Brisbane" },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Brisbane",
+      addressRegion: "QLD",
+      addressCountry: "AU",
+    },
+    makesOffer: {
+      "@type": "Offer",
+      url: `${siteUrl}/book`,
+      itemOffered: {
+        "@type": "Service",
+        name: "Electric Scooter Repair",
+        serviceType: "Electric Scooter Repair",
+        areaServed: "Brisbane",
+      },
+    },
   };
 
   return (
     <>
       <SEO
-        title="Electric Scooter Repairs Brisbane | OTR Scooters"
-        description="Book electric scooter repairs in Brisbane with OTR Scooters. Get expert diagnostics, servicing, tyre repairs and transparent job tracking."
+        title="Electric Scooter Repairs Brisbane | On The Run Electrics"
+        description="Brisbane's trusted electric scooter repair specialists. Fast turnaround, expert technicians, easy online booking. Book your repair today at On The Run Electrics."
         canonical="/"
         ogType="website"
         structuredData={localBusinessSchema}

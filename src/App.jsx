@@ -120,6 +120,7 @@ const AuthenticatedApp = () => {
       <Route path="/admin/feedback" element={<AdminFeedback />} />
       <Route path="/admin/clients" element={<AdminClients />} />
       <Route path="/admin/activity" element={<AdminActivityLog />} />
+      <Route path="/secrets.json" element={<PageNotFound />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

@@ -7,10 +7,9 @@ export default function GuestBooking() {
   return (
     <>
       <SEO
-        title="Guest Repair Booking | OTR Scooters"
-        description="Submit an electric scooter repair request as a guest so the OTR Scooters team can review your issue and follow up by email or SMS."
+        title="Guest Electric Scooter Repair Booking | On The Run Electrics"
+        description="Submit an electric scooter repair request in Brisbane as a guest. On The Run Electrics will review your issue and follow up by email or SMS."
         canonical="/book/guest"
-        noindex
       />
       <main className="min-h-screen bg-background text-foreground">
         <section className="relative overflow-hidden py-4 sm:py-6 lg:py-8">

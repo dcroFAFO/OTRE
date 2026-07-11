@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /secrets.json
+Disallow: /forgot-password
+Disallow: /register
+
+Sitemap: https://ontherunelectrics.com.au/sitemap.xml

@@ -1,9 +1,9 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 
-const SITE_NAME = "OTR Scooters";
-const DEFAULT_TITLE = "OTR Scooters | Electric Scooter Repairs";
-const DEFAULT_DESCRIPTION = "Book expert electric scooter repairs, servicing and diagnostics with OTR Scooters, including transparent quotes and online job tracking.";
+const SITE_NAME = "On The Run Electrics";
+const DEFAULT_TITLE = "Electric Scooter Repairs Brisbane | On The Run Electrics";
+const DEFAULT_DESCRIPTION = "Brisbane's trusted electric scooter repair specialists. Fast turnaround, expert technicians, easy online booking. Book your repair today at On The Run Electrics.";
 const DEFAULT_IMAGE = undefined;
 
 function absoluteUrl(value) {

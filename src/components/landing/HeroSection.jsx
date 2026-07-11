@@ -53,7 +53,7 @@ export default function HeroSection() {
           </span>
 
           <h1 className="mt-5 font-heading text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
-            {business.name}
+            Electric Scooter Repairs in Brisbane
           </h1>
 
           <p className="mt-4 text-xl sm:text-2xl font-heading font-bold text-foreground">
