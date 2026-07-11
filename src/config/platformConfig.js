@@ -35,6 +35,7 @@ export const DEFAULT_APP_SETTINGS = {
       { label: "Services", href: "#services" },
       { label: "Common issues", href: "#common-issues" },
       { label: "How it works", href: "#journey" },
+      { label: "Blog", href: "/blog" },
       { label: "Book a repair", href: "/book" },
     ],
     heroEyebrow: "Repairs · Servicing · Diagnostics",

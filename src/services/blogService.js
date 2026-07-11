@@ -49,3 +49,14 @@ export const scheduleBlogPost = (postId, scheduled_at) => invoke("scheduleBlogPo
 export const cancelScheduledBlogPost = (postId) => invoke("cancelScheduledBlogPost", { postId });
 export const archiveBlogPost = (postId) => invoke("archiveBlogPost", { postId });
 export const generateBlogPost = (payload) => invoke("generateBlogPost", payload);
+
+// Blog comments — entity SDK is used directly: read is public (RLS read: null),
+// create requires a logged-in user (RLS create: true).
+export const listBlogComments = (postId) =>
+  base44.entities.BlogComment.filter({ post_id: postId, status: "visible" }, "created_date", 500);
+
+export const createBlogComment = (data) =>
+  base44.entities.BlogComment.create(data);
+
+export const deleteBlogComment = (commentId) =>
+  base44.entities.BlogComment.delete(commentId);

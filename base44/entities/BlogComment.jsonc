@@ -1,0 +1,69 @@
+{
+  "name": "BlogComment",
+  "type": "object",
+  "properties": {
+    "post_id": {
+      "type": "string",
+      "description": "Linked BlogPost id"
+    },
+    "post_slug": {
+      "type": "string",
+      "description": "Denormalised post slug for quick lookup"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Display name of the commenter"
+    },
+    "author_user_id": {
+      "type": "string",
+      "description": "Authenticated app user id of the commenter"
+    },
+    "content": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Comment text"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "visible",
+        "hidden"
+      ],
+      "default": "visible",
+      "description": "Moderation status \u2014 hidden comments are not shown publicly"
+    }
+  },
+  "required": [
+    "post_id",
+    "author_name",
+    "content"
+  ],
+  "rls": {
+    "create": true,
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "data.author_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.author_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
