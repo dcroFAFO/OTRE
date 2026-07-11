@@ -6,6 +6,7 @@ import SEO from "@/components/SEO";
 import BlogPostCard from "@/components/blog/BlogPostCard";
 import BlogShareBar from "@/components/blog/BlogShareBar";
 import BlogComments from "@/components/blog/BlogComments";
+import NewsPageShell from "@/components/blog/NewsPageShell";
 import { listPublicBlog } from "@/services/blogService";
 
 export default function BlogPostPage() {
@@ -30,9 +31,9 @@ export default function BlogPostPage() {
   if (!post) {
     return (
       <Page>
-        <SEO title="Post not found | OTR Scooters" noindex />
+        <SEO title="Article not found | On The Run Electrics" noindex />
         <div className="rounded-3xl border border-border bg-card p-12 text-center">
-          <h1 className="font-heading text-3xl font-bold">Post not found</h1>
+          <h1 className="font-heading text-3xl font-bold">Article not found</h1>
           <Link className="mt-4 inline-block text-accent" to="/blog">Back to blog</Link>
         </div>
       </Page>
@@ -44,7 +45,7 @@ export default function BlogPostPage() {
   return (
     <Page>
       <SEO
-        title={post.meta_title || `${post.title} | OTR Scooters`}
+        title={post.meta_title || `${post.title} | On The Run Electrics`}
         description={post.meta_description || post.excerpt}
         canonical={post.canonical_url || `/blog/${post.slug}`}
         ogType="article"
@@ -55,11 +56,11 @@ export default function BlogPostPage() {
           headline: post.title,
           description: post.excerpt,
           datePublished: post.published_at,
-          author: { "@type": "Person", name: post.author_name || "OTR Scooters" },
+          author: { "@type": "Person", name: post.author_name || "On The Run Electrics" },
         }}
       />
       <article className="mx-auto max-w-3xl">
-        <Link to="/blog" className="text-sm font-semibold text-accent">← Blog</Link>
+        <Link to="/blog" className="text-sm font-semibold text-accent">← News and Events</Link>
         <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight">{post.title}</h1>
         {post.excerpt && <p className="mt-4 text-xl text-muted-foreground">{post.excerpt}</p>}
         <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -126,11 +127,7 @@ export default function BlogPostPage() {
 }
 
 function Page({ children }) {
-  return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">{children}</main>
-    </div>
-  );
+  return <NewsPageShell>{children}</NewsPageShell>;
 }
 
 function Author({ post }) {

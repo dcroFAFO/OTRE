@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import BlogPostCard from "@/components/blog/BlogPostCard";
+import NewsMasthead from "@/components/blog/NewsMasthead";
+import NewsLeadStories from "@/components/blog/NewsLeadStories";
+import NewsBrowseControls from "@/components/blog/NewsBrowseControls";
 import LandingNav from "@/components/landing/LandingNav";
 import LandingFooter from "@/components/landing/LandingFooter";
 import { listPublicBlog } from "@/services/blogService";
@@ -13,26 +14,47 @@ export default function BlogIndex() {
   const [q, setQ] = useState("");
   const [categoryId, setCategoryId] = useState("all");
   const [tagId, setTagId] = useState("all");
-  const [visible, setVisible] = useState(9);
-  const { data, isLoading } = useQuery({ queryKey: ["publicBlog", "index"], queryFn: () => listPublicBlog({ action: "index" }) });
-  const settings = data?.settings;
+  const [visible, setVisible] = useState(13);
+  const { data, isLoading } = useQuery({
+    queryKey: ["publicBlog", "index"],
+    queryFn: () => listPublicBlog({ action: "index" }),
+  });
   const posts = data?.posts || [];
   const categories = data?.categories || [];
   const tags = data?.tags || [];
-  const perPage = Number(settings?.posts_per_page) || 9;
-  const filtered = useMemo(() => posts.filter((p) => (categoryId === "all" || p.category_id === categoryId) && (tagId === "all" || p.tag_ids?.includes(tagId)) && (!q || [p.title, p.excerpt].some((v) => v?.toLowerCase?.().includes(q.toLowerCase())))), [posts, q, categoryId, tagId]);
-  const featured = filtered[0];
+  const perPage = Number(data?.settings?.posts_per_page) || 9;
+  const filtered = useMemo(() => posts.filter((post) =>
+    (categoryId === "all" || post.category_id === categoryId) &&
+    (tagId === "all" || post.tag_ids?.includes(tagId)) &&
+    (!q || [post.title, post.excerpt].some((value) => value?.toLowerCase?.().includes(q.toLowerCase())))
+  ), [posts, q, categoryId, tagId]);
+  const visiblePosts = filtered.slice(0, visible);
+
   return (
-    <div className="min-h-screen bg-background">
-      <SEO title={`${settings?.blog_name || "Scooter Repair Blog"} | OTR Scooters`} description={settings?.blog_description || "Read practical electric scooter repair, servicing and maintenance guides from OTR Scooters to keep your ride safe and running well."} canonical="/blog" />
+    <div className="min-h-screen bg-background text-foreground">
+      <SEO title="News and Events | On The Run Electrics" description="Browse electric scooter news, local events, repair advice and rider stories from On The Run Electrics in Brisbane." canonical="/blog" />
       <LandingNav />
-      <main className="mx-auto max-w-6xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
-        <div className="mb-8 text-center"><Link to="/" className="text-sm font-semibold text-accent">OTR Scooters</Link><h1 className="mt-3 font-heading text-4xl font-extrabold tracking-tight">{settings?.blog_name || "Blog"}</h1><p className="mx-auto mt-3 max-w-2xl text-muted-foreground">{settings?.blog_description || "Helpful repair, maintenance and ownership guides for electric scooter riders."}</p></div>
-        <div className="mb-6 grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-3"><Input placeholder="Search blog…" value={q} onChange={(e) => setQ(e.target.value)} /><select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}><option value="all">All categories</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select><select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={tagId} onChange={(e) => setTagId(e.target.value)}><option value="all">All tags</option>{tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-        {isLoading ? <p className="text-center text-sm text-muted-foreground">Loading posts…</p> : filtered.length === 0 ? <div className="rounded-3xl border border-dashed border-border p-12 text-center"><h2 className="font-heading text-2xl font-bold">No published posts yet</h2><p className="mt-2 text-muted-foreground">Check back soon for new articles.</p></div> : <><Featured post={featured} category={categories.find((c) => c.id === featured.category_id)} /><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{filtered.slice(0, visible).map((post) => <BlogPostCard key={post.id} post={post} category={categories.find((c) => c.id === post.category_id)} />)}</div>{visible < filtered.length && <div className="mt-8 text-center"><Button variant="outline" onClick={() => setVisible((v) => v + perPage)}>Load more</Button></div>}</>}
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
+        <NewsMasthead categories={categories} />
+        <NewsBrowseControls query={q} onQuery={setQ} categoryId={categoryId} onCategory={setCategoryId} tagId={tagId} onTag={setTagId} categories={categories} tags={tags} />
+        {isLoading ? (
+          <p className="py-16 text-center text-sm text-muted-foreground">Loading articles…</p>
+        ) : visiblePosts.length === 0 ? (
+          <div className="border-y border-border py-16 text-center"><h2 className="font-heading text-2xl font-bold">No articles found</h2><p className="mt-2 text-muted-foreground">Try another search, section or topic.</p></div>
+        ) : (
+          <>
+            <NewsLeadStories lead={visiblePosts[0]} secondary={visiblePosts.slice(1, 5)} categories={categories} />
+            {visiblePosts.length > 5 && (
+              <section className="py-8" aria-labelledby="latest-heading">
+                <div className="mb-5 flex items-end justify-between border-b-2 border-foreground pb-2"><h2 id="latest-heading" className="font-heading text-2xl font-extrabold">Latest articles</h2><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">News · Events · Advice</span></div>
+                <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-4">{visiblePosts.slice(5).map((post) => <BlogPostCard key={post.id} post={post} category={categories.find((category) => category.id === post.category_id)} />)}</div>
+              </section>
+            )}
+            {visible < filtered.length && <div className="border-t border-border pt-7 text-center"><Button variant="outline" onClick={() => setVisible((count) => count + perPage)}>Load more articles</Button></div>}
+          </>
+        )}
       </main>
       <LandingFooter />
     </div>
   );
 }
-function Featured({ post, category }) { if (!post) return null; return <Link to={`/blog/${post.slug}`} className="grid overflow-hidden rounded-3xl border border-border bg-card shadow-gentle lg:grid-cols-2"><div className="min-h-64 bg-secondary">{post.featured_image_url && <img src={post.featured_image_url} alt={post.featured_image_alt || post.title} className="h-full w-full object-cover" />}</div><div className="p-7"><p className="text-xs font-semibold uppercase tracking-wide text-accent">Latest {category?.name ? `· ${category.name}` : ""}</p><h2 className="mt-3 font-heading text-3xl font-extrabold">{post.title}</h2><p className="mt-3 text-muted-foreground">{post.excerpt}</p></div></Link>; }

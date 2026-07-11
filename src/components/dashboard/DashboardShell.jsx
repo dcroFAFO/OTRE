@@ -23,12 +23,12 @@ export default function DashboardShell({ user, children }) {
   { to: "/dashboard", label: app.dashboard.nav.overview, icon: LayoutDashboard },
   { to: "/dashboard/calendar", label: app.dashboard.nav.calendar, icon: CalendarDays },
   { to: "/dashboard/invoices", label: "Invoices", icon: Receipt },
-  { to: "/dashboard/blog", label: "Blog", icon: FileText, children: [
-  { to: "/dashboard/blog/posts", label: "Posts", icon: FileText },
+  { to: "/dashboard/blog", label: "News and Events", icon: FileText, children: [
+  { to: "/dashboard/blog/posts", label: "Articles", icon: FileText },
   { to: "/dashboard/blog/generate", label: "AI Generator", icon: Zap },
   { to: "/dashboard/blog/taxonomy", label: "Categories & Tags", icon: ListChecks },
-  { to: "/dashboard/blog/settings", label: "Blog Settings", icon: Settings },
-  { to: "/dashboard/blog/logs", label: "Blog Logs", icon: Activity }] },
+  { to: "/dashboard/blog/settings", label: "News Settings", icon: Settings },
+  { to: "/dashboard/blog/logs", label: "News Logs", icon: Activity }] },
   ...(canManageCustomers ? [
   { to: "/admin/clients", label: "Customers", icon: Contact, children: [
   { to: "/asset-management", label: "Asset Management", icon: Bike }] }] :
