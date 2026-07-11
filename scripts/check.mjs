@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const scripts = packageJson.scripts || {};
-const checks = ["quality:diagnostics", "test:functions", "test", "build"];
+const checks = ["quality:diagnostics", "test:reachability", "test:functions", "test", "build"];
 const summaryOnly = process.env.CHECK_SUMMARY_ONLY === "1";
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 

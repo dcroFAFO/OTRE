@@ -1,6 +1,7 @@
 import React from "react";
 import { Package, Wrench } from "lucide-react";
 import IntakePanel from "../IntakePanel";
+import JobChecklistPanel from "../JobChecklistPanel";
 import JobPartsPanel from "../JobPartsPanel";
 import QuotePanel from "../QuotePanel";
 
@@ -11,6 +12,10 @@ export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange
   return (
     <div className="space-y-5">
       <IntakePanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
+
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <JobChecklistPanel job={job} canEdit={canEdit} onChange={onChange} />
+      </section>
 
       <RepairSection title="Parts" icon={Package}>
         <JobPartsPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />

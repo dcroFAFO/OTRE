@@ -33,7 +33,7 @@ Run the app: `npm run dev`
 Install the locked dependency graph with `npm ci`, then use:
 
 ```sh
-npm run check       # diagnostic ratchets, backend bundles, tests and production build
+npm run check       # diagnostics, reachability, backend bundles, tests and production build
 npm run test:e2e    # critical browser workflows
 npm run check:all   # complete local equivalent of CI
 ```

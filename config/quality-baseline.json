@@ -1,8 +1,8 @@
 {
   "lint": {
-    "maxTotal": 21,
+    "maxTotal": 15,
     "categories": {
-      "unused-imports/no-unused-imports": 21
+      "unused-imports/no-unused-imports": 15
     }
   },
   "typecheck": {

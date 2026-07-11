@@ -32,6 +32,22 @@ test("technician advances the job lifecycle", async ({ page }) => {
   await expect(page.getByText("Repair In Progress").first()).toBeVisible();
 });
 
+test("technician completes a repair checklist item", async ({ page }) => {
+  await openApp(page, "/dashboard/jobs", "technician");
+
+  await page.getByRole("button", { name: /Casey Customer/ }).click();
+  await expect(page.getByRole("heading", { name: "Repair Checklist" })).toBeVisible();
+  await page.getByRole("button", { name: "Inspect brake pads" }).click();
+
+  const event = await expectEvent(page, "function.jobActions");
+  expect(event.payload).toMatchObject({
+    action: "toggle_checklist",
+    jobId: "job-e2e-1",
+    index: 0,
+  });
+  await expect(page.getByText("1/1 done")).toBeVisible();
+});
+
 test("technician creates quote data for a job", async ({ page }) => {
   await openApp(page, "/dashboard/jobs", "technician");
   await page.evaluate(() => {

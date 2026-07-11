@@ -11,6 +11,7 @@ import PrivateNotesPanel from "./PrivateNotesPanel";
 import AuditTimeline from "./AuditTimeline";
 import AttachmentsPanel from "./AttachmentsPanel";
 import IntakePanel from "./IntakePanel";
+import JobChecklistPanel from "./JobChecklistPanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import MobileJobWorkspace from "./mobile/MobileJobWorkspace";
 import { can } from "@/config/permissions";
@@ -157,7 +158,14 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 
                 <div className="p-5 flex-1 pb-safe">
                   <TabsContent value="intake" className="mt-0">
-                    {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
+                    {safeTab === "intake" && (
+                      <div className="space-y-5">
+                        <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                          <JobChecklistPanel job={job} canEdit={canManage} onChange={bump} />
+                        </section>
+                      </div>
+                    )}
                   </TabsContent>
                   <TabsContent value="billing" className="mt-0">
                     {safeTab === "billing" && (

@@ -3,7 +3,7 @@ import { ClipboardList, Check, Loader2 } from "lucide-react";
 import { toggleChecklistItem } from "@/services/jobService";
 import { cn } from "@/lib/utils";
 
-export default function JobChecklistPanel({ job, actor, canEdit, onChange }) {
+export default function JobChecklistPanel({ job, canEdit, onChange }) {
   const [busy, setBusy] = useState(null);
   const checklist = job.checklist || [];
   const doneCount = checklist.filter((c) => c.done).length;
@@ -12,9 +12,12 @@ export default function JobChecklistPanel({ job, actor, canEdit, onChange }) {
   const toggle = async (i) => {
     if (!canEdit) return;
     setBusy(i);
-    await toggleChecklistItem(job, i, actor);
-    setBusy(null);
-    onChange?.();
+    try {
+      await toggleChecklistItem(job, i);
+      onChange?.();
+    } finally {
+      setBusy(null);
+    }
   };
 
   if (checklist.length === 0) {
@@ -42,6 +45,7 @@ export default function JobChecklistPanel({ job, actor, canEdit, onChange }) {
       <div className="space-y-1.5">
         {checklist.map((c, i) => (
           <button
+            type="button"
             key={i}
             onClick={() => toggle(i)}
             disabled={!canEdit || busy === i}

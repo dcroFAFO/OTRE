@@ -140,7 +140,7 @@ function initialCollections() {
         status: "requested",
         payment_status: "outstanding",
         invoice_id: "invoice-e2e-1",
-        checklist: [],
+        checklist: [{ label: "Inspect brake pads", done: false }],
         intake: {
           make: "Segway",
           model: "Ninebot Max G30",
@@ -359,6 +359,12 @@ async function invoke(name, payload = {}) {
     if (payload.action === "cancel") job.status = "cancelled";
     if (payload.action === "reopen") job.status = "booked";
     if (payload.action === "mark_ready") job.status = "ready_for_pickup";
+    if (payload.action === "toggle_checklist") {
+      const index = Number(payload.index);
+      job.checklist = (job.checklist || []).map((item, itemIndex) => (
+        itemIndex === index ? { ...item, done: !item.done } : item
+      ));
+    }
     return { data: clone(job) };
   }
 
