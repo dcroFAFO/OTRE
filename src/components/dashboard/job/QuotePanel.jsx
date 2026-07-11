@@ -31,7 +31,7 @@ function totalsFor(items) {
 
 const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
 
-export default function QuotePanel({ job, actor, canEdit, onChange }) {
+export default function QuotePanel({ job, actor, canEdit, invoiceCanEdit = canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
   const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "" });
   const [aiMsg, setAiMsg] = useState("");
@@ -191,7 +191,7 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
               {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
               {saving ? "Saving…" : "Save"}
             </Button>
-            <InvoicePanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} buttonOnly />
+            <InvoicePanel job={job} actor={actor} canEdit={invoiceCanEdit} onChange={onChange} buttonOnly />
             <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
               <Sparkles className="h-4 w-4" /> AI draft
             </Button>

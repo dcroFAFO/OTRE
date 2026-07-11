@@ -132,7 +132,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
             <JobModalHeader job={job} />
 
             {canManage && (
-              <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
+              <JobDetailsHeaderActions job={job} onChange={bump} />
             )}
 
             <div className="flex-1 overflow-y-auto">
@@ -186,7 +186,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="private" className="mt-0">
-                    {safeTab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
+                    {safeTab === "private" && <PrivateNotesPanel job={job} canEdit={canManage} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="timeline" className="mt-0">
                     {safeTab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}

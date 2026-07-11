@@ -11,7 +11,6 @@ import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // Workflow events — rendered as buttons in the action strip.
@@ -57,7 +56,7 @@ const EVENT_GROUPS = {
   customer: ["on_hold", "cancelled"],
 };
 
-export default function JobDetailsHeaderActions({ job, actor, onChange, context = null }) {
+export default function JobDetailsHeaderActions({ job, onChange, context = null }) {
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   // Waiting-reason modal state

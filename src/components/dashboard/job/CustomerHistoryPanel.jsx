@@ -20,7 +20,6 @@ const fmt = (d) => {
 const STAFF_ROLES = new Set(["admin", "employee", "technician", "staff"]);
 
 export default function CustomerHistoryPanel({ job, actor }) {
-  const customerId = job.customer_id;
   const email = job.customer_email;
   const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 

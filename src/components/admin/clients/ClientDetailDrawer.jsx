@@ -15,7 +15,6 @@ import { logError } from "@/lib/logger";
 
 export default function ClientDetailDrawer({ client, open, onClose, actor, onChange }) {
   const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState([]);
   const [noteBody, setNoteBody] = useState("");
   const [addingNote, setAddingNote] = useState(false);

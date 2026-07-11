@@ -12,7 +12,6 @@ export default function ScrollReveal({
   delay = 0,
   y = 28,
   once = true,
-  as: Tag = "div",
 }) {
   return (
     <motion.div

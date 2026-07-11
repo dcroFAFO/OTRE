@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import DashboardShell from "@/components/dashboard/DashboardShell";

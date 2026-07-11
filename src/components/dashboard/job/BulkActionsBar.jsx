@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { changeStatus } from "@/services/jobService";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, ChevronDown, Loader2, Bell } from "lucide-react";
+import { X, Loader2, Bell } from "lucide-react";
 import { JOB_STATUSES } from "@/config/jobConfig";
 import { useToast } from "@/components/ui/use-toast";
 

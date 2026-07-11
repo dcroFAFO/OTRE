@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, MessageSquare, Contact, ShoppingBag, Activity, Receipt, Settings, Bike, BadgeDollarSign, FileText } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, MessageSquare, Contact, Activity, Receipt, Settings, Bike, BadgeDollarSign, FileText } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";

@@ -51,13 +51,6 @@ export default function Login() {
     }
   };
 
-  const PROVIDERS = [
-    { key: "google", label: "Continue with Google" },
-    { key: "microsoft", label: "Continue with Microsoft" },
-    { key: "facebook", label: "Continue with Facebook" },
-    { key: "apple", label: "Continue with Apple" },
-  ];
-
   return (
     <>
     <SEO title="Log In | OTR Scooters" description="Log in to your OTR Scooters customer portal to track repairs, approve quotes and manage invoices." canonical="/login" noindex />

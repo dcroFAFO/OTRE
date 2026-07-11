@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { Bike, CalendarDays, ExternalLink, FileText, Receipt, Wrench } from "lucide-react";
+import { Bike, ExternalLink, Receipt, Wrench } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 
 const fmt = (date) => { try { return date ? format(new Date(date), "d MMM yyyy") : "—"; } catch { return "—"; } };

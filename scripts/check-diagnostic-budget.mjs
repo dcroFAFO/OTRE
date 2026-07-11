@@ -33,7 +33,7 @@ function lintDiagnostics() {
   const eslint = runNodeTool(
     "ESLint",
     join(root, "node_modules/eslint/bin/eslint.js"),
-    [".", "--quiet", "--format", "json"],
+    [".", "--format", "json", "--max-warnings", "0"],
     [0, 1],
   );
   let results;
@@ -46,8 +46,9 @@ function lintDiagnostics() {
   const counts = {};
   for (const file of results) {
     for (const message of file.messages || []) {
-      if (message.severity !== 2) continue;
-      increment(counts, message.ruleId || `fatal:${relative(root, file.filePath)}`);
+      if (message.severity < 1) continue;
+      const rule = message.ruleId || `fatal:${relative(root, file.filePath)}`;
+      increment(counts, message.severity === 1 ? `warning:${rule}` : rule);
     }
   }
   return counts;

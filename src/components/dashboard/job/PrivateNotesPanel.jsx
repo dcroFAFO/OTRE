@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Lock, Save, Check, Loader2, Trash2 } from "lucide-react";
 import { savePrivateNotes } from "@/services/jobService";
 
-export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
+export default function PrivateNotesPanel({ job, canEdit, onChange }) {
   const [value, setValue] = useState(job.private_notes || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);

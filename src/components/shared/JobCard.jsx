@@ -4,11 +4,9 @@ import StatusPill from "./StatusPill";
 import ServiceTypeBadge from "./ServiceTypeBadge";
 import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BORDER_CLASSES, SERVICE_TYPE_STRIP_CLASSES } from "@/config/serviceTypes";
-import { getPaymentStatus, getStatus } from "@/config/jobConfig";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 
 export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
-  const paymentStatus = getPaymentStatus(job.payment_status);
   const serviceType = getServiceType(job.service_type || DEFAULT_SERVICE_TYPE);
   const outstanding = job.payment_status === "outstanding";
   const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";

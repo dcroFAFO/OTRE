@@ -201,10 +201,6 @@ export default function CustomerJobModal({ job, open, onClose, userEmail }) {
   );
 }
 
-function Field({ label, children }) {
-  return <div><p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p><p className="text-sm text-foreground">{children}</p></div>;
-}
-
 function lineTotal(item) {
   const base = (Number(item.unit_price) || 0) * (Number(item.qty) || 1);
   const tax = base * ((Number(item.tax_rate) || 0) / 100);

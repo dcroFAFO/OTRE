@@ -1,7 +1,6 @@
 import React from "react";
-import { Bike, Pencil, X, Check } from "lucide-react";
+import { Bike, Pencil, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 export const SPEC_FIELDS = [
   ["battery_voltage", "Voltage"],

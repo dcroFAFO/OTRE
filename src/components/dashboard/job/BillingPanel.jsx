@@ -19,7 +19,13 @@ export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoi
         description="Manage labour, fees, surcharges, consumables, and diagnosis notes before customer invoicing."
         icon={FileText}
       >
-        <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />
+        <QuotePanel
+          job={job}
+          actor={actor}
+          canEdit={canEdit && !quoteReadOnly}
+          invoiceCanEdit={canEdit && !invoiceReadOnly}
+          onChange={onChange}
+        />
       </BillingSection>
 
 

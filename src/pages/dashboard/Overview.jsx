@@ -16,7 +16,6 @@ import { isThisWeek } from "date-fns";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export default function Overview() {
   const navigate = useNavigate();

@@ -118,12 +118,6 @@ export default function RepairAssistantWidget() {
 
   const stage = useMemo(() => computeStage(context), [context]);
 
-  const makeModelLabel = useMemo(() => {
-    if (!context.make) return "";
-    if (context.make === "Other") return context.model || "";
-    return [context.make, context.model].filter(Boolean).join(" ");
-  }, [context.make, context.model]);
-
   const submitBooking = async (finalContext) => {
     setLoading(true);
     try {
