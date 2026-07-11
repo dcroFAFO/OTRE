@@ -187,8 +187,12 @@ export default function PublicBookingForm({ guestOnly = false }) {
           <section className="space-y-2.5">
             <h2 className="font-heading text-base font-extrabold">Your Details</h2>
             <div className="grid gap-2">
-              <Field label="Name" required error={errors.customer_name}><Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} /></Field>
-              <Field label={field("email").label || "Email"} required error={errors.customer_email}><Input type="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} /></Field>
+              <Field label="Name" htmlFor="booking-name" required error={errors.customer_name}>
+                <Input id="booking-name" name="name" autoComplete="name" value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} />
+              </Field>
+              <Field label={field("email").label || "Email"} htmlFor="booking-email" required error={errors.customer_email}>
+                <Input id="booking-email" name="email" type="email" autoComplete="email" value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} />
+              </Field>
               <PhoneNumberField
                 label={field("phone").label || "Phone"}
                 required
@@ -267,6 +271,6 @@ export default function PublicBookingForm({ guestOnly = false }) {
   );
 }
 
-function Field({ label, required, error, children }) {
-  return <div className="space-y-1"><Label className="text-xs font-semibold">{label}{required && <span className="text-accent"> *</span>}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
+function Field({ label, htmlFor = undefined, required, error, children }) {
+  return <div className="space-y-1"><Label htmlFor={htmlFor} className="text-xs font-semibold">{label}{required && <span className="text-accent"> *</span>}</Label>{children}{error && <p className="text-xs text-destructive">{error}</p>}</div>;
 }

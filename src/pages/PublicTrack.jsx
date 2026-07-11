@@ -5,7 +5,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import StatusPill from "@/components/shared/StatusPill";
-import { AlertCircle, CreditCard, Loader2, MessageSquare, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, CreditCard, FileText, Loader2, MessageSquare, Upload, XCircle } from "lucide-react";
 
 function money(value, currency = "AUD") {
   return `${currency} ${(Number(value) || 0).toFixed(2)}`;
@@ -22,6 +22,7 @@ export default function PublicTrack() {
   const token = new URLSearchParams(window.location.search).get("token") || "";
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(null);
 
@@ -76,6 +77,19 @@ export default function PublicTrack() {
     setBusy(null);
   };
 
+  const decideQuote = async (approved) => {
+    if (!data?.quote?.id || !can("quote_decision")) return;
+    setActionError(null);
+    setBusy(approved ? "quote-approve" : "quote-reject");
+    try {
+      setData(await invoke({ action: "quote_decision", quoteId: data.quote.id, approved }));
+    } catch (err) {
+      setActionError(err?.response?.data?.error || "The quote could not be updated. Please try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <>
       <SEO title="Track Repair Job | On The Run Electrics" description="Secure public repair job tracking." canonical={`/track/${trackingToken}`} noindex />
@@ -107,6 +121,59 @@ export default function PublicTrack() {
                   <StatusPill value={data.job.status} />
                 </div>
               </div>
+
+              {actionError && (
+                <div role="alert" className="flex items-start gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{actionError}</span>
+                </div>
+              )}
+
+              {data.quote && (
+                <Card title="Quote" icon={FileText}>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <StatusPill value={data.quote.status || data.quote.approval_status || "sent"} className="" label={null} />
+                      <strong className="text-lg">{money(data.quote.total, data.quote.currency)}</strong>
+                    </div>
+                    {data.quote.diagnosis_notes && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Diagnosis</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm">{data.quote.diagnosis_notes}</p>
+                      </div>
+                    )}
+                    {data.quote.recommended_repair && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recommended repair</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm">{data.quote.recommended_repair}</p>
+                      </div>
+                    )}
+                    {(data.quote.line_items || []).length > 0 && <LineItems items={data.quote.line_items} currency={data.quote.currency} />}
+                    {can("quote_decision") && data.quote.status === "sent" && (
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button type="button" onClick={() => decideQuote(true)} disabled={!!busy} className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:pointer-events-none disabled:opacity-50">
+                          {busy === "quote-approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          Approve quote
+                        </button>
+                        <button type="button" onClick={() => decideQuote(false)} disabled={!!busy} className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50">
+                          {busy === "quote-reject" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                          Reject quote
+                        </button>
+                      </div>
+                    )}
+                    {data.quote.status === "approved" && (
+                      <p role="status" className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="h-4 w-4" /> Quote approved
+                      </p>
+                    )}
+                    {data.quote.status === "rejected" && (
+                      <p role="status" className="flex items-center gap-2 rounded-xl bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">
+                        <XCircle className="h-4 w-4" /> Quote rejected
+                      </p>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               {data.invoice && (
                 <Card title="Invoice" icon={CreditCard}>
