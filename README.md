@@ -28,6 +28,18 @@ VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
 
 Run the app: `npm run dev`
 
+**Quality checks**
+
+Install the locked dependency graph with `npm ci`, then use:
+
+```sh
+npm run check       # diagnostic ratchets, backend bundles, tests and production build
+npm run test:e2e    # critical browser workflows
+npm run check:all   # complete local equivalent of CI
+```
+
+The temporary diagnostic budgets in `config/quality-baseline.json` prevent the recorded legacy lint and checkJs debt from increasing. They are cleanup ratchets, not waivers; the target is zero.
+
 **Publish your changes**
 
 Open [Base44.com](http://Base44.com) and click on Publish.

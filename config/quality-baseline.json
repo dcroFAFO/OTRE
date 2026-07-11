@@ -1,0 +1,25 @@
+{
+  "lint": {
+    "maxTotal": 21,
+    "categories": {
+      "unused-imports/no-unused-imports": 21
+    }
+  },
+  "typecheck": {
+    "maxTotal": 891,
+    "categories": {
+      "TS2322": 558,
+      "TS2339": 120,
+      "TS2345": 2,
+      "TS2353": 1,
+      "TS2362": 1,
+      "TS2363": 1,
+      "TS2554": 7,
+      "TS2559": 99,
+      "TS2698": 1,
+      "TS2739": 25,
+      "TS2740": 26,
+      "TS2741": 50
+    }
+  }
+}
