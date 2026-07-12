@@ -141,6 +141,11 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const payload = await req.json().catch(() => ({}));
     const action = payload.action || "index";
+    if (action === "sync") {
+      const user = await base44.auth.me().catch(() => null);
+      if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
+      if (!["admin", "employee", "technician"].includes(user.role)) return Response.json({ error: "Staff access required" }, { status: 403 });
+    }
     const settings = (await base44.asServiceRole.entities.BlogSettings.list("-created_date", 1))[0] || null;
     if (settings && settings.blog_enabled === false) return Response.json({ settings, posts: [], categories: [], tags: [], post: null });
     const [allPosts, contentfulPosts, categories, tags] = await Promise.all([
@@ -169,7 +174,7 @@ Deno.serve(async (req) => {
       filtered = tag ? posts.filter((post) => post.tag_ids?.includes(tag.id)) : [];
       return Response.json({ settings, posts: filtered, tag, categories, tags });
     }
-    return Response.json({ settings, posts, categories, tags });
+    return Response.json({ settings, posts, categories, tags, synced_at: action === "sync" ? new Date().toISOString() : undefined });
   } catch (error) {
     console.error("[publicBlog]", error.message, error.stack);
     return Response.json({ error: error.message }, { status: 500 });
