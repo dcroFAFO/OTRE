@@ -4,16 +4,16 @@ import { Input } from "@/components/ui/input";
 
 export default function NewsBrowseControls({ query, onQuery, categoryId, onCategory, tagId, onTag, categories, tags }) {
   return (
-    <section aria-label="Browse articles" className="my-8 grid gap-3 border-y border-border bg-card py-4 md:grid-cols-[1.4fr_1fr_1fr]">
+    <section aria-label="Browse articles" className="my-8 grid gap-3 rounded-2xl bg-secondary/60 p-3 md:grid-cols-[1.4fr_1fr_1fr]">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input aria-label="Search articles" placeholder="Search news and events…" value={query} onChange={(event) => onQuery(event.target.value)} className="pl-9" />
+        <Input aria-label="Search articles" placeholder="Search news and events…" value={query} onChange={(event) => onQuery(event.target.value)} className="h-11 border-0 bg-card pl-9 shadow-none" />
       </div>
-      <select aria-label="Filter by category" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={categoryId} onChange={(event) => onCategory(event.target.value)}>
+      <select aria-label="Filter by category" className="h-11 rounded-xl border-0 bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={categoryId} onChange={(event) => onCategory(event.target.value)}>
         <option value="all">All sections</option>
         {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
       </select>
-      <select aria-label="Filter by topic" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={tagId} onChange={(event) => onTag(event.target.value)}>
+      <select aria-label="Filter by topic" className="h-11 rounded-xl border-0 bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={tagId} onChange={(event) => onTag(event.target.value)}>
         <option value="all">All topics</option>
         {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
       </select>

@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { useQuery } from "@tanstack/react-query";
 import SEO from "@/components/SEO";
 import BlogPostCard from "@/components/blog/BlogPostCard";
+import BlogArticleHeader from "@/components/blog/BlogArticleHeader";
 import BlogShareBar from "@/components/blog/BlogShareBar";
 import BlogComments from "@/components/blog/BlogComments";
 import NewsPageShell from "@/components/blog/NewsPageShell";
@@ -59,53 +60,24 @@ export default function BlogPostPage() {
           author: { "@type": "Person", name: post.author_name || "On The Run Electrics" },
         }}
       />
-      <article className="mx-auto max-w-3xl">
-        <Link to="/blog" className="text-sm font-semibold text-accent">← News and Events</Link>
-        <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight">{post.title}</h1>
-        {post.excerpt && <p className="mt-4 text-xl text-muted-foreground">{post.excerpt}</p>}
-        <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <span>{post.published_at ? new Date(post.published_at).toLocaleDateString() : "Published"}</span>
-          <span>·</span>
-          <span>{post.reading_time_minutes || 1} min read</span>
-          {category && (
-            <>
-              <span>·</span>
-              <Link to={`/blog/category/${category.slug}`} className="text-accent">{category.name}</Link>
-            </>
-          )}
-        </div>
-
+      <article>
+        <BlogArticleHeader post={post} category={category} />
         {post.featured_image_url && (
-          <img
-            src={post.featured_image_url}
-            alt={post.featured_image_alt || post.title}
-            className="mt-8 rounded-3xl border border-border"
-          />
+          <img src={post.featured_image_url} alt={post.featured_image_alt || post.title} className="aspect-[16/9] w-full rounded-2xl object-cover shadow-soft" />
         )}
-
-        <div className="prose prose-slate mt-8 max-w-none">
-          <ReactMarkdown>{post.content_markdown}</ReactMarkdown>
-        </div>
-
-        {data?.settings?.show_author_box && <Author post={post} />}
-
-        {tags.filter((t) => post.tag_ids?.includes(t.id)).length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-2">
-            {tags.filter((t) => post.tag_ids?.includes(t.id)).map((tag) => (
-              <Link
-                key={tag.id}
-                to={`/blog/tag/${tag.slug}`}
-                className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold"
-              >
-                #{tag.name}
-              </Link>
-            ))}
+        <div className="mx-auto max-w-3xl">
+          <div className="mt-10 text-[1.05rem] leading-8 text-foreground/85 [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_blockquote]:my-8 [&_blockquote]:border-l-4 [&_blockquote]:border-primary [&_blockquote]:pl-6 [&_blockquote]:italic [&_h2]:mb-4 [&_h2]:mt-12 [&_h2]:font-heading [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h3]:mb-3 [&_h3]:mt-9 [&_h3]:font-heading [&_h3]:text-2xl [&_h3]:font-bold [&_img]:my-8 [&_img]:rounded-xl [&_li]:my-2 [&_ol]:my-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-6 [&_strong]:text-foreground [&_ul]:my-6 [&_ul]:list-disc [&_ul]:pl-6">
+            <ReactMarkdown>{post.content_markdown}</ReactMarkdown>
           </div>
-        )}
-
-        <BlogShareBar title={post.title} url={postUrl} />
-
-        <BlogComments postId={post.id} postSlug={post.slug} />
+          {data?.settings?.show_author_box && <Author post={post} />}
+          {tags.filter((tag) => post.tag_ids?.includes(tag.id)).length > 0 && (
+            <div className="mt-10 flex flex-wrap gap-2 border-t border-border pt-8">
+              {tags.filter((tag) => post.tag_ids?.includes(tag.id)).map((tag) => <Link key={tag.id} to={`/blog/tag/${tag.slug}`} className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold">#{tag.name}</Link>)}
+            </div>
+          )}
+          <BlogShareBar title={post.title} url={postUrl} />
+          <BlogComments postId={post.id} postSlug={post.slug} />
+        </div>
       </article>
 
       {data?.settings?.show_related_posts && data?.related?.length > 0 && (
@@ -132,7 +104,7 @@ function Page({ children }) {
 
 function Author({ post }) {
   return (
-    <div className="mt-10 flex gap-4 rounded-3xl border border-border bg-card p-5">
+    <div className="mt-12 flex gap-4 border-y border-border py-7">
       {post.author_avatar_url && (
         <img
           src={post.author_avatar_url}

@@ -2,7 +2,7 @@ import React from "react";
 import LandingNav from "@/components/landing/LandingNav";
 import LandingFooter from "@/components/landing/LandingFooter";
 
-export default function NewsPageShell({ children, width = "max-w-6xl" }) {
+export default function NewsPageShell({ children, width = "max-w-7xl" }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <LandingNav />
