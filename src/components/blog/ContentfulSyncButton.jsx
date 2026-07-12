@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,9 @@ import { listPublicBlog } from "@/services/blogService";
 
 const STAFF_ROLES = ["admin", "employee", "technician"];
 
-export default function ContentfulSyncButton({ onSynced }) {
+export default function ContentfulSyncButton() {
   const { role } = useCurrentUser();
+  const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
 
   if (!STAFF_ROLES.includes(role)) return null;
@@ -17,8 +19,8 @@ export default function ContentfulSyncButton({ onSynced }) {
     setSyncing(true);
     try {
       const data = await listPublicBlog({ action: "sync" });
-      onSynced(data);
-      toast.success("Contentful blog content synced");
+      queryClient.setQueryData(["publicBlog", "index"], data);
+      toast.success(`${data.posts?.length || 0} Contentful articles synced`);
     } catch (error) {
       toast.error(error?.response?.data?.error || "Contentful sync failed");
     } finally {

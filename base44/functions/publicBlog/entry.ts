@@ -82,7 +82,7 @@ const fetchContentfulItems = async (accessToken, resource) => {
   let skip = 0;
   while (true) {
     const url = `https://api.contentful.com/spaces/${CONTENTFUL_SPACE_ID}/environments/${CONTENTFUL_ENVIRONMENT_ID}/${resource}?limit=1000&skip=${skip}`;
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const response = await fetch(url, { cache: "no-store", headers: { Authorization: `Bearer ${accessToken}`, "Cache-Control": "no-cache" } });
     if (!response.ok) throw new Error(`Contentful ${resource} request failed (${response.status})`);
     const page = await response.json();
     items.push(...(page.items || []));

@@ -19,12 +19,10 @@ export default function BlogIndex() {
     queryKey: ["publicBlog", "index"],
     queryFn: () => listPublicBlog({ action: "index" }),
   });
-  const [syncedData, setSyncedData] = useState(null);
-  const currentData = syncedData || data;
-  const posts = currentData?.posts || [];
-  const categories = currentData?.categories || [];
-  const tags = currentData?.tags || [];
-  const perPage = Number(currentData?.settings?.posts_per_page) || 9;
+  const posts = data?.posts || [];
+  const categories = data?.categories || [];
+  const tags = data?.tags || [];
+  const perPage = Number(data?.settings?.posts_per_page) || 9;
   const filtered = useMemo(() => posts.filter((post) =>
     (categoryId === "all" || post.category_id === categoryId) &&
     (tagId === "all" || post.tag_ids?.includes(tagId)) &&
@@ -38,7 +36,7 @@ export default function BlogIndex() {
       <LandingNav />
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
         <div className="mb-4 flex justify-end">
-          <ContentfulSyncButton onSynced={setSyncedData} />
+          <ContentfulSyncButton />
         </div>
         <NewsBrowseControls query={q} onQuery={setQ} categoryId={categoryId} onCategory={setCategoryId} tagId={tagId} onTag={setTagId} categories={categories} tags={tags} />
         {isLoading ? (
