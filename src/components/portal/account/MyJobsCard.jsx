@@ -10,8 +10,8 @@ export default function MyJobsCard({ jobs, onOpenJob, jobLabelPlural = "jobs" })
       <div className="flex items-center gap-2.5">
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/15 text-accent"><Wrench className="h-4.5 w-4.5" /></span>
         <div>
-          <h2 className="font-heading text-lg font-extrabold">My Jobs</h2>
-          <p className="text-xs text-muted-foreground">Your current and recent repair {jobLabelPlural}.</p>
+          <h2 className="font-heading text-lg font-extrabold">Repairs</h2>
+          <p className="text-xs text-muted-foreground">Your current and recent {jobLabelPlural}.</p>
         </div>
       </div>
 

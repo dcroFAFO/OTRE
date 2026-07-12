@@ -14,7 +14,6 @@ import About from '@/pages/About';
 import Contact from '@/pages/Contact';
 import GuestBooking from '@/pages/GuestBooking';
 import ProfileSetup from '@/pages/ProfileSetup';
-import Portal from '@/pages/Portal';
 import PortalSettings from '@/pages/PortalSettings';
 import PortalAccount from '@/pages/PortalAccount';
 import Store from '@/pages/Store';
@@ -81,9 +80,9 @@ const AuthenticatedApp = () => {
       <Route path="/contact" element={<Contact />} />
       <Route path="/book/guest" element={<GuestBooking />} />
       <Route path="/profile-setup" element={<ProfileSetup />} />
-      <Route path="/portal" element={<Portal />} />
+      <Route path="/portal" element={<PortalAccount />} />
       <Route path="/portal/settings" element={<PortalSettings />} />
-      <Route path="/portal/account" element={<PortalAccount />} />
+      <Route path="/portal/account" element={<Navigate to="/portal" replace />} />
       <Route path="/store" element={<Store />} />
       <Route path="/blog" element={<BlogIndex />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />

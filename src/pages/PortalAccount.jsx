@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Zap, ArrowLeft, Loader2 } from "lucide-react";
+import { Zap, ArrowLeft, Loader2, Plus } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
@@ -10,6 +10,9 @@ import SEO from "@/components/SEO";
 import AccountDetailsCard from "@/components/portal/settings/AccountDetailsCard";
 import ScootersCard from "@/components/portal/settings/ScootersCard";
 import CustomerJobModal from "@/components/portal/CustomerJobModal";
+import CustomerBookingModal from "@/components/portal/CustomerBookingModal";
+import PortalTutorial from "@/components/portal/tutorial/PortalTutorial";
+import { Button } from "@/components/ui/button";
 import MyJobsCard from "@/components/portal/account/MyJobsCard";
 import MyInvoicesCard from "@/components/portal/account/MyInvoicesCard";
 import MyReferralsCard from "@/components/portal/account/MyReferralsCard";
@@ -23,7 +26,15 @@ export default function PortalAccount() {
   const { user, isLoading } = useCurrentUser();
   const { data: { business, app } } = usePlatformConfig();
   const [selectedJob, setSelectedJob] = useState(null);
+  const [showBooking, setShowBooking] = useState(false);
+  const [tutorialDone, setTutorialDone] = useState(false);
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user || isStaff(user.role)) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("book") === "1") setShowBooking(true);
+  }, [user]);
 
   const { data: settings, isLoading: loadingSettings, refetch } = useQuery({
     queryKey: ["customerSettings", user?.id],
@@ -40,7 +51,7 @@ export default function PortalAccount() {
     enabled: !!user && !isStaff(user.role),
   });
 
-  const seo = <SEO title="My Account | On The Run Electrics" description="Your rides, jobs, invoices, referrals, and account details in one place." canonical="/portal/account" noindex />;
+  const seo = <SEO title="My Account | On The Run Electrics" description="Your rides, jobs, invoices, referrals, and account details in one place." canonical="/portal" noindex />;
 
   if (isLoading) return <>{seo}<div className="fixed inset-0 grid place-items-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div></>;
 
@@ -65,6 +76,7 @@ export default function PortalAccount() {
   }
 
   const busy = loadingSettings || loadingJobs;
+  const tutorialActive = !busy && !showBooking && !user.hasSeenCustomerPortalTutorial && !tutorialDone;
 
   return (
     <>
@@ -73,14 +85,24 @@ export default function PortalAccount() {
       <header className="bg-card border-b border-border">
         <div className="mx-auto max-w-4xl px-5 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2"><span className="grid place-items-center h-8 w-8 rounded-lg bg-accent/15 text-accent"><Zap className="h-4 w-4" /></span><span className="font-heading font-extrabold">{business.name}</span></Link>
-          <button onClick={() => base44.auth.logout()} className="text-sm text-muted-foreground hover:text-foreground">Sign out</button>
+          <div className="flex items-center gap-4">
+            <Link to="/portal/settings" className="text-sm text-muted-foreground hover:text-foreground">Settings</Link>
+            <button onClick={() => base44.auth.logout()} className="text-sm text-muted-foreground hover:text-foreground">Sign out</button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-5 py-8">
-        <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4" /> Back to portal</Link>
-        <h1 className="font-heading text-2xl font-extrabold tracking-tight">My Account</h1>
-        <p className="text-muted-foreground text-sm">Your rides, {app.terminology.jobPlural}, invoices, referrals, and account details.</p>
+        <Link to="/" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back to site</Link>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-2xl font-extrabold tracking-tight">My Account</h1>
+            <p className="text-sm text-muted-foreground">Your rides, {app.terminology.jobPlural}, invoices, referrals, and account details.</p>
+          </div>
+          <Button onClick={() => setShowBooking(true)} className="shrink-0 gap-2 rounded-xl">
+            <Plus className="h-4 w-4" /> New booking
+          </Button>
+        </div>
 
         {busy ? (
           <div className="mt-10 grid place-items-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -98,11 +120,25 @@ export default function PortalAccount() {
 
       <CustomerJobModal
         job={selectedJob}
-        open={!!selectedJob}
+        open={!!selectedJob && !tutorialActive}
         onClose={() => setSelectedJob(null)}
         onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })}
         userEmail={user?.email}
       />
+      <CustomerBookingModal
+        open={showBooking}
+        onClose={() => setShowBooking(false)}
+        user={user}
+        profile={settings?.profile}
+        profileLoading={loadingSettings}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })}
+        onManage={async (jobId) => {
+          if (!jobId) return;
+          const job = await base44.entities.Job.get(jobId).catch(() => null);
+          if (job) setSelectedJob(job);
+        }}
+      />
+      {tutorialActive && <PortalTutorial onDone={() => setTutorialDone(true)} />}
     </div>
     </>
   );

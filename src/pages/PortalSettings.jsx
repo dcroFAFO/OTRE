@@ -60,7 +60,7 @@ export default function PortalSettings() {
       </header>
 
       <main className="mx-auto max-w-4xl px-5 py-8">
-        <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4" /> Back to portal</Link>
+        <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4" /> Back to My Account</Link>
         <h1 className="font-heading text-2xl font-extrabold tracking-tight">Settings</h1>
         <p className="text-muted-foreground text-sm">Manage your account details, saved scooters, and profiles.</p>
 

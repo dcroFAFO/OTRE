@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import TutorialBubble from "@/components/portal/tutorial/TutorialBubble";
@@ -9,8 +10,10 @@ import TutorialMockJobModal from "@/components/portal/tutorial/TutorialMockJobMo
 // tour (or accepted it), false when they explicitly closed/skipped it.
 export default function PortalTutorial({ onDone }) {
   const [step, setStep] = useState(0);
-  const finish = (completed) => {
-    base44.auth.updateMe({ hasSeenCustomerPortalTutorial: true }).catch(() => {});
+  const { checkUserAuth } = useAuth();
+  const finish = async (completed) => {
+    await base44.auth.updateMe({ hasSeenCustomerPortalTutorial: true });
+    await checkUserAuth();
     onDone(completed === true);
   };
   const close = () => finish(false);
@@ -22,7 +25,7 @@ export default function PortalTutorial({ onDone }) {
         <div className="z-[100] w-full max-w-sm rounded-3xl border-2 border-accent bg-card p-6 text-center shadow-[0_0_0_4px_hsl(var(--accent)/0.15),0_16px_48px_rgba(0,0,0,0.35)]">
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-accent/15 text-accent"><Sparkles className="h-6 w-6" /></span>
           <h2 className="mt-4 font-heading text-xl font-extrabold">Welcome to your customer portal!</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Want a quick tour of how to track your repairs, review invoices and view your ride's history?</p>
+          <p className="mt-2 text-sm text-muted-foreground">Take a quick tour of My Account, where you can manage your rides, repairs, invoices and account details in one place.</p>
           <div className="mt-5 flex justify-center gap-3">
             <Button variant="outline" onClick={close}>Close</Button>
             <Button onClick={next} className="bg-accent text-accent-foreground hover:bg-accent/90">Show me around</Button>
@@ -39,8 +42,8 @@ export default function PortalTutorial({ onDone }) {
         <div className="absolute inset-x-0 top-[40%] z-[100] flex justify-center px-4">
           <TutorialBubble
             arrow="up"
-            title="Your jobs live here"
-            text="Each repair or service shows as a job card just above. Tap a card any time to see its full details, status, invoices and history."
+            title="Everything in My Account"
+            text="Your saved rides, repair jobs, invoices, referrals and account details all live on this page. Tap a repair any time to see its status and history."
             onNext={next}
             onClose={close}
           />
