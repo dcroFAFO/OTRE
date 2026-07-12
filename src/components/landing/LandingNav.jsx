@@ -26,9 +26,11 @@ export default function LandingNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const links = app.landing.navLinks.map((link) =>
-    link.href === "/blog" ? { ...link, label: "News and Events" } : link
-  );
+  const links = app.landing.navLinks.map((link) => {
+    if (link.href.startsWith("#")) return { ...link, href: `/${link.href}` };
+    if (link.href === "/blog") return { ...link, label: "News and Events" };
+    return link;
+  });
 
   return (
     <header
