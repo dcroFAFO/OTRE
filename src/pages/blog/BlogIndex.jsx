@@ -18,6 +18,8 @@ export default function BlogIndex() {
   const { data, isLoading } = useQuery({
     queryKey: ["publicBlog", "index"],
     queryFn: () => listPublicBlog({ action: "index" }),
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
   const posts = data?.posts || [];
   const categories = data?.categories || [];
