@@ -173,7 +173,7 @@ async function ensureDefaults(db) {
         template_key: templateKey,
         event_key: event.key,
         channel,
-        subject: channel === 'email' ? `OTR Scooters — ${event.name}` : '',
+        subject: channel === 'email' ? `On The Run Electrics — ${event.name}` : '',
         body: channel === 'email'
           ? `<p>Hi {{recipient_name}},</p><p><strong>${event.name}</strong></p><p>{{message}}</p><p>Reference: {{reference}}</p><p>On The Run Electrics</p>`
           : `OTR Scooters: ${event.name}. {{message}} Ref: {{reference}}`,
@@ -260,7 +260,7 @@ async function deliver(db, event, rule, recipient, job, template, existingDelive
   const values = { recipient_name: recipient.full_name || 'there', reference: job?.reference || job?.job_id || event.related_entity_id, message: event.event_data?.message || rule.description };
   try {
     const providerResult = rule.channel === 'email'
-      ? await sendEmail(address, render(template?.subject || `OTR Scooters — ${rule.event_name}`, values), render(template?.body || '<p>{{message}}</p>', values))
+      ? await sendEmail(address, render(template?.subject || `On The Run Electrics — ${rule.event_name}`, values), render(template?.body || '<p>{{message}}</p>', values))
       : await sendSms(address, render(template?.body || '{{message}}', values));
     await db.NotificationDelivery.update(delivery.id, { delivery_status: 'sent', send_time: new Date().toISOString(), provider: providerResult.provider, provider_message_id: providerResult.id, failure_reason: '' });
     return { sent: true };
