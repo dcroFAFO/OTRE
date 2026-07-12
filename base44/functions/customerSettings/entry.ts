@@ -126,6 +126,15 @@ Deno.serve(async (req) => {
       if (ctx.customer) {
         await db.Customer.update(ctx.customer.id, { name, full_name: name, ...(phone ? { phone, phone_e164: phone, phone_display: phone } : {}), last_activity_date: now });
       }
+      const accountEvents = ['account.profile_updated'];
+      const previousPhone = ctx.profile?.phone_e164 || ctx.customer?.phone_e164 || '';
+      if (phone && previousPhone && phone !== previousPhone) accountEvents.push('account.phone_changed');
+      await db.NotificationEvent.bulkCreate(accountEvents.map((eventKey) => ({
+        event_key: eventKey, related_entity_type: 'CustomerProfile', related_entity_id: ctx.profile?.id || ctx.customer?.id || user.id,
+        customer_id: ctx.customer?.id || ctx.stableId || '', recipient_user_id: user.id, event_version: `${eventKey}:${now}`,
+        event_data: { customer_name: name, customer_email: ctx.email, customer_phone: phone || previousPhone, message: eventKey === 'account.phone_changed' ? 'Your account phone number was changed.' : 'Your customer profile was updated.' },
+        source: 'automatic', status: 'pending', occurred_at: now,
+      })));
 
       // Keep the customer's own jobs displaying current details for staff
       // lists — links (ids) are never touched, so history stays intact.
@@ -160,12 +169,14 @@ Deno.serve(async (req) => {
         const scooter = await db.Scooter.get(body.scooter_id).catch(() => null);
         if (!scooter || !ownsScooter(scooter, ctx)) return Response.json({ error: 'Scooter not found.' }, { status: 404 });
         const updated = await db.Scooter.update(scooter.id, { ...data, ...ownerFields });
+        await db.NotificationEvent.create({ event_key: 'account.asset_updated', related_entity_type: 'Scooter', related_entity_id: updated.id, customer_id: ctx.customer?.id || ctx.stableId || '', recipient_user_id: user.id, event_version: updated.updated_date || now, event_data: { customer_name: user.full_name, customer_email: ctx.email, customer_phone: ctx.profile?.phone_e164 || '', message: 'Your saved scooter details were updated.' }, source: 'automatic', status: 'pending', occurred_at: now });
         return Response.json({ saved: true, scooter_id: updated.id });
       }
 
       const existing = await listScooters(db, ctx);
       if (existing.some((s) => scooterMatches(s, data))) return Response.json({ error: 'You already have this scooter saved.' }, { status: 400 });
       const created = await db.Scooter.create({ ...data, ...ownerFields });
+      await db.NotificationEvent.create({ event_key: 'account.asset_added', related_entity_type: 'Scooter', related_entity_id: created.id, customer_id: ctx.customer?.id || ctx.stableId || '', recipient_user_id: user.id, event_version: created.created_date || now, event_data: { customer_name: user.full_name, customer_email: ctx.email, customer_phone: ctx.profile?.phone_e164 || '', message: 'A scooter was added to your account.' }, source: 'automatic', status: 'pending', occurred_at: now });
       return Response.json({ saved: true, scooter_id: created.id });
     }
 

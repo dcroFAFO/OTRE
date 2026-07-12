@@ -66,7 +66,9 @@ async function updateJobFromEvent(base44, event) {
 
   if (event.status === 'cancelled') {
     if (job.scheduled_date) {
+      const previousDate = job.scheduled_date;
       await base44.asServiceRole.entities.Job.update(job.id, { scheduled_date: null, preferred_time_window: 'Removed from Google Calendar' });
+      await base44.asServiceRole.entities.NotificationEvent.create({ event_key: 'scheduling.cancelled', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', recipient_user_id: job.customer_user_id || '', event_version: `${previousDate}->cancelled`, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, previous_date: previousDate, message: 'Your scheduled appointment was cancelled. Please contact us to reschedule.' }, source: 'automatic', status: 'pending', occurred_at: new Date().toISOString() });
     }
     return 'unscheduled_deleted_event';
   }
@@ -80,6 +82,10 @@ async function updateJobFromEvent(base44, event) {
 
   if (Object.keys(patch).length > 0) {
     await base44.asServiceRole.entities.Job.update(job.id, patch);
+    await base44.asServiceRole.entities.NotificationEvent.bulkCreate([
+      { event_key: job.scheduled_date ? 'scheduling.rescheduled' : 'scheduling.confirmed', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', recipient_user_id: job.customer_user_id || '', event_version: `${job.scheduled_date || 'unscheduled'}->${nextDate}`, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, previous_date: job.scheduled_date || '', scheduled_date: nextDate, message: `Your drop-off is scheduled for ${nextDate}.` }, source: 'automatic', status: 'pending', occurred_at: new Date().toISOString() },
+      { event_key: job.scheduled_date ? 'staff.job_rescheduled' : 'staff.job_scheduled', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', event_version: `${job.scheduled_date || 'unscheduled'}->${nextDate}`, event_data: { customer_name: job.customer_name, scheduled_date: nextDate }, source: 'automatic', status: 'pending', occurred_at: new Date().toISOString() },
+    ]);
   }
   return Object.keys(patch).length > 0 ? 'updated_job_date' : 'already_current';
 }

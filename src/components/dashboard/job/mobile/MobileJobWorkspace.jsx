@@ -17,7 +17,7 @@ import RepairTab from "./RepairTab";
 import BillingReviewTab from "./BillingReviewTab";
 import ReferralCard from "./ReferralCard";
 
-const TAB_LABELS = { schedule: "Schedule", repair: "Repair", billing: "Billing", customer: "Customer", notes: "Notes", private: "Private", timeline: "Timeline", files: "Files" };
+const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Complete", notes: "Notes", private: "Private", timeline: "Timeline", files: "Files" };
 const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User, notes: StickyNote, private: LockKeyhole, timeline: History, files: Paperclip };
 const PRIMARY_TABS = ["schedule", "repair", "billing", "customer"];
 const MORE_TABS = ["notes", "private", "timeline", "files"];

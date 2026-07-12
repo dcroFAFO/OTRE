@@ -105,91 +105,18 @@ async function currentUser(base44) {
   try { return await base44.auth.me(); } catch (_) { return null; }
 }
 
-// ---------------------------------------------------------------------------
-// Booking request notification flow — the ONLY customer notification path.
-// Runs once, after the job is created, persisted, and linked. Hard de-duped
-// via bookingRequestSmsSentAt / bookingRequestEmailSentAt on the Job record.
-// ---------------------------------------------------------------------------
-const BOOKING_NOTIFY_VERSION = 'booking_request_received_v1';
-
-function serviceTypeLabel(key) {
-  const label = String(key || '').replace(/_/g, ' ').trim();
-  return label || 'general repair';
-}
-
-async function sendBookingRequestSms(to, body) {
-  const sid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const token = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const from = Deno.env.get('TWILIO_FROM_NUMBER');
-  if (!sid || !token || !from) throw new Error('Twilio is not configured');
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${btoa(`${sid}:${token}`)}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ From: from, To: to, Body: body }),
-  });
-  if (!res.ok) throw new Error(`Twilio send failed: ${await res.text()}`);
-}
-
-async function sendBookingRequestEmail(to, subject, html) {
-  const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) throw new Error('RESEND_API_KEY not set');
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 'On The Run Electrics <hello@ontherunelectrics.com.au>', to: [to], subject, html }),
-  });
-  if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
-}
-
+// Explicit business events are delivered by the central notification engine.
 async function sendBookingRequestNotifications(base44, jobId) {
-  // Re-read the persisted job so dedup flags reflect the latest stored state
-  // (protects against retries, double submits, and race conditions).
   const job = await base44.asServiceRole.entities.Job.get(jobId);
   if (!job) return;
-
-  const name = job.customer_name || 'there';
-  const service = serviceTypeLabel(job.service_type);
-  const scooter = job.asset_label || job.scooter_make_model || 'scooter';
-  const reference = job.reference || job.job_id || job.id;
-
-  if (!job.bookingRequestSmsSentAt && job.customer_phone_e164) {
-    try {
-      console.log('[notify] sending booking_request_sms', JSON.stringify({ type: 'sms', provider: 'twilio', version: BOOKING_NOTIFY_VERSION, to: job.customer_phone_e164, job_id: job.id, reference, customer_id: job.customer_id || '', at: new Date().toISOString() }));
-      await sendBookingRequestSms(
-        job.customer_phone_e164,
-        `Hi, ${name}. We've just received your ${service} booking request for your ${scooter}. One of our technicians will be in contact with you as soon as possible. Thanks, On The Run Electrics.`
-      );
-      await base44.asServiceRole.entities.Job.update(job.id, { bookingRequestSmsSentAt: new Date().toISOString(), bookingRequestNotificationVersion: BOOKING_NOTIFY_VERSION });
-    } catch (smsErr) {
-      console.warn('[createBooking] booking request SMS failed:', smsErr.message);
-    }
-  }
-
-  if (!job.bookingRequestEmailSentAt && job.customer_email) {
-    try {
-      console.log('[notify] sending booking_request_email', JSON.stringify({ type: 'email', provider: 'resend', version: BOOKING_NOTIFY_VERSION, from: 'On The Run Electrics', to: job.customer_email, subject: `Booking Request Received | ${reference}`, job_id: job.id, reference, customer_id: job.customer_id || '', at: new Date().toISOString() }));
-      const html = `
-<p>Hi ${name},</p>
-<p>Thanks for your booking request. We&rsquo;ve received your details and our team will review everything shortly.</p>
-<p><strong>Booking details</strong></p>
-<p>Reference: ${reference}<br>
-Scooter: ${scooter}<br>
-Service requested: ${service}</p>
-<p><strong>What happens next?</strong></p>
-<p>Our team will review your request and confirm a suitable drop-off date and time.</p>
-<p>Once your scooter is with us, a technician will inspect it and let you know the recommended next steps.</p>
-<p>When the work is complete, we&rsquo;ll send you a text to let you know your ride is ready for pickup.</p>
-<p>You can track your job progress at any time through your customer portal.</p>
-<p>Questions? Reply to this email or call us on 0415 505 908 and we&rsquo;ll be happy to help.</p>
-<p>On The Run Electrics<br>
-11 Lucinda Street, Woolloongabba QLD<br>
-0415 505 908<br>
-<a href="mailto:hello@ontherunelectrics.com.au">hello@ontherunelectrics.com.au</a></p>`;
-      await sendBookingRequestEmail(job.customer_email, `Booking Request Received | ${reference}`, html);
-      await base44.asServiceRole.entities.Job.update(job.id, { bookingRequestEmailSentAt: new Date().toISOString(), bookingRequestNotificationVersion: BOOKING_NOTIFY_VERSION });
-    } catch (emailErr) {
-      console.warn('[createBooking] booking request email failed:', emailErr.message);
-    }
+  const now = new Date().toISOString();
+  const version = job.reference || job.id;
+  await base44.asServiceRole.entities.NotificationEvent.bulkCreate([
+    { event_key: 'request.submitted', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', recipient_user_id: job.customer_user_id || '', event_version: version, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: 'We received your repair request and our team will contact you about scheduling.' }, source: 'automatic', status: 'pending', occurred_at: now },
+    { event_key: 'staff.request_received', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', event_version: version, event_data: { customer_name: job.customer_name, message: `New repair request ${job.reference || job.id}` }, source: 'automatic', status: 'pending', occurred_at: now },
+  ]);
+  if ((job.booking_submission?.files || []).length > 0) {
+    await base44.asServiceRole.entities.NotificationEvent.bulkCreate(['request.files_received', 'staff.files_uploaded'].map((eventKey) => ({ event_key: eventKey, related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', recipient_user_id: job.customer_user_id || '', event_version: `${version}:files`, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: 'Your files and photos were received successfully.' }, source: 'automatic', status: 'pending', occurred_at: now })));
   }
 }
 

@@ -399,6 +399,15 @@ Deno.serve(async (req) => {
         summary: "Tax invoice finalised and made visible to the customer",
         visibility: "customer",
       });
+      if (!savedInvoice.invoiceSentAt || savedInvoice.invoiceVisibility !== "customer_visible") {
+        await base44.asServiceRole.entities.NotificationEvent.create({
+          event_key: "invoice.issued", related_entity_type: "Invoice", related_entity_id: visibleInvoice.id, job_id: job.id,
+          customer_id: job.customer_id || "", recipient_user_id: job.customer_user_id || "",
+          event_version: visibleInvoice.invoiceSentAt || visibleInvoice.updated_date || String(Date.now()),
+          event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: `Invoice ${visibleInvoice.number || ""} is now available in your portal.` },
+          source: "automatic", status: "pending", occurred_at: now,
+        });
+      }
       return Response.json({ sent: true, fileName, invoice: visibleInvoice });
     }
 

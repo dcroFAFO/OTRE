@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, MessageSquare, Contact, ShoppingBag, Activity, Receipt, Settings, Bike, BadgeDollarSign, FileText } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListChecks, Zap, LogOut, Menu, X, UserCircle, MessageSquare, Contact, ShoppingBag, Activity, Receipt, Settings, Bike, BadgeDollarSign, FileText, BellRing } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,9 @@ export default function DashboardShell({ user, children }) {
   { to: "/asset-management", label: "Asset Management", icon: Bike }] }] :
   []),
   { to: "/settings", label: "Settings", icon: Settings, children: [
-  { to: "/service-pricing", label: "Service Pricing", icon: BadgeDollarSign }] }];
+  { to: "/service-pricing", label: "Service Pricing", icon: BadgeDollarSign },
+  { to: "/settings/notification-preferences", label: "My Notifications", icon: BellRing },
+  ...(isAdmin ? [{ to: "/settings/notifications", label: "Notification Rules", icon: BellRing }] : [])] }];
 
   const adminNav = [
   ...(canViewLog ? [{ to: "/admin/activity", label: "Activity Log", icon: Activity }] : []),

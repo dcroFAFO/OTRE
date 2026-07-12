@@ -54,6 +54,15 @@ async function makeInvoiceVisible(base44, invoice) {
   });
 }
 
+async function emitInvoiceEvent(base44, job, invoice, eventKey, version, message = "") {
+  await base44.asServiceRole.entities.NotificationEvent.create({
+    event_key: eventKey, related_entity_type: "Invoice", related_entity_id: invoice.id, job_id: job.id,
+    customer_id: job.customer_id || "", recipient_user_id: job.customer_user_id || "", event_version: version,
+    event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message },
+    source: "automatic", status: "pending", occurred_at: new Date().toISOString(),
+  });
+}
+
 Deno.serve(async (req) => {
   // requestMeta is filled in as parsing progresses so the catch block can log
   // a useful summary (who, which action, which record) when something fails.
@@ -247,8 +256,10 @@ Deno.serve(async (req) => {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
         if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
+        const firstIssue = !invoice.invoiceSentAt || invoice.invoiceVisibility !== CUSTOMER_VISIBILITY;
         result = await makeInvoiceVisible(base44, invoice);
         await logAudit({ eventType: "invoice_sent_to_customer", summary: "Invoice made available to the customer in the portal", visibility: "customer" });
+        if (firstIssue) await emitInvoiceEvent(base44, job, result, "invoice.issued", result.invoiceSentAt || result.updated_date || String(Date.now()), `Invoice ${result.number || ""} is now available in your portal.`);
         break;
       }
       case "set_payment_status": {
@@ -256,6 +267,7 @@ Deno.serve(async (req) => {
         const { invoiceId, status } = params;
         const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
+        if (invoice.status === status) { result = invoice; break; }
 
         result = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
           status,
@@ -272,6 +284,8 @@ Deno.serve(async (req) => {
           summary: `Payment marked "${status}"`,
           visibility: "customer",
         });
+        const paymentEvent = status === "paid" ? "payment.received" : status === "failed" ? "payment.failed" : status === "refunded" ? "payment.refund_issued" : status === "partial" ? "payment.partial_received" : null;
+        if (paymentEvent) await emitInvoiceEvent(base44, job, result, paymentEvent, `${invoice.status}->${status}:${result.updated_date || Date.now()}`, `Payment status: ${status}.`);
         break;
       }
       default:

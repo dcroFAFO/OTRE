@@ -12,12 +12,11 @@ import SignatureCapture from "@/components/portal/SignatureCapture";
 
 // Distinct logo/theme colour per customer-facing milestone (literal Tailwind classes).
 const MILESTONES = [
-  { key: "requested", label: "Booking Received", active: "border-red-500 bg-red-500 text-white", done: "border-red-300 bg-red-50 text-red-600" },
-  { key: "booked", label: "Job Scheduled", active: "border-blue-500 bg-blue-500 text-white", done: "border-blue-300 bg-blue-50 text-blue-600" },
-  { key: "repair_in_progress", label: "Repair Underway", active: "border-amber-500 bg-amber-500 text-white", done: "border-amber-300 bg-amber-50 text-amber-600" },
-  { key: "ready_for_pickup", label: "Ready for Pickup", active: "border-emerald-500 bg-emerald-500 text-white", done: "border-emerald-300 bg-emerald-50 text-emerald-600" },
-  { key: "invoice_sent", label: "Invoice Issued", active: "border-violet-500 bg-violet-500 text-white", done: "border-violet-300 bg-violet-50 text-violet-600" },
-  { key: "completed", label: "Completed", active: "border-teal-500 bg-teal-500 text-white", done: "border-teal-300 bg-teal-50 text-teal-600" },
+  { key: "requested", label: "Request", active: "border-red-500 bg-red-500 text-white", done: "border-red-300 bg-red-50 text-red-600" },
+  { key: "booked", label: "Scheduling", active: "border-blue-500 bg-blue-500 text-white", done: "border-blue-300 bg-blue-50 text-blue-600" },
+  { key: "repair_in_progress", label: "Repair", active: "border-amber-500 bg-amber-500 text-white", done: "border-amber-300 bg-amber-50 text-amber-600" },
+  { key: "invoice_sent", label: "Invoice", active: "border-violet-500 bg-violet-500 text-white", done: "border-violet-300 bg-violet-50 text-violet-600" },
+  { key: "completed", label: "Complete", active: "border-teal-500 bg-teal-500 text-white", done: "border-teal-300 bg-teal-50 text-teal-600" },
 ];
 
 function normalizedStatus(status) {
@@ -26,8 +25,7 @@ function normalizedStatus(status) {
 
 function getMilestoneIndex(statusKey) {
   const status = normalizedStatus(statusKey);
-  // Paid collapses into Completed in the customer-facing timeline.
-  if (status === "paid") return MILESTONES.length - 1;
+  if (status === "paid" || status === "ready_for_pickup" || status === "completed") return MILESTONES.length - 1;
   const direct = MILESTONES.findIndex((m) => m.key === status);
   if (direct !== -1) return direct;
   if (status === "waiting_on_parts" || status === "on_hold") return 2;

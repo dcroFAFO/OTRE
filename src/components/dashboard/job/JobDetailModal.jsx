@@ -25,8 +25,8 @@ import { format } from "date-fns";
 // Tab label map (desktop modal only — mobile uses its own workspace tabs)
 const TAB_LABELS = {
   intake: "Intake",
-  billing: "Billing",
-  customer: "Customer",
+  billing: "Invoice",
+  customer: "Complete",
   notes: "Notes",
   private: "Private",
   timeline: "Timeline",

@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
 
       const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
       if (!invoice) return Response.json({ received: true, skipped: 'invoice not found' });
+      if (invoice.status === 'paid') return Response.json({ received: true, skipped: 'payment already recorded' });
 
       const paidDate = new Date().toISOString();
       await base44.asServiceRole.entities.Invoice.update(invoice.id, {
@@ -69,6 +70,13 @@ Deno.serve(async (req) => {
           new_value: 'paid',
           summary: `Stripe payment received for ${invoice.currency || 'AUD'} ${Number(invoice.amount || 0).toFixed(2)}`,
           visibility: 'customer',
+        });
+        await base44.asServiceRole.entities.NotificationEvent.create({
+          event_key: 'payment.received', related_entity_type: 'Invoice', related_entity_id: invoice.id, job_id: job.id,
+          customer_id: invoice.customer_id || job.customer_id || '', recipient_user_id: job.customer_user_id || '',
+          event_version: String(session.payment_intent || session.id),
+          event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: `Payment received for ${invoice.currency || 'AUD'} ${Number(invoice.amount || 0).toFixed(2)}.` },
+          source: 'automatic', status: 'pending', occurred_at: paidDate,
         });
       }
     }
