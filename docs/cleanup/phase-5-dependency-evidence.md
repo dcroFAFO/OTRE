@@ -1,6 +1,6 @@
 # Phase 5 dependency evidence
 
-Date: 2026-07-11  
+Date: 2026-07-11
 Branch: `cleanup/codebase-remediation`
 
 ## Result
