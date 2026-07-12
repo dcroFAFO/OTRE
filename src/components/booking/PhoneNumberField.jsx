@@ -2,7 +2,7 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function PhoneNumberField({ label = "Phone", required, value, onChange, error }) {
+export default function PhoneNumberField({ label = "Phone", required = false, value, onChange, error = undefined }) {
   const inputId = "booking-phone";
   const errorId = "booking-phone-error";
 

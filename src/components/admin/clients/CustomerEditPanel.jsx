@@ -31,6 +31,12 @@ function blankScooter() {
   return { make: "", model: "", year: "", serial_number: "", colour: "", notes: "" };
 }
 
+function blankCustomerForm() {
+  return { full_name: "", email: "", phone: "", status: "active", tags: [] };
+}
+
+const EMPTY_FIELD_ERRORS = { full_name: "", email: "", phone: "" };
+
 // ── Single scooter row (view + edit) ────────────────────────────────────────
 function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, onUpdated, onDeleted }) {
   const [editing, setEditing] = useState(!scooter.id); // new rows open in edit mode
@@ -156,9 +162,9 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
   const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState(null);
+  const [form, setForm] = useState(blankCustomerForm());
   const [saving, setSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldErrors, setFieldErrors] = useState(EMPTY_FIELD_ERRORS);
   const [scooters, setScooters] = useState([]);
   const [loadingScooters, setLoadingScooters] = useState(false);
   const [pendingNewScooter, setPendingNewScooter] = useState(null);
@@ -168,7 +174,7 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
       setForm({ full_name: customer.full_name || "", email: customer.email || "", phone: customer.phone_display || customer.phone || "", status: customer.status || "active", tags: customer.tags || [] });
       loadScooters();
       setEditing(false);
-      setFieldErrors({});
+      setFieldErrors(EMPTY_FIELD_ERRORS);
     }
   }, [customer?.id]);
 
@@ -186,7 +192,7 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
   const cancelEdit = () => {
     setForm({ full_name: customer.full_name || "", email: customer.email || "", phone: customer.phone_display || customer.phone || "", status: customer.status || "active", tags: customer.tags || [] });
     setEditing(false);
-    setFieldErrors({});
+    setFieldErrors(EMPTY_FIELD_ERRORS);
     setPendingNewScooter(null);
   };
 
@@ -196,7 +202,7 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
     if (form.email && !isValidEmail(form.email)) errors.email = "Invalid email format";
     const e164 = form.phone ? normalizePhone(form.phone) : "";
     if (form.phone && !e164) errors.phone = "Invalid Australian mobile number (04xx xxx xxx)";
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
+    if (Object.keys(errors).length > 0) { setFieldErrors({ ...EMPTY_FIELD_ERRORS, ...errors }); return; }
 
     // Duplicate contact check
     const { emailConflict, phoneConflict } = await checkDuplicateContact(
@@ -227,7 +233,7 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
       setForm({ full_name: updated.full_name || "", email: updated.email || "", phone: updated.phone_display || updated.phone || "", status: updated.status || "active", tags: updated.tags || [] });
       toast.success("Customer updated");
       setEditing(false);
-      setFieldErrors({});
+      setFieldErrors(EMPTY_FIELD_ERRORS);
       onChange?.(updated);
     } catch (e) {
       logError("Save customer failed", e);
@@ -254,7 +260,7 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
     }
   };
 
-  if (!customer || !form) return null;
+  if (!customer) return null;
 
   const canEdit = isStaff;
   const linkedAssetKey = String(linkedAssetId || "").trim();

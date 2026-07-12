@@ -18,11 +18,11 @@ export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange
       </section>
 
       <RepairSection title="Parts" icon={Package}>
-        <JobPartsPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
+        <JobPartsPanel job={job} canEdit={canEdit} onChange={onChange} />
       </RepairSection>
 
       <RepairSection title="Labour and Consumables" icon={Wrench}>
-        <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />
+        <QuotePanel job={job} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />
       </RepairSection>
     </div>
   );

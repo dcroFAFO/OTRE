@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X, Sparkles } from "lucide-react";
 
 // Game-style guide bubble that always floats in the tutorial foreground layer.
-export default function TutorialBubble({ title, text, onNext, onClose, nextLabel = "Next", arrow, className = "" }) {
+export default function TutorialBubble({ title, text, onNext, onClose, nextLabel = "Next", arrow = undefined, className = "" }) {
   return (
     <div className={`pointer-events-auto relative w-full max-w-sm ${className}`}>
       {arrow === "up" && (

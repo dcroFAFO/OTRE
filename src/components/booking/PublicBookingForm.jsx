@@ -16,7 +16,7 @@ import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { CheckCircle2, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 
-const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || {};
+const field = (key) => DEFAULT_BOOKING_FIELDS.find((f) => f.key === key) || { key, label: "", placeholder: "" };
 
 const EMPTY = {
   customer_name: "",
@@ -36,6 +36,16 @@ const EMPTY = {
   rideable_status: "",
   urgency_or_safety_notes: "",
   suspected_service_category: "",
+};
+
+const EMPTY_ERRORS = {
+  customer_name: null,
+  customer_email: null,
+  phone: null,
+  asset_label: null,
+  issue_type: null,
+  issue_description: null,
+  consent: null,
 };
 
 function getBookingPrefill() {
@@ -76,7 +86,7 @@ export default function PublicBookingForm({ guestOnly = false }) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(EMPTY_ERRORS);
 
   const set = (k, v) => {
     setForm((f) => ({ ...f, [k]: v }));

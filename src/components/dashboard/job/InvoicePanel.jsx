@@ -89,7 +89,7 @@ function usageToLineItem(usage) {
   });
 }
 
-export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly = false }) {
+export default function InvoicePanel({ job, canEdit, onChange, buttonOnly = false }) {
   const [invoice, setInvoice] = useState(null);
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState(null);
@@ -294,7 +294,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   };
 
   const setStatus = async (status) => {
-    const inv = await setPaymentStatus(invoice, job, status, actor);
+    const inv = await setPaymentStatus(invoice, job, status);
     setInvoice(inv);
     onChange?.();
   };

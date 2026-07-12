@@ -45,7 +45,7 @@ export default function Parts() {
         await new Promise((r) => setTimeout(r, 500));
       }
 
-      qc.invalidateQueries(["estore-products"]);
+      qc.invalidateQueries({ queryKey: ["estore-products"] });
       setSyncResult({ success: true, message: `Sync complete: ${totalCreated} new, ${totalUpdated} updated.` });
     } catch (err) {
       setSyncResult({ success: false, message: err.message || "Sync failed." });

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const resolvers = { job: getStatus, payment: getPaymentStatus, quote: getQuoteStatus };
 
-export default function StatusPill({ value, kind = "job", className, label }) {
+export default function StatusPill({ value, kind = "job", className = undefined, label = undefined }) {
   const status = resolvers[kind](value);
   const classes = STATUS_PILL_CLASSES[status.color] || STATUS_PILL_CLASSES.slate;
   return (

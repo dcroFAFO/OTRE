@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Zap, ArrowLeft, Loader2 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isStaff } from "@/config/permissions";
@@ -23,7 +23,6 @@ export default function PortalAccount() {
   const { user, isLoading } = useCurrentUser();
   const { data: { business, app } } = usePlatformConfig();
   const [selectedJob, setSelectedJob] = useState(null);
-  const qc = useQueryClient();
 
   const { data: settings, isLoading: loadingSettings, refetch } = useQuery({
     queryKey: ["customerSettings", user?.id],
@@ -100,7 +99,6 @@ export default function PortalAccount() {
         job={selectedJob}
         open={!!selectedJob}
         onClose={() => setSelectedJob(null)}
-        onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })}
         userEmail={user?.email}
       />
     </div>

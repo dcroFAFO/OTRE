@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BORDER_CLASSES, SERVICE_TYPE_STRIP_CLASSES } from "@/config/serviceTypes";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 
-export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
+export default function JobCard({ job, onClick, dragHandleProps = undefined, compact = false, className = undefined }) {
   const serviceType = getServiceType(job.service_type || DEFAULT_SERVICE_TYPE);
   const outstanding = job.payment_status === "outstanding";
   const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
@@ -37,8 +37,8 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
               {job.customer_name}
             </p>
             <div className="flex items-center gap-1 shrink-0">
-              {outstanding && <CreditCard className="h-3.5 w-3.5 text-rose-500" title="Invoice outstanding" />}
-              {isWaiting && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" title={`Waiting: ${waitingLabel}`} />}
+              {outstanding && <span title="Invoice outstanding"><CreditCard aria-label="Invoice outstanding" className="h-3.5 w-3.5 text-rose-500" /></span>}
+              {isWaiting && <span title={`Waiting: ${waitingLabel}`}><AlertTriangle aria-label={`Waiting: ${waitingLabel}`} className="h-3.5 w-3.5 text-amber-500" /></span>}
             </div>
           </div>
 

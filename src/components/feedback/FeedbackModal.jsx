@@ -13,6 +13,7 @@ const TYPES = ["Bug Report", "Feature Request", "General Feedback", "UI / UX Iss
 const PRIORITIES = ["Low", "Medium", "High"];
 
 const EMPTY = { subject: "", feedback_type: "General Feedback", priority: "Medium", message: "" };
+const EMPTY_ERRORS = { subject: "", message: "" };
 
 function deviceContext() {
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -22,21 +23,21 @@ function deviceContext() {
 export default function FeedbackModal({ open, onClose, user }) {
   const [form, setForm] = useState(EMPTY);
   const [file, setFile] = useState(null);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(EMPTY_ERRORS);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setErrors((e) => ({ ...e, [k]: undefined })); };
 
-  const reset = () => { setForm(EMPTY); setFile(null); setErrors({}); setDone(false); setSubmitError(""); };
+  const reset = () => { setForm(EMPTY); setFile(null); setErrors(EMPTY_ERRORS); setDone(false); setSubmitError(""); };
   const close = () => { onClose(); setTimeout(reset, 300); };
 
   const submit = async () => {
     const errs = {};
     if (!form.subject.trim()) errs.subject = "Subject is required";
     if (!form.message.trim()) errs.message = "Message is required";
-    setErrors(errs);
+    setErrors({ ...EMPTY_ERRORS, ...errs });
     if (Object.keys(errs).length) return;
 
     setSubmitting(true);

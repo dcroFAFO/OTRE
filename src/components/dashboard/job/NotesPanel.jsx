@@ -7,7 +7,7 @@ import { addNote } from "@/services/jobService";
 import NoteBubble from "@/components/dashboard/job/NoteBubble";
 import { cn } from "@/lib/utils";
 
-export default function NotesPanel({ job, actor, canCustomer, onChange }) {
+export default function NotesPanel({ job, canCustomer, onChange }) {
   const [notes, setNotes] = useState([]);
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState("internal");
@@ -19,7 +19,7 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
   const submit = async () => {
     if (!body.trim() || posting) return;
     setPosting(true);
-    await addNote(job, { body, visibility }, actor);
+    await addNote(job, { body, visibility });
     setBody("");
     await load();
     setPosting(false);

@@ -8,8 +8,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 // Renders children when allowed, a loading spinner while resolving, and a clean
 // access-denied card otherwise.
 export default function RequireCapability({
-  capability,
-  minRole,
+  capability = undefined,
+  minRole = undefined,
   children,
   deniedTitle = "Access restricted",
   deniedMessage = "You don't have permission to view this area.",

@@ -81,8 +81,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
             <tr className="bg-secondary/40 text-muted-foreground text-xs uppercase tracking-wide">
               <th className="px-4 py-2.5 w-10">
                 <Checkbox
-                  checked={allSelected}
-                  ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
                   onCheckedChange={toggleAll}
                   aria-label="Select all"
                 />
@@ -145,6 +144,6 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
 function Th({ children }) {
   return <th className="px-4 py-2.5 text-left font-medium">{children}</th>;
 }
-function Td({ children, className, onClick }) {
+function Td({ children, className = undefined, onClick = undefined }) {
   return <td onClick={onClick} className={cn("px-4 py-3 align-middle", className)}>{children}</td>;
 }

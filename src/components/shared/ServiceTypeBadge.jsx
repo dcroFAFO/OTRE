@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BADGE_CLASSES } from "@/config/serviceTypes";
 
-export default function ServiceTypeBadge({ job, value, className }) {
+export default function ServiceTypeBadge({ job = undefined, value = undefined, className = undefined }) {
   const key = value || job?.service_type || DEFAULT_SERVICE_TYPE;
   const serviceType = getServiceType(key);
 

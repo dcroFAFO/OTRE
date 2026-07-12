@@ -16,16 +16,16 @@ function absoluteUrl(value) {
 export default function SEO({
   title = DEFAULT_TITLE,
   description = DEFAULT_DESCRIPTION,
-  canonical,
-  ogTitle,
-  ogDescription,
+  canonical = undefined,
+  ogTitle = undefined,
+  ogDescription = undefined,
   ogImage = DEFAULT_IMAGE,
   ogType = "website",
-  twitterTitle,
-  twitterDescription,
-  twitterImage,
+  twitterTitle = undefined,
+  twitterDescription = undefined,
+  twitterImage = undefined,
   noindex = false,
-  structuredData,
+  structuredData = undefined,
 }) {
   const pageTitle = title;
   const pageDescription = description;

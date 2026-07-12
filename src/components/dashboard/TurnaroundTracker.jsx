@@ -19,7 +19,7 @@ export default function TurnaroundTracker({ jobs = [], targetDays = DEFAULT_TURN
     const groups = {};
     completed.forEach((j) => {
       const key = prettify(j.service_category_key || j.job_type || "Uncategorised");
-      const days = (new Date(j.updated_date) - new Date(j.created_date)) / MS_PER_DAY;
+      const days = (new Date(j.updated_date).getTime() - new Date(j.created_date).getTime()) / MS_PER_DAY;
       if (days < 0) return;
       (groups[key] ||= []).push(days);
     });

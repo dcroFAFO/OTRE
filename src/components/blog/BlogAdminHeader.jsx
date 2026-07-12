@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-export default function BlogAdminHeader({ title, description, actionTo, actionLabel }) {
+export default function BlogAdminHeader({ title, description, actionTo = undefined, actionLabel = undefined }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>

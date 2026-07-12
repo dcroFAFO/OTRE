@@ -54,7 +54,7 @@ export default function MobileJobWorkspace({
         {tab === "billing" && (
           <div className="space-y-4">
             {canManage && <JobDetailsHeaderActions job={job} onChange={bump} context="invoice" />}
-            <BillingReviewTab job={job} actor={actor} canEdit={canManage} invoiceReadOnly={invoiceReadOnly} onChange={bump} />
+            <BillingReviewTab job={job} canEdit={canManage} invoiceReadOnly={invoiceReadOnly} onChange={bump} />
           </div>
         )}
         {tab === "customer" && (
@@ -64,7 +64,7 @@ export default function MobileJobWorkspace({
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
         )}
-        {tab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
+        {tab === "notes" && <NotesPanel job={job} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
         {tab === "private" && <PrivateNotesPanel job={job} canEdit={canManage} onChange={bump} />}
         {tab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
         {tab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}

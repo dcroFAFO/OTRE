@@ -54,7 +54,7 @@ function useMobileJobWorkspace() {
   return isMobile;
 }
 
-export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
+export default function JobDetailModal({ jobId, actor, open, onClose, onChange = undefined }) {
   const [job, setJob] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("intake");
@@ -74,7 +74,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   const role = actor?.role;
   const canManage = can(role, "job.update") || role === "admin";
 
-  const visibleTabs = job ? getVisibleJobTabs(job.status) : ["intake"];
+  const visibleTabs = job ? getVisibleJobTabs() : ["intake"];
   const quoteReadOnly = job ? isQuoteReadOnlyForStatus(job.status) : false;
   const invoiceReadOnly = job ? isInvoiceReadOnlyForStatus(job.status) : false;
   const isMobileWorkspace = useMobileJobWorkspace();
@@ -171,7 +171,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     {safeTab === "billing" && (
                       <BillingPanel
                         job={job}
-                        actor={actor}
                         canEdit={canManage}
                         quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
                         invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
@@ -183,7 +182,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     {safeTab === "customer" && <CustomerHistoryPanel job={job} actor={actor} />}
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
-                    {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
+                    {safeTab === "notes" && <NotesPanel job={job} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
                   </TabsContent>
                   <TabsContent value="private" className="mt-0">
                     {safeTab === "private" && <PrivateNotesPanel job={job} canEdit={canManage} onChange={bump} />}

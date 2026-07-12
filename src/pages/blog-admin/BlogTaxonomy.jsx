@@ -15,6 +15,7 @@ export default function BlogTaxonomy() {
 }
 function TaxonomyPanel({ title, type, items, save }) {
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
+  /** @param {{ id?: string, name: string, slug: string, description: string, is_active?: boolean }} [item] */
   const submit = (item = form) => save.mutate({ type, id: item.id, data: { ...item, slug: item.slug || slugify(item.name) } });
   return <Card><CardHeader><CardTitle>{title}</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid gap-2"><Input placeholder="Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: f.slug || slugify(e.target.value) }))} /><Input placeholder="Slug" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))} /><Textarea placeholder="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /><Button onClick={() => submit()}>Create {type}</Button></div><div className="space-y-2">{items.map((item) => <div key={item.id} className="flex items-center justify-between rounded-xl border border-border p-3"><div><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">/{item.slug}</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setForm(item)}>Edit</Button><Button size="sm" variant="ghost" onClick={() => submit({ ...item, is_active: false })}>Deactivate</Button></div></div>)}</div></CardContent></Card>;
 }

@@ -68,7 +68,7 @@ function miscPart() {
   };
 }
 
-export default function PartPickerModal({ job, actor, open, onOpenChange, onAdded, onAdd }) {
+export default function PartPickerModal({ job, open, onOpenChange, onAdded, onAdd }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState({});
   const [adding, setAdding] = useState(false);
@@ -163,7 +163,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
           product_code: p.sku,
           is_custom_misc_part: !!p.is_custom_misc_part,
           note: p.note || "",
-        })), actor);
+        })));
       }
       setSelected({});
       onAdded?.();

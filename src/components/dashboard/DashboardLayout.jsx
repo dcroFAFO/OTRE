@@ -44,5 +44,6 @@ export default function DashboardLayout() {
 }
 
 export function useDashboardUser() {
-  return useOutletContext()?.user;
+  const context = /** @type {{ user?: any } | null} */ (useOutletContext());
+  return context?.user;
 }

@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, PenLine, RotateCcw } from "lucide-react";
 
-export default function SignatureCapture({ job, signatureKey, title, description, fileName, onSigned }) {
+export default function SignatureCapture({ job, signatureKey, title, description, fileName, onSigned = undefined }) {
   const canvasRef = useRef(null);
   const drawingRef = useRef(false);
   const hasInkRef = useRef(false);

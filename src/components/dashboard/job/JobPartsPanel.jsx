@@ -11,7 +11,7 @@ import { getUsageCustomerUnitPrice, getUsageLineTotal } from "@/lib/partsPricing
 
 const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
 
-export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
+export default function JobPartsPanel({ job, canEdit, onChange }) {
   const qc = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -31,10 +31,13 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
     },
   });
 
-  const removeUsage = useMutation({
-    mutationFn: (payload) => Array.isArray(payload)
+  /** @param {any | any[]} payload */
+  const removeUsageRecord = (payload) => Array.isArray(payload)
       ? removeInventoryParts(job, payload)
-      : removeInventoryPart(job, payload),
+      : removeInventoryPart(job, payload);
+
+  const removeUsage = useMutation({
+    mutationFn: removeUsageRecord,
     onSuccess: () => {
       setSelectedIds([]);
       refetch();
@@ -163,7 +166,6 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
       {canEdit && (
         <PartPickerModal
           job={job}
-          actor={actor}
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onAdd={(chosen) => addInventoryParts(job, chosen)}

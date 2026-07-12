@@ -104,7 +104,7 @@ export default function CheckoutDialog({ open, onOpenChange }) {
   );
 }
 
-function Field({ label, required, children }) {
+function Field({ label, required = false, children }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">{label}{required && <span className="text-destructive"> *</span>}</Label>

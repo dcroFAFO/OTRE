@@ -123,7 +123,7 @@ export default function Portal() {
         </div>
       </main>
 
-      <CustomerJobModal job={selectedJob} open={!!selectedJob && !tutorialActive} onClose={() => setSelectedJob(null)} onUpdate={() => qc.invalidateQueries({ queryKey: ["portalJobs", user?.id] })} userEmail={user?.email} />
+      <CustomerJobModal job={selectedJob} open={!!selectedJob && !tutorialActive} onClose={() => setSelectedJob(null)} userEmail={user?.email} />
       <CustomerBookingModal
         open={showBooking}
         onClose={() => setShowBooking(false)}

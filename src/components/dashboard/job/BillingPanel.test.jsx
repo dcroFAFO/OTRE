@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import BillingPanel from "./BillingPanel";
 
 const mocks = vi.hoisted(() => ({
-  jobParts: vi.fn(() => null),
-  quote: vi.fn(() => null),
+  jobParts: vi.fn((/** @type {any} */ _props) => null),
+  quote: vi.fn((/** @type {any} */ _props) => null),
 }));
 
 vi.mock("./JobPartsPanel", () => ({ default: mocks.jobParts }));
@@ -21,7 +21,6 @@ describe("BillingPanel permissions", () => {
     render(
       <BillingPanel
         job={{ id: "job-1" }}
-        actor={{ id: "staff-1" }}
         canEdit
         quoteReadOnly={false}
         invoiceReadOnly
@@ -37,7 +36,6 @@ describe("BillingPanel permissions", () => {
     render(
       <BillingPanel
         job={{ id: "job-1" }}
-        actor={{ id: "staff-1" }}
         canEdit
         quoteReadOnly={false}
         invoiceReadOnly={false}

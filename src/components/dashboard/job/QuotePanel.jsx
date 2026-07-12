@@ -31,9 +31,16 @@ function totalsFor(items) {
 
 const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
 
-export default function QuotePanel({ job, actor, canEdit, invoiceCanEdit = canEdit, onChange }) {
+const quoteForm = (quote) => ({
+  labour_estimate: Number(quote?.labour_estimate) || 0,
+  parts_estimate: Number(quote?.parts_estimate) || 0,
+  diagnosis_notes: quote?.diagnosis_notes || "",
+  recommended_repair: undefined,
+});
+
+export default function QuotePanel({ job, canEdit, invoiceCanEdit = canEdit, onChange }) {
   const [quote, setQuote] = useState(null);
-  const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "" });
+  const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "", recommended_repair: undefined });
   const [aiMsg, setAiMsg] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,7 +67,7 @@ export default function QuotePanel({ job, actor, canEdit, invoiceCanEdit = canEd
   const loadQuote = async () => {
     const q = await getJobQuote(job.id);
     setQuote(q);
-    if (q) setForm({ ...q, recommended_repair: undefined });
+    if (q) setForm(quoteForm(q));
   };
 
   useEffect(() => { loadQuote(); }, [job.id]);
@@ -81,9 +88,9 @@ export default function QuotePanel({ job, actor, canEdit, invoiceCanEdit = canEd
       labour_estimate: totals.labour,
       parts_estimate: totals.parts + partsTotal,
       recommended_repair: undefined,
-    }, actor);
+    });
     setQuote(q);
-    setForm({ ...q, recommended_repair: undefined });
+    setForm(quoteForm(q));
     onChange?.();
     return q;
   };
@@ -191,7 +198,7 @@ export default function QuotePanel({ job, actor, canEdit, invoiceCanEdit = canEd
               {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
               {saving ? "Saving…" : "Save"}
             </Button>
-            <InvoicePanel job={job} actor={actor} canEdit={invoiceCanEdit} onChange={onChange} buttonOnly />
+            <InvoicePanel job={job} canEdit={invoiceCanEdit} onChange={onChange} buttonOnly />
             <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
               <Sparkles className="h-4 w-4" /> AI draft
             </Button>

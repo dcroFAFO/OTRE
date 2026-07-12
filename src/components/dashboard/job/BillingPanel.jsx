@@ -3,7 +3,7 @@ import { FileText, Package, ShieldCheck } from "lucide-react";
 import JobPartsPanel from "./JobPartsPanel";
 import QuotePanel from "./QuotePanel";
 
-export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoiceReadOnly, onChange }) {
+export default function BillingPanel({ job, canEdit, quoteReadOnly, invoiceReadOnly, onChange = undefined }) {
   return (
     <div className="space-y-5">
       <BillingSection
@@ -11,7 +11,7 @@ export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoi
         description="Add parts from the existing search and catalogue; they are included when the invoice is finalised."
         icon={Package}
       >
-        <JobPartsPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
+        <JobPartsPanel job={job} canEdit={canEdit} onChange={onChange} />
       </BillingSection>
 
       <BillingSection
@@ -21,7 +21,6 @@ export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoi
       >
         <QuotePanel
           job={job}
-          actor={actor}
           canEdit={canEdit && !quoteReadOnly}
           invoiceCanEdit={canEdit && !invoiceReadOnly}
           onChange={onChange}

@@ -85,7 +85,7 @@ export default function FeedbackDetailDrawer({ item, open, onClose, onSave, savi
   );
 }
 
-function ContextRow({ label, value, mono }) {
+function ContextRow({ label, value, mono = false }) {
   return (
     <div className="px-3 py-2 flex gap-3">
       <span className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">{label}</span>

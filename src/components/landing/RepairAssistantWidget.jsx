@@ -154,7 +154,10 @@ export default function RepairAssistantWidget() {
         prompt: `You are the On The Run Electrics repair assistant. Reply in 1 short concise sentence acknowledging this scooter issue. Do not diagnose, quote exact costs, or promise turnaround times. Issue: ${nextContext.issue}`,
         response_json_schema: { type: "object", properties: { reply: { type: "string" } } },
       });
-      return response?.reply || null;
+      if (response && typeof response === "object" && "reply" in response) {
+        return String(response.reply || "") || null;
+      }
+      return null;
     } catch {
       return null;
     }

@@ -38,7 +38,7 @@ export default function Calendar() {
     if (!destination || destination.droppableId === source.droppableId) return;
     const job = jobs.find((j) => j.id === draggableId);
     if (!job) return;
-    await rescheduleJob(job, destination.droppableId, user);
+    await rescheduleJob(job, destination.droppableId);
     invalidate();
   };
 
@@ -140,8 +140,6 @@ export default function Calendar() {
             date={days.find((d) => format(d, "yyyy-MM-dd") === selectedDay) || days[0]}
             jobs={byDay[selectedDay] || []}
             onOpen={openJob}
-            actor={user}
-            onRefresh={invalidate}
           />
         </>
       )}

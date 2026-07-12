@@ -10,6 +10,27 @@ import { AlertTriangle, CalendarDays, CreditCard, FileText, Loader2, Search } fr
 const OVERDUE_DAYS = 14;
 const OPEN_STATUSES = new Set(["outstanding", "unpaid"]);
 
+/**
+ * @typedef {object} InvoiceRecord
+ * @property {string} id
+ * @property {string=} number
+ * @property {string=} job_id
+ * @property {string=} customer_id
+ * @property {string=} status
+ * @property {number|string=} amount
+ * @property {string=} currency
+ * @property {string=} created_date
+ * @property {string=} updated_date
+ * @property {string=} paid_date
+ */
+
+/**
+ * @typedef {object} InvoiceJob
+ * @property {string=} reference
+ * @property {string=} customer_name
+ * @property {string=} customer_email
+ */
+
 function currency(amount, code = "AUD") {
   return `${code} ${Number(amount || 0).toFixed(2)}`;
 }
@@ -35,24 +56,27 @@ export default function Invoices() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const { data: invoices = [], isLoading } = useQuery({
+  const { data: invoiceRows = [], isLoading } = useQuery({
     queryKey: ["dashboardInvoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 200),
   });
 
-  const { data: jobs = [] } = useQuery({
+  const { data: jobRows = [] } = useQuery({
     queryKey: ["invoiceJobs"],
     queryFn: () => base44.entities.Job.list("-created_date", 300),
   });
 
+  const invoices = /** @type {InvoiceRecord[]} */ (invoiceRows);
+  const jobs = /** @type {Array<InvoiceJob & { id: string }>} */ (jobRows);
+
   const jobById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
 
-  const enriched = useMemo(() => invoices.map((invoice) => ({
+  const enriched = /** @type {Array<InvoiceRecord & { job?: InvoiceJob, overdue: boolean, dueDate: Date | null }>} */ (useMemo(() => invoices.map((invoice) => ({
     ...invoice,
     job: jobById.get(invoice.job_id),
     overdue: isOverdue(invoice),
     dueDate: dueDateFor(invoice),
-  })), [invoices, jobById]);
+  })), [invoices, jobById]));
 
   const filtered = enriched.filter((invoice) => {
     const term = search.trim().toLowerCase();

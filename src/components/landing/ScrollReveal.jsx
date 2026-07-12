@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
  */
 export default function ScrollReveal({
   children,
-  className,
+  className = undefined,
   delay = 0,
   y = 28,
   once = true,
