@@ -13,7 +13,7 @@ export default function WhyChooseSection() {
   return (
     <section className="py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <ScrollReveal className="max-w-3xl">
+        <ScrollReveal className="max-w-2xl mx-auto text-center">
           <span className="text-sm font-semibold text-accent tracking-wide uppercase">Why Choose OTRE</span>
           <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
             Why Choose On The Run Electrics?

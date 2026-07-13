@@ -2,7 +2,6 @@ import React from "react";
 import LandingNav from "@/components/landing/LandingNav";
 import HeroSection from "@/components/landing/HeroSection";
 import ServicesSection from "@/components/landing/ServicesSection";
-import JourneySection from "@/components/landing/JourneySection";
 import IntroSection from "@/components/landing/IntroSection";
 import CommonIssuesSection from "@/components/landing/CommonIssuesSection";
 import ServicingSection from "@/components/landing/ServicingSection";
@@ -48,7 +47,6 @@ export default function Landing() {
           <ServicingSection />
           <WhyChooseSection />
           <TestimonialsSection />
-          <JourneySection />
           <ContactSection />
           <FinalCTASection />
         </main>

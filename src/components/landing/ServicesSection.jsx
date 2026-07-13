@@ -14,9 +14,9 @@ export default function ServicesSection() {
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <ScrollReveal>
+        <ScrollReveal className="ml-auto max-w-2xl text-right flex flex-col items-end">
           <span className="text-sm font-semibold text-accent tracking-wide uppercase">{app.landing.servicesEyebrow}</span>
-          <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground max-w-2xl">
+          <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
             {app.landing.servicesTitle}
           </h2>
           <p className="mt-3 text-muted-foreground max-w-xl leading-relaxed">

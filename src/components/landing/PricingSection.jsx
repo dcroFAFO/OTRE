@@ -60,12 +60,12 @@ export default function PricingSection() {
   return (
     <section id="pricing" className="py-20 sm:py-28 bg-card/35 border-y border-border/70">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <ScrollReveal className="max-w-3xl">
+        <ScrollReveal className="max-w-2xl mx-auto text-center">
           <span className="text-sm font-semibold text-accent tracking-wide uppercase">Pricing</span>
           <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
             Transparent Service Pricing
           </h2>
-          <p className="mt-3 text-muted-foreground max-w-xl leading-relaxed">
+          <p className="mt-3 text-muted-foreground leading-relaxed">
             Clear pricing tiers for every repair need. Final quotes are confirmed after inspection — no surprises, no hidden costs.
           </p>
         </ScrollReveal>

@@ -19,7 +19,7 @@ export default function ServicingSection() {
     <section id="servicing" className="py-20 sm:py-28 bg-card/35 border-y border-border/70">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-          <ScrollReveal>
+          <ScrollReveal className="lg:order-2 flex flex-col items-end text-right">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-accent tracking-wide uppercase">
               <Wrench className="h-4 w-4" /> Maintenance
             </span>
@@ -34,7 +34,7 @@ export default function ServicingSection() {
             </p>
           </ScrollReveal>
 
-          <ScrollReveal delay={0.1}>
+          <ScrollReveal delay={0.1} className="lg:order-1">
             <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
               <h3 className="font-heading text-base font-bold text-foreground">
                 What a service includes
