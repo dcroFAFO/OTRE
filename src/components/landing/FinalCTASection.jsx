@@ -8,8 +8,8 @@ export default function FinalCTASection() {
   return (
     <section className="relative py-24 sm:py-32 border-t border-border/70 overflow-hidden">
       <img
-        src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/6829f2e74_generated_image.png"
-        alt="Rider on an electric scooter at dusk"
+        src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/616e15808_generated_image.png"
+        alt="Electric scooter in motion illustration"
         className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/60" />

@@ -95,8 +95,8 @@ export default function HeroSection() {
             className="relative rounded-3xl overflow-hidden shadow-gentle border border-border mb-5"
           >
             <img
-              src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/3e70c7be5_generated_image.png"
-              alt="Technician repairing an electric scooter"
+              src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/71690b771_generated_image.png"
+              alt="Electric scooter illustration"
               className="w-full h-64 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
