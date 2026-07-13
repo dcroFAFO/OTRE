@@ -22,7 +22,7 @@ export default function LandingParallaxBackground({ heroRef }) {
   const colourOpacity = useTransform(
     scrollY,
     reduceMotion ? [0, heroHeight * 0.7, heroHeight * 0.71] : [0, heroHeight * 0.2, heroHeight * 0.85],
-    reduceMotion ? [0.22, 0.22, 0] : [0.22, 0.16, 0]
+    reduceMotion ? [0.4, 0.4, 0] : [0.4, 0.28, 0]
   );
 
   return (
