@@ -86,21 +86,8 @@ export default function HeroSection() {
           </div>
         </motion.div>
 
-        {/* Right: hero image + services grid — shown on lg+ only */}
-        <div className="hidden lg:block relative">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative rounded-3xl overflow-hidden shadow-gentle border border-border mb-5"
-          >
-            <img
-              src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/3e70c7be5_generated_image.png"
-              alt="Technician repairing an electric scooter"
-              className="w-full h-64 object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
-          </motion.div>
+        {/* Right: services grid — shown on sm+ only */}
+        <div className="hidden lg:block">
           <ServicesVisual services={services} />
         </div>
       </motion.div>
