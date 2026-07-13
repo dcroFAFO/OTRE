@@ -5,13 +5,24 @@ import { LANDING_LOGO_URL } from "@/components/landing/LandingLogo";
 export default function LandingParallaxBackground({ heroRef }) {
   const reduceMotion = useReducedMotion();
   const { scrollY } = useScroll();
-  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const [heroHeight, setHeroHeight] = React.useState(900);
+
+  React.useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return undefined;
+    const measure = () => setHeroHeight(hero.offsetHeight || window.innerHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, [heroRef]);
+
   const logoY = useTransform(scrollY, [0, 2200], reduceMotion ? [0, 0] : [0, -180]);
   const glowY = useTransform(scrollY, [0, 2200], reduceMotion ? [0, 0] : [0, -90]);
   const colourOpacity = useTransform(
-    heroProgress,
-    reduceMotion ? [0, 0.98, 1] : [0, 0.45, 1],
-    reduceMotion ? [0.5, 0.5, 0] : [0.5, 0.32, 0]
+    scrollY,
+    reduceMotion ? [0, heroHeight * 0.7, heroHeight * 0.71] : [0, heroHeight * 0.2, heroHeight * 0.85],
+    reduceMotion ? [0.22, 0.22, 0] : [0.22, 0.16, 0]
   );
 
   return (
