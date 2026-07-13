@@ -9,6 +9,7 @@ import ServicingSection from "@/components/landing/ServicingSection";
 import WhyChooseSection from "@/components/landing/WhyChooseSection";
 import ContactSection from "@/components/landing/ContactSection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
 import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
@@ -27,8 +28,8 @@ export default function Landing() {
   return (
     <>
       <SEO
-        title="Electric Scooter Repairs Brisbane | OTR Scooters"
-        description="Book electric scooter repairs in Brisbane with OTR Scooters. Get expert diagnostics, servicing, tyre repairs and transparent job tracking."
+        title="Electric Scooter Repairs Brisbane | On The Run Electrics"
+        description="Book electric scooter repairs in Brisbane with On The Run Electrics. Get expert diagnostics, servicing, tyre repairs and transparent job tracking."
         canonical="/"
         ogType="website"
         structuredData={localBusinessSchema}
@@ -44,6 +45,7 @@ export default function Landing() {
           <CommonIssuesSection />
           <ServicingSection />
           <WhyChooseSection />
+          <TestimonialsSection />
           <JourneySection />
           <ContactSection />
           <FinalCTASection />

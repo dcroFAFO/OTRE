@@ -1,9 +1,9 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 
-const SITE_NAME = "OTR Scooters";
-const DEFAULT_TITLE = "OTR Scooters | Electric Scooter Repairs";
-const DEFAULT_DESCRIPTION = "Book expert electric scooter repairs, servicing and diagnostics with OTR Scooters, including transparent quotes and online job tracking.";
+const SITE_NAME = "On The Run Electrics";
+const DEFAULT_TITLE = "On The Run Electrics | Electric Scooter Repairs";
+const DEFAULT_DESCRIPTION = "Book expert electric scooter repairs, servicing and diagnostics with On The Run Electrics, including transparent quotes and online job tracking.";
 const DEFAULT_IMAGE = undefined;
 
 function absoluteUrl(value) {
