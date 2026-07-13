@@ -9,6 +9,7 @@ import ServicingSection from "@/components/landing/ServicingSection";
 import WhyChooseSection from "@/components/landing/WhyChooseSection";
 import ContactSection from "@/components/landing/ContactSection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
+import PricingSection from "@/components/landing/PricingSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
@@ -42,6 +43,7 @@ export default function Landing() {
           <HeroSection />
           <IntroSection />
           <ServicesSection />
+          <PricingSection />
           <CommonIssuesSection />
           <ServicingSection />
           <WhyChooseSection />
