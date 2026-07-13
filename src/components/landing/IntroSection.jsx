@@ -30,8 +30,8 @@ export default function IntroSection() {
           <ScrollReveal delay={0.1}>
             <div className="rounded-3xl overflow-hidden shadow-gentle border border-border">
               <img
-                src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/d3c6a4b4f_generated_image.png"
-                alt="Electric scooter repair tools illustration"
+                src="https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/1ab1bd322_generated_image.png"
+                alt="On The Run Electrics repair workshop"
                 className="w-full h-64 sm:h-80 object-cover"
               />
             </div>
