@@ -21,8 +21,8 @@ export default function LandingParallaxBackground({ heroRef }) {
   const glowY = useTransform(scrollY, [0, 2200], reduceMotion ? [0, 0] : [0, -90]);
   const colourOpacity = useTransform(
     scrollY,
-    reduceMotion ? [0, heroHeight * 0.98, heroHeight] : [0, heroHeight * 0.7, heroHeight],
-    [1, 1, 0]
+    reduceMotion ? [0, heroHeight * 0.7, heroHeight * 0.71] : [0, heroHeight * 0.2, heroHeight * 0.85],
+    reduceMotion ? [0.58, 0.58, 0] : [0.58, 0.4, 0]
   );
 
   return (
@@ -40,18 +40,18 @@ export default function LandingParallaxBackground({ heroRef }) {
         className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 opacity-[0.055] blur-[0.2px] saturate-150 will-change-transform sm:top-8 sm:w-[1080px] sm:opacity-[0.075] lg:left-[34%] lg:w-[1220px]"
       />
       <motion.img
+        style={{ y: logoY, opacity: colourOpacity }}
+        src={LANDING_LOGO_URL}
+        alt=""
+        className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 blur-[0.2px] saturate-150 will-change-[transform,opacity] sm:top-8 sm:w-[1080px] lg:left-[34%] lg:w-[1220px]"
+      />
+      <motion.img
         style={{ y: logoY }}
         src={LANDING_LOGO_URL}
         alt=""
         className="absolute left-[62%] top-[118vh] hidden w-[1050px] -translate-x-1/2 opacity-[0.045] blur-[0.2px] saturate-150 will-change-transform md:block xl:w-[1280px]"
       />
       <div className="absolute inset-0 bg-background/72 sm:bg-background/62" />
-      <motion.img
-        style={{ y: logoY, opacity: colourOpacity }}
-        src={LANDING_LOGO_URL}
-        alt=""
-        className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 blur-[0.2px] saturate-150 will-change-[transform,opacity] sm:top-8 sm:w-[1080px] lg:left-[34%] lg:w-[1220px]"
-      />
     </div>
   );
 }
