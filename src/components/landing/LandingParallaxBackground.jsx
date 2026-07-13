@@ -2,11 +2,17 @@ import React from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { LANDING_LOGO_URL } from "@/components/landing/LandingLogo";
 
-export default function LandingParallaxBackground() {
+export default function LandingParallaxBackground({ heroRef }) {
   const reduceMotion = useReducedMotion();
   const { scrollY } = useScroll();
+  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const logoY = useTransform(scrollY, [0, 2200], reduceMotion ? [0, 0] : [0, -180]);
   const glowY = useTransform(scrollY, [0, 2200], reduceMotion ? [0, 0] : [0, -90]);
+  const colourOpacity = useTransform(
+    heroProgress,
+    reduceMotion ? [0, 0.98, 1] : [0, 0.45, 1],
+    reduceMotion ? [0.5, 0.5, 0] : [0.5, 0.32, 0]
+  );
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -21,6 +27,12 @@ export default function LandingParallaxBackground() {
         src={LANDING_LOGO_URL}
         alt=""
         className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 opacity-[0.055] blur-[0.2px] saturate-150 will-change-transform sm:top-8 sm:w-[1080px] sm:opacity-[0.075] lg:left-[34%] lg:w-[1220px]"
+      />
+      <motion.img
+        style={{ y: logoY, opacity: colourOpacity }}
+        src={LANDING_LOGO_URL}
+        alt=""
+        className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 blur-[0.2px] saturate-150 will-change-[transform,opacity] sm:top-8 sm:w-[1080px] lg:left-[34%] lg:w-[1220px]"
       />
       <motion.img
         style={{ y: logoY }}

@@ -16,6 +16,7 @@ import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
+  const heroRef = React.useRef(null);
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -35,13 +36,13 @@ export default function Landing() {
         structuredData={localBusinessSchema}
       />
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <LandingParallaxBackground />
+      <LandingParallaxBackground heroRef={heroRef} />
       <div className="relative z-10">
         <LandingNav />
         <main>
-          <HeroSection />
-          <IntroSection />
+          <HeroSection sectionRef={heroRef} />
           <ServicesSection />
+          <IntroSection />
           <PricingSection />
           <CommonIssuesSection />
           <ServicingSection />

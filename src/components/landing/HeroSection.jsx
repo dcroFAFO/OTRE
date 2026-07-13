@@ -1,48 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, CheckCircle2, Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag } from "lucide-react";
+import { ArrowRight, Zap, CheckCircle2 } from "lucide-react";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
-const ICONS = { Activity, CircleDot, Disc, BatteryCharging, Cpu, Wrench, Package, ShoppingBag };
 
-// A clean grid of the actual services offered — keeps the hero focused on what we do.
-function ServicesVisual({ services }) {
-  const items = services.slice(0, 6);
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-      {items.map((s, i) => {
-        const Icon = ICONS[s.icon] || Wrench;
-        return (
-          <motion.div
-            key={s.name}
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + i * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-gentle hover:border-accent/30 transition-all duration-200"
-          >
-            <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors duration-200">
-              <Icon className="h-5 w-5" />
-            </span>
-            <p className="mt-3 font-heading text-sm font-bold text-foreground leading-snug">{s.name}</p>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-export default function HeroSection() {
-  const { data: { business, app, services } } = usePlatformConfig();
-  const sectionRef = React.useRef(null);
+export default function HeroSection({ sectionRef }) {
+  const { data: { business, app } } = usePlatformConfig();
+  const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
-  const foregroundY = useTransform(scrollYProgress, [0, 1], [0, -120]);
+  const foregroundY = useTransform(scrollYProgress, [0, 1], reduceMotion ? [0, 0] : [0, -120]);
 
   return (
     <section ref={sectionRef} id="top" className="relative overflow-hidden pt-24 pb-20 sm:pt-36 sm:pb-28 min-h-[90vh] flex items-center">
-      <motion.div style={{ y: foregroundY }} className="relative mx-auto max-w-7xl px-5 sm:px-8 w-full grid lg:grid-cols-2 gap-10 lg:gap-16 items-center will-change-transform">
-        {/* Left: Copy */}
-        <motion.div
+      <motion.div style={{ y: foregroundY }} className="relative mx-auto w-full max-w-7xl px-5 sm:px-8 will-change-transform">
+        <motion.div className="max-w-2xl"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
@@ -85,11 +57,6 @@ export default function HeroSection() {
             ))}
           </div>
         </motion.div>
-
-        {/* Right: services grid — shown on sm+ only */}
-        <div className="hidden lg:block">
-          <ServicesVisual services={services} />
-        </div>
       </motion.div>
     </section>
   );

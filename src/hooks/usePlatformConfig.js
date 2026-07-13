@@ -29,9 +29,16 @@ export function usePlatformConfig() {
       ]);
 
       const settings = appSettings.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+      const configuredServices = services.length
+        ? services.map((service) => ({
+            ...DEFAULT_SERVICES.find((item) => item.name === service.name),
+            ...service,
+          }))
+        : DEFAULT_SERVICES;
+
       return {
         business: toBusiness(profiles[0]),
-        services: services.length ? services : DEFAULT_SERVICES,
+        services: configuredServices,
         app: { ...DEFAULT_APP_SETTINGS, ...(settings.app || {}) },
       };
     },
