@@ -79,31 +79,24 @@ export default function RepairAssistantWidget() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [unread, setUnread] = useState(0);
+  const [showScrollNotification, setShowScrollNotification] = useState(false);
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
   const busyRef = useRef(false);
-  const readCountRef = useRef(0);
-  const autoOpenRef = useRef(false);
+  const readCountRef = useRef(messages.length);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Auto-open on first scroll or after 10 seconds, whichever comes first.
+  // Keep the assistant minimised and show a message notification after scrolling.
   useEffect(() => {
-    const trigger = () => {
-      if (autoOpenRef.current) return;
-      autoOpenRef.current = true;
-      setOpen(true);
+    const onScroll = () => {
+      if (!open) setShowScrollNotification(true);
     };
-    const timer = setTimeout(trigger, 10000);
-    const onScroll = () => trigger();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [open]);
 
   // Track unread assistant messages while the widget is minimised.
   useEffect(() => {
@@ -323,21 +316,26 @@ export default function RepairAssistantWidget() {
   const showTextInput = !result;
 
   const handleOpen = () => {
-    autoOpenRef.current = true;
+    setShowScrollNotification(false);
     setOpen(true);
   };
 
   if (!open) {
-    if (unread > 0) {
+    if (unread > 0 || showScrollNotification) {
       return (
         <button
           onClick={handleOpen}
-          className="fixed bottom-4 right-4 z-40 grid h-14 w-14 animate-in fade-in slide-in-from-bottom-3 duration-500 place-items-center rounded-full bg-accent text-accent-foreground shadow-xl shadow-slate-900/20 transition hover:bg-accent/90 sm:bottom-5 sm:right-5"
-          aria-label={`Open scooter repair assistant — ${unread} unread message${unread === 1 ? "" : "s"}`}
+          className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-3 duration-500 items-center gap-3 rounded-2xl border border-accent/30 bg-card px-3 py-3 text-left shadow-xl shadow-slate-900/15 transition hover:border-accent hover:bg-accent/10 motion-reduce:animate-none sm:bottom-5 sm:right-5"
+          aria-label={`Open scooter repair assistant — ${unread || 1} unread message${unread > 1 ? "s" : ""}`}
+          aria-live="polite"
         >
-          <Bot className="h-6 w-6" />
-          <span className="absolute -right-1 -top-1 grid h-6 min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground ring-2 ring-card">
-            {unread > 9 ? "9+" : unread}
+          <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground">
+            <Bot className="h-5 w-5" aria-hidden="true" />
+            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-destructive ring-2 ring-card" />
+          </span>
+          <span>
+            <span className="block text-xs font-bold text-muted-foreground">Repair assistant</span>
+            <span className="block text-sm font-semibold text-foreground">Hi! Need help with your scooter?</span>
           </span>
         </button>
       );
