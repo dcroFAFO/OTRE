@@ -58,11 +58,11 @@ const TIERS = [
 
 export default function PricingSection() {
   return (
-    <section id="pricing" className="py-20 sm:py-28 bg-card/35 border-y border-border/70">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <ScrollReveal className="max-w-2xl mx-auto text-center">
+    <section id="pricing" className="border-y border-border/70 bg-card/35 py-14 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+        <ScrollReveal className="mx-auto max-w-2xl text-left sm:text-center">
           <span className="text-sm font-semibold text-accent tracking-wide uppercase">Pricing</span>
-          <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+          <h2 className="mt-3 font-heading text-2xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
             Transparent Service Pricing
           </h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -70,7 +70,7 @@ export default function PricingSection() {
           </p>
         </ScrollReveal>
 
-        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+        <div className="mt-9 grid gap-5 sm:mt-12 lg:grid-cols-3">
           {TIERS.map((tier, i) => {
             const Icon = tier.icon;
             return (
@@ -80,7 +80,7 @@ export default function PricingSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                className={`relative rounded-2xl border bg-card p-6 sm:p-7 transition-all duration-300 ${
+                className={`relative rounded-3xl border bg-card p-5 transition-all duration-300 sm:p-7 ${
                   tier.highlighted
                     ? "border-accent shadow-gentle lg:scale-[1.03] lg:-translate-y-1"
                     : "border-border shadow-sm hover:border-accent/30 hover:shadow-gentle"

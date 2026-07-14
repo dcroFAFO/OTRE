@@ -37,13 +37,13 @@ export default function LandingParallaxBackground({ heroRef }) {
         style={{ y: logoY }}
         src={LANDING_LOGO_URL}
         alt=""
-        className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 opacity-[0.055] blur-[0.2px] saturate-150 will-change-transform sm:top-8 sm:w-[1080px] sm:opacity-[0.075] lg:left-[34%] lg:w-[1220px]"
+        className="absolute left-[58%] top-24 w-[560px] -translate-x-1/2 opacity-[0.045] blur-[0.2px] saturate-150 will-change-transform sm:left-1/2 sm:top-8 sm:w-[1080px] sm:opacity-[0.075] lg:left-[34%] lg:w-[1220px]"
       />
       <motion.img
         style={{ y: logoY, opacity: colourOpacity }}
         src={LANDING_LOGO_URL}
         alt=""
-        className="absolute left-1/2 top-16 w-[720px] -translate-x-1/2 blur-[0.2px] saturate-150 will-change-[transform,opacity] sm:top-8 sm:w-[1080px] lg:left-[34%] lg:w-[1220px]"
+        className="absolute left-[58%] top-24 w-[560px] -translate-x-1/2 blur-[0.2px] saturate-150 will-change-[transform,opacity] sm:left-1/2 sm:top-8 sm:w-[1080px] lg:left-[34%] lg:w-[1220px]"
       />
       <motion.img
         style={{ y: logoY }}
@@ -51,7 +51,7 @@ export default function LandingParallaxBackground({ heroRef }) {
         alt=""
         className="absolute left-[62%] top-[118vh] hidden w-[1050px] -translate-x-1/2 opacity-[0.045] blur-[0.2px] saturate-150 will-change-transform md:block xl:w-[1280px]"
       />
-      <div className="absolute inset-0 bg-background/72 sm:bg-background/62" />
+      <div className="absolute inset-0 bg-background/78 sm:bg-background/62" />
     </div>
   );
 }

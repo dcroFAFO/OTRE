@@ -39,9 +39,9 @@ export default function LandingNav() {
         scrolled ? "bg-background/90 backdrop-blur-xl border-b border-border shadow-sm" : "bg-background/70 backdrop-blur-md"
       )}
     >
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 h-16 flex items-center justify-between">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-8">
         <Link to="/" className="flex items-center" aria-label="On The Road home">
-          <LandingLogo imageClassName="h-12 sm:h-14" />
+          <LandingLogo imageClassName="h-10 sm:h-14" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -63,27 +63,27 @@ export default function LandingNav() {
           <Link to="/book"><Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">Book a Repair</Button></Link>
         </div>
 
-        <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <button className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-card/80 transition-colors hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden" onClick={() => setOpen(!open)} aria-label={open ? "Close navigation menu" : "Open navigation menu"} aria-expanded={open} aria-controls="mobile-navigation">
+          {open ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
         </button>
       </div>
 
       {open && (
-        <div className="md:hidden bg-background border-b border-border px-5 py-4 space-y-3">
+        <div id="mobile-navigation" className="space-y-2 border-b border-border bg-background/95 px-4 pb-5 pt-3 shadow-xl backdrop-blur-xl md:hidden">
           {links.map((l) => (
             l.href.startsWith("/") ? (
-              <Link key={l.href} to={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-muted-foreground">
+              <Link key={l.href} to={l.href} onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded-xl px-3 text-base font-semibold text-foreground transition-colors hover:bg-accent/10">
                 {l.label}
               </Link>
             ) : (
-              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block text-sm font-medium text-muted-foreground">
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded-xl px-3 text-base font-semibold text-foreground transition-colors hover:bg-accent/10">
                 {l.label}
               </a>
             )
           ))}
-          <div className="flex gap-2 pt-2">
-            <Link to="/portal" className="flex-1"><Button variant="outline" size="sm" className="w-full">Login</Button></Link>
-            <Link to="/book" className="flex-1"><Button size="sm" className="w-full bg-accent text-accent-foreground">Book</Button></Link>
+          <div className="grid grid-cols-2 gap-3 pt-3">
+            <Link to="/portal"><Button variant="outline" className="h-12 w-full rounded-xl">Login</Button></Link>
+            <Link to="/book"><Button className="h-12 w-full rounded-xl bg-accent text-accent-foreground">Book a Repair</Button></Link>
           </div>
         </div>
       )}

@@ -16,17 +16,17 @@ const CHECKLIST = [
 
 export default function ServicingSection() {
   return (
-    <section id="servicing" className="py-20 sm:py-28 bg-card/35 border-y border-border/70">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section id="servicing" className="border-y border-border/70 bg-card/35 py-14 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-          <ScrollReveal className="lg:order-2 flex flex-col items-end text-right">
+          <ScrollReveal className="flex flex-col items-start text-left lg:order-2 lg:items-end lg:text-right">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-accent tracking-wide uppercase">
               <Wrench className="h-4 w-4" /> Maintenance
             </span>
-            <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h2 className="mt-3 font-heading text-2xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
               Servicing & Maintenance
             </h2>
-            <p className="mt-5 text-muted-foreground leading-relaxed text-lg">
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
               Regular servicing helps prevent small problems from becoming bigger, more expensive repairs. A service can include checking brakes, tyres, bolts, wiring, lights, folding mechanisms, suspension, battery condition, and general ride safety.
             </p>
             <p className="mt-4 text-muted-foreground leading-relaxed">
@@ -39,7 +39,7 @@ export default function ServicingSection() {
               <h3 className="font-heading text-base font-bold text-foreground">
                 What a service includes
               </h3>
-              <div className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-6 sm:gap-y-3">
                 {CHECKLIST.map((item, i) => (
                   <motion.div
                     key={item}

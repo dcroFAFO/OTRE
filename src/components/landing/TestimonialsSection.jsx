@@ -23,16 +23,16 @@ const TESTIMONIALS = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section className="py-14 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <ScrollReveal className="max-w-3xl">
           <span className="text-sm font-semibold text-accent tracking-wide uppercase">Rider Stories</span>
-          <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+          <h2 className="mt-3 font-heading text-2xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
             What Brisbane Riders Say
           </h2>
         </ScrollReveal>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {TESTIMONIALS.map((t, i) => (
             <motion.div
               key={t.author}

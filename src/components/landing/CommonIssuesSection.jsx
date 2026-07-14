@@ -28,21 +28,21 @@ const ISSUES = [
 
 export default function CommonIssuesSection() {
   return (
-    <section id="common-issues" className="py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section id="common-issues" className="py-14 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <ScrollReveal className="max-w-3xl">
           <span className="inline-flex items-center gap-2 text-sm font-semibold text-accent tracking-wide uppercase">
             <AlertCircle className="h-4 w-4" /> Common Issues
           </span>
-          <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+          <h2 className="mt-3 font-heading text-2xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
             Common Issues We Fix
           </h2>
-          <p className="mt-5 text-muted-foreground leading-relaxed text-lg">
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
             If your scooter will not turn on, will not charge, cuts out while riding, feels unsafe, makes unusual noises, has weak brakes, loses range, or shows an error code, we can inspect it and advise on the best repair path.
           </p>
         </ScrollReveal>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-2.5 sm:mt-12 sm:gap-4 lg:grid-cols-4">
           {ISSUES.map((issue, i) => {
             const Icon = issue.icon;
             return (
@@ -52,7 +52,7 @@ export default function CommonIssuesSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.45, delay: (i % 4) * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                className="group rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-accent/30 hover:shadow-gentle hover:-translate-y-1 transition-all duration-200"
+                className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-accent/30 hover:shadow-gentle sm:p-5"
               >
                 <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors duration-200">
                   <Icon className="h-5 w-5" />
@@ -68,8 +68,8 @@ export default function CommonIssuesSection() {
           <p className="text-sm text-muted-foreground">
             Not every issue is obvious from the outside. We check the likely causes, explain what is going on, and recommend the most sensible fix.
           </p>
-          <Link to="/book" className="mt-5 inline-flex">
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl gap-2 shadow-lg shadow-accent/20">
+          <Link to="/book" className="mt-5 block sm:inline-flex">
+            <Button className="h-12 w-full gap-2 rounded-xl bg-accent text-accent-foreground shadow-lg shadow-accent/20 hover:bg-accent/90 sm:h-9 sm:w-auto">
               Book a diagnostic <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>

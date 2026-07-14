@@ -14,19 +14,19 @@ const ITEMS = [
 
 export default function ContactSection() {
   return (
-    <section id="contact" className="py-20 sm:py-28 bg-card/35 border-y border-border/70">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section id="contact" className="border-y border-border/70 bg-card/35 py-14 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <ScrollReveal>
             <span className="text-sm font-semibold text-accent tracking-wide uppercase">Contact</span>
-            <h2 className="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h2 className="mt-3 font-heading text-2xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
               Get In Touch
             </h2>
-            <p className="mt-5 text-muted-foreground leading-relaxed text-lg">
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
               Have a question about your scooter, repair options, or an existing job? Contact On The Run Electrics or book your repair online.
             </p>
-            <Link to="/book" className="mt-8 inline-flex">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl gap-2 shadow-lg shadow-accent/20">
+            <Link to="/book" className="mt-7 block sm:mt-8 sm:inline-flex">
+              <Button size="lg" className="h-12 w-full gap-2 rounded-xl bg-accent text-accent-foreground shadow-lg shadow-accent/20 hover:bg-accent/90 sm:h-10 sm:w-auto">
                 Book a Repair <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -47,7 +47,7 @@ export default function ContactSection() {
               );
 
               if (!href) {
-                return <div key={label} className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">{content}</div>;
+                return <div key={label} className="flex gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:gap-4 sm:p-5">{content}</div>;
               }
 
               return (
@@ -56,7 +56,7 @@ export default function ContactSection() {
                   href={href}
                   target={external ? "_blank" : undefined}
                   rel={external ? "noopener noreferrer" : undefined}
-                  className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-accent/50 hover:bg-accent/5"
+                  className="flex gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-accent/50 hover:bg-accent/5 sm:gap-4 sm:p-5"
                 >
                   {content}
                 </a>

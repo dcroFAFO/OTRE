@@ -9,7 +9,7 @@ export default function LandingFooter() {
   const { data: { business, app } } = usePlatformConfig();
   return (
     <footer className="bg-card/90 backdrop-blur-sm border-t border-border text-foreground">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 py-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-8 sm:py-14 lg:grid-cols-4 lg:gap-10">
         <div className="lg:col-span-2">
           <div className="flex items-center gap-2">
             <span className="grid place-items-center h-9 w-9 rounded-xl bg-accent/15"><Zap className="h-5 w-5 text-accent" /></span>
@@ -20,22 +20,22 @@ export default function LandingFooter() {
 
         <div>
           <p className="text-sm font-semibold mb-3">Contact</p>
-          <ul className="space-y-2 text-sm text-muted-foreground">
+          <ul className="space-y-1 text-sm text-muted-foreground">
             <li>
-              <a href={CONTACT_LINKS.email} className="flex items-center gap-2 hover:text-accent transition-colors"><Mail className="h-4 w-4" /> {CONTACT_DETAILS.email}</a>
+              <a href={CONTACT_LINKS.email} className="flex min-h-11 items-center gap-2 rounded-lg transition-colors hover:text-accent"><Mail className="h-4 w-4" /> {CONTACT_DETAILS.email}</a>
             </li>
             <li>
-              <a href={CONTACT_LINKS.phone} className="flex items-center gap-2 hover:text-accent transition-colors"><Phone className="h-4 w-4" /> {CONTACT_DETAILS.phone}</a>
+              <a href={CONTACT_LINKS.phone} className="flex min-h-11 items-center gap-2 rounded-lg transition-colors hover:text-accent"><Phone className="h-4 w-4" /> {CONTACT_DETAILS.phone}</a>
             </li>
             <li>
-              <a href={CONTACT_LINKS.maps} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-accent transition-colors"><MapPin className="h-4 w-4" /> {CONTACT_DETAILS.address}</a>
+              <a href={CONTACT_LINKS.maps} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-2 rounded-lg transition-colors hover:text-accent"><MapPin className="h-4 w-4" /> {CONTACT_DETAILS.address}</a>
             </li>
           </ul>
         </div>
 
         <div>
           <p className="text-sm font-semibold mb-3">Opening hours</p>
-          <ul className="space-y-2 text-sm text-muted-foreground">
+          <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="flex items-start gap-2"><Clock className="h-4 w-4 mt-0.5" /> <span>Monday – Sunday, 11:00 AM – 7:30 PM</span></li>
           </ul>
           <div className="mt-4 flex flex-col gap-2">
