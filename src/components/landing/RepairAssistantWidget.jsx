@@ -9,7 +9,7 @@ import { normalizePhoneToE164 } from "@/lib/phone";
 import RepairAssistantJobCard from "@/components/landing/RepairAssistantJobCard";
 
 const QUICK_REPLIES = ["Won’t turn on", "Won’t charge", "Flat tyre or puncture", "Brake issue", "Error code", "Reduced range", "Strange noise", "General service"];
-const OPENING = "Hi, I’m the On The Run Electrics repair assistant. Are you starting a new job, or following up on an existing one?";
+const OPENING = "Hi, I’m the On The Run Electrics repair assistant. I can help with any questions or queries you have about our services, repairs, bookings, or an existing job — just ask me anything.";
 const SAFETY_YES = "Yes, please note details below";
 const SAFETY_NO = "No urgent safety concerns";
 const OTHER_MODEL = "Other model";
@@ -147,10 +147,13 @@ export default function RepairAssistantWidget() {
   };
 
   const askAssistant = async (currentStage, nextContext) => {
-    if (currentStage !== "issue" || !nextContext.issue) return null;
+    if (!nextContext.issue) return null;
     try {
+      const isGeneralQuestion = currentStage === "intent";
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are the On The Run Electrics repair assistant. Reply in 1 short concise sentence acknowledging this scooter issue. Do not diagnose, quote exact costs, or promise turnaround times. Issue: ${nextContext.issue}`,
+        prompt: isGeneralQuestion
+          ? `You are the friendly On The Run Electrics repair assistant. Answer this question naturally in 2–3 concise sentences. You may help with electric scooter repairs, services, bookings, and repair follow-ups. Do not invent business details, diagnose faults, quote exact costs, or promise turnaround times. If the answer requires staff confirmation, say so and suggest getting in touch. Question: ${nextContext.issue}`
+          : `You are the On The Run Electrics repair assistant. Reply in 1 short concise sentence acknowledging this scooter issue. Do not diagnose, quote exact costs, or promise turnaround times. Issue: ${nextContext.issue}`,
         response_json_schema: { type: "object", properties: { reply: { type: "string" } } },
       });
       return response?.reply || null;
@@ -183,7 +186,16 @@ export default function RepairAssistantWidget() {
     setMessages((prev) => [...prev, { role: "user", text: clean }]);
 
     if (stage === "intent") {
-      const wantsExisting = /existing|follow/i.test(clean);
+      const wantsExisting = /existing|follow|job status|check.*job/i.test(clean);
+      const wantsNew = /book|start.*job|new job|repair request/i.test(clean);
+      if (!wantsExisting && !wantsNew) {
+        setLoading(true);
+        const reply = await askAssistant("intent", { issue: clean });
+        setLoading(false);
+        setMessages((prev) => [...prev, { role: "assistant", text: reply || "I can help with repair services, bookings, or an existing job. What would you like to know?" }]);
+        setTimeout(() => inputRef.current?.focus(), 50);
+        return;
+      }
       const nextContext = { ...context, intent: wantsExisting ? "existing" : "new" };
       setContext(nextContext);
       const nextStage = computeStage(nextContext);
@@ -297,7 +309,7 @@ export default function RepairAssistantWidget() {
   };
 
   const quickReplies = useMemo(() => {
-    if (stage === "intent") return ["Start a new job", "Follow up on an existing job"];
+    if (stage === "intent") return ["Book a repair", "Check an existing repair"];
     if (stage === "issue") return QUICK_REPLIES;
     if (stage === "make") return BRAND_NAMES;
     if (stage === "model") return SCOOTER_BRANDS[context.make] || [];
@@ -405,7 +417,7 @@ export default function RepairAssistantWidget() {
 
       {showTextInput && (
         <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex gap-2 p-4">
-          <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type your answer…" className="h-10" disabled={loading} />
+          <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask me anything…" aria-label="Message the repair assistant" className="h-10" disabled={loading} />
           <Button type="submit" size="icon" disabled={loading || !input.trim()} className="h-10 w-10 shrink-0 rounded-xl bg-accent hover:bg-accent/90">
             <Send className="h-4 w-4" />
           </Button>
