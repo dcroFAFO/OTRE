@@ -6,6 +6,7 @@ import MobileProcessSection from "@/components/landing/MobileProcessSection";
 import MobileIssuesSection from "@/components/landing/MobileIssuesSection";
 import MobileTrustSection from "@/components/landing/MobileTrustSection";
 import MobileResourceSection from "@/components/landing/MobileResourceSection";
+import MobileLocationSection from "@/components/landing/MobileLocationSection";
 import MobileContactCTA from "@/components/landing/MobileContactCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
 import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
@@ -39,6 +40,7 @@ export default function Landing() {
           <MobileIssuesSection />
           <MobileTrustSection />
           <MobileResourceSection />
+          <MobileLocationSection />
           <MobileContactCTA />
         </main>
         <LandingFooter />
