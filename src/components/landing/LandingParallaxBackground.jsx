@@ -8,7 +8,7 @@ export default function LandingParallaxBackground({ heroRef }) {
   const [heroHeight, setHeroHeight] = React.useState(900);
 
   React.useEffect(() => {
-    const hero = heroRef.current;
+    const hero = heroRef?.current;
     if (!hero) return undefined;
     const measure = () => setHeroHeight(hero.offsetHeight || window.innerHeight);
     measure();
