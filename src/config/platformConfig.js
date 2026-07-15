@@ -69,12 +69,10 @@ export const DEFAULT_APP_SETTINGS = {
 };
 
 export const CUSTOMER_JOURNEY = [
-  { key: "book", label: "Book repair", icon: "CalendarCheck" },
-  { key: "confirmed", label: "Job booked", icon: "CalendarCheck" },
-  { key: "progress", label: "Repair in progress", icon: "Wrench" },
-  { key: "pickup", label: "Ready for pickup", icon: "PackageCheck" },
-  { key: "invoice", label: "Invoice sent", icon: "FileText" },
-  { key: "paid", label: "Invoice paid", icon: "CreditCard" },
+  { key: "request", label: "Request", icon: "CalendarCheck" },
+  { key: "repair", label: "Repair", icon: "Wrench" },
+  { key: "pickup", label: "Pickup", icon: "PackageCheck" },
+  { key: "pay", label: "Pay", icon: "CreditCard" },
 ];
 
 export const DEFAULT_SERVICE_CATEGORIES = [

@@ -6,11 +6,11 @@ import { normalizeStatusKey } from "@/config/jobConfig";
 // These do NOT change any status values — they only filter what's shown.
 export const LIFECYCLE_GROUPS = [
   { key: "all", label: "All", statuses: null },
-  { key: "requests", label: "Requests", statuses: ["requested"] },
-  { key: "scheduled", label: "Scheduled", statuses: ["booked"] },
-  { key: "in_progress", label: "In Progress", statuses: ["repair_in_progress", "waiting_on_parts"] },
-  { key: "billing", label: "Ready / Billing", statuses: ["ready_for_pickup", "invoice_sent"] },
-  { key: "done", label: "Done / Other", statuses: ["completed", "paid", "cancelled", "on_hold"] },
+  { key: "request_review", label: "Request Review", statuses: ["requested"] },
+  { key: "approval_scheduling", label: "Approval / Scheduling", statuses: ["booked"] },
+  { key: "repair", label: "Repair", statuses: ["repair_in_progress", "waiting_on_parts"] },
+  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_sent", "paid"] },
+  { key: "complete", label: "Complete", statuses: ["completed", "cancelled", "on_hold"] },
 ];
 
 export default function LifecycleTabs({ jobs, value, onChange }) {

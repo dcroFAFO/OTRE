@@ -7,7 +7,7 @@ import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
 
 export default function MobileLandingHero() {
   const { data: { business } } = usePlatformConfig();
-  const benefits = ["No payment to book", "Clear quote before work", "Track your repair online"];
+  const benefits = ["No payment to request", "Clear repair updates", "Track your repair online"];
 
   return (
     <section className="relative overflow-hidden px-4 pb-12 pt-24 sm:px-8 sm:pb-20 sm:pt-32">

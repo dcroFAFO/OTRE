@@ -4,7 +4,6 @@ import MobileLandingHero from "@/components/landing/MobileLandingHero";
 import MobileServicesSection from "@/components/landing/MobileServicesSection";
 import MobileProcessSection from "@/components/landing/MobileProcessSection";
 import MobileIssuesSection from "@/components/landing/MobileIssuesSection";
-import MobilePricingSection from "@/components/landing/MobilePricingSection";
 import MobileTrustSection from "@/components/landing/MobileTrustSection";
 import MobileContactCTA from "@/components/landing/MobileContactCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
@@ -29,7 +28,7 @@ export default function Landing() {
 
   return (
     <>
-      <SEO title="Electric Scooter Repairs Brisbane | On The Run Electrics" description="Book electric scooter repairs, diagnostics and servicing in Woolloongabba, Brisbane. Clear quotes, practical repairs and online job tracking." canonical="/" ogType="website" structuredData={localBusinessSchema} />
+      <SEO title="Electric Scooter Repairs Brisbane | On The Run Electrics" description="Book electric scooter repairs, diagnostics and servicing in Woolloongabba, Brisbane. Clear repair updates and online job tracking." canonical="/" ogType="website" structuredData={localBusinessSchema} />
       <div className="min-h-screen overflow-hidden bg-background text-foreground">
         <LandingNav />
         <main>
@@ -37,7 +36,6 @@ export default function Landing() {
           <MobileServicesSection />
           <MobileProcessSection />
           <MobileIssuesSection />
-          <MobilePricingSection />
           <MobileTrustSection />
           <MobileContactCTA />
         </main>

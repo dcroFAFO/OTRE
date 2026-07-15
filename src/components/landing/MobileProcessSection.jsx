@@ -1,11 +1,11 @@
 import React from "react";
-import { CalendarCheck, Search, Smartphone, Wrench } from "lucide-react";
+import { CalendarCheck, CreditCard, PackageCheck, Wrench } from "lucide-react";
 
 const STEPS = [
-  { icon: CalendarCheck, title: "Request a booking", text: "Tell us about your scooter and the issue online." },
-  { icon: Search, title: "Get it assessed", text: "Bring it to our Woolloongabba workshop for inspection." },
-  { icon: Smartphone, title: "Approve and track", text: "Review the quote, then follow progress online." },
-  { icon: Wrench, title: "Get back riding", text: "We let you know when your scooter is ready." },
+  { icon: CalendarCheck, title: "Request", text: "Tell us about your scooter and request a repair online." },
+  { icon: Wrench, title: "Repair", text: "We review, schedule and complete the required repair work." },
+  { icon: PackageCheck, title: "Pickup", text: "We let you know when your scooter is ready to collect." },
+  { icon: CreditCard, title: "Pay", text: "Pay your invoice and get back on the road." },
 ];
 
 export default function MobileProcessSection() {

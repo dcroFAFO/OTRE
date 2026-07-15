@@ -4,25 +4,12 @@ import { JOB_STATUSES } from "@/config/jobConfig";
 
 export const JOB_GROUPS = [
   { key: "all", label: "All", statuses: null },
-  { key: "new", label: "New Jobs", statuses: ["requested", "pending_confirmation"] },
-  { key: "quotes", label: "Quotes", statuses: ["quote_required", "quote_sent", "quote_approved"] },
-  {
-    key: "in_progress",
-    label: "In Progress",
-    statuses: ["active", "booked", "technician_assigned", "repair_in_progress"],
-  },
-  { key: "completed", label: "Completed", statuses: ["ready_for_pickup", "completed", "paid"] },
-  {
-    key: "on_hold",
-    label: "On Hold",
-    statuses: [
-      "on_hold",
-      "waiting_customer",
-      "waiting_technician",
-      "waiting_supplier",
-      "waiting_parts",
-    ],
-  },
+  { key: "request_review", label: "Request Review", statuses: ["requested", "pending_confirmation"] },
+  { key: "approval_scheduling", label: "Approval / Scheduling", statuses: ["booked", "technician_assigned", "quote_required", "quote_sent", "quote_approved"] },
+  { key: "repair", label: "Repair", statuses: ["active", "repair_in_progress", "waiting_on_parts"] },
+  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_sent", "paid"] },
+  { key: "complete", label: "Complete", statuses: ["completed", "cancelled"] },
+  { key: "on_hold", label: "On Hold", statuses: ["on_hold", "waiting_customer", "waiting_technician", "waiting_supplier", "waiting_parts"] },
 ];
 
 // Anything not explicitly captured by another group falls into "Other".
