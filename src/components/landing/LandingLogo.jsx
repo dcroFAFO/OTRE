@@ -8,10 +8,12 @@ export default function LandingLogo({ className, imageClassName }) {
     <span className={cn("inline-flex items-center", className)}>
       <img
         src={LANDING_LOGO_URL}
-        alt="On The Road logo"
+        alt="On The Run Electrics"
+        decoding="async"
+        fetchPriority="high"
         className={cn("block h-auto w-auto object-contain", imageClassName)}
       />
-      <span className="sr-only">On The Road</span>
+      <span className="sr-only">On The Run Electrics</span>
     </span>
   );
 }

@@ -1,60 +1,49 @@
 import React from "react";
 import LandingNav from "@/components/landing/LandingNav";
-import HeroSection from "@/components/landing/HeroSection";
-import ServicesSection from "@/components/landing/ServicesSection";
-import IntroSection from "@/components/landing/IntroSection";
-import CommonIssuesSection from "@/components/landing/CommonIssuesSection";
-import ServicingSection from "@/components/landing/ServicingSection";
-import WhyChooseSection from "@/components/landing/WhyChooseSection";
-import ContactSection from "@/components/landing/ContactSection";
-import FinalCTASection from "@/components/landing/FinalCTASection";
-import PricingSection from "@/components/landing/PricingSection";
-import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import MobileLandingHero from "@/components/landing/MobileLandingHero";
+import MobileServicesSection from "@/components/landing/MobileServicesSection";
+import MobileProcessSection from "@/components/landing/MobileProcessSection";
+import MobileIssuesSection from "@/components/landing/MobileIssuesSection";
+import MobilePricingSection from "@/components/landing/MobilePricingSection";
+import MobileTrustSection from "@/components/landing/MobileTrustSection";
+import MobileContactCTA from "@/components/landing/MobileContactCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
-import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
 import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
-  const heroRef = React.useRef(null);
   const localBusinessSchema = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": "AutoRepair",
     name: "On The Run Electrics",
-    description: "Electric scooter repairs, servicing, diagnostics and maintenance in Brisbane.",
+    description: "Electric scooter repairs, servicing and diagnostics in Woolloongabba, Brisbane.",
     url: typeof window !== "undefined" ? window.location.origin : "/",
-    serviceType: "Electric scooter repair",
+    telephone: "+61415505908",
+    email: "hello@ontherunelectrics.com.au",
+    priceRange: "$$",
+    areaServed: "Brisbane",
+    address: { "@type": "PostalAddress", streetAddress: "11 Lucinda Street", addressLocality: "Woolloongabba", addressRegion: "QLD", postalCode: "4102", addressCountry: "AU" },
+    openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: "11:00", closes: "19:30" }],
+    hasOfferCatalog: { "@type": "OfferCatalog", name: "Electric scooter services", itemListElement: ["Brake repairs", "Tyres and punctures", "Battery diagnostics", "Electrical fault finding", "General servicing", "Safety checks"].map((name) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name } })) },
   };
 
   return (
     <>
-      <SEO
-        title="Electric Scooter Repairs Brisbane | On The Run Electrics"
-        description="Book electric scooter repairs in Brisbane with On The Run Electrics. Get expert diagnostics, servicing, tyre repairs and transparent job tracking."
-        canonical="/"
-        ogType="website"
-        structuredData={localBusinessSchema}
-      />
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <LandingParallaxBackground heroRef={heroRef} />
-      <div className="relative z-10">
+      <SEO title="Electric Scooter Repairs Brisbane | On The Run Electrics" description="Book electric scooter repairs, diagnostics and servicing in Woolloongabba, Brisbane. Clear quotes, practical repairs and online job tracking." canonical="/" ogType="website" structuredData={localBusinessSchema} />
+      <div className="min-h-screen overflow-hidden bg-background text-foreground">
         <LandingNav />
         <main>
-          <HeroSection sectionRef={heroRef} />
-          <ServicesSection />
-          <IntroSection />
-          <PricingSection />
-          <CommonIssuesSection />
-          <ServicingSection />
-          <WhyChooseSection />
-          <TestimonialsSection />
-          <ContactSection />
-          <FinalCTASection />
+          <MobileLandingHero />
+          <MobileServicesSection />
+          <MobileProcessSection />
+          <MobileIssuesSection />
+          <MobilePricingSection />
+          <MobileTrustSection />
+          <MobileContactCTA />
         </main>
         <LandingFooter />
         <RepairAssistantWidget />
       </div>
-    </div>
     </>
   );
 }

@@ -27,7 +27,7 @@ export default function LandingNav() {
   }, []);
 
   const links = app.landing.navLinks.map((link) => {
-    if (link.href.startsWith("#")) return { ...link, href: `/${link.href}` };
+    if (link.href.startsWith("#")) return link;
     if (link.href === "/blog") return { ...link, label: "News and Events" };
     return link;
   });
