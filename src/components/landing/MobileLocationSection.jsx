@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Navigation, ParkingCircle, Building2 } from "lucide-react";
-import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
+import { CONTACT_DETAILS } from "@/config/contactDetails";
+import { base44 } from "@/api/base44Client";
 
 const LOCATION_NOTES = [
   { icon: Building2, text: "Look for the James Trowse building — we're right next to Woolloongabba Rotary Park." },
@@ -9,6 +10,14 @@ const LOCATION_NOTES = [
 ];
 
 export default function MobileLocationSection() {
+  const [embedUrl, setEmbedUrl] = useState(null);
+
+  useEffect(() => {
+    base44.functions.invoke("getMapEmbedUrl", { address: CONTACT_DETAILS.address })
+      .then((res) => setEmbedUrl(res.data?.embedUrl || null))
+      .catch(() => setEmbedUrl(null));
+  }, []);
+
   return (
     <section className="px-4 py-12 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-5xl rounded-3xl border border-border bg-card/85 p-6 shadow-gentle backdrop-blur-xl sm:p-10">
@@ -29,14 +38,23 @@ export default function MobileLocationSection() {
           ))}
         </div>
 
-        <a
-          href={CONTACT_LINKS.maps}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-accent hover:underline"
-        >
-          Get directions on Google Maps →
-        </a>
+        <div className="mt-6 aspect-video w-full overflow-hidden rounded-2xl border border-border">
+          {embedUrl ? (
+            <iframe
+              title="Workshop location map"
+              src={embedUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-background/60 text-sm text-muted-foreground">
+              Loading map…
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
