@@ -36,7 +36,7 @@ export default function LandingFooter() {
         <div>
           <p className="text-sm font-semibold mb-3">Opening hours</p>
           <ul className="space-y-1 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2"><Clock className="h-4 w-4 mt-0.5" /> <span>Monday – Sunday, 11:00 AM – 7:30 PM</span></li>
+            <li className="flex items-start gap-2"><Clock className="h-4 w-4 mt-0.5" /> <span>{CONTACT_DETAILS.openingHours}</span></li>
           </ul>
           <div className="mt-4 flex flex-col gap-2">
             <Link to="/portal" className="text-sm font-medium text-accent">{app.landing.portalLabel} →</Link>
