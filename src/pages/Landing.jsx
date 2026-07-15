@@ -22,7 +22,7 @@ export default function Landing() {
     priceRange: "$$",
     areaServed: "Brisbane",
     address: { "@type": "PostalAddress", streetAddress: "11 Lucinda Street", addressLocality: "Woolloongabba", addressRegion: "QLD", postalCode: "4102", addressCountry: "AU" },
-    openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: "11:00", closes: "19:30" }],
+    openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: "11:00", closes: "23:59" }],
     hasOfferCatalog: { "@type": "OfferCatalog", name: "Electric scooter services", itemListElement: ["Brake repairs", "Tyres and punctures", "Battery diagnostics", "Electrical fault finding", "General servicing", "Safety checks"].map((name) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name } })) },
   };
 

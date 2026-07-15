@@ -4,7 +4,7 @@ export const CONTACT_DETAILS = {
   phone: "0415 505 908",
   tel: "+61415505908",
   address: "11 Lucinda Street, Wooloongabba QLD 4102",
-  openingHours: "Monday – Sunday: 11:00 AM – 7:30 PM",
+  openingHours: "Monday – Sunday: 11:00 AM – Midnight",
 };
 
 export const CONTACT_LINKS = {

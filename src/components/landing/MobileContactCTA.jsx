@@ -18,7 +18,7 @@ export default function MobileContactCTA() {
         <div className="rounded-3xl bg-foreground p-6 text-background shadow-xl sm:p-10">
           <p className="text-xs font-bold uppercase tracking-widest text-accent">Ready to get moving?</p>
           <h2 className="mt-3 max-w-xl text-3xl font-extrabold leading-tight">Send your repair request in a few minutes.</h2>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-background/70">Tell us what is happening with your scooter. No payment is needed to request a booking.</p>
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-background/70">Tell us what is happening with your scooter. No payment is needed to request a booking. Open until midnight every night — need a time outside that? Just contact us to arrange it.</p>
           <Link to="/book" className="mt-6 block sm:inline-flex"><Button size="lg" className="h-12 w-full rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto">Request a repair booking <ArrowRight aria-hidden="true" /></Button></Link>
         </div>
         <div className="mt-5 grid gap-2.5 sm:grid-cols-2">

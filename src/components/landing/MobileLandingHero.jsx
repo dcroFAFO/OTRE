@@ -16,11 +16,11 @@ export default function MobileLandingHero() {
         <div className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent">
           <Zap className="h-3.5 w-3.5" aria-hidden="true" /> Electric scooter repairs · Woolloongabba
         </div>
-        <h1 className="mt-5 max-w-[12ch] font-heading text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-6xl">
-          Brisbane scooter repairs, without the runaround.
+        <h1 className="mt-5 max-w-[14ch] font-heading text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-6xl">
+          Service that fits your life, not your lunch break.
         </h1>
         <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Book repairs, diagnostics or servicing online. Get clear updates and track your scooter from drop-off to pickup.
+          Open until midnight, every night — so busy schedules never get in the way of a repair. Can't make our hours? Get in touch and we'll arrange a time that works for you.
         </p>
         <div className="mt-7 grid gap-3 sm:flex">
           <Link to={business.primaryCta.target}>
