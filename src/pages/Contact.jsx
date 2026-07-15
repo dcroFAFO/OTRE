@@ -73,7 +73,7 @@ export default function Contact() {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Opening hours</p>
                   <p className="mt-1 font-heading text-lg font-extrabold">Mon – Sun</p>
-                  <p className="mt-1 text-sm text-muted-foreground">11:00 AM – 7:30 PM</p>
+                  <p className="mt-1 text-sm text-muted-foreground">11:00 AM – Midnight</p>
                 </div>
               </div>
             </div>
