@@ -159,13 +159,6 @@ Deno.serve(async (req) => {
 
     if (scooter?.id) await entities.Scooter.update(scooter.id, { job_id: addIdList(scooter.job_id, job.id), last_service_date: intake.date || scooter.last_service_date || '' }).catch(() => null);
     await entities.Customer.update(customer.id, { job_id: addIdList(customer.job_id, job.id), last_activity_date: now }).catch(() => null);
-    if (intake.date) {
-      await entities.NotificationEvent.bulkCreate([
-        { event_key: 'scheduling.confirmed', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: stableCustomerId, recipient_user_id: customer.user_id || '', event_version: `scheduled:${intake.date}`, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, scheduled_date: intake.date, message: `Your drop-off is scheduled for ${intake.date}.` }, source: 'automatic', status: 'pending', occurred_at: now },
-        { event_key: 'staff.job_scheduled', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: stableCustomerId, event_version: `scheduled:${intake.date}`, event_data: { customer_name: job.customer_name, scheduled_date: intake.date }, source: 'automatic', status: 'pending', occurred_at: now },
-      ]);
-    }
-
     console.log(`[staffCreateJob] Job ${job.id} created for customer ${stableCustomerId} by ${user.full_name}`);
     return Response.json({ success: true, job, customer_id: stableCustomerId, customer_account_id: customer.id, asset_id: scooter?.id || '', is_new_customer: isNewCustomer, reference });
   } catch (error) {

@@ -105,21 +105,6 @@ async function currentUser(base44) {
   try { return await base44.auth.me(); } catch (_) { return null; }
 }
 
-// Explicit business events are delivered by the central notification engine.
-async function sendBookingRequestNotifications(base44, jobId) {
-  const job = await base44.asServiceRole.entities.Job.get(jobId);
-  if (!job) return;
-  const now = new Date().toISOString();
-  const version = job.reference || job.id;
-  await base44.asServiceRole.entities.NotificationEvent.bulkCreate([
-    { event_key: 'request.submitted', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', recipient_user_id: job.customer_user_id || '', event_version: version, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: 'We received your repair request and our team will contact you about scheduling.' }, source: 'automatic', status: 'pending', occurred_at: now },
-    { event_key: 'staff.request_received', related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', event_version: version, event_data: { customer_name: job.customer_name, message: `New repair request ${job.reference || job.id}` }, source: 'automatic', status: 'pending', occurred_at: now },
-  ]);
-  if ((job.booking_submission?.files || []).length > 0) {
-    await base44.asServiceRole.entities.NotificationEvent.bulkCreate(['request.files_received', 'staff.files_uploaded'].map((eventKey) => ({ event_key: eventKey, related_entity_type: 'Job', related_entity_id: job.id, job_id: job.id, customer_id: job.customer_id || '', recipient_user_id: job.customer_user_id || '', event_version: `${version}:files`, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: 'Your files and photos were received successfully.' }, source: 'automatic', status: 'pending', occurred_at: now })));
-  }
-}
-
 async function findOrCreateProfile(base44, { name, email, phone, user, now }) {
   let profile = null;
   const emailMatches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 1).catch(() => []);
@@ -221,10 +206,6 @@ Deno.serve(async (req) => {
     if (submittedBooking.files.length > 0) await Promise.all(submittedBooking.files.map((fileUrl, index) => base44.asServiceRole.entities.Attachment.create({ job_id: job.id, customer_id: stableCustomerId, file_url: fileUrl, file_name: `booking_upload_${index + 1}`, kind: 'photo', visibility: 'customer', uploaded_by_name: submittedBooking.customerName })));
     if (rawToken) { const tokenHash = await sha256(rawToken); await base44.asServiceRole.entities.PublicJobAccess.create({ jobId: job.id, job_id: job.id, tokenHash, token_hash: tokenHash, permissions: DEFAULT_PERMISSIONS, createdAt: now }); }
     await base44.asServiceRole.entities.AuditEvent.create({ event_type: 'booking_created', job_id: job.id, customer_id: customerRecord?.id || stableCustomerId, actor_name: form.customer_name, actor_role: customerUserId ? 'customer_account' : 'guest_customer', summary: `Booking request received from ${form.customer_name}`, visibility: 'system', metadata: { customer_id: customerRecord?.id || '', stable_customer_id: stableCustomerId, scooter_id: scooter?.id || '' } }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
-
-    // Single booking request notification flow — runs once, after the job is
-    // fully created and linked. Never blocks the booking on send failure.
-    await sendBookingRequestNotifications(base44, job.id).catch((notifyErr) => console.warn('[createBooking] booking request notifications failed:', notifyErr.message));
 
     const managePath = customerUserId ? '/portal' : null;
     const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;

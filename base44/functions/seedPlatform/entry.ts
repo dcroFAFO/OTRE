@@ -111,13 +111,6 @@ const BOOKING_FIELDS = [
   { key: "photo", label: "Photo (optional)", field_type: "file", maps_to: "attachment", order: 9 },
 ];
 
-const NOTIFICATION_TEMPLATES = [
-  { key: "booking_received", channel: "email", subject: "We received your booking", body: "Hi {customer_name}, your request {reference} has been received." },
-  { key: "quote_sent", channel: "email", subject: "Your quote is ready", body: "Hi {customer_name}, your quote for {reference} is ready to review." },
-  { key: "status_changed", channel: "email", subject: "Your job status changed", body: "Hi {customer_name}, {reference} is now {status}." },
-  { key: "invoice_created", channel: "email", subject: "Your invoice is ready", body: "Hi {customer_name}, your invoice for {reference} is ready." },
-];
-
 const TECHS = [
   { full_name: "Mason Reid", short_name: "Mason R.", role: "technician", role_label: "Technician", color: "teal", active: true },
   { full_name: "Ella Turner", short_name: "Ella T.", role: "technician", role_label: "Technician", color: "indigo", active: true },
@@ -190,10 +183,6 @@ Deno.serve(async (req) => {
       booking: async () => {
         for (const field of BOOKING_FIELDS)
           await createIfNone("BookingFieldConfig", { key: field.key }, { ...field, active: true });
-      },
-      templates: async () => {
-        for (const template of NOTIFICATION_TEMPLATES)
-          await createIfNone("NotificationTemplate", { key: template.key, channel: template.channel }, { ...template, active: true });
       },
       demo: async () => {
         const existingJobs = await db.Job.list("-created_date", 1);

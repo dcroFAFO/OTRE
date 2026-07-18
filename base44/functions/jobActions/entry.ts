@@ -44,27 +44,6 @@ const isCanonicalStatus = (status) => JOB_STATUSES.includes(status);
 const statusLabel = (key) =>
   String(key || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
-const emitEvents = async (base44, job, eventKeys, version, eventData = {}) => {
-  const now = new Date().toISOString();
-  const keys = [...new Set(eventKeys.filter(Boolean))];
-  if (!keys.length) return;
-  await base44.asServiceRole.entities.NotificationEvent.bulkCreate(keys.map((eventKey) => ({
-    event_key: eventKey, related_entity_type: "Job", related_entity_id: job.id, job_id: job.id,
-    customer_id: job.customer_id || "", recipient_user_id: job.customer_user_id || "",
-    event_version: version, event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, ...eventData },
-    source: "automatic", status: "pending", occurred_at: now,
-  })));
-};
-
-const statusEvents = (nextStatus) => ({
-  booked: ["scheduling.confirmed", "staff.job_scheduled"],
-  repair_in_progress: ["repair.started"],
-  waiting_on_parts: ["repair.waiting_parts", "staff.parts_required"],
-  ready_for_pickup: ["repair.completed", "completion.ready_for_pickup", "completion.pickup_reminder", "staff.repair_completed"],
-  completed: ["completion.completed"],
-  on_hold: ["repair.delayed", "staff.job_on_hold"],
-}[nextStatus] || []);
-
 const findJobInvoice = async (base44, job) => {
   if (job.invoice_id) {
     try {
@@ -205,7 +184,6 @@ Deno.serve(async (req) => {
           summary: `Status changed to "${statusLabel(nextStatus)}"`,
           visibility: "customer",
         });
-        await emitEvents(base44, { ...job, ...result }, statusEvents(nextStatus), `${currentStatus}->${nextStatus}:${result.updated_date || Date.now()}`);
         if (nextStatus === READY_STATUS) {
           const readyJob = { ...job, ...result };
           const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
@@ -227,7 +205,6 @@ Deno.serve(async (req) => {
       }
       case "reschedule": {
         if (!params.newDate || job.scheduled_date === params.newDate) { result = job; break; }
-        const eventKeys = job.scheduled_date ? ["scheduling.rescheduled", "staff.job_rescheduled"] : ["scheduling.confirmed", "staff.job_scheduled"];
         result = await base44.entities.Job.update(job.id, { scheduled_date: params.newDate });
         await logAudit({
           eventType: job.scheduled_date ? "job_rescheduled" : "job_scheduled",
@@ -236,14 +213,12 @@ Deno.serve(async (req) => {
           summary: `${job.scheduled_date ? "Rescheduled" : "Scheduled"} to ${params.newDate}`,
           visibility: "customer",
         });
-        await emitEvents(base44, { ...job, ...result }, eventKeys, `${job.scheduled_date || "unscheduled"}->${params.newDate}`, { previous_date: job.scheduled_date || "", scheduled_date: params.newDate });
         break;
       }
       case "mark_ready": {
         if (normalizeStatus(job.status) === READY_STATUS && job.ready_for_pickup) { result = job; break; }
         result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
-        await emitEvents(base44, { ...job, ...result }, statusEvents(READY_STATUS), `${normalizeStatus(job.status)}->${READY_STATUS}:${result.updated_date || Date.now()}`);
         const readyJob = { ...job, ...result };
         const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
         if (invoiceSync.addedCount > 0) {
@@ -265,7 +240,6 @@ Deno.serve(async (req) => {
         if (normalizeStatus(job.status) === CANCELLED_STATUS) { result = job; break; }
         result = await base44.entities.Job.update(job.id, { status: CANCELLED_STATUS });
         await logAudit({ eventType: "job_cancelled", summary: "Job cancelled", visibility: "customer" });
-        await emitEvents(base44, { ...job, ...result }, [normalizeStatus(job.status) === "requested" ? "request.cancelled" : "scheduling.cancelled"], `${normalizeStatus(job.status)}->cancelled:${result.updated_date || Date.now()}`);
         break;
       }
       case "reopen": {

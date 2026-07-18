@@ -34,9 +34,7 @@ export default function DashboardShell({ user, children }) {
   { to: "/asset-management", label: "Asset Management", icon: Bike }] }] :
   []),
   { to: "/settings", label: "Settings", icon: Settings, children: [
-  { to: "/service-pricing", label: "Service Pricing", icon: BadgeDollarSign },
-  { to: "/settings/notification-preferences", label: "My Notifications", icon: BellRing },
-  ...(isAdmin ? [{ to: "/settings/notifications", label: "Notification Rules", icon: BellRing }] : [])] }];
+  { to: "/service-pricing", label: "Service Pricing", icon: BadgeDollarSign }] }];
 
   const adminNav = [
   ...(canViewLog ? [{ to: "/admin/activity", label: "Activity Log", icon: Activity }] : []),
