@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Loader2, CheckCircle2, AlertTriangle, Bike } from "lucide-react";
 import { rescheduleJob } from "@/services/jobService";
+import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
+import { getCanonicalJobStatus } from "@/config/jobConfig";
 import { toast } from "sonner";
 
 const TIME_WINDOWS = [
@@ -53,7 +55,15 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
       if (timeWindow !== (job.preferred_time_window || "")) {
         await base44.entities.Job.update(job.id, { preferred_time_window: timeWindow });
       }
-      toast.success("Schedule saved");
+      // For requested jobs, saving the schedule confirms the booking and
+      // transitions the job to "booked" — this triggers the notification flow
+      // and refreshes which tabs are visible.
+      if (getCanonicalJobStatus(job.status) === "requested") {
+        await updateJobStatusFromEvent({ ...job, scheduled_date: date, preferred_time_window: timeWindow }, "booked");
+        toast.success("Job scheduled and confirmed");
+      } else {
+        toast.success("Schedule saved");
+      }
       setSaved(true);
       onChange?.();
     } catch (err) {
