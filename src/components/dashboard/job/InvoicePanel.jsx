@@ -7,10 +7,14 @@ import StatusPill from "@/components/shared/StatusPill";
 import { getJobInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
+import PartPickerModal from "./PartPickerModal";
+import LabourConsumablePickerModal from "./LabourConsumablePickerModal";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
 import { AlertCircle, CheckCircle2, Clock, Copy, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Trash2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { PARTS_MARKUP_PERCENT, getUsageCustomerUnitPrice, roundMoney } from "@/lib/partsPricing";
+import { addInventoryParts } from "@/services/jobService";
+import { saveQuote } from "@/services/quoteService";
 
 function normalizeDraftItem(item = {}) {
   const qty = Number(item.qty) || 1;
@@ -106,6 +110,10 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   const [loading, setLoading] = useState(true);
   const [finaliseStatus, setFinaliseStatus] = useState(ASYNC_STATES.IDLE);
   const [sendError, setSendError] = useState("");
+  const [partsPickerOpen, setPartsPickerOpen] = useState(false);
+  const [labourPickerOpen, setLabourPickerOpen] = useState(false);
+  const [addingParts, setAddingParts] = useState(false);
+  const [addingLabour, setAddingLabour] = useState(false);
 
   const loadInvoiceData = async () => {
     setLoading(true);
@@ -311,6 +319,36 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     }
   };
 
+  const handleAddParts = async (chosen) => {
+    setAddingParts(true);
+    try {
+      await addInventoryParts(job, chosen);
+      await loadInvoiceData();
+      onChange?.();
+      toast.success("Parts added to invoice.");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to add parts.");
+    } finally {
+      setAddingParts(false);
+    }
+  };
+
+  const handleAddLabour = async (items) => {
+    setAddingLabour(true);
+    try {
+      const currentQuote = quote || await getJobQuote(job.id);
+      const nextItems = [...(currentQuote?.line_items || []), ...items];
+      await saveQuote(job, { ...currentQuote, id: currentQuote?.id, line_items: nextItems });
+      await loadInvoiceData();
+      onChange?.();
+      toast.success("Labour / consumable added to invoice.");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to add labour / consumable.");
+    } finally {
+      setAddingLabour(false);
+    }
+  };
+
   if (loading) {
     return buttonOnly
       ? <Button size="sm" disabled className="gap-1.5"><Loader2 className="h-4 w-4 animate-spin" /> Finalise Invoice</Button>
@@ -322,7 +360,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       <>
         <Button size="sm" onClick={finaliseInvoice} disabled={!canEdit || creating || sending} className="gap-1.5">
           {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {creating ? "Generating…" : "Finalise Invoice"}
+          {creating ? "Generating…" : "Send Invoice"}
         </Button>
         <InvoicePdfPreviewDialog
           open={previewOpen}
@@ -436,12 +474,18 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
           {canEdit ? (
             <div className="flex flex-wrap gap-2 pt-1">
               {quote && <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Copy costing</Button>}
+              <Button size="sm" variant="outline" onClick={() => setPartsPickerOpen(true)} disabled={addingParts} className="gap-1.5">
+                {addingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />} Add parts
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setLabourPickerOpen(true)} disabled={addingLabour} className="gap-1.5">
+                {addingLabour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />} Add labour / consumable
+              </Button>
               {invoice.status !== "paid" && invoice.status !== "refunded" && <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={payOnline} disabled={paying}>{paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Pay with Stripe</Button>}
               <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setStatus("paid")}>Mark paid</Button>
               <Button size="sm" variant="ghost" onClick={() => setStatus("refunded")}>Refund</Button>
               <Button size="sm" className="gap-1.5 border-primary ml-auto" onClick={finaliseInvoice} disabled={creating || sending}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Finalise Invoice
+                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send Invoice
               </Button>
             </div>
           ) : null}
@@ -452,17 +496,23 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
         <div className="space-y-3">
           {billingItems.length === 0 && (
             <div className="rounded-xl border border-dashed border-border bg-secondary/20 p-4 text-center">
-              <p className="text-sm text-muted-foreground">No parts or labour have been added to this job yet. Add them from the Repair tab before finalising the invoice.</p>
+              <p className="text-sm text-muted-foreground">No parts or labour have been added to this job yet. Add them from the Repair tab or use the buttons below.</p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
             {quote && <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Copy costing</Button>}
-            <Button size="sm" onClick={finaliseInvoice} disabled={creating || sending || billingItems.length === 0} className="gap-1.5">
+            <Button size="sm" variant="outline" onClick={() => setPartsPickerOpen(true)} disabled={addingParts} className="gap-1.5">
+              {addingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />} Add parts
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setLabourPickerOpen(true)} disabled={addingLabour} className="gap-1.5">
+              {addingLabour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />} Add labour / consumable
+            </Button>
+            <Button size="sm" onClick={finaliseInvoice} disabled={creating || sending || billingItems.length === 0} className="gap-1.5 ml-auto">
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Finalise Invoice{lineTotal > 0 ? ` · ${currency} ${lineTotal.toFixed(2)}` : ""}
+              Send Invoice{lineTotal > 0 ? ` · ${currency} ${lineTotal.toFixed(2)}` : ""}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Finalise Invoice creates an internal preview first. Nothing is sent or shown to the customer until you confirm.</p>
+          <p className="text-xs text-muted-foreground">Send Invoice creates an internal preview first. Nothing is sent or shown to the customer until you confirm.</p>
           {!job.customer_email && <p className="text-xs text-amber-600">⚠️ No email address on this job — cannot send invoice.</p>}
         </div>
       ) : (
@@ -481,6 +531,23 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
         onPrint={printPdf}
         onConfirmSend={confirmSend}
       />
+
+      {canEdit && (
+        <>
+          <PartPickerModal
+            job={job}
+            actor={actor}
+            open={partsPickerOpen}
+            onOpenChange={setPartsPickerOpen}
+            onAdd={handleAddParts}
+          />
+          <LabourConsumablePickerModal
+            open={labourPickerOpen}
+            onOpenChange={setLabourPickerOpen}
+            onAdd={handleAddLabour}
+          />
+        </>
+      )}
     </div>
   );
 }
