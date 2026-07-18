@@ -125,14 +125,14 @@ export default function Invoices() {
         </div>
       ) : (
         <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
+          <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-3 text-left">Invoice</th>
-                <th className="px-4 py-3 text-left hidden md:table-cell">Customer</th>
-                <th className="px-4 py-3 text-left hidden lg:table-cell">Issued / Due</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-3 sm:px-4 py-3 text-left w-[40%] md:w-[28%] lg:w-[20%]">Invoice</th>
+                <th className="px-3 sm:px-4 py-3 text-left hidden md:table-cell w-[26%] lg:w-[22%]">Customer</th>
+                <th className="px-3 sm:px-4 py-3 text-left hidden lg:table-cell w-[22%]">Issued / Due</th>
+                <th className="px-3 sm:px-4 py-3 text-right w-[24%] md:w-[18%] lg:w-[16%]">Amount</th>
+                <th className="px-3 sm:px-4 py-3 text-left w-[36%] md:w-[28%] lg:w-[20%]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -146,23 +146,23 @@ export default function Invoices() {
                     invoice.job_id && "cursor-pointer"
                   )}
                 >
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-foreground">{invoice.number || "Invoice"}</p>
-                    <p className="text-xs text-muted-foreground">{invoice.job?.reference || invoice.job_id || "No linked job"}</p>
+                  <td className="px-3 sm:px-4 py-3 overflow-hidden">
+                    <p className="font-semibold text-foreground truncate">{invoice.number || "Invoice"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{invoice.job?.reference || invoice.job_id || "No linked job"}</p>
                     {invoice.overdue && <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-rose-600"><AlertTriangle className="h-3 w-3" /> Overdue</p>}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <p className="font-medium text-foreground">{invoice.job?.customer_name || "—"}</p>
-                    <p className="text-xs text-muted-foreground">{invoice.job?.customer_email || invoice.customer_id || "—"}</p>
+                  <td className="px-3 sm:px-4 py-3 hidden md:table-cell overflow-hidden">
+                    <p className="font-medium text-foreground truncate">{invoice.job?.customer_name || "—"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{invoice.job?.customer_email || invoice.customer_id || "—"}</p>
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
-                    <p>Issued {invoice.created_date ? new Date(invoice.created_date).toLocaleDateString() : "—"}</p>
-                    <p className={cn("text-xs", invoice.overdue && "font-semibold text-rose-600")}>Due {invoice.dueDate ? invoice.dueDate.toLocaleDateString() : "—"}</p>
+                  <td className="px-3 sm:px-4 py-3 hidden lg:table-cell text-muted-foreground overflow-hidden">
+                    <p className="truncate">Issued {invoice.created_date ? new Date(invoice.created_date).toLocaleDateString() : "—"}</p>
+                    <p className={cn("text-xs truncate", invoice.overdue && "font-semibold text-rose-600")}>Due {invoice.dueDate ? invoice.dueDate.toLocaleDateString() : "—"}</p>
                   </td>
-                  <td className="px-4 py-3 text-right font-heading font-bold">{currency(invoice.amount, invoice.currency)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 sm:px-4 py-3 text-right font-heading font-bold whitespace-nowrap">{currency(invoice.amount, invoice.currency)}</td>
+                  <td className="px-3 sm:px-4 py-3">
                     <StatusPill kind="payment" value={invoice.status || "outstanding"} />
-                    {invoice.paid_date && <p className="mt-1 text-xs text-muted-foreground">Paid {new Date(invoice.paid_date).toLocaleDateString()}</p>}
+                    {invoice.paid_date && <p className="mt-1 text-xs text-muted-foreground truncate">Paid {new Date(invoice.paid_date).toLocaleDateString()}</p>}
                   </td>
                 </tr>
               ))}
