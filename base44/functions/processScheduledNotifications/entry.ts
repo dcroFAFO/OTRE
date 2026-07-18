@@ -9,6 +9,7 @@ const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 const BUSINESS_NAME = "On The Run Electrics";
 const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
 const BUSINESS_PHONE = "0415 505 908";
+const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
 const OVERDUE_HOURS = 24;
 const FEEDBACK_DELAY_HOURS = 12;
 const REMINDER_INTERVAL_HOURS = 24;
@@ -74,7 +75,14 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const db = base44.asServiceRole.entities;
-    const origin = req.headers.get('origin') || '';
+    let origin = req.headers.get('origin') || '';
+    if (!origin) {
+      try {
+        const profiles = await db.BusinessProfile.list('-created_date', 1).catch(() => []);
+        if (profiles[0]?.website_url) origin = profiles[0].website_url.replace(/\/$/, '');
+      } catch (_) {}
+    }
+    if (!origin) origin = DEFAULT_ORIGIN;
     const results = { overdue: 0, feedback: 0 };
 
     // ── OVERDUE INVOICE REMINDERS ──
