@@ -4,7 +4,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Bike, Calendar, User, CreditCard, AlertTriangle, Hash } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
-import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import BillingPanel from "./BillingPanel";
 import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
@@ -23,9 +22,7 @@ import { format } from "date-fns";
 // Tab label map (desktop modal only — mobile uses its own workspace tabs)
 const TAB_LABELS = {
   billing: "Invoice",
-  customer: "Complete",
-  notes: "Notes",
-  files: "Files",
+  customer: "Customer",
 };
 
 // Matches the "lg:hidden" breakpoint used by DashboardShell/MobileJobWorkspace
@@ -125,10 +122,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
           <>
             <JobModalHeader job={job} />
 
-            {canManage && (
-              <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
-            )}
-
             <div className="flex-1 overflow-y-auto">
               <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
                 <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10">
@@ -162,18 +155,14 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     )}
                   </TabsContent>
                   <TabsContent value="customer" className="mt-0">
-                    {safeTab === "customer" && <CustomerHistoryPanel job={job} actor={actor} />}
-                  </TabsContent>
-                  <TabsContent value="notes" className="mt-0">
-                    {safeTab === "notes" && (
-                      <div className="space-y-4">
+                    {safeTab === "customer" && (
+                      <div className="space-y-6">
+                        <CustomerHistoryPanel job={job} actor={actor} />
                         <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
                         <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                        <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
                       </div>
                     )}
-                  </TabsContent>
-                  <TabsContent value="files" className="mt-0">
-                    {safeTab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
                   </TabsContent>
                 </div>
               </Tabs>

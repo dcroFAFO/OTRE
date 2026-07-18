@@ -1,11 +1,15 @@
 import React from "react";
-import { Package, Wrench } from "lucide-react";
+import { Package, Wrench, StickyNote, Paperclip } from "lucide-react";
 import JobPartsPanel from "../JobPartsPanel";
 import QuotePanel from "../QuotePanel";
+import NotesPanel from "../NotesPanel";
+import PrivateNotesPanel from "../PrivateNotesPanel";
+import AttachmentsPanel from "../AttachmentsPanel";
 
-// Scooter-focused repair workspace: parts picker and labour/consumables.
+// Scooter-focused repair workspace: parts picker, labour/consumables,
+// notes, and files — all in one scrollable view.
 // Intake is now managed per-asset in the customer profile, not per-job.
-export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange }) {
+export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange, role, canNote, canAttach }) {
   return (
     <div className="space-y-5">
       <RepairSection title="Parts" icon={Package}>
@@ -14,6 +18,15 @@ export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange
 
       <RepairSection title="Labour and Consumables" icon={Wrench}>
         <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />
+      </RepairSection>
+
+      <RepairSection title="Notes" icon={StickyNote}>
+        <NotesPanel job={job} actor={actor} canCustomer={canNote} onChange={onChange} />
+        <PrivateNotesPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
+      </RepairSection>
+
+      <RepairSection title="Files" icon={Paperclip}>
+        <AttachmentsPanel job={job} actor={actor} canUpload={canAttach} />
       </RepairSection>
     </div>
   );

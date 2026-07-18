@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  ArrowLeft, CalendarDays, Wrench, CreditCard, User, MoreHorizontal,
-  StickyNote, Paperclip, Hash, Bike,
+  ArrowLeft, CalendarDays, Wrench, CreditCard, User,
+  Hash, Bike,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/config/permissions";
@@ -16,10 +16,9 @@ import RepairTab from "./RepairTab";
 import BillingReviewTab from "./BillingReviewTab";
 import ReferralCard from "./ReferralCard";
 
-const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Complete", notes: "Notes", files: "Files" };
-const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User, notes: StickyNote, files: Paperclip };
+const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Customer" };
+const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User };
 const PRIMARY_TABS = ["schedule", "repair", "billing", "customer"];
-const MORE_TABS = ["notes", "files"];
 
 // Contextual primary action + initial tab, driven by the job's current status.
 function contextualStep(status) {
@@ -47,7 +46,8 @@ export default function MobileJobWorkspace({
         {tab === "repair" && (
           <>
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />}
-            <RepairTab job={job} actor={actor} canEdit={canManage} quoteReadOnly={quoteReadOnly} onChange={bump} />
+            <RepairTab job={job} actor={actor} canEdit={canManage} quoteReadOnly={quoteReadOnly} onChange={bump}
+              role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
           </>
         )}
         {tab === "billing" && (
@@ -58,18 +58,13 @@ export default function MobileJobWorkspace({
         )}
         {tab === "customer" && (
           <div className="space-y-4">
-            {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="customer" />}
             <CustomerHistoryPanel job={job} actor={actor} />
+            <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
+            <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+            <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
         )}
-        {tab === "notes" && (
-          <div className="space-y-4">
-            <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
-            <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-          </div>
-        )}
-        {tab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
       </div>
 
       <MobileJobTabBar activeTab={tab} onChange={setTab} />
@@ -103,55 +98,24 @@ function MobileHeader({ job, onClose, primaryLabel, onPrimary }) {
 }
 
 function MobileJobTabBar({ activeTab, onChange }) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = MORE_TABS.includes(activeTab);
-
-  const select = (t) => { onChange(t); setMoreOpen(false); };
+  const select = (t) => onChange(t);
 
   return (
-    <>
-      {moreOpen && (
-        <div className="fixed inset-x-3 bottom-20 z-50 rounded-2xl border border-border bg-card p-2 shadow-gentle mb-safe">
-          <div className="grid grid-cols-4 gap-1.5">
-            {MORE_TABS.map((t) => {
-              const Icon = TAB_ICONS[t];
-              const active = activeTab === t;
-              return (
-                <button key={t} onClick={() => select(t)}
-                  className={cn("flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition-colors",
-                    active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary")}>
-                  <Icon className="h-5 w-5" />
-                  {TAB_LABELS[t]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur pb-safe" aria-label="Job navigation">
-        <div className="grid grid-cols-5">
-          {PRIMARY_TABS.map((t) => {
-            const Icon = TAB_ICONS[t];
-            const active = activeTab === t;
-            return (
-              <button key={t} onClick={() => select(t)}
-                className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-                  active ? "text-accent" : "text-muted-foreground")}>
-                <Icon className="h-5 w-5" />
-                {TAB_LABELS[t]}
-              </button>
-            );
-          })}
-          <button onClick={() => setMoreOpen((o) => !o)}
-            className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-              moreActive || moreOpen ? "text-accent" : "text-muted-foreground")}
-            aria-expanded={moreOpen} aria-label="More job sections">
-            <MoreHorizontal className="h-5 w-5" />
-            More
-          </button>
-        </div>
-      </nav>
-    </>
+    <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur pb-safe" aria-label="Job navigation">
+      <div className="grid grid-cols-4">
+        {PRIMARY_TABS.map((t) => {
+          const Icon = TAB_ICONS[t];
+          const active = activeTab === t;
+          return (
+            <button key={t} onClick={() => select(t)}
+              className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
+                active ? "text-accent" : "text-muted-foreground")}>
+              <Icon className="h-5 w-5" />
+              {TAB_LABELS[t]}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
