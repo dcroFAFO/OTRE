@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
-  ArrowLeft, CalendarDays, Wrench, CreditCard, User,
-  Hash, Bike } from
-"lucide-react";
+  ArrowLeft, CalendarDays, Wrench, CreditCard, User, History,
+  Hash, Bike,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/config/permissions";
 import StatusPill from "@/components/shared/StatusPill";
@@ -11,31 +11,36 @@ import NotesPanel from "../NotesPanel.jsx";
 import PrivateNotesPanel from "../PrivateNotesPanel";
 import AttachmentsPanel from "../AttachmentsPanel";
 import CustomerHistoryPanel from "../CustomerHistoryPanel";
+import AuditTimeline from "../AuditTimeline";
 import ScheduleTab from "./ScheduleTab";
 import RepairTab from "./RepairTab";
 import BillingReviewTab from "./BillingReviewTab";
 import ReferralCard from "./ReferralCard";
+import { getVisibleJobTabs } from "@/config/jobDetailsTabConfig";
 
-const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Customer" };
-const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User };
-const PRIMARY_TABS = ["schedule", "repair", "billing", "customer"];
+const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Customer", timeline: "Timeline" };
+const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User, timeline: History };
 
 // Contextual primary action + initial tab, driven by the job's current status.
 function contextualStep(status) {
   if (["requested"].includes(status)) return { tab: "schedule", label: "Schedule job" };
-  if (["booked", "on_hold"].includes(status)) return { tab: "repair", label: "Start repair" };
+  if (["booked", "on_hold"].includes(status)) return { tab: "repair", label: "Begin repair" };
   if (["repair_in_progress", "waiting_on_parts"].includes(status)) return { tab: "repair", label: "Continue repair" };
   if (["ready_for_pickup", "invoice_sent"].includes(status)) return { tab: "billing", label: "Manage invoice" };
-  if (["paid", "completed"].includes(status)) return { tab: "customer", label: "View summary" };
+  if (["paid", "completed", "cancelled"].includes(status)) return { tab: "timeline", label: "View timeline" };
   return { tab: "schedule", label: "Schedule job" };
 }
 
 export default function MobileJobWorkspace({
-  job, actor, canManage, role, bump, refreshKey, quoteReadOnly, invoiceReadOnly, onClose
+  job, actor, canManage, role, bump, refreshKey, quoteReadOnly, invoiceReadOnly, onClose,
 }) {
   const step = contextualStep(job.status);
-  const [tab, setTab] = useState(step.tab);
-  useEffect(() => {setTab(step.tab);}, [job.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visibleTabs = getVisibleJobTabs(job.status);
+  const [tab, setTab] = useState(visibleTabs.includes(step.tab) ? step.tab : visibleTabs[0]);
+  useEffect(() => {
+    const tabs = getVisibleJobTabs(job.status);
+    setTab(tabs.includes(step.tab) ? step.tab : tabs[0]);
+  }, [job.id, job.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="lg:hidden fixed inset-0 z-50 bg-background text-foreground flex flex-col">
@@ -43,33 +48,34 @@ export default function MobileJobWorkspace({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-28">
         {tab === "schedule" && <ScheduleTab job={job} canEdit={canManage} onChange={bump} />}
-        {tab === "repair" &&
-        <>
+        {tab === "repair" && (
+          <>
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />}
             <RepairTab job={job} actor={actor} canEdit={canManage} quoteReadOnly={quoteReadOnly} onChange={bump}
-          role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
+              role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
           </>
-        }
-        {tab === "billing" &&
-        <div className="space-y-4">
+        )}
+        {tab === "billing" && (
+          <div className="space-y-4">
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="invoice" />}
             <BillingReviewTab job={job} actor={actor} canEdit={canManage} invoiceReadOnly={invoiceReadOnly} onChange={bump} />
           </div>
-        }
-        {tab === "customer" &&
-        <div className="space-y-4">
+        )}
+        {tab === "customer" && (
+          <div className="space-y-4">
             <CustomerHistoryPanel job={job} actor={actor} />
             <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
             <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
             <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
-        }
+        )}
+        {tab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
       </div>
 
-      <MobileJobTabBar activeTab={tab} onChange={setTab} />
-    </div>);
-
+      <MobileJobTabBar activeTab={tab} onChange={setTab} visibleTabs={visibleTabs} />
+    </div>
+  );
 }
 
 function MobileHeader({ job, onClose, primaryLabel, onPrimary }) {
@@ -86,36 +92,36 @@ function MobileHeader({ job, onClose, primaryLabel, onPrimary }) {
             {job.reference && <span className="flex items-center gap-0.5"><Hash className="h-2.5 w-2.5" />{job.reference}</span>}
           </p>
         </div>
-        
-
-        
+        <button onClick={onPrimary} className="min-h-11 shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground">
+          {primaryLabel}
+        </button>
       </div>
       <div className="flex items-center gap-1.5 px-3 pb-2.5">
         <StatusPill value={job.status} />
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
-function MobileJobTabBar({ activeTab, onChange }) {
+function MobileJobTabBar({ activeTab, onChange, visibleTabs }) {
   const select = (t) => onChange(t);
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur pb-safe" aria-label="Job navigation">
-      <div className="grid grid-cols-4">
-        {PRIMARY_TABS.map((t) => {
+      <div className="flex">
+        {visibleTabs.map((t) => {
           const Icon = TAB_ICONS[t];
           const active = activeTab === t;
           return (
             <button key={t} onClick={() => select(t)}
-            className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-            active ? "text-accent" : "text-muted-foreground")}>
+              className={cn("flex flex-1 min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
+                active ? "text-accent" : "text-muted-foreground")}>
               <Icon className="h-5 w-5" />
               {TAB_LABELS[t]}
-            </button>);
-
+            </button>
+          );
         })}
       </div>
-    </nav>);
-
+    </nav>
+  );
 }

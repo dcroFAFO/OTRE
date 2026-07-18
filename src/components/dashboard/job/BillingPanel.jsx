@@ -1,49 +1,49 @@
-import React from "react";
-import { FileText, Package, ShieldCheck } from "lucide-react";
-import JobPartsPanel from "./JobPartsPanel";
-import QuotePanel from "./QuotePanel";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import InvoicePanel from "./InvoicePanel";
+import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
+import { toast } from "sonner";
 
+// Invoice tab for ready_for_pickup / invoice_sent status:
+// - Editable summary of parts/labour/consumables (via InvoicePanel)
+// - Invoice creation, preview, and issuing tools
+// - "Invoice Settled" button for cash/external payments → completed
 export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoiceReadOnly, onChange }) {
+  const [settling, setSettling] = useState(false);
+
+  const settleInvoice = async () => {
+    setSettling(true);
+    try {
+      await updateJobStatusFromEvent(job, "completed");
+      onChange?.();
+      toast.success("Invoice settled. Job marked as completed.");
+    } catch (err) {
+      toast.error(err.message || "Failed to settle invoice.");
+    } finally {
+      setSettling(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
-      <BillingSection
-        title="Parts"
-        description="Add parts from the existing search and catalogue; they are included when the invoice is finalised."
-        icon={Package}
-      >
-        <JobPartsPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
-      </BillingSection>
+      <InvoicePanel job={job} actor={actor} canEdit={canEdit && !invoiceReadOnly} onChange={onChange} />
 
-      <BillingSection
-        title="Labour and Consumables"
-        description="Manage labour, fees, surcharges, consumables, and diagnosis notes before customer invoicing."
-        icon={FileText}
-      >
-        <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} />
-      </BillingSection>
-
-
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 flex gap-2">
-        <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
-        <p>Internal costing notes and internal-only invoices stay hidden from customers until the invoice is sent or marked visible.</p>
-      </div>
-    </div>
-  );
-}
-
-function BillingSection({ title, description, icon: Icon, children }) {
-  return (
-    <section className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm">
-      <div className="flex items-start gap-2">
-        <span className="mt-0.5 rounded-lg bg-primary/10 p-1.5 text-primary">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div>
-          <h3 className="font-heading text-sm font-extrabold text-foreground">{title}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+      {canEdit && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <h3 className="font-heading text-sm font-extrabold text-emerald-800">Payment received externally?</h3>
+          </div>
+          <p className="text-xs text-emerald-700">
+            Mark this invoice as settled if payment was received via cash, bank transfer, or another method not handled by the online checkout.
+          </p>
+          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={settling} onClick={settleInvoice}>
+            {settling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            {settling ? "Settling…" : "Invoice Settled"}
+          </Button>
         </div>
-      </div>
-      {children}
-    </section>
+      )}
+    </div>
   );
 }

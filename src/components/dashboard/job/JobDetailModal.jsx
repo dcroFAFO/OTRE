@@ -9,6 +9,7 @@ import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
+import AuditTimeline from "./AuditTimeline";
 import ScheduleTab from "./mobile/ScheduleTab";
 import RepairTab from "./mobile/RepairTab";
 import MobileJobWorkspace from "./mobile/MobileJobWorkspace";
@@ -27,6 +28,7 @@ const TAB_LABELS = {
   repair: "Repair",
   billing: "Invoice",
   customer: "Customer",
+  timeline: "Timeline",
 };
 
 // Matches the "lg:hidden" breakpoint used by DashboardShell/MobileJobWorkspace
@@ -52,7 +54,7 @@ function useMobileJobWorkspace() {
 export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
   const [job, setJob] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("billing");
+  const [activeTab, setActiveTab] = useState(null);
 
   const [loadError, setLoadError] = useState(false);
 
@@ -62,7 +64,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
     base44.entities.Job.get(jobId).then(setJob).catch(() => setLoadError(true));
   }, [jobId]);
 
-  useEffect(() => { if (open) { load(); setActiveTab("billing"); } }, [jobId, open, load]);
+  useEffect(() => { if (open) { load(); setActiveTab(null); } }, [jobId, open, load]);
   useEffect(() => { if (!open) setJob(null); }, [open]);
 
   const bump = () => { load(); setRefreshKey((k) => k + 1); onChange?.(); };
@@ -186,6 +188,9 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
                       </div>
                     )}
+                  </TabsContent>
+                  <TabsContent value="timeline" className="mt-0">
+                    {safeTab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
                   </TabsContent>
                 </div>
               </Tabs>

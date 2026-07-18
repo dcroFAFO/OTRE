@@ -31,7 +31,7 @@ function totalsFor(items) {
 
 const isRepairPartUsage = (item) => !String(item.item_id || "").startsWith("labour-");
 
-export default function QuotePanel({ job, actor, canEdit, onChange }) {
+export default function QuotePanel({ job, actor, canEdit, onChange, repairMode = false }) {
   const [quote, setQuote] = useState(null);
   const [form, setForm] = useState({ labour_estimate: 0, parts_estimate: 0, diagnosis_notes: "" });
   const [aiMsg, setAiMsg] = useState("");
@@ -181,23 +181,27 @@ export default function QuotePanel({ job, actor, canEdit, onChange }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
-            <span className="text-sm font-medium">Total</span>
-            <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
-          </div>
+          {!repairMode && (
+            <>
+              <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
+                <span className="text-sm font-medium">Total</span>
+                <span className="font-heading text-xl font-extrabold">${total.toFixed(2)}</span>
+              </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
-              {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
-              {saving ? "Saving…" : "Save"}
-            </Button>
-            <InvoicePanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} buttonOnly />
-            <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
-              <Sparkles className="h-4 w-4" /> AI draft
-            </Button>
-          </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                  {saving ? <Save className="h-3.5 w-3.5 animate-pulse" /> : <Save className="h-3.5 w-3.5" />}
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+                <InvoicePanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} buttonOnly />
+                <Button size="sm" variant="ghost" onClick={aiDraft} className="gap-1.5 text-accent">
+                  <Sparkles className="h-4 w-4" /> AI draft
+                </Button>
+              </div>
 
-          {aiMsg && <p className="text-xs text-muted-foreground italic">{aiMsg}</p>}
+              {aiMsg && <p className="text-xs text-muted-foreground italic">{aiMsg}</p>}
+            </>
+          )}
         </>
       ) : (
         <QuoteReadOnlyView quote={quote} total={total} />
