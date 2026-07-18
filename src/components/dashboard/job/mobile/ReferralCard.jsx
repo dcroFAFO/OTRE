@@ -21,11 +21,23 @@ export default function ReferralCard({ customerId }) {
 
   useEffect(() => {
     if (!customerId) return;
+    let cancelled = false;
     setNotFound(false);
     setCustomer(null);
+    // customerId may be the Customer entity record id (customer_account_id)
+    // or the stable customer_id identifier. Try get() first, then filter fallback.
     base44.entities.Customer.get(customerId)
-      .then(setCustomer)
-      .catch(() => setNotFound(true));
+      .then((c) => { if (!cancelled) setCustomer(c); })
+      .catch(() =>
+        base44.entities.Customer.filter({ customer_id: customerId })
+          .then((rows) => {
+            if (cancelled) return;
+            if (rows.length) setCustomer(rows[0]);
+            else setNotFound(true);
+          })
+          .catch(() => { if (!cancelled) setNotFound(true); })
+      );
+    return () => { cancelled = true; };
   }, [customerId]);
 
   if (!customerId) return null;
