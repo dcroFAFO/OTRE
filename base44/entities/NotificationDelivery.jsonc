@@ -1,0 +1,146 @@
+{
+  "name": "NotificationDelivery",
+  "type": "object",
+  "properties": {
+    "event_key": {
+      "type": "string"
+    },
+    "notification_event_id": {
+      "type": "string"
+    },
+    "related_entity_type": {
+      "type": "string"
+    },
+    "related_entity_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "recipient_type": {
+      "type": "string"
+    },
+    "recipient_user_id": {
+      "type": "string"
+    },
+    "recipient_address": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms",
+        "push"
+      ]
+    },
+    "template_reference": {
+      "type": "string"
+    },
+    "created_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scheduled_for": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "send_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivery_status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "sending",
+        "sent",
+        "delivered",
+        "failed",
+        "suppressed",
+        "duplicate_prevented"
+      ],
+      "default": "queued"
+    },
+    "provider": {
+      "type": "string"
+    },
+    "provider_message_id": {
+      "type": "string"
+    },
+    "failure_reason": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0
+    },
+    "idempotency_key": {
+      "type": "string",
+      "unique": true
+    },
+    "delivery_mode": {
+      "type": "string",
+      "enum": [
+        "automatic",
+        "scheduled",
+        "manual_resend"
+      ],
+      "default": "automatic"
+    },
+    "is_resend": {
+      "type": "boolean",
+      "default": false
+    },
+    "original_delivery_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_key",
+    "recipient_type",
+    "recipient_address",
+    "channel",
+    "idempotency_key"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.recipient_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

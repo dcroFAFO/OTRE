@@ -105,6 +105,11 @@ Deno.serve(async (req) => {
     const userUpdates = { is_customer: true, customer_id: stableCustomerId, customer_account_id: customer.id };
     if (jobIdList) userUpdates.job_id = jobIdList;
     await base44.asServiceRole.entities.User.update(user.id, userUpdates);
+
+    // Trigger welcome email to customer and notification to staff
+    const origin = req.headers.get('origin') || '';
+    await base44.functions.invoke('sendNotification', { event_type: 'user_welcome', user_id: user.id, origin }).catch((e) => console.warn('[claimCustomerJobs] welcome notification failed:', e.message));
+
     return Response.json({ linked, customer_profile_id: profile.id, customer_account_id: customer.id });
   } catch (error) {
     console.error('[claimCustomerJobs] Error:', error.message, error.stack);
