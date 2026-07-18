@@ -9,6 +9,8 @@ import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
+import ScheduleTab from "./mobile/ScheduleTab";
+import RepairTab from "./mobile/RepairTab";
 import MobileJobWorkspace from "./mobile/MobileJobWorkspace";
 import { can } from "@/config/permissions";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
@@ -21,6 +23,8 @@ import { format } from "date-fns";
 
 // Tab label map (desktop modal only — mobile uses its own workspace tabs)
 const TAB_LABELS = {
+  schedule: "Scheduling",
+  repair: "Repair",
   billing: "Invoice",
   customer: "Customer",
 };
@@ -142,6 +146,25 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                 </div>
 
                 <div className="p-5 flex-1 pb-safe">
+                  <TabsContent value="schedule" className="mt-0">
+                    {safeTab === "schedule" && (
+                      <ScheduleTab job={job} canEdit={canManage} onChange={bump} />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="repair" className="mt-0">
+                    {safeTab === "repair" && (
+                      <RepairTab
+                        job={job}
+                        actor={actor}
+                        canEdit={canManage}
+                        quoteReadOnly={quoteReadOnly}
+                        onChange={bump}
+                        role={role}
+                        canNote={can(role, "job.note.customer") || role === "admin"}
+                        canAttach={can(role, "job.attach") || role === "admin"}
+                      />
+                    )}
+                  </TabsContent>
                   <TabsContent value="billing" className="mt-0">
                     {safeTab === "billing" && (
                       <BillingPanel
