@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   ArrowLeft, CalendarDays, Wrench, CreditCard, User,
-  Hash, Bike,
-} from "lucide-react";
+  Hash, Bike } from
+"lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/config/permissions";
 import StatusPill from "@/components/shared/StatusPill";
@@ -31,11 +31,11 @@ function contextualStep(status) {
 }
 
 export default function MobileJobWorkspace({
-  job, actor, canManage, role, bump, refreshKey, quoteReadOnly, invoiceReadOnly, onClose,
+  job, actor, canManage, role, bump, refreshKey, quoteReadOnly, invoiceReadOnly, onClose
 }) {
   const step = contextualStep(job.status);
   const [tab, setTab] = useState(step.tab);
-  useEffect(() => { setTab(step.tab); }, [job.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {setTab(step.tab);}, [job.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="lg:hidden fixed inset-0 z-50 bg-background text-foreground flex flex-col">
@@ -43,33 +43,33 @@ export default function MobileJobWorkspace({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-28">
         {tab === "schedule" && <ScheduleTab job={job} canEdit={canManage} onChange={bump} />}
-        {tab === "repair" && (
-          <>
+        {tab === "repair" &&
+        <>
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />}
             <RepairTab job={job} actor={actor} canEdit={canManage} quoteReadOnly={quoteReadOnly} onChange={bump}
-              role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
+          role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
           </>
-        )}
-        {tab === "billing" && (
-          <div className="space-y-4">
+        }
+        {tab === "billing" &&
+        <div className="space-y-4">
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="invoice" />}
             <BillingReviewTab job={job} actor={actor} canEdit={canManage} invoiceReadOnly={invoiceReadOnly} onChange={bump} />
           </div>
-        )}
-        {tab === "customer" && (
-          <div className="space-y-4">
+        }
+        {tab === "customer" &&
+        <div className="space-y-4">
             <CustomerHistoryPanel job={job} actor={actor} />
             <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
             <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
             <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
-        )}
+        }
       </div>
 
       <MobileJobTabBar activeTab={tab} onChange={setTab} />
-    </div>
-  );
+    </div>);
+
 }
 
 function MobileHeader({ job, onClose, primaryLabel, onPrimary }) {
@@ -86,15 +86,15 @@ function MobileHeader({ job, onClose, primaryLabel, onPrimary }) {
             {job.reference && <span className="flex items-center gap-0.5"><Hash className="h-2.5 w-2.5" />{job.reference}</span>}
           </p>
         </div>
-        <button onClick={onPrimary} className="min-h-11 shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground">
+        <button onClick={onPrimary} className="min-h-11 shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground hidden">
           {primaryLabel}
         </button>
       </div>
       <div className="flex items-center gap-1.5 px-3 pb-2.5">
         <StatusPill value={job.status} />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function MobileJobTabBar({ activeTab, onChange }) {
@@ -108,14 +108,14 @@ function MobileJobTabBar({ activeTab, onChange }) {
           const active = activeTab === t;
           return (
             <button key={t} onClick={() => select(t)}
-              className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-                active ? "text-accent" : "text-muted-foreground")}>
+            className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
+            active ? "text-accent" : "text-muted-foreground")}>
               <Icon className="h-5 w-5" />
               {TAB_LABELS[t]}
-            </button>
-          );
+            </button>);
+
         })}
       </div>
-    </nav>
-  );
+    </nav>);
+
 }
