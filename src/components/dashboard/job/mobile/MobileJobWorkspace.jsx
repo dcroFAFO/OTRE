@@ -86,9 +86,9 @@ function MobileHeader({ job, onClose, primaryLabel, onPrimary }) {
             {job.reference && <span className="flex items-center gap-0.5"><Hash className="h-2.5 w-2.5" />{job.reference}</span>}
           </p>
         </div>
-        <button onClick={onPrimary} className="min-h-11 shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground hidden">
-          {primaryLabel}
-        </button>
+        
+
+        
       </div>
       <div className="flex items-center gap-1.5 px-3 pb-2.5">
         <StatusPill value={job.status} />
