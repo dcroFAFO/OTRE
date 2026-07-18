@@ -34,8 +34,6 @@ import AdminClients from '@/pages/admin/AdminClients';
 import AdminActivityLog from '@/pages/admin/AdminActivityLog';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
 import SystemSettings from '@/pages/settings/SystemSettings';
-import NotificationSettings from '@/pages/settings/NotificationSettings';
-import NotificationPreferences from '@/pages/settings/NotificationPreferences';
 import AssetManagement from '@/pages/AssetManagement';
 import ServicePricing from '@/pages/ServicePricing';
 import BlogIndex from '@/pages/blog/BlogIndex';
@@ -112,8 +110,6 @@ const AuthenticatedApp = () => {
       </Route>
       <Route element={<DashboardLayout />}>
         <Route path="/settings" element={<SystemSettings />} />
-        <Route path="/settings/notifications" element={<NotificationSettings />} />
-        <Route path="/settings/notification-preferences" element={<NotificationPreferences />} />
         <Route path="/asset-management" element={<AssetManagement />} />
         <Route path="/service-pricing" element={<ServicePricing />} />
       </Route>
