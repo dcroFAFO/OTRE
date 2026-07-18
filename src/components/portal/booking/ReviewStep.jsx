@@ -1,13 +1,18 @@
 import React from "react";
+import { format } from "date-fns";
 import PhoneNumberField from "@/components/booking/PhoneNumberField";
 
 export default function ReviewStep({ data, update, user, profile, scooterLabel }) {
   const name = profile?.display_name || profile?.full_name || user?.full_name || "";
   const service = data.service === "Other" ? data.customIssue.trim() : data.service;
+  const preferredDate = data.preferredDate
+    ? format(new Date(data.preferredDate), "d MMM yyyy")
+    : "Flexible / ASAP";
   const rows = [
     ["Name", name],
     ["Scooter", scooterLabel],
     ["Service requested", service],
+    ["Preferred date", preferredDate],
     ["Additional notes", data.notes.trim() || "—"],
   ];
 

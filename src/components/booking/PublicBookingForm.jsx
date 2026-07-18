@@ -10,6 +10,7 @@ import { createBookingRequest } from "@/services/bookingService";
 import { DEFAULT_BOOKING_FIELDS } from "@/config/platformConfig";
 import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import PhoneNumberField from "@/components/booking/PhoneNumberField";
+import PreferredDateField from "@/components/booking/PreferredDateField";
 import BookingStepIndicator from "@/components/booking/BookingStepIndicator";
 import { isModelValidForBrand } from "@/config/scooterBrands";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
@@ -31,6 +32,7 @@ const EMPTY = {
   asset_custom_model: "",
   rideable: true,
   consent: false,
+  preferred_date: "",
   scooter_issue_summary: "",
   scooter_make_model: "",
   rideable_status: "",
@@ -228,6 +230,12 @@ export default function PublicBookingForm({ guestOnly = false }) {
                   </SelectContent>
                 </Select>
                 {isOther && <Textarea value={form.issue_description} onChange={(e) => set("issue_description", e.target.value)} placeholder={field("issue_description").placeholder} className="h-16 mt-1.5" />}
+              </Field>
+              <Field label="Preferred completion date">
+                <PreferredDateField
+                  value={form.preferred_date}
+                  onChange={(v) => set("preferred_date", v)}
+                />
               </Field>
               <div className="space-y-1">
                 <label className="flex items-start gap-2 text-xs text-muted-foreground">

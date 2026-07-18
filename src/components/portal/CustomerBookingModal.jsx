@@ -41,6 +41,7 @@ export default function CustomerBookingModal({ open, onClose, user, profile, pro
         serviceRequested: service,
         issue_description,
         rideable: true,
+        preferred_date: data.preferredDate || "",
       });
       setSummary({ scooterLabel, service });
       setDone(res);

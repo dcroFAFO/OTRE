@@ -1,4 +1,5 @@
 import React from "react";
+import { format } from "date-fns";
 import { User, Wrench, CreditCard, Clock, GripVertical, Calendar, AlertTriangle } from "lucide-react";
 import StatusPill from "./StatusPill";
 import ServiceTypeBadge from "./ServiceTypeBadge";
@@ -6,6 +7,12 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BORDER_CLASSES, SERVICE_TYPE_STRIP_CLASSES } from "@/config/serviceTypes";
 import { getPaymentStatus, getStatus } from "@/config/jobConfig";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
+
+const fmtDate = (d) => {
+  if (!d) return "";
+  const date = new Date(d);
+  return isNaN(date) ? d : format(date, "d MMM yyyy");
+};
 
 export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
   const paymentStatus = getPaymentStatus(job.payment_status);
@@ -60,10 +67,24 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
               {ownershipLabel && <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{ownershipLabel}</span>}
             </div>
             <div className="flex items-center gap-2">
+              {job.preferred_time_window === "ASAP" && !compact && (
+                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> ASAP
+                </span>
+              )}
               {job.scheduled_date && !compact && (
-                <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                <span
+                  className={cn(
+                    "text-[11px] flex items-center gap-1 rounded-full px-2 py-0.5",
+                    job.status === "requested"
+                      ? "font-semibold text-accent bg-accent/10"
+                      : "text-muted-foreground"
+                  )}
+                  title={job.status === "requested" ? "Customer's preferred completion date" : "Scheduled date"}
+                >
                   <Calendar className="h-3 w-3" />
-                  {job.scheduled_date}
+                  {job.status === "requested" ? "Requested: " : ""}
+                  {fmtDate(job.scheduled_date)}
                 </span>
               )}
             </div>

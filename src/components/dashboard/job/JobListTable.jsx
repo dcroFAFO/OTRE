@@ -66,7 +66,14 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
               <ServiceTypeBadge job={j} />
               <span>Booked {fmtDate(j.created_date)}</span>
-              <span>Expected {fmtDate(j.scheduled_date)}</span>
+              {j.scheduled_date && (
+                <span className={j.status === "requested" ? "font-semibold text-accent" : ""}>
+                  {j.status === "requested" ? "Requested" : "Expected"} {fmtDate(j.scheduled_date)}
+                </span>
+              )}
+              {j.preferred_time_window === "ASAP" && (
+                <span className="font-semibold text-amber-600">ASAP</span>
+              )}
             </div>
           </div>
         );

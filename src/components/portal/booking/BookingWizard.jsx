@@ -18,6 +18,7 @@ export default function BookingWizard({ user, profile, submitting, onSubmit }) {
     customIssue: "",
     notes: "",
     phone: "",
+    preferredDate: "",
   });
   const update = (patch) => setData((d) => ({ ...d, ...patch }));
 
