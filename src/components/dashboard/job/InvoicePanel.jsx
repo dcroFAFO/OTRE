@@ -338,7 +338,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     try {
       const currentQuote = quote || await getJobQuote(job.id);
       const nextItems = [...(currentQuote?.line_items || []), ...items];
-      await saveQuote(job, { ...currentQuote, id: currentQuote?.id, line_items: nextItems });
+      await saveQuote(job, { ...currentQuote, id: currentQuote?.id, line_items: nextItems }, "invoice");
       await loadInvoiceData();
       onChange?.();
       toast.success("Labour / consumable added to invoice.");

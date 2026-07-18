@@ -8,8 +8,8 @@ const invoke = async (payload) => {
   return res.data;
 };
 
-export async function saveQuote(job, data) {
-  return invoke({ action: "save", jobId: job.id, data });
+export async function saveQuote(job, data, context) {
+  return invoke({ action: "save", jobId: job.id, data, context });
 }
 
 export async function sendQuote(quote, job) {

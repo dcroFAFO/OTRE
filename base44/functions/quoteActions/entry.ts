@@ -78,7 +78,12 @@ Deno.serve(async (req) => {
         } else {
           result = await db.Quote.create({ ...data, job_id: job.id, customer_id: job.customer_id || data.customer_id || null, total, currency: CURRENCY, status: "draft" });
           await db.Job.update(job.id, { quote_status: "draft" });
-          await logAudit({ eventType: "quote_generated", summary: "Quote generated", newValue: `${CURRENCY} ${total}` });
+          const isInvoiceContext = params.context === "invoice";
+          await logAudit({
+            eventType: isInvoiceContext ? "invoice_generated" : "quote_generated",
+            summary: isInvoiceContext ? "Invoice generated" : "Quote generated",
+            newValue: `${CURRENCY} ${total}`,
+          });
         }
         break;
       }
