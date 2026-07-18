@@ -330,6 +330,46 @@ async function persistInvoice(base44, job, invoice, invoiceDraft, lineItems) {
   return saved;
 }
 
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
+
+function getRequestOrigin(req) {
+  const origin = req.headers.get("origin");
+  if (origin) return origin;
+  const referer = req.headers.get("referer");
+  if (referer) { try { return new URL(referer).origin; } catch (_) {} }
+  return "";
+}
+
+function invoiceEmailTemplate(content) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
+<div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">On The Run Electrics</h1></div>
+<div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
+<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">On The Run Electrics · Woolloongabba, Brisbane<br>hello@ontherunelectrics.com.au · 0415 505 908</p>
+</body></html>`;
+}
+
+async function sendInvoiceEmailWithPdf({ to, subject, html, pdfBase64, fileName }) {
+  if (!RESEND_API_KEY) { console.warn("[invoicePdfActions] RESEND_API_KEY not set — email not sent"); return false; }
+  if (!to) { console.warn("[invoicePdfActions] no email recipient — email not sent"); return false; }
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [to],
+        subject,
+        html,
+        attachments: [{ filename: fileName, content: pdfBase64 }],
+      }),
+    });
+    if (!res.ok) { console.error("[invoicePdfActions] invoice email failed:", await res.text()); return false; }
+    return true;
+  } catch (e) { console.error("[invoicePdfActions] invoice email error:", e.message); return false; }
+}
+
 Deno.serve(async (req) => {
   const requestMeta = { fn: "invoicePdfActions" };
   try {
@@ -376,7 +416,6 @@ Deno.serve(async (req) => {
         return Response.json({ error: "Invoice could not be generated." }, { status: 500 });
       }
 
-      // No email is sent — the invoice is finalised and made visible in the customer portal only.
       const now = new Date().toISOString();
       const visibleInvoice = await base44.asServiceRole.entities.Invoice.update(savedInvoice.id, {
         invoiceVisibility: "customer_visible",
@@ -399,6 +438,36 @@ Deno.serve(async (req) => {
         summary: "Tax invoice finalised and made visible to the customer",
         visibility: "customer",
       });
+
+      // Email the PDF directly to the customer so they have a copy attached.
+      const origin = getRequestOrigin(req);
+      const portalUrl = origin ? `${origin}/portal` : "https://ontherunelectrics.com.au/portal";
+      const amount = `${visibleInvoice.currency || "AUD"} ${(Number(visibleInvoice.amount) || 0).toFixed(2)}`;
+      const emailSubject = `Invoice ${visibleInvoice.number || ""} — ${amount}`;
+      const emailHtml = invoiceEmailTemplate(
+        `<p>Hi ${clean(job.customer_name, "there")},</p>` +
+        `<p>Your invoice is ready. Please review and pay online at your convenience.</p>` +
+        `<p style="background:#e0f2fe;padding:16px;border-radius:8px;text-align:center;"><strong>Invoice:</strong> ${visibleInvoice.number || "N/A"}<br><strong>Amount:</strong> ${amount}</p>` +
+        `<p style="margin-top:24px;"><a href="${portalUrl}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">View & Pay Invoice</a></p>` +
+        `<p style="margin-top:16px;font-size:13px;color:#64748b;">A copy of your tax invoice is attached to this email for your records.</p>`
+      );
+      const emailSent = await sendInvoiceEmailWithPdf({
+        to: job.customer_email,
+        subject: emailSubject,
+        html: emailHtml,
+        pdfBase64,
+        fileName,
+      });
+
+      // Mark the dedup key so sendNotification doesn't send a duplicate email without the PDF.
+      if (emailSent) {
+        await base44.asServiceRole.entities.AuditEvent.create({
+          event_type: `notif:invoice_issued:${visibleInvoice.id}:email`,
+          summary: `Invoice email with PDF attachment sent to ${job.customer_email}`,
+          visibility: "system",
+        }).catch(() => {});
+      }
+
       if (!savedInvoice.invoiceSentAt || savedInvoice.invoiceVisibility !== "customer_visible") {
         await base44.asServiceRole.entities.NotificationEvent.create({
           event_key: "invoice.issued", related_entity_type: "Invoice", related_entity_id: visibleInvoice.id, job_id: job.id,
@@ -408,7 +477,7 @@ Deno.serve(async (req) => {
           source: "automatic", status: "pending", occurred_at: now,
         });
       }
-      return Response.json({ sent: true, fileName, invoice: visibleInvoice });
+      return Response.json({ sent: true, emailSent, fileName, invoice: visibleInvoice });
     }
 
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
