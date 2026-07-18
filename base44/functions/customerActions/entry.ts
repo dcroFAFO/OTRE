@@ -69,6 +69,7 @@ async function findOrCreateScooterForCustomer(entities, customer, data = {}, job
     battery_voltage: data.battery_voltage || '',
     odometer_km: data.odometer_km ? Number(data.odometer_km) : undefined,
     notes: data.notes || data.physical_condition || data.initial_issue_notes || '',
+    intake: data.intake || undefined,
   };
   if (!payload.make && !payload.model && !payload.serial_number) return null;
   const [byStable, byAccount] = await Promise.all([
@@ -80,7 +81,7 @@ async function findOrCreateScooterForCustomer(entities, customer, data = {}, job
   if (existing) {
     const updates = { customer_id: stableId, customer_account_id: accountId };
     if (jobId) updates.job_id = addIdList(existing.job_id, jobId);
-    for (const key of ['make', 'model', 'year', 'serial_number', 'colour', 'color', 'battery_voltage', 'notes']) {
+    for (const key of ['make', 'model', 'year', 'serial_number', 'colour', 'color', 'battery_voltage', 'notes', 'intake']) {
       if (payload[key] && !existing[key]) updates[key] = payload[key];
     }
     if (payload.odometer_km && !existing.odometer_km) updates.odometer_km = payload.odometer_km;

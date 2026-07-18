@@ -44,6 +44,45 @@
     "last_service_date": {
       "type": "string",
       "format": "date"
+    },
+    "intake": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Staff-completed intake assessment for this asset. Persists across jobs.",
+      "properties": {
+        "battery_condition": {
+          "type": "string",
+          "enum": [
+            "good",
+            "fair",
+            "poor",
+            "faulty",
+            "unknown"
+          ]
+        },
+        "physical_condition": {
+          "type": "string",
+          "description": "Scratches, dents, worn tyres, existing damage at intake."
+        },
+        "accessories_received": {
+          "type": "string",
+          "description": "Charger, key, phone mount, etc. received with the scooter."
+        },
+        "powers_on": {
+          "type": "boolean"
+        },
+        "initial_issue_notes": {
+          "type": "string",
+          "description": "Customer-reported issue or requested service noted at intake."
+        },
+        "intake_by_name": {
+          "type": "string"
+        },
+        "intake_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     }
   },
   "required": [

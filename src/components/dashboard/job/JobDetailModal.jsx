@@ -8,9 +8,7 @@ import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import BillingPanel from "./BillingPanel";
 import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
-import AuditTimeline from "./AuditTimeline";
 import AttachmentsPanel from "./AttachmentsPanel";
-import IntakePanel from "./IntakePanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import MobileJobWorkspace from "./mobile/MobileJobWorkspace";
 import { can } from "@/config/permissions";
@@ -24,12 +22,9 @@ import { format } from "date-fns";
 
 // Tab label map (desktop modal only — mobile uses its own workspace tabs)
 const TAB_LABELS = {
-  intake: "Intake",
   billing: "Invoice",
   customer: "Complete",
   notes: "Notes",
-  private: "Private",
-  timeline: "Timeline",
   files: "Files",
 };
 
@@ -56,7 +51,7 @@ function useMobileJobWorkspace() {
 export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
   const [job, setJob] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("intake");
+  const [activeTab, setActiveTab] = useState("billing");
 
   const [loadError, setLoadError] = useState(false);
 
@@ -66,20 +61,20 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
     base44.entities.Job.get(jobId).then(setJob).catch(() => setLoadError(true));
   }, [jobId]);
 
-  useEffect(() => { if (open) { load(); setActiveTab("intake"); } }, [jobId, open, load]);
+  useEffect(() => { if (open) { load(); setActiveTab("billing"); } }, [jobId, open, load]);
   useEffect(() => { if (!open) setJob(null); }, [open]);
 
   const bump = () => { load(); setRefreshKey((k) => k + 1); onChange?.(); };
   const role = actor?.role;
   const canManage = can(role, "job.update") || role === "admin";
 
-  const visibleTabs = job ? getVisibleJobTabs(job.status) : ["intake"];
+  const visibleTabs = job ? getVisibleJobTabs(job.status) : ["billing"];
   const quoteReadOnly = job ? isQuoteReadOnlyForStatus(job.status) : false;
   const invoiceReadOnly = job ? isInvoiceReadOnlyForStatus(job.status) : false;
   const isMobileWorkspace = useMobileJobWorkspace();
 
   // If active tab is no longer visible (e.g. after status change), fall back to first tab
-  const safeTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0] ?? "intake";
+  const safeTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0] ?? "billing";
 
   if (!open) return null;
 
@@ -146,8 +141,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         badge={
                           tab === "billing" && job.payment_status && job.payment_status !== "unpaid"
                             ? job.payment_status
-                            : tab === "intake" && job.intake?.intake_date
-                            ? "✓"
                             : null
                         }
                       />
@@ -156,9 +149,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                 </div>
 
                 <div className="p-5 flex-1 pb-safe">
-                  <TabsContent value="intake" className="mt-0">
-                    {safeTab === "intake" && <IntakePanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
-                  </TabsContent>
                   <TabsContent value="billing" className="mt-0">
                     {safeTab === "billing" && (
                       <BillingPanel
@@ -175,13 +165,12 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                     {safeTab === "customer" && <CustomerHistoryPanel job={job} actor={actor} />}
                   </TabsContent>
                   <TabsContent value="notes" className="mt-0">
-                    {safeTab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
-                  </TabsContent>
-                  <TabsContent value="private" className="mt-0">
-                    {safeTab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
-                  </TabsContent>
-                  <TabsContent value="timeline" className="mt-0">
-                    {safeTab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
+                    {safeTab === "notes" && (
+                      <div className="space-y-4">
+                        <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
+                        <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+                      </div>
+                    )}
                   </TabsContent>
                   <TabsContent value="files" className="mt-0">
                     {safeTab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ArrowLeft, CalendarDays, Wrench, CreditCard, User, MoreHorizontal,
-  StickyNote, LockKeyhole, History, Paperclip, Hash, Bike,
+  StickyNote, Paperclip, Hash, Bike,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/config/permissions";
@@ -9,7 +9,6 @@ import StatusPill from "@/components/shared/StatusPill";
 import JobDetailsHeaderActions from "../JobDetailsHeaderActions";
 import NotesPanel from "../NotesPanel.jsx";
 import PrivateNotesPanel from "../PrivateNotesPanel";
-import AuditTimeline from "../AuditTimeline";
 import AttachmentsPanel from "../AttachmentsPanel";
 import CustomerHistoryPanel from "../CustomerHistoryPanel";
 import ScheduleTab from "./ScheduleTab";
@@ -17,15 +16,15 @@ import RepairTab from "./RepairTab";
 import BillingReviewTab from "./BillingReviewTab";
 import ReferralCard from "./ReferralCard";
 
-const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Complete", notes: "Notes", private: "Private", timeline: "Timeline", files: "Files" };
-const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User, notes: StickyNote, private: LockKeyhole, timeline: History, files: Paperclip };
+const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Complete", notes: "Notes", files: "Files" };
+const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User, notes: StickyNote, files: Paperclip };
 const PRIMARY_TABS = ["schedule", "repair", "billing", "customer"];
-const MORE_TABS = ["notes", "private", "timeline", "files"];
+const MORE_TABS = ["notes", "files"];
 
 // Contextual primary action + initial tab, driven by the job's current status.
 function contextualStep(status) {
   if (["requested"].includes(status)) return { tab: "schedule", label: "Schedule job" };
-  if (["booked", "on_hold"].includes(status)) return { tab: "repair", label: "Start intake" };
+  if (["booked", "on_hold"].includes(status)) return { tab: "repair", label: "Start repair" };
   if (["repair_in_progress", "waiting_on_parts"].includes(status)) return { tab: "repair", label: "Continue repair" };
   if (["ready_for_pickup", "invoice_sent"].includes(status)) return { tab: "billing", label: "Manage invoice" };
   if (["paid", "completed"].includes(status)) return { tab: "customer", label: "View summary" };
@@ -64,9 +63,12 @@ export default function MobileJobWorkspace({
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
         )}
-        {tab === "notes" && <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />}
-        {tab === "private" && <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />}
-        {tab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
+        {tab === "notes" && (
+          <div className="space-y-4">
+            <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
+            <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
+          </div>
+        )}
         {tab === "files" && <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />}
       </div>
 

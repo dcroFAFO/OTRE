@@ -9,6 +9,7 @@ import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { CLIENT_STATUSES } from "@/config/clientConfig";
 import { updateClient, listCustomerScooters, createScooter, updateScooter, deleteScooter, checkDuplicateContact } from "@/services/clientService";
 import ClientTagEditor from "./ClientTagEditor";
+import AssetIntakeForm from "./AssetIntakeForm";
 import { toast } from "sonner";
 import { logError } from "@/lib/logger";
 
@@ -75,23 +76,28 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
 
   if (!editing) {
     return (
-      <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 group">
-        <Bike className="h-4 w-4 text-muted-foreground shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-sm font-medium">{[scooter.make, scooter.model].filter(Boolean).join(" ") || "Unknown"}</p>
-            {linkedToCurrentJob && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Linked to this job</span>}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 group">
+          <Bike className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="text-sm font-medium">{[scooter.make, scooter.model].filter(Boolean).join(" ") || "Unknown"}</p>
+              {linkedToCurrentJob && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Linked to this job</span>}
+            </div>
+            <p className="text-xs text-muted-foreground">{[scooter.serial_number && `SN: ${scooter.serial_number}`, scooter.year, scooter.colour || scooter.color].filter(Boolean).join(" · ")}</p>
+            <p className="text-xs text-muted-foreground">{Number(scooter.related_job_count || 0)} related jobs{scooter.last_service_date ? ` · Last service ${scooter.last_service_date}` : ""}</p>
+            {scooter.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{scooter.notes}</p>}
           </div>
-          <p className="text-xs text-muted-foreground">{[scooter.serial_number && `SN: ${scooter.serial_number}`, scooter.year, scooter.colour || scooter.color].filter(Boolean).join(" · ")}</p>
-          <p className="text-xs text-muted-foreground">{Number(scooter.related_job_count || 0)} related jobs{scooter.last_service_date ? ` · Last service ${scooter.last_service_date}` : ""}</p>
-          {scooter.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{scooter.notes}</p>}
+          <button type="button" onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary transition-opacity">
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+          <button type="button" onClick={remove} disabled={deleting} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 transition-opacity">
+            {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
+          </button>
         </div>
-        <button type="button" onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary transition-opacity">
-          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-        </button>
-        <button type="button" onClick={remove} disabled={deleting} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 transition-opacity">
-          {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
-        </button>
+        {scooter.id && (
+          <AssetIntakeForm scooter={scooter} customerName={customerName} actor={actor} onUpdated={onUpdated} />
+        )}
       </div>
     );
   }

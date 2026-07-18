@@ -27,7 +27,7 @@ export function normalizeJobStatus(status) {
 }
 
 export function getVisibleJobTabs() {
-  return ["intake", "billing", "customer", "notes", "private", "timeline", "files"];
+  return ["billing", "customer", "notes", "files"];
 }
 
 export function isQuoteReadOnlyForStatus(status) {

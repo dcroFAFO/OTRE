@@ -1,17 +1,13 @@
 import React from "react";
 import { Package, Wrench } from "lucide-react";
-import IntakePanel from "../IntakePanel";
 import JobPartsPanel from "../JobPartsPanel";
 import QuotePanel from "../QuotePanel";
 
-// Scooter-focused repair workspace: intake/scooter details, checklist,
-// parts picker, and labour/consumables — all feeding the same Billing tab.
-// No customer account fields or scheduling controls live here.
+// Scooter-focused repair workspace: parts picker and labour/consumables.
+// Intake is now managed per-asset in the customer profile, not per-job.
 export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange }) {
   return (
     <div className="space-y-5">
-      <IntakePanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
-
       <RepairSection title="Parts" icon={Package}>
         <JobPartsPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
       </RepairSection>
