@@ -91,7 +91,6 @@ function usageToLineItem(usage) {
 
 export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly = false }) {
   const [invoice, setInvoice] = useState(null);
-  const [amount, setAmount] = useState(0);
   const [quote, setQuote] = useState(null);
   const [usageRecords, setUsageRecords] = useState([]);
   const [sending, setSending] = useState(false);
@@ -138,9 +137,10 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
 
   useEffect(() => { loadInvoiceData(); }, [job.id]);
 
+  const usageSourceIds = new Set(usageRecords.map((usage) => usage.id));
   const billingItems = [
-    ...usageRecords.filter((usage) => !String(usage.item_id || "").startsWith("labour-")).map(usageToLineItem),
-    ...((quote?.line_items || []).filter((item) => item.kind !== "part").map(normalizeDraftItem)),
+    ...usageRecords.map(usageToLineItem),
+    ...((quote?.line_items || []).filter((item) => item.kind !== "part" && !usageSourceIds.has(item.source_usage_id)).map(normalizeDraftItem)),
   ];
 
   const activeItems = invoice ? draftItems : billingItems;
@@ -450,15 +450,14 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
         </div>
       ) : canEdit ? (
         <div className="space-y-3">
-          {lineTotal === 0 && (
-            <div className="space-y-1">
-              <Label>Amount ({DEFAULT_INVOICE_SETTINGS.currency})</Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32" />
+          {billingItems.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border bg-secondary/20 p-4 text-center">
+              <p className="text-sm text-muted-foreground">No parts or labour have been added to this job yet. Add them from the Repair tab before finalising the invoice.</p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
             {quote && <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Copy costing</Button>}
-            <Button size="sm" onClick={finaliseInvoice} disabled={creating || sending} className="gap-1.5">
+            <Button size="sm" onClick={finaliseInvoice} disabled={creating || sending || billingItems.length === 0} className="gap-1.5">
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Finalise Invoice{lineTotal > 0 ? ` · ${currency} ${lineTotal.toFixed(2)}` : ""}
             </Button>
