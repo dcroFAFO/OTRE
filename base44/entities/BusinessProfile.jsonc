@@ -14,6 +14,10 @@
     "subheading": {
       "type": "string"
     },
+    "website_url": {
+      "type": "string",
+      "description": "Published app URL used in notification links (e.g. https://ontherunelectrics.com.au)"
+    },
     "email": {
       "type": "string"
     },

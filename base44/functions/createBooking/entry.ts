@@ -25,7 +25,7 @@ function originFrom(req) {
   if (origin) return origin;
   const referer = req.headers.get('referer');
   if (referer) return new URL(referer).origin;
-  return 'https://app.base44.com';
+  return 'https://ontherunelectrics.com.au';
 }
 
 function normalizePhone(value) {

@@ -10,13 +10,21 @@ const BUSINESS_NAME = "On The Run Electrics";
 const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
 const BUSINESS_PHONE = "0415 505 908";
 
-function getOrigin(req, body) {
-  if (body?.origin) return body.origin;
+const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
+
+async function resolveOrigin(req, body, base44) {
+  // Prefer the BusinessProfile website_url — always correct for published app.
+  try {
+    const profiles = await base44.asServiceRole.entities.BusinessProfile.list('-created_date', 1).catch(() => []);
+    if (profiles[0]?.website_url) return profiles[0].website_url.replace(/\/$/, '');
+  } catch (_) {}
+  // Fall back to explicit origin in body, then request headers.
+  if (body?.origin) return body.origin.replace(/\/$/, '');
   const origin = req.headers.get('origin');
-  if (origin) return origin;
+  if (origin) return origin.replace(/\/$/, '');
   const referer = req.headers.get('referer');
-  if (referer) { try { return new URL(referer).origin; } catch (_) {} }
-  return '';
+  if (referer) { try { return new URL(referer).origin.replace(/\/$/, ''); } catch (_) {} }
+  return DEFAULT_ORIGIN;
 }
 
 function fmtMoney(amount, currency = 'AUD') {
@@ -97,7 +105,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const origin = getOrigin(req, body);
+    const origin = await resolveOrigin(req, body, base44);
     const db = base44.asServiceRole.entities;
 
     let eventType = body.event_type;
