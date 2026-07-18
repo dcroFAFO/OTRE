@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import StatusPill from "@/components/shared/StatusPill";
+import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
+import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, CalendarDays, CreditCard, FileText, Loader2, Search } from "lucide-react";
 
@@ -32,8 +34,11 @@ function isOverdue(invoice) {
 }
 
 export default function Invoices() {
+  const user = useDashboardUser();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedJobId, setSelectedJobId] = useState(null);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["dashboardInvoices"],
@@ -132,7 +137,15 @@ export default function Invoices() {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((invoice) => (
-                <tr key={invoice.id} className={cn("transition-colors hover:bg-secondary/30", invoice.overdue && "bg-rose-50/70 hover:bg-rose-50")}>
+                <tr
+                  key={invoice.id}
+                  onClick={() => invoice.job_id && setSelectedJobId(invoice.job_id)}
+                  className={cn(
+                    "transition-colors hover:bg-secondary/30",
+                    invoice.overdue && "bg-rose-50/70 hover:bg-rose-50",
+                    invoice.job_id && "cursor-pointer"
+                  )}
+                >
                   <td className="px-4 py-3">
                     <p className="font-semibold text-foreground">{invoice.number || "Invoice"}</p>
                     <p className="text-xs text-muted-foreground">{invoice.job?.reference || invoice.job_id || "No linked job"}</p>
@@ -157,6 +170,16 @@ export default function Invoices() {
           </table>
         </div>
       )}
+
+      <JobDetailModal
+        jobId={selectedJobId}
+        actor={user}
+        open={!!selectedJobId}
+        onClose={() => {
+          setSelectedJobId(null);
+          queryClient.invalidateQueries({ queryKey: ["dashboardInvoices"] });
+        }}
+      />
     </div>
   );
 }
