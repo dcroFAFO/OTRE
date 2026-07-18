@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Staff notification
+      // Staff email notification
       const staffKey = `notif:booking_request_staff:${job.id}:email`;
       if (!await alreadySent(base44, staffKey)) {
         const staff = await getStaffUsers(base44);
@@ -209,6 +209,18 @@ Deno.serve(async (req) => {
         for (const s of staff) await sendEmail(s.email, subject, emailTemplate(body));
         await markSent(base44, staffKey, `Staff notified of booking ${ref}`);
         results.push({ channel: 'email', to: 'staff', sent: true });
+      }
+
+      // Staff SMS notification
+      const staffSmsKey = `notif:booking_request_staff:${job.id}:sms`;
+      if (!await alreadySent(base44, staffSmsKey)) {
+        const staff = await getStaffUsers(base44);
+        const msg = `New booking request — ${ref}. ${customerName}, ${job.customer_phone_display || customerPhone || 'no phone'}. ${job.asset_label || 'Scooter'}: ${job.issue_description || 'N/A'}. ${dashboardUrl(origin)}`;
+        let sentAny = false;
+        for (const s of staff) {
+          if (s.phone_e164) { await sendSMS(s.phone_e164, msg); sentAny = true; }
+        }
+        if (sentAny) { await markSent(base44, staffSmsKey, `Staff notified by SMS of booking ${ref}`); results.push({ channel: 'sms', to: 'staff', sent: true }); }
       }
     }
 
