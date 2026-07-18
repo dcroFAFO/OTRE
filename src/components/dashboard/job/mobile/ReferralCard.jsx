@@ -17,12 +17,29 @@ export default function ReferralCard({ customerId }) {
   const [customer, setCustomer] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  const [notFound, setNotFound] = useState(false);
+
   useEffect(() => {
     if (!customerId) return;
-    base44.entities.Customer.get(customerId).then(setCustomer);
+    setNotFound(false);
+    setCustomer(null);
+    base44.entities.Customer.get(customerId)
+      .then(setCustomer)
+      .catch(() => setNotFound(true));
   }, [customerId]);
 
   if (!customerId) return null;
+  if (notFound) return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="rounded-lg bg-primary/10 p-1.5 text-primary"><Gift className="h-4 w-4" /></span>
+        <div>
+          <h3 className="font-heading text-sm font-extrabold text-foreground">Referral program</h3>
+          <p className="text-xs text-muted-foreground">No customer account linked to this job yet.</p>
+        </div>
+      </div>
+    </section>
+  );
   if (!customer) return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
 
   const set = (patch) => setCustomer((c) => ({ ...c, ...patch }));
