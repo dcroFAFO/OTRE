@@ -11,6 +11,36 @@ const CUSTOMER_VISIBILITY = "customer_visible";
 const PARTS_MARKUP_PERCENT = 20;
 const PARTS_MARKUP_MULTIPLIER = 1.2;
 
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const BUSINESS_NAME = "On The Run Electrics";
+const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
+const BUSINESS_PHONE = "0415 505 908";
+const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
+
+function fmtMoney(amount, currency = 'AUD') { return `${currency} ${Number(amount || 0).toFixed(2)}`; }
+
+function reminderEmailTemplate(content) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
+<div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">${BUSINESS_NAME}</h1></div>
+<div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
+<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>hello@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
+</body></html>`;
+}
+
+async function sendReminderEmail(to, subject, html) {
+  if (!RESEND_API_KEY || !to) return false;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
+    });
+    if (!res.ok) { console.error('[invoiceActions] reminder email failed:', await res.text()); return false; }
+    return true;
+  } catch (e) { console.error('[invoiceActions] reminder email error:', e.message); return false; }
+}
+
 const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
 
@@ -276,6 +306,38 @@ Deno.serve(async (req) => {
           visibility: "customer",
         });
 
+        break;
+      }
+      case "send_reminder": {
+        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+        const invoice = await base44.asServiceRole.entities.Invoice.get(params.invoiceId);
+        if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
+        if (invoice.status === "paid" || invoice.status === "refunded") return Response.json({ error: "Invoice is already paid" }, { status: 400 });
+
+        const customerEmail = job.customer_email || "";
+        if (!customerEmail) return Response.json({ error: "No customer email on this job" }, { status: 400 });
+
+        let origin = req.headers.get('origin') || '';
+        if (!origin) {
+          try {
+            const profiles = await base44.asServiceRole.entities.BusinessProfile.list('-created_date', 1).catch(() => []);
+            if (profiles[0]?.website_url) origin = profiles[0].website_url.replace(/\/$/, '');
+          } catch (_) {}
+        }
+        if (!origin) origin = DEFAULT_ORIGIN;
+
+        const customerName = job.customer_name || "there";
+        const amount = fmtMoney(invoice.amount, invoice.currency);
+        const subject = `Payment reminder — Invoice ${invoice.number || ""}`;
+        const body = `<p>Hi ${customerName},</p><p>This is a friendly reminder that your invoice ${invoice.number || ""} for <strong>${amount}</strong> is awaiting payment. Please pay online at your earliest convenience.</p><p style="margin-top:24px;"><a href="${origin}/portal" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Pay Now</a></p>`;
+        const sent = await sendReminderEmail(customerEmail, subject, reminderEmailTemplate(body));
+        if (!sent) return Response.json({ error: "Failed to send reminder email" }, { status: 502 });
+
+        result = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+          last_payment_reminder_sent_date: new Date().toISOString(),
+          payment_reminder_count: (invoice.payment_reminder_count || 0) + 1,
+        });
+        await logAudit({ eventType: "payment_reminder_sent", summary: `Payment reminder emailed to ${customerEmail}`, visibility: "customer" });
         break;
       }
       default:

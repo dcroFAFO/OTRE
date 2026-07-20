@@ -36,6 +36,10 @@ export async function setPaymentStatus(invoice, job, status) {
   return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
 }
 
+export async function sendPaymentReminder(job, invoice) {
+  return invoke({ action: "send_reminder", jobId: job.id, invoiceId: invoice.id });
+}
+
 export async function generateInvoicePdf(job, invoiceDraft, notes = "", regenerateCount = 0) {
   const res = await base44.functions.invoke("invoicePdfActions", {
     action: "preview",

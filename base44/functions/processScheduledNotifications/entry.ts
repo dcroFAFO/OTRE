@@ -83,55 +83,11 @@ Deno.serve(async (req) => {
       } catch (_) {}
     }
     if (!origin) origin = DEFAULT_ORIGIN;
-    const results = { overdue: 0, feedback: 0 };
+    const results = { feedback: 0 };
 
-    // ── OVERDUE INVOICE REMINDERS ──
+    // Overdue invoice reminders have been removed — staff send reminders manually
+    // from the invoice panel (see invoiceActions → send_reminder).
     const invoices = await db.Invoice.list('-created_date', 500).catch(() => []);
-    const overdueInvoices = invoices.filter((inv) => {
-      if (inv.status !== 'outstanding') return false;
-      if (!inv.invoiceSentAt) return false;
-      if (hoursSince(inv.invoiceSentAt) < OVERDUE_HOURS) return false;
-      const lastReminder = inv.last_payment_reminder_sent_date;
-      if (lastReminder && hoursSince(lastReminder) < REMINDER_INTERVAL_HOURS) return false;
-      return true;
-    });
-
-    for (const invoice of overdueInvoices) {
-      const job = invoice.job_id ? await db.Job.get(invoice.job_id).catch(() => null) : null;
-      const customerName = job?.customer_name || 'there';
-      const customerEmail = job?.customer_email || '';
-      const customerPhone = job?.customer_phone_e164 || '';
-      const ref = job?.reference || invoice.id;
-      const amount = fmtMoney(invoice.amount, invoice.currency);
-
-      // Customer email
-      if (customerEmail) {
-        const subject = `Payment reminder — Invoice ${invoice.number || ''}`;
-        const body = `<p>Hi ${customerName},</p><p>This is a friendly reminder that your invoice ${invoice.number || ''} for <strong>${amount}</strong> is overdue. Please pay online at your earliest convenience.</p><p style="margin-top:24px;"><a href="${origin}/portal" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Pay Now</a></p>`;
-        await sendEmail(customerEmail, subject, emailTemplate(body));
-      }
-
-      // Customer SMS
-      if (customerPhone) {
-        const msg = `Hi ${customerName}, your invoice ${invoice.number || ''} (${amount}) is overdue. Please pay online: ${origin}/portal`;
-        await sendSMS(customerPhone, msg);
-      }
-
-      // Staff email
-      const staff = await getStaffUsers(base44);
-      const staffSubject = `Overdue invoice — ${invoice.number || ref}`;
-      const staffBody = `<p>Invoice ${invoice.number || ''} for ${customerName} (${amount}) is overdue.</p><p style="margin-top:16px;"><a href="${origin}/dashboard/invoices" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">View Dashboard</a></p>`;
-      for (const s of staff) await sendEmail(s.email, staffSubject, emailTemplate(staffBody));
-
-      // Update reminder tracking
-      await db.Invoice.update(invoice.id, {
-        last_payment_reminder_sent_date: new Date().toISOString(),
-        payment_reminder_count: (invoice.payment_reminder_count || 0) + 1,
-      }).catch(() => {});
-
-      await markSent(base44, `notif:invoice_overdue:${invoice.id}:${Date.now()}`, `Overdue reminder sent for ${ref}`);
-      results.overdue++;
-    }
 
     // ── FEEDBACK EMAILS (12h after payment) ──
     const paidInvoices = invoices.filter((inv) => {

@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems } from "@/services/paymentService";
+import { getJobInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems, sendPaymentReminder } from "@/services/paymentService";
 import { getJobQuote } from "@/services/quoteService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import PartPickerModal from "./PartPickerModal";
 import LabourConsumablePickerModal from "./LabourConsumablePickerModal";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { AlertCircle, CheckCircle2, Clock, Copy, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Trash2, Wrench } from "lucide-react";
+import { AlertCircle, Bell, CheckCircle2, Clock, Copy, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Trash2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { PARTS_MARKUP_PERCENT, getUsageCustomerUnitPrice, roundMoney } from "@/lib/partsPricing";
 import { addInventoryParts } from "@/services/jobService";
@@ -114,6 +114,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   const [labourPickerOpen, setLabourPickerOpen] = useState(false);
   const [addingParts, setAddingParts] = useState(false);
   const [addingLabour, setAddingLabour] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   const loadInvoiceData = async () => {
     setLoading(true);
@@ -333,6 +334,21 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     }
   };
 
+  const handleSendReminder = async () => {
+    if (!invoice) return;
+    setSendingReminder(true);
+    try {
+      await sendPaymentReminder(job, invoice);
+      await loadInvoiceData();
+      toast.success("Payment reminder emailed to the customer.");
+      onChange?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to send reminder.");
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
   const handleAddLabour = async (items) => {
     setAddingLabour(true);
     try {
@@ -481,6 +497,11 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
                 {addingLabour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />} Add labour / consumable
               </Button>
               {invoice.status !== "paid" && invoice.status !== "refunded" && <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={payOnline} disabled={paying}>{paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Pay with Stripe</Button>}
+              {invoice.status !== "paid" && invoice.status !== "refunded" && invoice.invoiceSentAt && (
+                <Button size="sm" variant="outline" onClick={handleSendReminder} disabled={sendingReminder || !job.customer_email} className="gap-1.5">
+                  {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />} Send reminder
+                </Button>
+              )}
               <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setStatus("paid")}>Mark paid</Button>
               <Button size="sm" variant="ghost" onClick={() => setStatus("refunded")}>Refund</Button>
