@@ -24,12 +24,21 @@ const TRANSITION_RULES = {
   booked: {
     targetStatus: "booked",
     allowedFrom: ["requested", "on_hold"],
-    check() { return { ok: true }; },
+    check(job) {
+      if (!job.scheduled_date) return { ok: false, reason: "A drop-off date must be arranged before this job can be scheduled." };
+      if (!job.preferred_time_window) return { ok: false, reason: "A drop-off time window must be selected before this job can be scheduled." };
+      return { ok: true };
+    },
   },
   repair_in_progress: {
     targetStatus: "repair_in_progress",
     allowedFrom: ["requested", "booked", "on_hold", "waiting_on_parts"],
-    check() { return { ok: true }; },
+    check(job) {
+      if (job.status === "requested" && !job.scheduled_date) {
+        return { ok: false, reason: "A drop-off date must be arranged before starting repair on this job." };
+      }
+      return { ok: true };
+    },
   },
   waiting_on_parts: {
     targetStatus: "waiting_on_parts",

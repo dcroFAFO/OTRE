@@ -29,7 +29,11 @@ export default function Calendar() {
   const byDay = useMemo(() => {
     const map = {};
     days.forEach((d) => { map[format(d, "yyyy-MM-dd")] = []; });
-    jobs.forEach((j) => { if (j.scheduled_date && map[j.scheduled_date]) map[j.scheduled_date].push(j); });
+    jobs.forEach((j) => {
+      if (!j.scheduled_date) return;
+      const dayKey = String(j.scheduled_date).slice(0, 10);
+      if (map[dayKey]) map[dayKey].push(j);
+    });
     return map;
   }, [jobs, days]);
 

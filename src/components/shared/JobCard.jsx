@@ -5,7 +5,7 @@ import StatusPill from "./StatusPill";
 import ServiceTypeBadge from "./ServiceTypeBadge";
 import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BORDER_CLASSES, SERVICE_TYPE_STRIP_CLASSES } from "@/config/serviceTypes";
-import { getPaymentStatus, getStatus } from "@/config/jobConfig";
+import { getPaymentStatus, getStatus, getTimeWindowLabel } from "@/config/jobConfig";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 
 const fmtDate = (d) => {
@@ -78,13 +78,16 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
                     "text-[11px] flex items-center gap-1 rounded-full px-2 py-0.5",
                     job.status === "requested"
                       ? "font-semibold text-accent bg-accent/10"
-                      : "text-muted-foreground"
+                      : "font-semibold text-indigo-700 bg-indigo-50"
                   )}
-                  title={job.status === "requested" ? "Customer's preferred completion date" : "Scheduled date"}
+                  title={job.status === "requested" ? "Customer's preferred completion date" : "Arranged drop-off date and time"}
                 >
                   <Calendar className="h-3 w-3" />
-                  {job.status === "requested" ? "Requested: " : ""}
+                  {job.status === "requested" ? "Requested: " : "Drop-off: "}
                   {fmtDate(job.scheduled_date)}
+                  {job.preferred_time_window && job.preferred_time_window !== "asap"
+                    ? ` · ${getTimeWindowLabel(job.preferred_time_window).split(" ")[0]}`
+                    : job.preferred_time_window === "asap" ? " · ASAP" : ""}
                 </span>
               )}
             </div>

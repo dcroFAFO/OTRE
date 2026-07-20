@@ -78,3 +78,15 @@ export function getPaymentStatus(key) {
 export function getQuoteStatus(key) {
   return QUOTE_STATUSES.find((s) => s.key === key) || { key, label: key, color: "slate" };
 }
+
+// Drop-off time windows arranged with the customer during scheduling.
+export const TIME_WINDOW_LABELS = {
+  morning: "Morning (8am–12pm)",
+  afternoon: "Afternoon (12pm–4pm)",
+  evening: "Evening (4pm–6pm)",
+  asap: "ASAP / any time",
+};
+
+export function getTimeWindowLabel(key) {
+  return TIME_WINDOW_LABELS[key] || (key ? key : "");
+}

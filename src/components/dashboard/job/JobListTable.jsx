@@ -4,8 +4,14 @@ import StatusPill from "@/components/shared/StatusPill";
 import ServiceTypeBadge from "@/components/shared/ServiceTypeBadge";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getTimeWindowLabel } from "@/config/jobConfig";
 
 const fmtDate = (d) => (d ? format(new Date(d), "d MMM yyyy") : "—");
+const fmtSchedule = (j) => {
+  if (!j.scheduled_date) return "—";
+  const time = j.preferred_time_window ? getTimeWindowLabel(j.preferred_time_window).split(" ")[0] : "";
+  return time ? `${fmtDate(j.scheduled_date)} · ${time}` : fmtDate(j.scheduled_date);
+};
 
 // List view of jobs with optional multi-select.
 export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelectionChange }) {
@@ -67,8 +73,8 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
               <ServiceTypeBadge job={j} />
               <span>Booked {fmtDate(j.created_date)}</span>
               {j.scheduled_date && (
-                <span className={j.status === "requested" ? "font-semibold text-accent" : ""}>
-                  {j.status === "requested" ? "Requested" : "Expected"} {fmtDate(j.scheduled_date)}
+                <span className={j.status === "requested" ? "font-semibold text-accent" : "font-semibold text-indigo-700"}>
+                  {j.status === "requested" ? "Requested" : "Drop-off"} {fmtSchedule(j)}
                 </span>
               )}
               {j.preferred_time_window === "ASAP" && (
@@ -99,7 +105,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
               <Th>Issue</Th>
               <Th>Customer</Th>
               <Th>Booked</Th>
-              <Th>Expected</Th>
+              <Th>Drop-off</Th>
               <Th>Status</Th>
             </tr>
           </thead>
@@ -134,7 +140,7 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
                   </Td>
                   <Td className="whitespace-nowrap">{j.customer_name || "—"}</Td>
                   <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(j.created_date)}</Td>
-                  <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(j.scheduled_date)}</Td>
+                  <Td className="whitespace-nowrap text-muted-foreground">{fmtSchedule(j)}</Td>
                   <Td className="whitespace-nowrap">
                     <StatusPill value={j.status || "requested"} kind="job" />
                   </Td>
