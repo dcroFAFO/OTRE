@@ -9,6 +9,7 @@ import { getJobQuote } from "@/services/quoteService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import PartPickerModal from "./PartPickerModal";
 import LabourConsumablePickerModal from "./LabourConsumablePickerModal";
+import InvoiceLineItemCard from "./InvoiceLineItemCard";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
 import { AlertCircle, Bell, CheckCircle2, Clock, Copy, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Trash2, Wrench } from "lucide-react";
 import { toast } from "sonner";
@@ -412,51 +413,25 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
           <div className="px-4 py-2.5 bg-secondary/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <FileText className="h-3.5 w-3.5" /> Invoice Items
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted-foreground">
-                <th className="text-left px-4 py-2 font-medium">Description</th>
-                <th className="text-center px-2 py-2 font-medium">Qty</th>
-                <th className="text-right px-4 py-2 font-medium">Unit</th>
-                <th className="text-right px-4 py-2 font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeItems.map((item, i) => (
-                <tr key={i} className="border-b border-border/50 last:border-0">
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-1.5">
-                      {item.kind === "part" ? <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <Wrench className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                      {canEdit && invoice ? <Input value={item.description} onChange={(e) => updateDraft(i, { description: e.target.value })} className="h-8 min-w-[180px]" /> : item.description}
-                    </div>
-                    {canEdit && invoice && (
-                      <div className="mt-1 grid grid-cols-2 gap-1 sm:grid-cols-4">
-                        <Input type="number" step="0.01" value={item.qty} onChange={(e) => updateDraft(i, { qty: e.target.value })} className="h-7 text-xs" placeholder="Qty" />
-                        <Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateDraft(i, { unit_price: e.target.value, customer_unit_price: e.target.value })} className="h-7 text-xs" placeholder="Customer price" />
-                        <Input type="number" step="0.01" value={item.tax_rate} onChange={(e) => updateDraft(i, { tax_rate: e.target.value })} className="h-7 text-xs" placeholder="Tax %" />
-                        <Input type="number" step="0.01" value={item.discount_amount} onChange={(e) => updateDraft(i, { discount_amount: e.target.value })} className="h-7 text-xs" placeholder="Discount" />
-                      </div>
-                    )}
-                    {canEdit && item.kind === "part" && (
-                      <p className="mt-1 text-[11px] text-muted-foreground">Cost price {(Number(item.internal_cost_price) || 0).toFixed(2)} · Customer price {(Number(item.unit_price) || 0).toFixed(2)}</p>
-                    )}
-                  </td>
-                  <td className="px-2 py-2.5 text-center text-muted-foreground">{item.qty}</td>
-                  <td className="px-4 py-2.5 text-right text-muted-foreground">{currency} {(Number(item.unit_price) || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">
-                    <div>{currency} {calculateLineTotal(item).toFixed(2)}</div>
-                    {canEdit && invoice && <button onClick={() => removeLine(i)} className="mt-1 text-xs text-rose-600 hover:underline"><Trash2 className="inline h-3 w-3" /> Remove</button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-secondary/30">
-                <td colSpan={3} className="px-4 py-2.5 text-right font-semibold text-sm">Total</td>
-                <td className="px-4 py-2.5 text-right font-heading font-extrabold text-base">{currency} {lineTotal.toFixed(2)}</td>
-              </tr>
-            </tfoot>
-          </table>
+          <div className="p-3 space-y-2.5 bg-card">
+            {activeItems.map((item, i) => (
+              <InvoiceLineItemCard
+                key={i}
+                item={item}
+                index={i}
+                canEdit={canEdit}
+                hasInvoice={!!invoice}
+                currency={currency}
+                onUpdate={updateDraft}
+                onRemove={removeLine}
+                calculateLineTotal={calculateLineTotal}
+              />
+            ))}
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-secondary/40 px-3 py-2.5">
+              <span className="text-sm font-semibold">Total</span>
+              <span className="font-heading font-extrabold text-base">{currency} {lineTotal.toFixed(2)}</span>
+            </div>
+          </div>
           {canEdit && invoice && (
             <div className="flex flex-wrap gap-2 border-t border-border bg-secondary/20 px-4 py-3">
               <Button size="sm" variant="outline" onClick={() => addLine("labour")} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Add labour</Button>
