@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { changeStatus } from "@/services/jobService";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, ChevronDown, Loader2, Bell } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { X, ChevronDown, Loader2, Bell, Trash2 } from "lucide-react";
 import { JOB_STATUSES } from "@/config/jobConfig";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -22,6 +23,17 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
       await Promise.all(selectedJobs.map((job) => changeStatus(job, statusValue)));
       toast({ title: `Updated ${count} job${count !== 1 ? "s" : ""}`, description: `Status set to "${JOB_STATUSES.find(s => s.key === statusValue)?.label || statusValue}"` });
       setStatusValue("");
+      onDone();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteJobs = async () => {
+    setLoading(true);
+    try {
+      await Promise.all(selectedIds.map((id) => base44.entities.Job.delete(id)));
+      toast({ title: `Deleted ${count} job${count !== 1 ? "s" : ""}`, description: "The selected jobs have been permanently removed." });
       onDone();
     } finally {
       setLoading(false);
@@ -82,6 +94,32 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
         <Bell className="h-3.5 w-3.5" />
         Send notification
       </Button>
+
+      <div className="hidden sm:block h-4 w-px bg-border" />
+
+      {/* Bulk delete */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={loading}>
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {count} job{count !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected job{count !== 1 ? "s" : ""} and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteJobs} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete {count} job{count !== 1 ? "s" : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex-1" />
 
