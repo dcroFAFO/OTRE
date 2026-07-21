@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.Job.update(job.id, {
           invoice_id: result.id,
           payment_status: result.status || DEFAULT_STATUS,
-          status: result.status === "paid" ? "paid" : job.status,
+          status: result.status === "paid" ? "completed" : job.status,
         });
         await logAudit({ eventType: "costing_copied_to_invoice", summary: `Costing copied to internal invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "internal" });
         break;
@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
         });
         await base44.asServiceRole.entities.Job.update(job.id, {
           payment_status: status,
-          status: status === "paid" ? "paid" : job.status,
+          status: status === "paid" ? "completed" : job.status,
         });
         await logAudit({
           eventType: "payment_status_changed",

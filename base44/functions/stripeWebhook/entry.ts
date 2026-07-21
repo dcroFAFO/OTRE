@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       if (job) {
         await base44.asServiceRole.entities.Job.update(job.id, {
           payment_status: 'paid',
-          status: 'paid',
+          status: 'completed',
         });
 
         await base44.asServiceRole.entities.AuditEvent.create({
