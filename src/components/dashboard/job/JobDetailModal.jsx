@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Bike, Calendar, User, CreditCard, AlertTriangle, Hash } from "lucide-react";
 import StatusPill from "@/components/shared/StatusPill";
 import BillingPanel from "./BillingPanel";
+import InvoicePanel from "./InvoicePanel";
 import NotesPanel from "./NotesPanel.jsx";
 import PrivateNotesPanel from "./PrivateNotesPanel";
 import AttachmentsPanel from "./AttachmentsPanel";
@@ -27,6 +28,7 @@ const TAB_LABELS = {
   schedule: "Scheduling",
   repair: "Repair",
   billing: "Invoice",
+  invoice: "Invoice",
   customer: "Customer",
   timeline: "Timeline",
 };
@@ -187,6 +189,11 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
                         <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
                       </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="invoice" className="mt-0">
+                    {safeTab === "invoice" && (
+                      <InvoicePanel job={job} actor={actor} canEdit={false} onChange={bump} />
                     )}
                   </TabsContent>
                   <TabsContent value="timeline" className="mt-0">

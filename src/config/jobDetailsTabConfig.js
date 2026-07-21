@@ -31,7 +31,7 @@ const STATUS_TABS = {
   ready_for_pickup: ["billing", "customer"],
   invoice_sent: ["billing", "customer"],
   paid: ["timeline", "customer"],
-  completed: ["timeline", "customer"],
+  completed: ["invoice", "timeline", "customer"],
   cancelled: ["timeline", "customer"],
 };
 

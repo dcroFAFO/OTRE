@@ -15,11 +15,12 @@ import AuditTimeline from "../AuditTimeline";
 import ScheduleTab from "./ScheduleTab";
 import RepairTab from "./RepairTab";
 import BillingReviewTab from "./BillingReviewTab";
+import InvoicePanel from "../InvoicePanel";
 import ReferralCard from "./ReferralCard";
 import { getVisibleJobTabs } from "@/config/jobDetailsTabConfig";
 
-const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", customer: "Customer", timeline: "Timeline" };
-const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, customer: User, timeline: History };
+const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", invoice: "Invoice", customer: "Customer", timeline: "Timeline" };
+const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, invoice: CreditCard, customer: User, timeline: History };
 
 // Contextual primary action + initial tab, driven by the job's current status.
 function contextualStep(status) {
@@ -70,6 +71,7 @@ export default function MobileJobWorkspace({
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
         )}
+        {tab === "invoice" && <InvoicePanel job={job} actor={actor} canEdit={false} onChange={bump} />}
         {tab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
       </div>
 
