@@ -77,7 +77,7 @@ export default function Jobs() {
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [view, setView] = useState("list");
+  const [view, setView] = useState("board");
   const [lifecycle, setLifecycle] = useState("all");
 
   const params = new URLSearchParams(location.search);
@@ -88,22 +88,13 @@ export default function Jobs() {
 
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
-    const result = jobs.filter((j) => {
+    return jobs.filter((j) => {
       const matchesSearch = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
         .some((v) => v?.toLowerCase().includes(q));
-      const statusKey = normalizeStatusKey(j.status);
-      const matchesStatus = view === "board" || filters.status === "all" || statusKey === filters.status;
+      const matchesStatus = view === "board" || filters.status === "all" || normalizeStatusKey(j.status) === filters.status;
       const matchesService = filters.service_type === "all" || (j.service_type || DEFAULT_SERVICE_TYPE) === filters.service_type;
       const matchesPriority = filters.priority === "all" || (j.priority || "medium") === filters.priority;
-      // Hide cancelled jobs by default — only show when explicitly filtered
-      const matchesCancelled = filters.status !== "all" || statusKey !== "cancelled";
-      return matchesSearch && matchesStatus && matchesService && matchesPriority && matchesCancelled;
-    });
-    // Sort by booking age: most recent first
-    return result.sort((a, b) => {
-      const dateA = new Date(a.created_date || a.createdAt || a.created_at || 0).getTime();
-      const dateB = new Date(b.created_date || b.createdAt || b.created_at || 0).getTime();
-      return dateB - dateA;
+      return matchesSearch && matchesStatus && matchesService && matchesPriority;
     });
   }, [jobs, filters.q, filters.status, filters.service_type, filters.priority, view]);
 
