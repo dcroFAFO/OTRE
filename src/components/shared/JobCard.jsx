@@ -26,7 +26,7 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
     <div
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-2xl border border-l-4 border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-gentle select-none",
+        "group relative cursor-pointer overflow-hidden rounded-2xl border border-l-4 border-border bg-card p-4 sm:p-3 shadow-sm transition-shadow hover:shadow-gentle select-none",
         SERVICE_TYPE_BORDER_CLASSES[serviceType.key],
         className
       )}
@@ -60,11 +60,11 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
             <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{job.issue_description}</p>
           )}
 
-          <div className="mt-2 flex items-center justify-between gap-1.5 flex-wrap">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="mt-3 sm:mt-2 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <ServiceTypeBadge value={serviceType.key} />
-              <StatusPill value={job.status} />
-              {ownershipLabel && <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{ownershipLabel}</span>}
+              <StatusPill value={job.status} className="px-3 py-1 text-xs sm:px-2.5 sm:py-0.5 sm:text-xs" />
+              {ownershipLabel && <span className="rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] sm:px-2 sm:py-0.5 sm:text-[10px] font-semibold text-muted-foreground">{ownershipLabel}</span>}
             </div>
             <div className="flex items-center gap-2">
               {job.preferred_time_window === "ASAP" && !compact && (
