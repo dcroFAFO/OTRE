@@ -14,13 +14,19 @@ const fmtDate = (d) => {
   return isNaN(date) ? d : format(date, "d MMM yyyy");
 };
 
+const fmtDateTime = (d) => {
+  if (!d) return "";
+  const date = new Date(d);
+  return isNaN(date) ? d : format(date, "d MMM, h:mma");
+};
+
 export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
   const paymentStatus = getPaymentStatus(job.payment_status);
   const serviceType = getServiceType(job.service_type || DEFAULT_SERVICE_TYPE);
   const outstanding = job.payment_status === "outstanding";
   const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
   const waitingLabel = DEFAULT_WAITING_REASONS.find((r) => r.key === job.waiting_reason)?.label;
-  const ownershipLabel = job.customer_user_id || job.customer_account_id ? "Claimed" : job.customer_profile_id ? "Guest" : null;
+  const ownershipLabel = !job.customer_user_id && !job.customer_account_id && job.customer_profile_id ? "Guest" : null;
 
   return (
     <div
@@ -66,10 +72,16 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
               <StatusPill value={job.status} className="px-3 py-1 text-xs sm:px-2.5 sm:py-0.5 sm:text-xs" />
               {ownershipLabel && <span className="rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] sm:px-2 sm:py-0.5 sm:text-[10px] font-semibold text-muted-foreground">{ownershipLabel}</span>}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {!compact && job.created_date && (
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Requested {fmtDateTime(job.created_date)}
+                </span>
+              )}
               {job.preferred_time_window === "ASAP" && !compact && (
                 <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> ASAP
+                  ASAP
                 </span>
               )}
               {job.scheduled_date && !compact && (
@@ -80,10 +92,10 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
                       ? "font-semibold text-accent bg-accent/10"
                       : "font-semibold text-indigo-700 bg-indigo-50"
                   )}
-                  title={job.status === "requested" ? "Customer's preferred completion date" : "Arranged drop-off date and time"}
+                  title={job.status === "requested" ? "Customer's preferred completion date" : "Scheduled drop-off date and time"}
                 >
                   <Calendar className="h-3 w-3" />
-                  {job.status === "requested" ? "Requested: " : "Drop-off: "}
+                  {job.status === "requested" ? "Prefers: " : "Scheduled: "}
                   {fmtDate(job.scheduled_date)}
                   {job.preferred_time_window && job.preferred_time_window !== "asap"
                     ? ` · ${getTimeWindowLabel(job.preferred_time_window).split(" ")[0]}`

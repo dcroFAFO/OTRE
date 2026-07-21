@@ -77,7 +77,7 @@ export default function Jobs() {
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [view, setView] = useState("board");
+  const [view, setView] = useState("list");
   const [lifecycle, setLifecycle] = useState("all");
 
   const params = new URLSearchParams(location.search);
@@ -86,24 +86,34 @@ export default function Jobs() {
   const open = (id) => navigate(jobsPath({ id }));
   const close = () => { navigate(jobsPath({ id: null })); invalidate(); };
 
+  const HIDDEN_BY_DEFAULT = ["cancelled", "paid", "completed"];
+
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
-    return jobs.filter((j) => {
-      const matchesSearch = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
-        .some((v) => v?.toLowerCase().includes(q));
-      const matchesStatus = view === "board" || filters.status === "all" || normalizeStatusKey(j.status) === filters.status;
-      const matchesService = filters.service_type === "all" || (j.service_type || DEFAULT_SERVICE_TYPE) === filters.service_type;
-      const matchesPriority = filters.priority === "all" || (j.priority || "medium") === filters.priority;
-      return matchesSearch && matchesStatus && matchesService && matchesPriority;
-    });
+    return jobs
+      .filter((j) => {
+        const matchesSearch = !q || [j.customer_name, j.asset_label, j.scooter_label, j.reference, j.issue_description]
+          .some((v) => v?.toLowerCase().includes(q));
+        const matchesStatus = view === "board" || filters.status === "all" || normalizeStatusKey(j.status) === filters.status;
+        const matchesService = filters.service_type === "all" || (j.service_type || DEFAULT_SERVICE_TYPE) === filters.service_type;
+        const matchesPriority = filters.priority === "all" || (j.priority || "medium") === filters.priority;
+        return matchesSearch && matchesStatus && matchesService && matchesPriority;
+      })
+      .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
   }, [jobs, filters.q, filters.status, filters.service_type, filters.priority, view]);
 
   // Display-only lifecycle grouping — filters which statuses are shown.
   const lifecycleStatuses = LIFECYCLE_GROUPS.find((g) => g.key === lifecycle)?.statuses || null;
-  const visibleJobs = useMemo(
-    () => (lifecycleStatuses ? filtered.filter((j) => lifecycleStatuses.includes(normalizeStatusKey(j.status))) : filtered),
-    [filtered, lifecycleStatuses]
-  );
+  const visibleJobs = useMemo(() => {
+    let result = lifecycleStatuses
+      ? filtered.filter((j) => lifecycleStatuses.includes(normalizeStatusKey(j.status)))
+      : filtered;
+    // Hide closed/terminal jobs unless the user picks a specific lifecycle tab or status filter
+    if (lifecycle === "all" && filters.status === "all") {
+      result = result.filter((j) => !HIDDEN_BY_DEFAULT.includes(normalizeStatusKey(j.status)));
+    }
+    return result;
+  }, [filtered, lifecycleStatuses, lifecycle, filters.status]);
 
   return (
     <div className="space-y-5">

@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { getTimeWindowLabel } from "@/config/jobConfig";
 
 const fmtDate = (d) => (d ? format(new Date(d), "d MMM yyyy") : "—");
+const fmtDateTime = (d) => (d ? format(new Date(d), "d MMM, h:mma") : "—");
 const fmtSchedule = (j) => {
   if (!j.scheduled_date) return "—";
   const time = j.preferred_time_window ? getTimeWindowLabel(j.preferred_time_window).split(" ")[0] : "";
@@ -73,10 +74,10 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
             {j.issue_description && <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{j.issue_description}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
               <ServiceTypeBadge job={j} />
-              <span>Booked {fmtDate(j.created_date)}</span>
+              <span>Requested {fmtDateTime(j.created_date)}</span>
               {j.scheduled_date && (
                 <span className={j.status === "requested" ? "font-semibold text-accent" : "font-semibold text-indigo-700"}>
-                  {j.status === "requested" ? "Requested" : "Drop-off"} {fmtSchedule(j)}
+                  {j.status === "requested" ? "Prefers" : "Scheduled"} {fmtSchedule(j)}
                 </span>
               )}
               {j.preferred_time_window === "ASAP" && (
