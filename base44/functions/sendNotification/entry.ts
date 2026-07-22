@@ -48,14 +48,19 @@ function emailTemplate(content) {
 </body></html>`;
 }
 
-async function sendEmail(to, subject, html) {
+const AUDIT_EMAIL = "hello@ontherunelectrics.com.au";
+
+async function sendEmail(to, subject, html, { audit = true } = {}) {
   if (!RESEND_API_KEY) { console.warn('[sendNotification] RESEND_API_KEY not set'); return false; }
   if (!to) { console.warn('[sendNotification] no email recipient'); return false; }
   try {
+    const payload = { from: FROM_EMAIL, to: [to], subject, html };
+    // BCC the business inbox on every outgoing email for staff audit visibility.
+    if (audit && to !== AUDIT_EMAIL) payload.bcc = [AUDIT_EMAIL];
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) { console.error('[sendNotification] email failed:', await res.text()); return false; }
     return true;
@@ -73,6 +78,10 @@ async function sendSMS(to, body) {
       body: new URLSearchParams({ From: TWILIO_FROM_NUMBER, To: to, Body: body }),
     });
     if (!res.ok) { console.error('[sendNotification] SMS failed:', await res.text()); return false; }
+    // Email an audit copy of every SMS to the business inbox for staff visibility.
+    await sendEmail(AUDIT_EMAIL, `[SMS Audit] Sent to ${to}`, emailTemplate(
+      `<p><strong>SMS sent to:</strong> ${to}</p><p><strong>Message:</strong></p><p style="white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px;">${body}</p>`
+    ), { audit: false });
     return true;
   } catch (e) { console.error('[sendNotification] SMS error:', e.message); return false; }
 }
