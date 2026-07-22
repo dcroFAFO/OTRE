@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
@@ -108,6 +109,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   const [savingLines, setSavingLines] = useState(false);
   const [draftItems, setDraftItems] = useState([]);
   const [internalNotes, setInternalNotes] = useState("");
+  const [customerNotes, setCustomerNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [finaliseStatus, setFinaliseStatus] = useState(ASYNC_STATES.IDLE);
   const [sendError, setSendError] = useState("");
@@ -141,6 +143,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       return normalizeDraftItem({ ...item, internal_cost_price: usage.unit_cost, markup_percentage: usage.markup_percentage, is_custom_misc_part: usage.is_custom_misc_part, staff_notes: usage.note });
     }));
     setInternalNotes(inv?.internalCostingNotes || "");
+    setCustomerNotes(inv?.customer_notes ?? (q?.diagnosis_notes || job.issue_description || ""));
     setFinaliseStatus(inv?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
     setLoading(false);
   };
@@ -155,7 +158,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
 
   const activeItems = invoice ? draftItems : billingItems;
   const lineTotal = activeItems.reduce((sum, item) => sum + calculateLineTotal(item), 0);
-  const invoiceNotes = quote?.diagnosis_notes || job.issue_description || "";
+  const invoiceNotes = customerNotes;
   const currency = invoice?.currency || DEFAULT_INVOICE_SETTINGS.currency;
 
   const getFinaliseItems = () => {
@@ -198,7 +201,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     if (!invoice) return;
     setSavingLines(true);
     try {
-      const inv = await updateInvoiceLineItems(job, invoice, draftItems, internalNotes);
+      const inv = await updateInvoiceLineItems(job, invoice, draftItems, internalNotes, customerNotes);
       setInvoice(inv);
       setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
       toast.success("Invoice line items saved.");
@@ -219,6 +222,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       amount: lineItems.reduce((sum, item) => sum + calculateLineTotal(item), 0),
       lineItems,
       internalCostingNotes: internalNotes,
+      customerNotes,
     };
   };
 
@@ -441,6 +445,26 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
                 {savingLines ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save invoice items
               </Button>
             </div>
+          )}
+        </div>
+      )}
+
+      {(canEdit || customerNotes) && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invoice notes</Label>
+            <span className="text-[11px] text-muted-foreground/60">Included on the invoice</span>
+          </div>
+          {canEdit ? (
+            <Textarea
+              value={customerNotes}
+              onChange={(e) => setCustomerNotes(e.target.value)}
+              placeholder="Add notes for the customer — e.g. repair summary, warranty info, payment terms"
+              rows={3}
+              className="resize-y"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap rounded-lg border border-border bg-secondary/20 px-3 py-2">{customerNotes}</p>
           )}
         </div>
       )}

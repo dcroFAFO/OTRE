@@ -299,6 +299,7 @@ function invoicePayload(job, invoice, invoiceDraft, lineItems) {
     status: invoice?.status || "outstanding",
     invoiceVisibility: invoice?.invoiceVisibility || "internal",
     internalCostingNotes: invoiceDraft?.internalCostingNotes || invoice?.internalCostingNotes || "",
+    customer_notes: invoiceDraft?.customerNotes ?? invoice?.customer_notes ?? "",
     line_items: lineItems.map((item) => ({
       description: item.description,
       qty: item.qty,

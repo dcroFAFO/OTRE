@@ -256,6 +256,7 @@ Deno.serve(async (req) => {
           line_items: lineItems,
           amount,
           internalCostingNotes: params.internalCostingNotes || "",
+          customer_notes: params.customerNotes || "",
         });
         await logAudit({ eventType: "invoice_line_items_updated", summary: `Updated internal invoice line items (${result.currency || CURRENCY} ${amount.toFixed(2)})`, visibility: "internal" });
         break;

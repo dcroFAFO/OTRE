@@ -20,8 +20,8 @@ export async function addPartsToInvoice(job, usageIds) {
   return invoke({ action: "add_parts_to_invoice", jobId: job.id, usageIds });
 }
 
-export async function updateInvoiceLineItems(job, invoice, lineItems, internalCostingNotes = "") {
-  return invoke({ action: "update_line_items", jobId: job.id, invoiceId: invoice.id, lineItems, internalCostingNotes });
+export async function updateInvoiceLineItems(job, invoice, lineItems, internalCostingNotes = "", customerNotes = "") {
+  return invoke({ action: "update_line_items", jobId: job.id, invoiceId: invoice.id, lineItems, internalCostingNotes, customerNotes });
 }
 
 export async function setInvoiceVisibility(job, invoice, invoiceVisibility) {

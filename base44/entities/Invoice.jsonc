@@ -57,6 +57,10 @@
       "type": "string",
       "description": "Internal staff-only costing notes. Never shown to customers."
     },
+    "customer_notes": {
+      "type": "string",
+      "description": "Customer-facing notes included on the invoice PDF. Staff-editable."
+    },
     "line_items": {
       "type": "array",
       "description": "Invoice line items copied from the approved quote or generated from job parts/labour.",
