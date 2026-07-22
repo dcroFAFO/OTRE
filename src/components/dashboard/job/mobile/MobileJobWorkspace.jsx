@@ -71,7 +71,7 @@ export default function MobileJobWorkspace({
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
         )}
-        {tab === "invoice" && <InvoicePanel job={job} actor={actor} canEdit={false} onChange={bump} />}
+        {tab === "invoice" && <InvoicePanel job={job} actor={actor} canEdit={canManage && (can(role, "job.invoice.manage") || role === "admin")} onChange={bump} />}
         {tab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
       </div>
 

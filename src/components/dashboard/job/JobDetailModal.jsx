@@ -193,7 +193,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="invoice" className="mt-0">
                     {safeTab === "invoice" && (
-                      <InvoicePanel job={job} actor={actor} canEdit={false} onChange={bump} />
+                      <InvoicePanel job={job} actor={actor} canEdit={canManage && (can(role, "job.invoice.manage") || role === "admin")} onChange={bump} />
                     )}
                   </TabsContent>
                   <TabsContent value="timeline" className="mt-0">
