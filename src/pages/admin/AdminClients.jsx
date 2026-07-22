@@ -8,7 +8,10 @@ import ClientFilters, { EMPTY_CLIENT_FILTERS } from "@/components/admin/clients/
 import ClientTable from "@/components/admin/clients/ClientTable";
 import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
 import { listClients } from "@/services/clientService";
+import { base44 } from "@/api/base44Client";
+import ClientBulkActionsBar from "@/components/admin/clients/ClientBulkActionsBar";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Users, AlertTriangle } from "lucide-react";
 import RequireCapability from "@/components/auth/RequireCapability";
 import { hasAtLeastRole } from "@/config/roles";
@@ -18,6 +21,7 @@ export default function AdminClients() {
   const { user, isLoading } = useCurrentUser();
   const [filters, setFilters] = useState(EMPTY_CLIENT_FILTERS);
   const [selected, setSelected] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   const { data: clients, isLoading: loadingClients, error, refetch } = useQuery({
     queryKey: ["adminCustomers"],
@@ -42,6 +46,80 @@ export default function AdminClients() {
     };
     return [...list].sort(sorters[filters.sort] || sorters.newest);
   }, [clients, filters]);
+
+  const canBulkEdit = hasAtLeastRole(user?.role, "employee");
+  const canDelete = user?.role === "admin";
+
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAll = () => setSelectedIds((prev) => {
+    const allSelected = filtered.length > 0 && filtered.every((c) => prev.has(c.id));
+    if (allSelected) return new Set();
+    return new Set(filtered.map((c) => c.id));
+  });
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const bulkStatusChange = async (status) => {
+    const ids = [...selectedIds];
+    try {
+      await base44.entities.Customer.bulkUpdate(ids.map((id) => ({ id, status })));
+      toast.success(`Updated status for ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
+      clearSelection();
+      refetch();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to update status.");
+    }
+  };
+
+  const bulkAddTag = async (tag) => {
+    const ids = [...selectedIds];
+    try {
+      const updates = ids.map((id) => {
+        const c = clients.find((c) => c.id === id);
+        const currentTags = c?.tags || [];
+        return { id, tags: [...new Set([...currentTags, tag])] };
+      });
+      await base44.entities.Customer.bulkUpdate(updates);
+      toast.success(`Added tag to ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
+      clearSelection();
+      refetch();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to add tag.");
+    }
+  };
+
+  const bulkRemoveTag = async (tag) => {
+    const ids = [...selectedIds];
+    try {
+      const updates = ids.map((id) => {
+        const c = clients.find((c) => c.id === id);
+        const currentTags = c?.tags || [];
+        return { id, tags: currentTags.filter((t) => t !== tag) };
+      });
+      await base44.entities.Customer.bulkUpdate(updates);
+      toast.success(`Removed tag from ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
+      clearSelection();
+      refetch();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to remove tag.");
+    }
+  };
+
+  const bulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (!confirm(`Delete ${ids.length} customer${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    try {
+      await base44.entities.Customer.deleteMany({ id: { $in: ids } });
+      toast.success(`Deleted ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
+      clearSelection();
+      refetch();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Failed to delete customers.");
+    }
+  };
 
   const seo = <SEO title="Customers | OTR Scooters" description="Private staff area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
 
@@ -83,7 +161,26 @@ export default function AdminClients() {
             {clients.length > 0 && <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setFilters(EMPTY_CLIENT_FILTERS)}>Clear filters</Button>}
           </div>
         ) : (
-          <ClientTable clients={filtered} onView={setSelected} />
+          <>
+            {canBulkEdit && selectedIds.size > 0 && (
+              <ClientBulkActionsBar
+                selectedCount={selectedIds.size}
+                onStatusChange={bulkStatusChange}
+                onAddTag={bulkAddTag}
+                onRemoveTag={bulkRemoveTag}
+                onDelete={bulkDelete}
+                onClear={clearSelection}
+                canDelete={canDelete}
+              />
+            )}
+            <ClientTable
+              clients={filtered}
+              onView={setSelected}
+              selected={canBulkEdit ? selectedIds : null}
+              onToggleSelect={canBulkEdit ? toggleSelect : null}
+              onToggleSelectAll={canBulkEdit ? toggleSelectAll : null}
+            />
+          </>
         )}
 
         <ClientDetailDrawer

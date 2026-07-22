@@ -1,16 +1,29 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye } from "lucide-react";
 import { ClientStatusBadge, ClientTagBadge } from "./ClientStatusBadge";
 import { format } from "date-fns";
 
-export default function ClientTable({ clients, onView }) {
+export default function ClientTable({ clients, onView, selected, onToggleSelect, onToggleSelectAll }) {
+  const selectable = !!onToggleSelect;
+  const allSelected = selectable && clients.length > 0 && clients.every((c) => selected.has(c.id));
+  const someSelected = selectable && clients.some((c) => selected.has(c.id));
+
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/40 text-left text-xs text-muted-foreground">
+              {selectable && (
+                <th className="px-4 py-3 w-10">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={() => onToggleSelectAll()}
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Contact</th>
               <th className="px-4 py-3 font-semibold">Status</th>
@@ -23,7 +36,15 @@ export default function ClientTable({ clients, onView }) {
           </thead>
           <tbody className="divide-y divide-border">
             {clients.map((c) => (
-              <tr key={c.id} className="hover:bg-secondary/30 transition-colors">
+              <tr key={c.id} className={`hover:bg-secondary/30 transition-colors ${selected?.has(c.id) ? "bg-primary/5" : ""}`}>
+                {selectable && (
+                  <td className="px-4 py-3">
+                    <Checkbox
+                      checked={selected?.has(c.id) || false}
+                      onCheckedChange={() => onToggleSelect(c.id)}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3 max-w-[200px]">
                   <button onClick={() => onView(c)} className="font-medium text-left hover:underline truncate block">{c.full_name}</button>
                 </td>
