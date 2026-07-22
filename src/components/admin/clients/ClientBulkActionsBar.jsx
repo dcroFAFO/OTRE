@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -19,6 +29,7 @@ export default function ClientBulkActionsBar({
   canDelete,
 }) {
   const [busy, setBusy] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const run = async (key, fn) => {
     setBusy(key);
@@ -30,6 +41,7 @@ export default function ClientBulkActionsBar({
   };
 
   return (
+    <>
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-3">
       <span className="text-sm font-semibold">{selectedCount} selected</span>
       <div className="h-4 w-px bg-border" />
@@ -85,7 +97,7 @@ export default function ClientBulkActionsBar({
           size="sm"
           className="gap-1.5 ml-auto"
           disabled={!!busy}
-          onClick={() => run("delete", onDelete)}
+          onClick={() => setConfirmOpen(true)}
         >
           {busy === "delete" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           Delete
@@ -95,5 +107,26 @@ export default function ClientBulkActionsBar({
         <X className="h-3.5 w-3.5" /> Clear
       </Button>
     </div>
+
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {selectedCount} customer{selectedCount > 1 ? "s" : ""}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete the selected customer{selectedCount > 1 ? "s" : ""}. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => run("delete", onDelete)}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

@@ -110,7 +110,6 @@ export default function AdminClients() {
 
   const bulkDelete = async () => {
     const ids = [...selectedIds];
-    if (!confirm(`Delete ${ids.length} customer${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
     try {
       await base44.entities.Customer.deleteMany({ id: { $in: ids } });
       toast.success(`Deleted ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
