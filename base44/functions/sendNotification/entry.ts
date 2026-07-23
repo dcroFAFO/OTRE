@@ -110,6 +110,30 @@ function portalUrl(origin) { return `${origin}/portal`; }
 function feedbackUrl(origin, jobId) { return `${origin}/feedback${jobId ? `?job_id=${jobId}` : ''}`; }
 function dashboardUrl(origin) { return `${origin}/dashboard/jobs`; }
 
+function isGuestBooking(job) {
+  return !!job && !job.customer_user_id;
+}
+
+function registerUrl(origin, email) {
+  const params = new URLSearchParams();
+  if (email) params.set('email', email);
+  params.set('customerFlow', '1');
+  return `${origin}/register?${params.toString()}`;
+}
+
+function guestPerksBlock(origin, email) {
+  return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-top:24px;">
+<p style="margin:0 0 8px;font-weight:600;color:#166534;">Create a free account to unlock:</p>
+<ul style="margin:0;padding-left:20px;color:#15803d;font-size:14px;line-height:1.8;">
+<li>Track your repair status online in real time</li>
+<li>View and pay invoices securely online</li>
+<li>Book future services faster with saved details</li>
+<li>Access your full service history</li>
+</ul>
+<p style="margin:12px 0 0;"><a href="${registerUrl(origin, email)}" style="background:#16a34a;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-size:14px;">Create Your Free Account</a></p>
+</div>`;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -195,13 +219,15 @@ Deno.serve(async (req) => {
       const customerEmail = job.customer_email || '';
       const customerPhone = job.customer_phone_e164 || '';
       const ref = job.reference || job.id;
+      const isGuest = isGuestBooking(job);
 
       // Customer email
       if (customerEmail) {
         const key = `notif:booking_request:${job.id}:email`;
         if (!await alreadySent(base44, key)) {
           const subject = `Booking request received — ${ref}`;
-          const body = `<p>Hi ${customerName},</p><p>We've received your booking request for your ${job.asset_label || 'scooter'}. Our team will review it and contact you shortly to confirm your appointment.</p><p><strong>Reference:</strong> ${ref}</p><p><strong>Issue:</strong> ${job.issue_description || 'Not specified'}</p><p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const trackButton = isGuest ? '' : `<p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const body = `<p>Hi ${customerName},</p><p>We've received your booking request for your ${job.asset_label || 'scooter'}. Our team will review it and contact you shortly to confirm your appointment.</p><p><strong>Reference:</strong> ${ref}</p><p><strong>Issue:</strong> ${job.issue_description || 'Not specified'}</p>${trackButton}`;
           const sent = await sendEmail(customerEmail, subject, emailTemplate(body));
           if (sent) { await markSent(base44, key, `Booking confirmation email sent to ${customerEmail}`); results.push({ channel: 'email', to: customerEmail, sent: true }); }
         }
@@ -211,7 +237,9 @@ Deno.serve(async (req) => {
       if (customerPhone) {
         const key = `notif:booking_request:${job.id}:sms`;
         if (!await alreadySent(base44, key)) {
-          const msg = `Hi ${customerName}, we received your booking request (ref ${ref}). Our team will confirm your appointment shortly. Track: ${trackUrl(origin, job.id)}`;
+          const msg = isGuest
+            ? `Hi ${customerName}, we received your booking request (ref ${ref}). Our team will confirm your appointment shortly.`
+            : `Hi ${customerName}, we received your booking request (ref ${ref}). Our team will confirm your appointment shortly. Track: ${trackUrl(origin, job.id)}`;
           const sent = await sendSMS(customerPhone, msg);
           if (sent) { await markSent(base44, key, `Booking confirmation SMS sent to ${customerPhone}`); results.push({ channel: 'sms', to: customerPhone, sent: true }); }
         }
@@ -251,12 +279,16 @@ Deno.serve(async (req) => {
       const ref = job.reference || job.id;
       const dateStr = fmtDate(job.scheduled_date);
       const timeWindow = job.preferred_time_window || '';
+      const isGuest = isGuestBooking(job);
 
       if (customerEmail) {
         const key = `notif:job_scheduled:${job.id}:email`;
         if (!await alreadySent(base44, key)) {
           const subject = `Booking confirmed — ${ref}`;
-          const body = `<p>Hi ${customerName},</p><p>Your repair booking has been confirmed. Please drop off your ${job.asset_label || 'scooter'} on:</p><p style="background:#e0f2fe;padding:16px;border-radius:8px;text-align:center;font-size:18px;font-weight:600;">${dateStr}${timeWindow ? `<br><span style="font-size:14px;font-weight:400;">${timeWindow}</span>` : ''}</p><p>We look forward to seeing you!</p><p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const footer = isGuest
+            ? guestPerksBlock(origin, customerEmail)
+            : `<p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const body = `<p>Hi ${customerName},</p><p>Your repair booking has been confirmed. Please drop off your ${job.asset_label || 'scooter'} on:</p><p style="background:#e0f2fe;padding:16px;border-radius:8px;text-align:center;font-size:18px;font-weight:600;">${dateStr}${timeWindow ? `<br><span style="font-size:14px;font-weight:400;">${timeWindow}</span>` : ''}</p><p>We look forward to seeing you!</p>${footer}`;
           const sent = await sendEmail(customerEmail, subject, emailTemplate(body));
           if (sent) { await markSent(base44, key, `Scheduling confirmation email sent to ${customerEmail}`); results.push({ channel: 'email', to: customerEmail, sent: true }); }
         }
@@ -265,7 +297,9 @@ Deno.serve(async (req) => {
       if (customerPhone) {
         const key = `notif:job_scheduled:${job.id}:sms`;
         if (!await alreadySent(base44, key)) {
-          const msg = `Hi ${customerName}, your repair booking is confirmed. Drop off: ${dateStr}${timeWindow ? ', ' + timeWindow : ''}. Ref: ${ref}. Track: ${trackUrl(origin, job.id)}`;
+          const msg = isGuest
+            ? `Hi ${customerName}, your repair booking is confirmed. Drop off: ${dateStr}${timeWindow ? ', ' + timeWindow : ''}. Ref: ${ref}.`
+            : `Hi ${customerName}, your repair booking is confirmed. Drop off: ${dateStr}${timeWindow ? ', ' + timeWindow : ''}. Ref: ${ref}. Track: ${trackUrl(origin, job.id)}`;
           const sent = await sendSMS(customerPhone, msg);
           if (sent) { await markSent(base44, key, `Scheduling confirmation SMS sent to ${customerPhone}`); results.push({ channel: 'sms', to: customerPhone, sent: true }); }
         }
@@ -279,12 +313,14 @@ Deno.serve(async (req) => {
       const customerName = job.customer_name || 'there';
       const customerEmail = job.customer_email || '';
       const ref = job.reference || job.id;
+      const isGuest = isGuestBooking(job);
 
       if (customerEmail) {
         const key = `notif:repair_started:${job.id}:email`;
         if (!await alreadySent(base44, key)) {
           const subject = `Repair started — ${ref}`;
-          const body = `<p>Hi ${customerName},</p><p>Good news! We've started working on your ${job.asset_label || 'scooter'}. Our technicians are diagnosing and repairing the issue. We'll let you know as soon as it's ready for pickup.</p><p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const trackButton = isGuest ? '' : `<p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const body = `<p>Hi ${customerName},</p><p>Good news! We've started working on your ${job.asset_label || 'scooter'}. Our technicians are diagnosing and repairing the issue. We'll let you know as soon as it's ready for pickup.</p>${trackButton}`;
           const sent = await sendEmail(customerEmail, subject, emailTemplate(body));
           if (sent) { await markSent(base44, key, `Repair started email sent to ${customerEmail}`); results.push({ channel: 'email', to: customerEmail, sent: true }); }
         }
@@ -299,12 +335,14 @@ Deno.serve(async (req) => {
       const customerEmail = job.customer_email || '';
       const customerPhone = job.customer_phone_e164 || '';
       const ref = job.reference || job.id;
+      const isGuest = isGuestBooking(job);
 
       if (customerEmail) {
         const key = `notif:repair_completed:${job.id}:email`;
         if (!await alreadySent(base44, key)) {
           const subject = `Your scooter is ready for pickup — ${ref}`;
-          const body = `<p>Hi ${customerName},</p><p>Great news! Your ${job.asset_label || 'scooter'} repair is complete and ready for pickup. Please come by during our opening hours to collect it.</p><p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const trackButton = isGuest ? '' : `<p style="margin-top:24px;"><a href="${trackUrl(origin, job.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Track Your Repair</a></p>`;
+          const body = `<p>Hi ${customerName},</p><p>Great news! Your ${job.asset_label || 'scooter'} repair is complete and ready for pickup. Please come by during our opening hours to collect it.</p>${trackButton}`;
           const sent = await sendEmail(customerEmail, subject, emailTemplate(body));
           if (sent) { await markSent(base44, key, `Ready for pickup email sent to ${customerEmail}`); results.push({ channel: 'email', to: customerEmail, sent: true }); }
         }
@@ -313,7 +351,9 @@ Deno.serve(async (req) => {
       if (customerPhone) {
         const key = `notif:repair_completed:${job.id}:sms`;
         if (!await alreadySent(base44, key)) {
-          const msg = `Hi ${customerName}, your scooter is ready for pickup! Ref: ${ref}. Track: ${trackUrl(origin, job.id)}`;
+          const msg = isGuest
+            ? `Hi ${customerName}, your scooter is ready for pickup! Ref: ${ref}.`
+            : `Hi ${customerName}, your scooter is ready for pickup! Ref: ${ref}. Track: ${trackUrl(origin, job.id)}`;
           const sent = await sendSMS(customerPhone, msg);
           if (sent) { await markSent(base44, key, `Ready for pickup SMS sent to ${customerPhone}`); results.push({ channel: 'sms', to: customerPhone, sent: true }); }
         }
