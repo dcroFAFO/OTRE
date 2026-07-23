@@ -57,6 +57,10 @@
     "failure_reason": {
       "type": "string",
       "maxLength": 1000
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
     }
   },
   "required": [
