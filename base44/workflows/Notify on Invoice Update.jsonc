@@ -1,0 +1,34 @@
+{
+  "name": "Notify on Invoice Update",
+  "description": "Sends notifications when invoice is issued to customer, paid, or payment fails.",
+  "trigger": {
+    "condition": "${ ((.trigger.changed_fields | index(\"status\") != null) or (.trigger.changed_fields | index(\"invoiceVisibility\") != null)) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Invoice"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notify_on_invoice_update",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendNotification",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Notify on Job Status Change",
+  "description": "Sends notifications when job status changes to booked, repair_in_progress, or ready_for_pickup.",
+  "trigger": {
+    "condition": "${ (.trigger.changed_fields | index(\"status\") != null) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Job"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notify_on_job_status_change",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendNotification",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

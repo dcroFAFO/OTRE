@@ -1,0 +1,34 @@
+{
+  "name": "Link Job Note To Customer",
+  "description": "Automatically copies customer_id from the related job onto new job notes.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "JobNote"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "link_job_note_to_customer",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "linkJobToCustomer",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

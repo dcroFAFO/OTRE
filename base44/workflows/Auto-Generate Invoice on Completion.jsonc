@@ -1,0 +1,34 @@
+{
+  "name": "Auto-Generate Invoice on Completion",
+  "description": "Automatically creates a draft invoice when a job is marked Completed, pulling labour from the approved quote and parts from the inventory usage tracker.",
+  "trigger": {
+    "condition": "${ ((.trigger.changed_fields | index(\"status\") != null) and (.trigger.data.status == \"completed\") and (.trigger.old_data.status != \"completed\")) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Job"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_generate_invoice_on_completion",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "autoGenerateInvoice",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

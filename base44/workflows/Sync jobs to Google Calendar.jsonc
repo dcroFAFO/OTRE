@@ -1,0 +1,35 @@
+{
+  "name": "Sync jobs to Google Calendar",
+  "description": "Creates or updates Google Calendar events for scheduled repair jobs.",
+  "trigger": {
+    "condition": "${ (.trigger.data.scheduled_date != null and .trigger.data.scheduled_date != \"\" and .trigger.data.scheduled_date != [] and .trigger.data.scheduled_date != {}) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update"
+      ],
+      "entity_name": "Job"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "sync_jobs_to_google_calendar",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncJobToGoogleCalendar",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

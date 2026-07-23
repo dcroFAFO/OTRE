@@ -1,0 +1,34 @@
+{
+  "name": "Link Job To Customer",
+  "description": "Automatically links new jobs to the matching customer user by customer_email.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Job"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "link_job_to_customer",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "linkJobToCustomer",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

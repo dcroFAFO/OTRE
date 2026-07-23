@@ -1,0 +1,34 @@
+{
+  "name": "Assign Job ID To New Job",
+  "description": "Automatically assigns a unique job_id to every new job record.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Job"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "assign_job_id_to_new_job",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "assignJobIdToNewJob",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

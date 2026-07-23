@@ -1,0 +1,34 @@
+{
+  "name": "Link Customer Record To User",
+  "description": "Automatically links customer records to users and jobs by matching email.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Customer"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "link_customer_record_to_user",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "linkJobToCustomer",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Link Inventory Usage To Customer",
+  "description": "Automatically copies customer_id from the related job onto new inventory usage records.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "InventoryUsage"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "link_inventory_usage_to_customer",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "linkJobToCustomer",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

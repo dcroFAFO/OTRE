@@ -1,0 +1,34 @@
+{
+  "name": "Notify on Job Created",
+  "description": "Sends booking request confirmation to customer and notifies staff when a new job is created.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Job"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notify_on_job_created",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendNotification",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

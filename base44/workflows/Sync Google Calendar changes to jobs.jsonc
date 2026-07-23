@@ -1,0 +1,35 @@
+{
+  "name": "Sync Google Calendar changes to jobs",
+  "description": "Updates scheduled repair jobs when their linked Google Calendar events are moved or removed.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "connector",
+      "events": [
+        "events"
+      ],
+      "integration_type": "googlecalendar",
+      "resource_id": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "sync_google_calendar_changes_to_jobs",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncGoogleCalendarToJobs",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Link Audit Event To Customer",
+  "description": "Automatically copies customer_id from the related job onto new audit events.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "AuditEvent"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "link_audit_event_to_customer",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "linkJobToCustomer",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  }
+}
