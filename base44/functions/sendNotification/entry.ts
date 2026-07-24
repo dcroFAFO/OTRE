@@ -48,7 +48,7 @@ function emailTemplate(content) {
 </body></html>`;
 }
 
-const AUDIT_EMAIL = "info@ontherunelectrics.com.au";
+const AUDIT_EMAIL = "logging@ontherunelectrics.com.au";
 
 async function sendEmail(to, subject, html, { audit = true } = {}) {
   if (!RESEND_API_KEY) { console.warn('[sendNotification] RESEND_API_KEY not set'); return false; }
