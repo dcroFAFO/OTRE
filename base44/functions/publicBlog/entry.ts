@@ -155,8 +155,10 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.BlogTag.filter({ is_active: true }, "name", 200)
     ]);
     const localPosts = allPosts.filter((post) => post.title && post.slug && post.published_at).map(postPublic);
-    const postsBySlug = new Map(localPosts.map((post) => [post.slug, post]));
-    contentfulPosts.forEach((post) => postsBySlug.set(post.slug, post));
+    // Local posts take precedence over Contentful posts with the same slug,
+    // so regenerated local versions override the original Contentful articles.
+    const postsBySlug = new Map(contentfulPosts.map((post) => [post.slug, post]));
+    localPosts.forEach((post) => postsBySlug.set(post.slug, post));
     const posts = [...postsBySlug.values()].sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
     if (action === "post") {
       const post = posts.find((item) => item.slug === payload.slug) || null;
