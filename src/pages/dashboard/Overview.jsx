@@ -31,9 +31,9 @@ export default function Overview() {
   }, [q]);
 
   const m = useMemo(() => ({
-    active: jobs.filter((j) => ["active", "booked", "repair_in_progress"].includes(j.status)).length,
-    awaitingCustomer: jobs.filter((j) => j.status === "waiting_customer").length,
-    waitingParts: jobs.filter((j) => ["waiting_parts", "waiting_supplier"].includes(j.status)).length,
+    active: jobs.filter((j) => ["booked", "repair_in_progress"].includes(j.status)).length,
+    awaitingCustomer: jobs.filter((j) => j.status === "on_hold").length,
+    waitingParts: jobs.filter((j) => j.status === "waiting_on_parts").length,
     readyPickup: jobs.filter((j) => j.ready_for_pickup || j.status === "ready_for_pickup").length,
     outstanding: jobs.filter((j) => j.payment_status === "outstanding").length,
     completedWeek: jobs.filter((j) => j.status === "completed" && j.updated_date && isThisWeek(new Date(j.updated_date))).length,
