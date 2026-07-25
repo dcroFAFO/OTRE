@@ -18,13 +18,6 @@ import MyInvoicesCard from "@/components/portal/account/MyInvoicesCard";
 import MyReferralsCard from "@/components/portal/account/MyReferralsCard";
 import SupportCard from "@/components/portal/account/SupportCard";
 
-function RedirectToLogin() {
-  useEffect(() => {
-    base44.auth.redirectToLogin(window.location.href);
-  }, []);
-  return null;
-}
-
 // Central customer dashboard. Reuses existing customerSettings (profile +
 // scooters), Job/Invoice entities, and the same components used on the
 // portal jobs list and settings page — no duplicate customer/job/invoice
@@ -63,7 +56,8 @@ export default function PortalAccount() {
   if (isLoading) return <>{seo}<div className="fixed inset-0 grid place-items-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div></>;
 
   if (!user) {
-    return <>{seo}<RedirectToLogin /></>;
+    base44.auth.redirectToLogin(window.location.href);
+    return seo;
   }
 
   if (isStaff(user.role)) {

@@ -21,26 +21,21 @@ export default function FeedbackRating() {
     setIsSubmitting(true);
     setError("");
 
-    try {
-      const response = await base44.functions.invoke("submitCustomerFeedback", {
-        job_id: jobId,
-        rating,
-        message,
-        page_context: window.location.href,
-        device_context: `${window.innerWidth}x${window.innerHeight}`,
-        app_context: navigator.userAgent,
-      });
+    const response = await base44.functions.invoke("submitCustomerFeedback", {
+      job_id: jobId,
+      rating,
+      message,
+      page_context: window.location.href,
+      device_context: `${window.innerWidth}x${window.innerHeight}`,
+      app_context: navigator.userAgent,
+    });
 
-      if (response.data?.ok) {
-        setSubmitted(true);
-      } else {
-        setError(response.data?.error || "Something went wrong. Please try again.");
-      }
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    if (response.data?.ok) {
+      setSubmitted(true);
+    } else {
+      setError(response.data?.error || "Something went wrong. Please try again.");
     }
+    setIsSubmitting(false);
   };
 
   return (

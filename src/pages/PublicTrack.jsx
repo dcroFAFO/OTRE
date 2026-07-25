@@ -49,29 +49,19 @@ export default function PublicTrack() {
   const addNote = async () => {
     if (!note.trim()) return;
     setBusy("note");
-    try {
-      setData(await invoke({ action: "add_note", note }));
-      setNote("");
-    } catch (err) {
-      setError(err?.response?.data?.error || "Couldn't send your message. Please try again.");
-    } finally {
-      setBusy(null);
-    }
+    setData(await invoke({ action: "add_note", note }));
+    setNote("");
+    setBusy(null);
   };
 
   const uploadFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setBusy("file");
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setData(await invoke({ action: "upload_file", file_url, file_name: file.name, kind: file.type.startsWith("image") ? "photo" : "document" }));
-      e.target.value = "";
-    } catch (err) {
-      setError(err?.response?.data?.error || "Couldn't upload your file. Please try again.");
-    } finally {
-      setBusy(null);
-    }
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setData(await invoke({ action: "upload_file", file_url, file_name: file.name, kind: file.type.startsWith("image") ? "photo" : "document" }));
+    e.target.value = "";
+    setBusy(null);
   };
 
   const payInvoice = async () => {
