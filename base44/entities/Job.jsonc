@@ -424,7 +424,25 @@
     "customer_name"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
+    },
     "read": {
       "$or": [
         {
@@ -435,18 +453,17 @@
         },
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "data.is_customer": false
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
           }
         }
       ]
@@ -454,25 +471,18 @@
     "update": {
       "$or": [
         {
-          "data.customer_user_id": "{{user.id}}"
-        },
-        {
-          "data.customer_account_id": "{{user.id}}"
-        },
-        {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "data.is_customer": false
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
           }
         }
       ]
