@@ -34,7 +34,25 @@
     "body"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
+    },
     "read": {
       "$or": [
         {
@@ -44,41 +62,35 @@
         },
         {
           "user_condition": {
-            "data.is_customer": "false"
+            "role": "employee"
           }
         },
         {
-          "data.job_id": "{{user.data.job_id}}"
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.visibility": "customer"
+            },
+            {
+              "data.customer_id": "{{user.data.customer_id}}"
+            }
+          ]
         }
       ]
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.is_customer": "false"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.is_customer": "false"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
