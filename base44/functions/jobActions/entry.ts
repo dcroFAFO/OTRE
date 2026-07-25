@@ -149,7 +149,19 @@ Deno.serve(async (req) => {
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || (user.is_customer === false || user.data?.is_customer === false);
+    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role);
+    const ownsJob = job.customer_user_id === user.id
+      || job.customer_account_id === user.id
+      || (!!user.customer_id && job.customer_id === user.customer_id)
+      || (!!user.data?.customer_id && job.customer_id === user.data.customer_id);
+
+    const STAFF_ONLY_ACTIONS = [
+      "change_status", "reschedule", "mark_ready", "cancel", "reopen", "toggle_checklist",
+      "save_private_notes", "add_inventory_parts", "remove_inventory_part", "remove_inventory_parts",
+    ];
+    if (STAFF_ONLY_ACTIONS.includes(action) && !isStaff) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
       base44.asServiceRole.entities.AuditEvent.create({
@@ -266,8 +278,10 @@ Deno.serve(async (req) => {
         break;
       }
       case "add_note": {
-        const { body, visibility } = params;
-        result = await base44.entities.JobNote.create({
+        if (!isStaff && !ownsJob) return Response.json({ error: "Forbidden" }, { status: 403 });
+        const { body } = params;
+        const visibility = isStaff ? params.visibility : "customer";
+        result = await base44.asServiceRole.entities.JobNote.create({
           job_id: job.id,
           body,
           visibility,
@@ -359,7 +373,7 @@ Deno.serve(async (req) => {
         break;
       }
       case "list_activity": {
-        if (!isStaff && job.customer_id !== user.customer_id && job.customer_id !== user.data?.customer_id) {
+        if (!isStaff && !ownsJob) {
           return Response.json({ error: "Forbidden" }, { status: 403 });
         }
 

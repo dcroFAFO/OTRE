@@ -257,8 +257,8 @@ Deno.serve(async (req) => {
             product_data: { name: invoice.number ? `Invoice ${invoice.number}` : 'Invoice payment', description: job.reference ? `Job ${job.reference}` : 'Repair invoice payment' },
           },
         }],
-        success_url: `${returnUrl}&payment=success`,
-        cancel_url: `${returnUrl}&payment=cancelled`,
+        success_url: `${returnUrl}?payment=success`,
+        cancel_url: `${returnUrl}?payment=cancelled`,
         metadata,
         payment_intent_data: { metadata },
       });
