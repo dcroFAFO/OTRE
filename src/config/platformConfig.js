@@ -33,9 +33,9 @@ export const DEFAULT_APP_SETTINGS = {
   landing: {
     navLinks: [
       { label: "Services", href: "#services" },
-      { label: "Common issues", href: "#common-issues" },
-      { label: "How it works", href: "#journey" },
+      { label: "About Us", href: "/about" },
       { label: "News and Events", href: "/blog" },
+      { label: "Contact", href: "/contact" },
       { label: "Book a repair", href: "/book" },
     ],
     heroEyebrow: "Repairs · Servicing · Diagnostics",
