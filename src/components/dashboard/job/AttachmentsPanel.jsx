@@ -17,7 +17,7 @@ export default function AttachmentsPanel({ job, actor, canUpload }) {
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     await base44.entities.Attachment.create({
-      job_id: job.id, file_url, file_name: file.name,
+      job_id: job.id, customer_id: job.customer_id || "", file_url, file_name: file.name,
       kind: file.type.startsWith("image") ? "photo" : "document",
       visibility,
       uploaded_by_name: actor?.full_name || actor?.short_name,
