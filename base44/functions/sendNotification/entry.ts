@@ -103,7 +103,9 @@ async function markSent(base44, key, summary) {
 }
 
 function trackUrl(origin, jobId) {
-  return jobId ? `${origin}/track/${jobId}` : `${origin}/portal`;
+  // Registered customers manage jobs in the portal. Raw job ids are not valid
+  // tracking tokens, so never link /track/<job.id> — it would show an error.
+  return `${origin}/portal`;
 }
 
 function portalUrl(origin) { return `${origin}/portal`; }
@@ -184,6 +186,8 @@ Deno.serve(async (req) => {
     if (eventType === 'user_welcome') {
       const user = userId ? await db.User.get(userId).catch(() => null) : null;
       if (!user || !user.email) return Response.json({ skipped: 'user not found or no email' });
+      // Guard against spoofed direct calls: welcome only fires for freshly created accounts.
+      if (Date.now() - new Date(user.created_date || 0).getTime() > 60 * 60 * 1000) return Response.json({ skipped: 'user not recently created' });
       const isStaff = STAFF_ROLES.has(String(user.role || '').toLowerCase());
 
       const key = `notif:user_welcome:${user.id}:email`;
@@ -215,6 +219,8 @@ Deno.serve(async (req) => {
     if (eventType === 'booking_request') {
       const job = jobId ? await db.Job.get(jobId).catch(() => null) : null;
       if (!job) return Response.json({ skipped: 'job not found' });
+      // Guard against spoofed direct calls: only fires for freshly created bookings.
+      if (Date.now() - new Date(job.created_date || job.createdAt || 0).getTime() > 60 * 60 * 1000) return Response.json({ skipped: 'job not recently created' });
       const customerName = job.customer_name || 'there';
       const customerEmail = job.customer_email || '';
       const customerPhone = job.customer_phone_e164 || '';
@@ -273,6 +279,7 @@ Deno.serve(async (req) => {
     if (eventType === 'job_scheduled') {
       const job = jobId ? await db.Job.get(jobId).catch(() => null) : null;
       if (!job) return Response.json({ skipped: 'job not found' });
+      if (job.status !== 'booked') return Response.json({ skipped: 'job is not in booked status' });
       const customerName = job.customer_name || 'there';
       const customerEmail = job.customer_email || '';
       const customerPhone = job.customer_phone_e164 || '';
@@ -310,6 +317,7 @@ Deno.serve(async (req) => {
     if (eventType === 'repair_started') {
       const job = jobId ? await db.Job.get(jobId).catch(() => null) : null;
       if (!job) return Response.json({ skipped: 'job not found' });
+      if (job.status !== 'repair_in_progress') return Response.json({ skipped: 'job is not in repair' });
       const customerName = job.customer_name || 'there';
       const customerEmail = job.customer_email || '';
       const ref = job.reference || job.id;
@@ -331,6 +339,7 @@ Deno.serve(async (req) => {
     if (eventType === 'repair_completed') {
       const job = jobId ? await db.Job.get(jobId).catch(() => null) : null;
       if (!job) return Response.json({ skipped: 'job not found' });
+      if (!['ready_for_pickup', 'completed', 'paid'].includes(job.status)) return Response.json({ skipped: 'job is not ready for pickup' });
       const customerName = job.customer_name || 'there';
       const customerEmail = job.customer_email || '';
       const customerPhone = job.customer_phone_e164 || '';
@@ -364,6 +373,7 @@ Deno.serve(async (req) => {
     if (eventType === 'invoice_issued') {
       const invoice = invoiceId ? await db.Invoice.get(invoiceId).catch(() => null) : null;
       if (!invoice) return Response.json({ skipped: 'invoice not found' });
+      if (invoice.invoiceVisibility !== 'customer_visible') return Response.json({ skipped: 'invoice not customer visible' });
       const job = invoice.job_id ? await db.Job.get(invoice.job_id).catch(() => null) : null;
       const customerName = job?.customer_name || 'there';
       const customerEmail = job?.customer_email || '';
@@ -385,6 +395,7 @@ Deno.serve(async (req) => {
     if (eventType === 'invoice_paid') {
       const invoice = invoiceId ? await db.Invoice.get(invoiceId).catch(() => null) : null;
       if (!invoice) return Response.json({ skipped: 'invoice not found' });
+      if (invoice.status !== 'paid') return Response.json({ skipped: 'invoice is not paid' });
       const job = invoice.job_id ? await db.Job.get(invoice.job_id).catch(() => null) : null;
       const customerName = job?.customer_name || 'there';
       const customerEmail = job?.customer_email || '';
@@ -429,6 +440,7 @@ Deno.serve(async (req) => {
     if (eventType === 'payment_failed') {
       const invoice = invoiceId ? await db.Invoice.get(invoiceId).catch(() => null) : null;
       if (!invoice) return Response.json({ skipped: 'invoice not found' });
+      if (invoice.status !== 'failed') return Response.json({ skipped: 'invoice payment has not failed' });
       const job = invoice.job_id ? await db.Job.get(invoice.job_id).catch(() => null) : null;
       const customerName = job?.customer_name || 'there';
       const customerEmail = job?.customer_email || '';
