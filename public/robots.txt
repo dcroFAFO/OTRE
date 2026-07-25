@@ -3,4 +3,4 @@ Allow: /
 
 Content-Signal: ai-train=no, search=yes, ai-input=no
 
-Sitemap: /sitemap.xml
+Sitemap: https://ontherunelectrics.com.au/sitemap.xml
