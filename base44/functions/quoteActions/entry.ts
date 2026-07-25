@@ -37,6 +37,20 @@ Deno.serve(async (req) => {
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
+    // Staff-only for everything except a customer approving/rejecting their own pending quote.
+    const isStaff = ["admin", "employee", "technician", "staff"].includes(String(user.role || "").toLowerCase());
+    const ownsJob = job.customer_user_id === user.id
+      || job.customer_account_id === user.id
+      || (!!user.data?.customer_id && job.customer_id === user.data.customer_id);
+    if (!isStaff && action !== "set_approval") return Response.json({ error: "Forbidden" }, { status: 403 });
+    if (!isStaff && action === "set_approval") {
+      if (!ownsJob) return Response.json({ error: "Forbidden" }, { status: 403 });
+      const pendingQuote = await base44.asServiceRole.entities.Quote.get(params.quoteId).catch(() => null);
+      if (!pendingQuote || pendingQuote.job_id !== job.id || pendingQuote.approval_status !== "pending") {
+        return Response.json({ error: "This quote can no longer be updated." }, { status: 403 });
+      }
+    }
+
     const logAudit = async ({ eventType, newValue = null, summary = "", visibility = "internal" }) => {
       try {
         await base44.asServiceRole.entities.AuditEvent.create({
@@ -55,8 +69,9 @@ Deno.serve(async (req) => {
       }
     };
 
-    // Quote writes run as the signed-in user so Quote RLS can validate staff/customer access.
-    const db = base44.entities;
+    // Permission checks above are explicit; writes run as service role so a
+    // customer's legitimate quote approval isn't blocked by staff-only RLS.
+    const db = base44.asServiceRole.entities;
 
     const getJobQuote = async () => {
       const quotes = await db.Quote.filter({ job_id: job.id }, "-created_date", 1);
