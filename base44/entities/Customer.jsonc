@@ -113,18 +113,35 @@
     "full_name"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        }
+      ]
+    },
     "read": {
       "$or": [
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
           }
         },
         {
@@ -136,12 +153,12 @@
       "$or": [
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee"
-              ]
-            }
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
           }
         },
         {
