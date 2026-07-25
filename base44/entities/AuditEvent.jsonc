@@ -49,7 +49,25 @@
     "event_type"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
+    },
     "read": {
       "$or": [
         {
