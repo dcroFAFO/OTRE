@@ -2,90 +2,164 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://ontherunelectrics.com.au/</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/about</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/contact</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/service-pricing</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/book</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/book/guest</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/login</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/register</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/feedback</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/blog</loc>
-    <lastmod>2026-07-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-lifespan</loc>
-    <lastmod>2026-07-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-parts-replacement-guide</loc>
-    <lastmod>2026-07-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ontherunelectrics.com.au/blog/is-it-worth-repairing-an-electric-scooter</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/blog/most-reliable-electric-scooter-brands-australia</loc>
-    <lastmod>2026-07-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-reset-button-guide</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/blog/electric-scooter-stopped-working-causes</loc>
-    <lastmod>2026-07-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ontherunelectrics.com.au/blog/e-scooter-battery-replacement-cost-australia</loc>
-    <lastmod>2026-07-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ontherunelectrics.com.au/blog/most-expensive-electric-scooter-parts</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/blog/electric-scooter-motor-repair</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ontherunelectrics.com.au/blog/common-electric-scooter-problems</loc>
-    <lastmod>2026-07-12</lastmod>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-suspension-maintenance</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ontherunelectrics.com.au/blog/storing-electric-scooter-long-term</loc>
-    <lastmod>2026-07-12</lastmod>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-tire-maintenance</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-brake-maintenance-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-bearing-maintenance-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-handlebar-stem-wobble-fix</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-hot-weather-summer-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/e-scooter-battery-replacement-cost-australia</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-riding-posture-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-speed-modes-unlocking-performance</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-grip-tape-care-replacement</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-water-resistance-rainy-day-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-headlight-safety-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ontherunelectrics.com.au/blog/electric-scooter-folding-maintenance-guide</loc>
+    <lastmod>2026-07-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://ontherunelectrics.com.au/blog/queensland-new-escooter-laws-july-2026-brisbane</loc>
     <lastmod>2026-07-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>
