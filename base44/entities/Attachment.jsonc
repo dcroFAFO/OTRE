@@ -39,19 +39,28 @@
     "file_url"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
     "read": {
       "$or": [
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "admin"
           }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "created_by_id": "{{user.id}}"
         },
         {
           "$and": [
@@ -59,7 +68,7 @@
               "data.visibility": "customer"
             },
             {
-              "created_by_id": "{{user.id}}"
+              "data.customer_id": "{{user.data.customer_id}}"
             }
           ]
         }
@@ -68,17 +77,18 @@
     "update": {
       "$or": [
         {
-          "created_by_id": "{{user.id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "employee",
-                "technician"
-              ]
-            }
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
           }
         }
       ]
