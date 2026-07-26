@@ -8,11 +8,11 @@ const ICONS = { Activity, BatteryCharging, CircleDot, Cpu, Disc, Wrench };
 export default function MobileServicesSection() {
   const { data: { services, business } } = usePlatformConfig();
   return (
-    <section id="services" className="relative border-y border-white/15 px-4 py-14 sm:px-8 sm:py-20">
+    <section id="services" className="border-y border-border bg-card/55 px-4 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <p className="text-xs font-bold uppercase tracking-widest text-accent">Repairs & servicing</p>
-        <h2 className="mt-2 max-w-[18ch] text-3xl font-extrabold leading-tight text-white drop-shadow">Everything your scooter needs, in one workshop.</h2>
-        <p className="mt-4 max-w-2xl leading-relaxed text-white/80 drop-shadow">Practical electric scooter repairs in Brisbane, from punctures and brakes to battery diagnostics, electrical faults and routine servicing.</p>
+        <h2 className="mt-2 max-w-[18ch] text-3xl font-extrabold leading-tight">Everything your scooter needs, in one workshop.</h2>
+        <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">Practical electric scooter repairs in Brisbane, from punctures and brakes to battery diagnostics, electrical faults and routine servicing.</p>
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => {
             const Icon = ICONS[service.icon] || Wrench;
