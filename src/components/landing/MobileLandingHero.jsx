@@ -5,22 +5,13 @@ import { Button } from "@/components/ui/button";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
 
-const HERO_IMAGE = "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/1b9e3fe67_cover.jpg";
-
 export default function MobileLandingHero() {
   const { data: { business } } = usePlatformConfig();
   const benefits = ["No payment to request", "Clear repair updates", "Track your repair online"];
 
   return (
     <section className="relative overflow-hidden px-4 pb-12 pt-24 sm:px-8 sm:pb-20 sm:pt-32">
-      <img
-        src={HERO_IMAGE}
-        alt="Electric scooters parked in front of the On The Run mural in Woolloongabba"
-        className="absolute inset-0 h-full w-full object-cover object-center"
-        aria-hidden="true"
-      />
-      <div className="absolute inset-0 bg-slate-950/70" aria-hidden="true" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-slate-950/60 to-slate-950/85" aria-hidden="true" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 to-transparent" aria-hidden="true" />
       <div className="relative mx-auto max-w-5xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm">
           <Zap className="h-3.5 w-3.5" aria-hidden="true" /> Electric scooter repairs · Woolloongabba

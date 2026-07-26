@@ -8,7 +8,7 @@ const ICONS = { Activity, BatteryCharging, CircleDot, Cpu, Disc, Wrench };
 export default function MobileServicesSection() {
   const { data: { services, business } } = usePlatformConfig();
   return (
-    <section id="services" className="border-y border-border bg-card/55 px-4 py-14 sm:px-8 sm:py-20">
+    <section id="services" className="relative border-b border-border bg-gradient-to-b from-transparent via-background/92 to-background px-4 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <p className="text-xs font-bold uppercase tracking-widest text-accent">Repairs & servicing</p>
         <h2 className="mt-2 max-w-[18ch] text-3xl font-extrabold leading-tight">Everything your scooter needs, in one workshop.</h2>
