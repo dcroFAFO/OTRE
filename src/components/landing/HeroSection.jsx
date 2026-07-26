@@ -14,7 +14,7 @@ export default function HeroSection({ sectionRef }) {
 
   return (
     <section ref={sectionRef} id="top" className="relative flex min-h-[calc(100svh-3.5rem)] items-center overflow-hidden pb-14 pt-24 sm:min-h-[90vh] sm:pb-28 sm:pt-32">
-      <motion.div style={{ y: foregroundY }} className="relative mx-auto w-full max-w-7xl px-4 will-change-transform sm:px-8">
+      <motion.div style={{ y: foregroundY }} className="relative w-full will-change-transform">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -35,7 +35,7 @@ export default function HeroSection({ sectionRef }) {
             </div>
           </HeroCarousel>
 
-          <div className="mt-7 grid gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
+          <div className="mx-auto mt-7 grid max-w-7xl gap-2.5 px-4 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2 sm:px-8">
             {app.landing.heroBenefits.map((t) => (
               <span key={t} className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> {t}

@@ -11,8 +11,8 @@ export default function MobileLandingHero() {
   const benefits = ["No payment to request", "Clear repair updates", "Track your repair online"];
 
   return (
-    <section className="relative overflow-hidden px-4 pb-12 pt-24 sm:px-8 sm:pb-20 sm:pt-32">
-      <div className="relative mx-auto max-w-5xl">
+    <section className="relative overflow-hidden pb-12 pt-24 sm:pb-20 sm:pt-32">
+      <div className="relative w-full">
         <HeroCarousel>
           <div className="mt-7 grid gap-3 sm:flex">
             <Link to={business.primaryCta.target} className="w-full sm:w-auto">
@@ -28,7 +28,7 @@ export default function MobileLandingHero() {
           </div>
         </HeroCarousel>
 
-        <div className="mt-7 grid gap-2.5 border-t border-border pt-5 sm:grid-cols-3">
+        <div className="mx-auto mt-7 grid max-w-5xl gap-2.5 px-4 pt-5 sm:grid-cols-3 sm:px-8">
           {benefits.map((benefit) => <span key={benefit} className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{benefit}</span>)}
         </div>
       </div>
