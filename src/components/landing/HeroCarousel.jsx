@@ -13,7 +13,7 @@ export default function HeroCarousel({ children }) {
 
   useEffect(() => {
     if (paused) return;
-    const timer = setInterval(() => setIndex((prev) => (prev + 1) % HERO_SLIDES.length), 6500);
+    const timer = setInterval(() => setIndex((prev) => (prev + 1) % HERO_SLIDES.length), 10000);
     return () => clearInterval(timer);
   }, [paused, index]);
 
@@ -23,26 +23,26 @@ export default function HeroCarousel({ children }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative min-h-[30rem] sm:min-h-[34rem]">
+      <div className="relative min-h-[calc(100svh-9rem)] sm:min-h-[calc(100svh-11rem)]">
         {HERO_SLIDES.map((item, i) => (
           <img
             key={item.id}
             src={item.image}
             alt={item.eyebrow}
             loading={i === 0 ? "eager" : "lazy"}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${i === index ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1600ms] ease-in-out ${i === index ? "opacity-100" : "opacity-0"}`}
           />
         ))}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/20" />
 
-        <div className="relative flex min-h-[30rem] flex-col justify-end p-6 sm:min-h-[34rem] sm:p-12">
+        <div className="relative flex min-h-[calc(100svh-9rem)] flex-col justify-end p-6 sm:min-h-[calc(100svh-11rem)] sm:p-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={slide.id}
               initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: reduceMotion ? 0 : -12 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
               className="max-w-2xl"
             >
               <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
