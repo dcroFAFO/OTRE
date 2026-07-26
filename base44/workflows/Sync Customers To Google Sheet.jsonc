@@ -1,0 +1,40 @@
+{
+  "description": "Appends each new customer's details to the Google Sheets customer list.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "Customer"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "sync_customers_to_google_sheet",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "append_to_sheet": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncCustomerToSheet",
+            "args": {
+              "customer_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Add customer to sheet",
+            "description": "Appends a new row"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Sync Customers To Google Sheet"
+}
