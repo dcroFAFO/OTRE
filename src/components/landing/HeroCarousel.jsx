@@ -30,7 +30,7 @@ export default function HeroCarousel({ children }) {
             src={item.image}
             alt={item.eyebrow}
             loading={i === 0 ? "eager" : "lazy"}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1600ms] ease-in-out ${i === index ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 h-full w-full transition-opacity duration-[1600ms] ease-in-out ${item.imageFit === "contain" ? "object-contain" : "object-cover"} ${i === index ? "opacity-100" : "opacity-0"}`}
           />
         ))}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/20" />
