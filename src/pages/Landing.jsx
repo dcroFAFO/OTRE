@@ -1,6 +1,5 @@
 import React from "react";
 import LandingNav from "@/components/landing/LandingNav";
-import HeroBackdrop from "@/components/landing/HeroBackdrop";
 import MobileLandingHero from "@/components/landing/MobileLandingHero";
 import MobileServicesSection from "@/components/landing/MobileServicesSection";
 import MobileProcessSection from "@/components/landing/MobileProcessSection";
@@ -35,10 +34,8 @@ export default function Landing() {
       <div className="min-h-screen overflow-hidden bg-background text-foreground">
         <LandingNav />
         <main>
-          <HeroBackdrop>
-            <MobileLandingHero />
-            <MobileServicesSection />
-          </HeroBackdrop>
+          <MobileLandingHero />
+          <MobileServicesSection />
           <MobileProcessSection />
           <MobileIssuesSection />
           <MobileTrustSection />
