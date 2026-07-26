@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
     // Skip if this customer (by email, else by id) is already listed.
     const existingRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!C2:G?majorDimension=COLUMNS`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!D2:E?majorDimension=COLUMNS`,
       { headers: authHeader },
     );
     const existing = await existingRes.json();
@@ -27,23 +27,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Could not read the customer sheet' }, { status: 500 });
     }
     const emails = (existing.values?.[0] || []).map((v) => String(v || '').trim().toLowerCase());
-    const ids = existing.values?.[4] || [];
-    if ((email && emails.includes(email)) || ids.includes(customer.id)) {
+    const ids = existing.values?.[1] || [];
+    const customerRef = customer.customer_id || customer.id;
+    if ((email && emails.includes(email)) || ids.includes(customerRef)) {
       return Response.json({ skipped: 'already in sheet', customer_id: customer.id });
     }
 
+    const nameParts = String(customer.full_name || customer.name || '').trim().split(/\s+/);
     const row = [
-      new Date().toISOString().slice(0, 10),
-      customer.full_name || customer.name || '',
-      customer.email || '',
+      nameParts[0] || '',
+      nameParts.slice(1).join(' '),
       customer.phone_display || customer.phone_e164 || customer.phone || '',
-      customer.user_id ? 'Account signup' : 'Booking',
-      customer.status || 'active',
-      customer.id,
+      customer.email || '',
+      customerRef,
     ];
 
     const appendRes = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!A1:G1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!A1:E1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       { method: 'POST', headers: { ...authHeader, 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [row] }) },
     );
     const appendData = await appendRes.json();
