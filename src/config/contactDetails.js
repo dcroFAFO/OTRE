@@ -1,6 +1,6 @@
 export const CONTACT_DETAILS = {
   businessName: "On The Run Electrics",
-  email: "hello@ontherunelectrics.com.au",
+  email: "info@ontherunelectrics.com.au",
   phone: "0415 505 908",
   tel: "+61415505908",
   address: "11 Lucinda Street, Wooloongabba QLD 4102",
