@@ -28,6 +28,7 @@ export const HERO_SLIDES = [
     id: "diagnostics",
     image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/ba46b8fea_inmotion.jpg",
     imageFit: "contain",
+    imageOrientation: "landscape",
     eyebrow: "Electrical diagnostics",
     title: "Pinpoint testing for complex electrical faults",
     body:
