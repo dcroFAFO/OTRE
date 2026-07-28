@@ -111,12 +111,14 @@ export default function AdminClients() {
   const bulkDelete = async () => {
     const ids = [...selectedIds];
     try {
-      await base44.entities.Customer.deleteMany({ id: { $in: ids } });
+      for (const id of ids) {
+        await base44.entities.Customer.delete(id);
+      }
       toast.success(`Deleted ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
       clearSelection();
       refetch();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to delete customers.");
+      toast.error(err?.message || "Failed to delete customers.");
     }
   };
 
