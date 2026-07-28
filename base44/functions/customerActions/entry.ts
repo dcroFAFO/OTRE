@@ -12,6 +12,9 @@ function userField(user, key) {
 
 function isCustomerUserRecord(user) {
   if (!user?.id || isStaff(user) || user?.is_service) return false;
+  // Users explicitly flagged as non-customers (e.g. their customer record was
+  // deleted by an admin) must never be rebuilt into a customer row.
+  if (userField(user, 'is_customer') === false) return false;
   const explicitCustomer = userField(user, 'is_customer') === true;
   const hasCustomerLink = !!(userField(user, 'customer_id') || userField(user, 'job_id'));
   return explicitCustomer || hasCustomerLink;
@@ -458,12 +461,38 @@ async function removeScooter(entities, actor, payload) {
   }).catch(() => null);
 }
 
+// Deleting a Customer alone is not durable: the scheduled "Sync Customers From
+// Users" automation recreates a record for any non-staff user without one, and
+// listCustomers derives rows from User/CustomerProfile records. So deletion also
+// flags the linked user as a non-customer and removes the backing profile.
+async function detachCustomerSources(entities, customer) {
+  const email = cleanEmail(customer.email);
+
+  const users = [
+    ...(customer.user_id ? [await entities.User.get(customer.user_id).catch(() => null)] : []),
+    ...(email ? await entities.User.filter({ email }, '-updated_date', 5).catch(() => []) : []),
+  ].filter((user) => user?.id && !isStaff(user));
+
+  for (const user of [...new Map(users.map((user) => [user.id, user])).values()]) {
+    await entities.User.update(user.id, { is_customer: false }).catch(() => null);
+  }
+
+  const profiles = [
+    ...(customer.user_id ? await entities.CustomerProfile.filter({ auth_user_id: customer.user_id }, '-updated_date', 10).catch(() => []) : []),
+    ...(email ? await entities.CustomerProfile.filter({ email }, '-updated_date', 10).catch(() => []) : []),
+  ];
+  for (const profile of [...new Map(profiles.map((p) => [p.id, p])).values()]) {
+    await entities.CustomerProfile.delete(profile.id).catch(() => null);
+  }
+}
+
 async function deleteCustomers(entities, ids) {
   const uniqueIds = [...new Set((Array.isArray(ids) ? ids : []).filter(Boolean))];
   let deleted = 0;
   for (const id of uniqueIds) {
     const existing = await entities.Customer.get(id).catch(() => null);
     if (!existing) continue;
+    await detachCustomerSources(entities, existing);
     await entities.Customer.delete(id);
     deleted += 1;
   }
