@@ -1,7 +1,7 @@
 export const HERO_SLIDES = [
   {
     id: "same-day",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/1b9e3fe67_cover.jpg",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/b340514a5_Untitled2560x1440px1.svg",
     eyebrow: "Same-day scooter repairs",
     title: "Brisbane’s electric scooter repair specialists",
     body:
@@ -9,8 +9,7 @@ export const HERO_SLIDES = [
   },
   {
     id: "tyres",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/37e8c611b_inmotion3.jpg",
-    imageFit: "contain",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/780429b28_Untitled2560x1440px2.svg",
     eyebrow: "Tyres, tubes & suspension",
     title: "Punctures fixed while you wait",
     body:
@@ -18,7 +17,7 @@ export const HERO_SLIDES = [
   },
   {
     id: "workshop",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/63dbdf7d0_stormworkshop2.jpg",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/0fac2acac_Untitled2560x1440px3.svg",
     eyebrow: "Your repair, always within reach",
     title: "Track every step through your customer portal",
     body:
