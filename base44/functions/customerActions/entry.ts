@@ -264,14 +264,17 @@ async function listCustomers(entities) {
       || (email && customersByKey.get(`email:${email}`))
       || null;
   };
-  const createFromSource = async (source) => {
+  // Build an in-memory customer object for sources without an existing Customer
+  // record. Listing must NOT persist new records — otherwise deleted customers
+  // are immediately recreated on the next list fetch, making deletes appear to fail.
+  const buildFromSource = (source) => {
     const found = existingFor(source);
-    if (found) return remember(found);
+    if (found) return found;
     const email = cleanEmail(source.email);
     const phone = source.phone || source.phone_e164 || source.phone_display || '';
     const phoneE164 = source.phone_e164 || normalizePhone(phone) || '';
     const fullName = source.full_name || source.name || source.display_name || email || 'Customer';
-    const created = await entities.Customer.create({
+    return {
       customer_id: source.customer_id || source.profile_id || source.user_id || crypto.randomUUID(),
       full_name: fullName,
       name: source.name || fullName,
@@ -284,12 +287,12 @@ async function listCustomers(entities) {
       tags: ['customer'],
       createdAt: source.createdAt || source.created_date || new Date().toISOString(),
       last_activity_date: source.last_activity_date || source.updated_date || new Date().toISOString(),
-    });
-    return remember(created);
+    };
   };
 
+  const virtualCustomers = [];
   for (const user of users.filter(isCustomerUserRecord)) {
-    await createFromSource({
+    const virtual = buildFromSource({
       user_id: user.id,
       customer_id: userField(user, 'customer_id') || user.id,
       full_name: user.full_name,
@@ -301,10 +304,11 @@ async function listCustomers(entities) {
       created_date: user.created_date,
       last_activity_date: user.updated_date,
     });
+    if (!virtual.id) virtualCustomers.push(virtual);
   }
 
   for (const profile of profiles) {
-    await createFromSource({
+    const virtual = buildFromSource({
       profile_id: profile.id,
       user_id: profile.auth_user_id,
       customer_id: profile.id,
@@ -317,12 +321,13 @@ async function listCustomers(entities) {
       created_date: profile.created_date || profile.created_at,
       last_activity_date: profile.updated_date || profile.updated_at,
     });
+    if (!virtual.id) virtualCustomers.push(virtual);
   }
 
   const staffUsers = users.filter(isStaff);
   const staffUserIds = new Set(staffUsers.map((user) => user.id).filter(Boolean));
   const staffEmails = new Set(staffUsers.map((user) => cleanEmail(user.email)).filter(Boolean));
-  const byId = [...new Map([...customersByKey.values()].map((customer) => [customer.id, customer])).values()]
+  const byId = [...new Map([...customersByKey.values(), ...virtualCustomers].map((customer) => [customer.id || customer.customer_id || customer.user_id, customer])).values()]
     .filter((customer) => customer.email || customer.full_name || customer.name)
     .filter((customer) => !staffUserIds.has(customer.user_id) && !staffEmails.has(cleanEmail(customer.email)));
   const byIdentity = new Map();
