@@ -458,6 +458,18 @@ async function removeScooter(entities, actor, payload) {
   }).catch(() => null);
 }
 
+async function deleteCustomers(entities, ids) {
+  const uniqueIds = [...new Set((Array.isArray(ids) ? ids : []).filter(Boolean))];
+  let deleted = 0;
+  for (const id of uniqueIds) {
+    const existing = await entities.Customer.get(id).catch(() => null);
+    if (!existing) continue;
+    await entities.Customer.delete(id);
+    deleted += 1;
+  }
+  return { deleted, requested: uniqueIds.length };
+}
+
 async function updateCustomer(entities, actor, customerId, changes) {
   const customer = await entities.Customer.get(customerId);
   if (!customer) throw new Error('Customer not found');
@@ -511,6 +523,10 @@ Deno.serve(async (req) => {
     if (action === 'get') return Response.json({ customer: await entities.Customer.get(payload.customer_id) });
     if (action === 'resolveForJob') return Response.json({ customer: await resolveCustomerForJob(entities, payload.job_id, payload.job) });
     if (action === 'update') return Response.json({ customer: await updateCustomer(entities, user, payload.customer_id, payload.changes || {}) });
+    if (action === 'delete') {
+      if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json(await deleteCustomers(entities, payload.customer_ids));
+    }
     if (action === 'listScooters') return Response.json({ scooters: await listScootersForCustomer(entities, payload.customer_id) });
     if (action === 'saveScooter') return Response.json({ scooter: await saveScooter(entities, user, payload) });
     if (action === 'deleteScooter') { await removeScooter(entities, user, payload); return Response.json({ success: true }); }

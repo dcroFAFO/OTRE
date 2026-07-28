@@ -7,7 +7,7 @@ import ClientSummaryCards from "@/components/admin/clients/ClientSummaryCards";
 import ClientFilters, { EMPTY_CLIENT_FILTERS } from "@/components/admin/clients/ClientFilters";
 import ClientTable from "@/components/admin/clients/ClientTable";
 import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
-import { listClients } from "@/services/clientService";
+import { deleteClients, listClients } from "@/services/clientService";
 import { base44 } from "@/api/base44Client";
 import ClientBulkActionsBar from "@/components/admin/clients/ClientBulkActionsBar";
 import { Button } from "@/components/ui/button";
@@ -111,28 +111,18 @@ export default function AdminClients() {
   const bulkDelete = async () => {
     const ids = [...selectedIds].filter(Boolean);
     if (ids.length === 0) return;
-    let deleted = 0;
-    let failed = 0;
-    for (const id of ids) {
-      try {
-        await base44.entities.Customer.delete(id);
-        deleted++;
-      } catch {
-        failed++;
-      }
-    }
-    clearSelection();
-    refetch();
-    if (deleted === 0) {
-      toast.error("Those customers could not be removed — they may have already been deleted.");
-    } else if (failed > 0) {
-      toast.success(`Deleted ${deleted} customer${deleted > 1 ? "s" : ""}.${failed > 0 ? ` ${failed} could not be removed.` : ""}`);
-    } else {
-      toast.success(`Deleted ${deleted} customer${deleted > 1 ? "s" : ""}.`);
+    try {
+      const result = await deleteClients(ids);
+      clearSelection();
+      await refetch();
+      toast.success(`Deleted ${result.deleted} customer${result.deleted === 1 ? "" : "s"}.`);
+    } catch (err) {
+      await refetch();
+      toast.error(err?.response?.data?.error || err?.message || "Failed to delete customers.");
     }
   };
 
-  const seo = <SEO title="Customers | OTR Scooters" description="Private staff area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
+  const seo = <SEO title="Customers | On The Run Electrics" description="Private staff area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
 
   if (isLoading) {
     return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;

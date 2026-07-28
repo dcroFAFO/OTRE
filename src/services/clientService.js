@@ -16,6 +16,11 @@ export async function getClient(id) {
   return res.data.customer;
 }
 
+export async function deleteClients(ids) {
+  const res = await base44.functions.invoke("customerActions", { action: "delete", customer_ids: ids });
+  return res.data;
+}
+
 export async function resolveCustomerForJob(job) {
   const res = await base44.functions.invoke("customerActions", { action: "resolveForJob", job_id: job?.id, job });
   return res.data.customer;
