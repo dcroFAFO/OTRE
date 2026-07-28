@@ -34,10 +34,10 @@ export const HERO_SLIDES = [
   },
   {
     id: "local",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/26ecb0714_AZ-pILdfIM2ja8hpU0ZIvg-AZ-pILdfawzbwIInoLdI1A.jpg",
-    eyebrow: "Brisbane scooter specialists",
-    title: "Friendly expertise, close to home",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/012b46378_MatchBackgroundtoImageColor1.svg",
+    eyebrow: "Extended & flexible hours",
+    title: "Drop off before work, pick up after",
     body:
-      "Bring your scooter to our Woolloongabba workshop for practical advice, careful workmanship and straightforward service from a local team that knows scooters.",
+      "Early openings and late pick-ups make servicing simple. Bring your scooter to our Woolloongabba workshop at a time that fits your schedule — including evenings and weekends.",
   },
 ];

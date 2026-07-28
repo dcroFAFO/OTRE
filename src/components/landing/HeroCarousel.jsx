@@ -13,7 +13,7 @@ export default function HeroCarousel({ children }) {
 
   useEffect(() => {
     if (paused) return;
-    const timer = setInterval(() => setIndex((prev) => (prev + 1) % HERO_SLIDES.length), 10000);
+    const timer = setInterval(() => setIndex((prev) => (prev + 1) % HERO_SLIDES.length), 6000);
     return () => clearInterval(timer);
   }, [paused, index]);
 
