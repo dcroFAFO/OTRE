@@ -109,16 +109,26 @@ export default function AdminClients() {
   };
 
   const bulkDelete = async () => {
-    const ids = [...selectedIds];
-    try {
-      for (const id of ids) {
+    const ids = [...selectedIds].filter(Boolean);
+    if (ids.length === 0) return;
+    let deleted = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
         await base44.entities.Customer.delete(id);
+        deleted++;
+      } catch {
+        failed++;
       }
-      toast.success(`Deleted ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
-      clearSelection();
-      refetch();
-    } catch (err) {
-      toast.error(err?.message || "Failed to delete customers.");
+    }
+    clearSelection();
+    refetch();
+    if (deleted === 0) {
+      toast.error("Those customers could not be removed — they may have already been deleted.");
+    } else if (failed > 0) {
+      toast.success(`Deleted ${deleted} customer${deleted > 1 ? "s" : ""}.${failed > 0 ? ` ${failed} could not be removed.` : ""}`);
+    } else {
+      toast.success(`Deleted ${deleted} customer${deleted > 1 ? "s" : ""}.`);
     }
   };
 
