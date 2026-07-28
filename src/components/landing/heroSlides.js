@@ -25,9 +25,8 @@ export const HERO_SLIDES = [
   },
   {
     id: "diagnostics",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/ba46b8fea_inmotion.jpg",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/e18437ca2_Untitled2560x1440px.png",
     imageFit: "contain",
-    imageOrientation: "landscape",
     eyebrow: "Electrical diagnostics",
     title: "Pinpoint testing for complex electrical faults",
     body:
@@ -35,7 +34,7 @@ export const HERO_SLIDES = [
   },
   {
     id: "local",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/8a310eaae_frontwide.jpg",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/26ecb0714_AZ-pILdfIM2ja8hpU0ZIvg-AZ-pILdfawzbwIInoLdI1A.jpg",
     eyebrow: "Brisbane scooter specialists",
     title: "Friendly expertise, close to home",
     body:
