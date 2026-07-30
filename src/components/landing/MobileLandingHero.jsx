@@ -11,7 +11,7 @@ export default function MobileLandingHero() {
   const benefits = ["No payment to request", "Clear repair updates", "Track your repair online"];
 
   return (
-    <section className="relative overflow-hidden pb-12 pt-24 sm:pb-20 sm:pt-32">
+    <section className="relative overflow-hidden pb-12 sm:pb-20">
       <div className="relative w-full">
         <HeroCarousel>
           <div className="mt-7 grid gap-3 sm:flex">

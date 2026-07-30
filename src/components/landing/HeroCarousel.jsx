@@ -23,7 +23,7 @@ export default function HeroCarousel({ children }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative min-h-[calc(100svh-9rem)] sm:min-h-[calc(100svh-11rem)]">
+      <div className="relative min-h-[100svh]">
         {HERO_SLIDES.map((item, i) => (
           <img
             key={item.id}
@@ -35,7 +35,7 @@ export default function HeroCarousel({ children }) {
         ))}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/20" />
 
-        <div className="relative mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-7xl flex-col justify-end p-6 sm:min-h-[calc(100svh-11rem)] sm:p-12">
+        <div className="relative mx-auto flex min-h-[100svh] w-full max-w-7xl flex-col justify-end p-6 sm:p-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={slide.id}
