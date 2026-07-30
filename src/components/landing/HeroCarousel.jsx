@@ -60,14 +60,16 @@ export default function HeroCarousel({ children }) {
             Expert repairs, servicing and diagnostics in Woolloongabba — open until midnight, 7 days a week.
           </p>
 
-          {/* Rotating service highlight (secondary content, not the H1) */}
-          <AnimatePresence>
+          {/* Rotating service highlight (secondary content, not the H1).
+              mode="wait" ensures only one text block is in the flow at a time,
+              so exiting/entering never stack and create a layout gap. */}
+          <AnimatePresence mode="wait">
             <motion.div
               key={slide.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: "easeInOut" }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
               className="mt-5"
             >
               <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
