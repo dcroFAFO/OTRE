@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import LandingNav from "@/components/landing/LandingNav";
 import MobileLandingHero from "@/components/landing/MobileLandingHero";
 import MobileServicesSection from "@/components/landing/MobileServicesSection";
@@ -13,6 +13,7 @@ import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
+  const heroRef = useRef(null);
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "AutoRepair",
@@ -32,9 +33,11 @@ export default function Landing() {
     <>
       <SEO title="Electric Scooter Repairs Brisbane | On The Run Electrics" description="Book electric scooter repairs, diagnostics and servicing in Woolloongabba, Brisbane. Clear repair updates and online job tracking." canonical="/" ogType="website" structuredData={localBusinessSchema} />
       <div className="min-h-screen overflow-hidden bg-background text-foreground">
-        <LandingNav />
+        <LandingNav heroRef={heroRef} />
         <main>
-          <MobileLandingHero />
+          <div ref={heroRef}>
+            <MobileLandingHero />
+          </div>
           <MobileServicesSection />
           <MobileProcessSection />
           <MobileIssuesSection />

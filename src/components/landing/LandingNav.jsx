@@ -6,25 +6,36 @@ import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import LandingLogo from "@/components/landing/LandingLogo";
 import { cn } from "@/lib/utils";
 
-export default function LandingNav() {
-  const [scrolled, setScrolled] = useState(false);
+export default function LandingNav({ heroRef }) {
+  const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const { data: { app } } = usePlatformConfig();
 
   useEffect(() => {
+    const hero = heroRef?.current;
+    if (hero && "IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries) => setVisible(!entries[0].isIntersecting),
+        { threshold: 0, rootMargin: "0px 0px -5% 0px" }
+      );
+      observer.observe(hero);
+      return () => observer.disconnect();
+    }
+    // Fallback when no hero ref is available: reveal after scrolling past ~60% of the viewport.
     let ticking = false;
     const onScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
-          setScrolled(window.scrollY > 20);
+          setVisible(window.scrollY > window.innerHeight * 0.6);
           ticking = false;
         });
         ticking = true;
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [heroRef]);
 
   const links = app.landing.navLinks.map((link) => {
     if (link.href.startsWith("#")) return link;
@@ -36,7 +47,9 @@ export default function LandingNav() {
     <header
       className={cn(
         "fixed top-0 inset-x-0 z-50 transition-all duration-300",
-        scrolled ? "bg-background/90 backdrop-blur-xl border-b border-border shadow-sm" : "bg-background/70 backdrop-blur-md"
+        visible
+          ? "translate-y-0 opacity-100 bg-background/90 backdrop-blur-xl border-b border-border shadow-sm"
+          : "-translate-y-full opacity-0 pointer-events-none bg-transparent"
       )}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-8">
