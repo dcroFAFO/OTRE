@@ -9,7 +9,6 @@ import MobileResourceSection from "@/components/landing/MobileResourceSection";
 import MobileLocationSection from "@/components/landing/MobileLocationSection";
 import MobileContactCTA from "@/components/landing/MobileContactCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
-import RepairAssistantWidget from "@/components/landing/RepairAssistantWidget";
 import SEO from "@/components/SEO";
 
 export default function Landing() {
@@ -47,7 +46,6 @@ export default function Landing() {
           <MobileContactCTA />
         </main>
         <LandingFooter />
-        <RepairAssistantWidget />
       </div>
     </>
   );
