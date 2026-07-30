@@ -41,6 +41,7 @@ export default function LandingFooter() {
           <div className="mt-4 flex flex-col gap-2">
             <Link to="/portal" className="text-sm font-medium text-accent">{app.landing.portalLabel} →</Link>
             <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors">About us →</Link>
+            <Link to="/service-pricing" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors">Pricing →</Link>
             <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors">Contact →</Link>
             <Link to="/terms" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors">T&apos;s &amp; C&apos;s →</Link>
           </div>

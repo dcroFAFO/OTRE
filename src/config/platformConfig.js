@@ -34,6 +34,7 @@ export const DEFAULT_APP_SETTINGS = {
     navLinks: [
       { label: "Services", href: "#services" },
       { label: "About Us", href: "/about" },
+      { label: "Pricing", href: "/service-pricing" },
       { label: "News and Events", href: "/blog" },
       { label: "Contact", href: "/contact" },
       { label: "Book a repair", href: "/book" },

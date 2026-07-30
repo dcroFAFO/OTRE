@@ -86,6 +86,7 @@ const AuthenticatedApp = () => {
       <Route path="/portal/settings" element={<PortalSettings />} />
       <Route path="/portal/account" element={<Navigate to="/portal" replace />} />
       <Route path="/store" element={<Store />} />
+      <Route path="/service-pricing" element={<ServicePricing />} />
       <Route path="/blog" element={<BlogIndex />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/blog/category/:slug" element={<BlogCategoryPage />} />
@@ -113,7 +114,6 @@ const AuthenticatedApp = () => {
       <Route element={<DashboardLayout />}>
         <Route path="/settings" element={<SystemSettings />} />
         <Route path="/asset-management" element={<AssetManagement />} />
-        <Route path="/service-pricing" element={<ServicePricing />} />
       </Route>
       <Route path="/customers" element={<Navigate to="/admin/clients" replace />} />
       <Route path="/job-board" element={<Navigate to="/dashboard/jobs" replace />} />
