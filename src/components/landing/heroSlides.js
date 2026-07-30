@@ -2,10 +2,10 @@ export const HERO_SLIDES = [
   {
     id: "same-day",
     image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/b340514a5_Untitled2560x1440px1.svg",
-    eyebrow: "Open until midnight, 7 days a week",
-    title: "Scooter repairs that fit your life on the run",
+    eyebrow: "Same-day scooter repairs",
+    title: "Brisbane’s electric scooter repair specialists",
     body:
-      "On The Run Electrics stays open until midnight, seven days a week, so busy Brisbane riders can drop off and pick up repairs around work, family and everything in between.",
+      "From punctures and servicing to brakes, suspension and electrical faults, On The Run Electrics keeps your scooter safe, reliable and ready for the road.",
   },
   {
     id: "tyres",
