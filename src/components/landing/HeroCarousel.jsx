@@ -61,13 +61,13 @@ export default function HeroCarousel({ children }) {
           </p>
 
           {/* Rotating service highlight (secondary content, not the H1) */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             <motion.div
               key={slide.id}
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
               className="mt-5"
             >
               <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
