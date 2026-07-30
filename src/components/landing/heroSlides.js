@@ -1,7 +1,7 @@
 export const HERO_SLIDES = [
   {
     id: "same-day",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/b340514a5_Untitled2560x1440px1.svg",
+    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/26ecb0714_AZ-pILdfIM2ja8hpU0ZIvg-AZ-pILdfawzbwIInoLdI1A.jpg",
     eyebrow: "Open until midnight, 7 days a week",
     title: "Scooter repairs that fit around your life",
     body:
