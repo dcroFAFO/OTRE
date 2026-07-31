@@ -1,5 +1,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.31";
 
+const isStaff = (user) => ["admin", "employee", "technician"].includes(user?.role) || user?.data?.is_customer === false;
+
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
@@ -7,6 +9,8 @@ Deno.serve(async (req) => {
     }
 
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user || !isStaff(user)) return Response.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
     const id = typeof body.id === "string" ? body.id.trim() : "";
 
