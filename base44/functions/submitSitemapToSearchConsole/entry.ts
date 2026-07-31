@@ -12,7 +12,10 @@ export default async function (req: Request): Promise<Response> {
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection("google_search_console");
 
-    const siteUrl = `${SITE_URL}/`;
+    // This property is registered in Search Console as a domain property
+    // (sc-domain:ontherunelectrics.com.au), not a URL-prefix property, so the
+    // site resource id must use the sc-domain: format.
+    const siteUrl = "sc-domain:ontherunelectrics.com.au";
     const sitemapUrl = `${SITE_URL}/sitemap.xml`;
 
     const response = await fetch(
