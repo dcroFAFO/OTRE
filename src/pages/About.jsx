@@ -6,14 +6,16 @@ import LandingFooter from "@/components/landing/LandingFooter";
 import { Zap, Wrench, Star, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { aboutPageSchema } from "@/lib/structuredData";
 
 export default function About() {
   return (
     <>
       <SEO
-        title="About OTR Scooters | Brisbane Repairs"
-        description="Meet OTR Scooters, Brisbane's electric scooter repair specialists offering expert diagnostics, transparent quotes and rider-focused service."
+        title="About On The Run Electrics | Brisbane Scooter Repairs"
+        description="Meet On The Run Electrics, Brisbane's electric scooter repair specialists offering expert diagnostics, transparent quotes and rider-focused service."
         canonical="/about"
+        structuredData={aboutPageSchema}
       />
       <main className="min-h-screen bg-background text-foreground">
         <LandingParallaxBackground />

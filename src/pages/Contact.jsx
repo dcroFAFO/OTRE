@@ -5,14 +5,16 @@ import LandingParallaxBackground from "@/components/landing/LandingParallaxBackg
 import LandingFooter from "@/components/landing/LandingFooter";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
 import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
+import { contactPageSchema } from "@/lib/structuredData";
 
 export default function Contact() {
   return (
     <>
       <SEO
-        title="Contact OTR Scooters | Brisbane Repair Shop"
-        description="Contact OTR Scooters for electric scooter repairs in Brisbane. Call, email or visit our Wooloongabba workshop for service advice and bookings."
+        title="Contact On The Run Electrics | Brisbane Repair Shop"
+        description="Contact On The Run Electrics for electric scooter repairs in Brisbane. Call, email or visit our Woolloongabba workshop for service advice and bookings."
         canonical="/contact"
+        structuredData={contactPageSchema}
       />
       <main className="min-h-screen bg-background text-foreground">
         <LandingParallaxBackground />

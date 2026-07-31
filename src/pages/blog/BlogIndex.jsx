@@ -9,6 +9,7 @@ import NewsBrowseControls from "@/components/blog/NewsBrowseControls";
 import LandingNav from "@/components/landing/LandingNav";
 import LandingFooter from "@/components/landing/LandingFooter";
 import { listPublicBlog } from "@/services/blogService";
+import { blogIndexSchema } from "@/lib/structuredData";
 
 export default function BlogIndex() {
   const [q, setQ] = useState("");
@@ -34,7 +35,7 @@ export default function BlogIndex() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <SEO title="News and Events | On The Run Electrics" description="Browse electric scooter news, local events, repair advice and rider stories from On The Run Electrics in Brisbane." canonical="/blog" />
+      <SEO title="News and Events | On The Run Electrics" description="Browse electric scooter news, local events, repair advice and rider stories from On The Run Electrics in Brisbane." canonical="/blog" structuredData={blogIndexSchema} />
       <LandingNav />
       <main className="mx-auto max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
         <header className="border-b border-border pb-10 sm:flex sm:items-end sm:justify-between sm:gap-8">

@@ -1,10 +1,21 @@
 User-agent: *
 Allow: /
+
+# Private areas — not for indexing
+Disallow: /portal
+Disallow: /portal/
+Disallow: /profile-setup
 Disallow: /dashboard
+Disallow: /dashboard/
 Disallow: /settings
 Disallow: /asset-management
 Disallow: /admin
-Disallow: /portal
-Disallow: /profile-setup
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /book/guest
+Disallow: /track/
 
 Sitemap: https://ontherunelectrics.com.au/sitemap.xml

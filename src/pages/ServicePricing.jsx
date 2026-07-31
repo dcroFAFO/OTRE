@@ -9,6 +9,7 @@ import LandingParallaxBackground from "@/components/landing/LandingParallaxBackg
 import LandingFooter from "@/components/landing/LandingFooter";
 import { Button } from "@/components/ui/button";
 import PricingCategoryCard from "@/components/pricing/PricingCategoryCard";
+import { servicePricingSchema } from "@/lib/structuredData";
 
 export default function ServicePricing() {
   const { data: services = [], isLoading } = useQuery({
@@ -32,6 +33,7 @@ export default function ServicePricing() {
         title="Service Pricing | Electric Scooter Repairs Brisbane"
         description="Transparent pricing for electric scooter repairs, servicing and diagnostics at On The Run Electrics in Woolloongabba, Brisbane."
         canonical="/service-pricing"
+        structuredData={servicePricingSchema}
       />
       <main className="min-h-screen bg-background text-foreground">
         <LandingParallaxBackground />

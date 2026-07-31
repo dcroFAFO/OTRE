@@ -5,6 +5,7 @@ import SEO from "@/components/SEO";
 import LandingFooter from "@/components/landing/LandingFooter";
 import LegalSection from "@/components/legal/LegalSection";
 import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
+import { termsPageSchema } from "@/lib/structuredData";
 
 const LAST_UPDATED = "26 July 2026";
 
@@ -31,6 +32,7 @@ export default function Terms() {
         title="Terms & Conditions, Privacy Policy | On The Run Electrics"
         description="Privacy policy, terms of service, terms of use, cookie and data handling statements for On The Run Electrics electric scooter repairs."
         canonical="/terms"
+        structuredData={termsPageSchema}
       />
 
       <header className="border-b border-border bg-card">

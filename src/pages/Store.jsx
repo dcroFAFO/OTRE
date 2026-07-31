@@ -13,6 +13,7 @@ import StoreCategoryNav from "@/components/store/StoreCategoryNav";
 import CartDrawer from "@/components/store/CartDrawer";
 import CheckoutDialog from "@/components/store/CheckoutDialog";
 import SEO from "@/components/SEO";
+import { storeSchema } from "@/lib/structuredData";
 
 function StoreInner() {
   const { data: { business } } = usePlatformConfig();
@@ -53,6 +54,7 @@ function StoreInner() {
         description={storeDescription}
         canonical="/store"
         ogType="website"
+        structuredData={storeSchema}
       />
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-border">

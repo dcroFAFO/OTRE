@@ -10,23 +10,10 @@ import MobileLocationSection from "@/components/landing/MobileLocationSection";
 import MobileContactCTA from "@/components/landing/MobileContactCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
 import SEO from "@/components/SEO";
+import { localBusinessSchema } from "@/lib/structuredData";
 
 export default function Landing() {
   const heroRef = useRef(null);
-  const localBusinessSchema = {
-    "@context": "https://schema.org",
-    "@type": "AutoRepair",
-    name: "On The Run Electrics",
-    description: "Electric scooter repairs, servicing and diagnostics in Woolloongabba, Brisbane.",
-    url: typeof window !== "undefined" ? window.location.origin : "/",
-    telephone: "+61415505908",
-    email: "hello@ontherunelectrics.com.au",
-    priceRange: "$$",
-    areaServed: "Brisbane",
-    address: { "@type": "PostalAddress", streetAddress: "11 Lucinda Street", addressLocality: "Woolloongabba", addressRegion: "QLD", postalCode: "4102", addressCountry: "AU" },
-    openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: "11:00", closes: "23:59" }],
-    hasOfferCatalog: { "@type": "OfferCatalog", name: "Electric scooter services", itemListElement: ["Brake repairs", "Tyres and punctures", "Battery diagnostics", "Electrical fault finding", "General servicing", "Safety checks"].map((name) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name } })) },
-  };
 
   return (
     <>
