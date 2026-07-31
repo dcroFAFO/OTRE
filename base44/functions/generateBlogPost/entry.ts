@@ -26,23 +26,23 @@ Deno.serve(async (req) => {
     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
       model: "gemini_3_1_pro",
       add_context_from_internet: true,
-      prompt: `You are a professional content writer for OTR Scooters, a Brisbane-based electric scooter repair and service workshop. Write a high-quality, SEO-friendly blog article that reads like it was written by a real human mechanic who knows their stuff.
+      prompt: `You are a professional content writer for On The Run Electrics, a Brisbane-based electric scooter repair and service workshop. Write a high-quality, SEO-friendly blog article that reads like it was written by a real human mechanic who knows their stuff.
 
 TOPIC: ${input.topic}
 TARGET KEYWORD: ${input.target_keyword || "derive naturally from the topic"}
 SECONDARY KEYWORDS: ${input.secondary_keywords || ""}
 SEARCH INTENT: ${input.search_intent || "informational"}
 TARGET AUDIENCE: ${input.target_audience || "electric scooter owners in Brisbane and across Queensland"}
-TONE: ${input.tone || "helpful, knowledgeable, and genuine — like a trusted local mechanic explaining things to a customer across the counter"}
+TONE: ${input.tone || "helpful, knowledgeable, and genuine. Write as though you are an electric scooter technician having a casual conversation with a good friend."}
 ARTICLE LENGTH: ${lengthSpec.label} (ABSOLUTE MINIMUM ${lengthSpec.min_words} words — if you write less, the article will be rejected)
-CALL TO ACTION: ${input.call_to_action || "Book a scooter repair or service with OTR Scooters"}
+CALL TO ACTION: ${input.call_to_action || "Book a scooter repair or service with On The Run Electrics"}
 CUSTOM INSTRUCTIONS: ${input.custom_instructions || ""}
 
 === ACCURACY RULES (NON-NEGOTIABLE) ===
 
 1. Every factual claim, statistic, law reference, specification, price, or technical detail MUST be verifiable from real sources. Use the web search context provided to ground your claims. If you cannot verify something, leave it out rather than guess.
 2. NEVER invent statistics, test results, performance figures, survey data, or user testimonials. If you need a number, find a real one or make the point without a number.
-3. For Queensland or Australian e-scooter laws, reference current legislation accurately. Queensland Personal Mobility Device rules fall under the Transport Operations (Road Use Management — Personal Mobility Devices) Regulation 2019. Do not invent law names, fines, or requirements.
+3. For Queensland or Australian e-scooter laws, reference current legislation accurately. Queensland Personal Mobility Device rules fall under the Transport and Other Legislation (Managing E-mobility Use and Protecting Our Communities) Amendment Bill 2026. Do not invent law names, fines, or requirements.
 4. Read your entire draft before finalising. Ensure no claim contradicts another claim earlier in the article. If you state a range or spec in one section, it must be consistent everywhere else.
 5. Every section must directly serve the topic and search intent. Do not pad with generic filler or tangential content. If the topic is about headlights, every section relates to headlights, visibility, or night riding — not general maintenance.
 
