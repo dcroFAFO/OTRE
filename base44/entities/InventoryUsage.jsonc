@@ -91,7 +91,12 @@
         },
         {
           "user_condition": {
-            "data.is_customer": "false"
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
           }
         }
       ]
@@ -105,11 +110,16 @@
         },
         {
           "user_condition": {
-            "data.is_customer": "false"
+            "role": "employee"
           }
         },
         {
-          "data.job_id": "{{user.data.job_id}}"
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
+          "data.customer_id": "{{user.data.customer_id}}"
         }
       ]
     },
@@ -122,7 +132,12 @@
         },
         {
           "user_condition": {
-            "data.is_customer": "false"
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
           }
         }
       ]

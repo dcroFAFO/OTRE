@@ -452,6 +452,9 @@
           "data.customer_account_id": "{{user.id}}"
         },
         {
+          "data.customer_id": "{{user.data.customer_id}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }

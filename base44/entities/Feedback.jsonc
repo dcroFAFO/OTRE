@@ -115,25 +115,48 @@
     "message"
   ],
   "rls": {
+    "create": null,
     "read": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "technician"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
         }
-      }
+      ]
     },
-    "write": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "technician"
-          ]
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
         }
-      }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
     }
   }
 }

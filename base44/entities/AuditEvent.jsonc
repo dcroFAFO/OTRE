@@ -76,6 +76,16 @@
           }
         },
         {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        },
+        {
           "data.customer_id": "{{user.data.customer_id}}"
         }
       ]
