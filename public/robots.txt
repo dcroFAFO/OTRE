@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /asset-management
+Disallow: /admin
+Disallow: /portal
+Disallow: /profile-setup
 
 Sitemap: https://ontherunelectrics.com.au/sitemap.xml

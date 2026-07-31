@@ -1,0 +1,18 @@
+import { SITE_URL, PUBLIC_PAGES, buildUrlset, xmlResponse } from "../../shared/sitemapConfig.ts";
+
+// Public, indexable, non-blog pages. No auth — must be reachable by crawlers.
+export default async function (req: Request): Promise<Response> {
+  try {
+    const lastmod = new Date().toISOString().slice(0, 10);
+    const entries = PUBLIC_PAGES.map((page) => ({
+      loc: `${SITE_URL}${page.path}`,
+      lastmod,
+      changefreq: page.changefreq,
+      priority: page.priority,
+    }));
+    return xmlResponse(buildUrlset(entries));
+  } catch (error) {
+    console.error("[sitemapPages]", error.message, error.stack);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
