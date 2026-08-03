@@ -1,12 +1,9 @@
 import React, { useState } from "react";
-import { Package, Wrench, StickyNote, Paperclip, PlayCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Package, Wrench, Stethoscope, PlayCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import JobPartsPanel from "../JobPartsPanel";
 import JobLabourPanel from "../JobLabourPanel";
 import DiagnosisNotesCard from "../DiagnosisNotesCard";
-import NotesPanel from "../NotesPanel";
-import PrivateNotesPanel from "../PrivateNotesPanel";
-import AttachmentsPanel from "../AttachmentsPanel";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 import { toast } from "sonner";
 
@@ -14,7 +11,8 @@ import { toast } from "sonner";
 // - scheduled/on_hold: "Begin Repair" button → repair_in_progress
 // - repair_in_progress/waiting_on_parts: parts + labour catalogues (no invoice
 //   actions) + "Complete Repair" button → ready_for_pickup
-export default function RepairTab({ job, actor, canEdit, labourReadOnly, onChange, role, canNote, canAttach }) {
+// General notes and attachments live in the dedicated Notes & Files tab.
+export default function RepairTab({ job, actor, canEdit, labourReadOnly, onChange }) {
   const status = job.status;
 
   if (["scheduled", "on_hold", "requested"].includes(status)) {
@@ -31,14 +29,8 @@ export default function RepairTab({ job, actor, canEdit, labourReadOnly, onChang
         <JobLabourPanel job={job} canEdit={canEdit && !labourReadOnly} onChange={onChange} />
       </RepairSection>
 
-      <RepairSection title="Notes" icon={StickyNote}>
+      <RepairSection title="Diagnosis" icon={Stethoscope}>
         <DiagnosisNotesCard job={job} canEdit={canEdit && !labourReadOnly} onChange={onChange} />
-        <NotesPanel job={job} actor={actor} canCustomer={canNote} onChange={onChange} />
-        <PrivateNotesPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
-      </RepairSection>
-
-      <RepairSection title="Files" icon={Paperclip}>
-        <AttachmentsPanel job={job} actor={actor} canUpload={canAttach} />
       </RepairSection>
 
       <CompleteRepairCard job={job} onChange={onChange} />

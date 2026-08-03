@@ -6,11 +6,10 @@ import { Bike, Calendar, User, CreditCard, AlertTriangle, Hash } from "lucide-re
 import StatusPill from "@/components/shared/StatusPill";
 import BillingPanel from "./BillingPanel";
 import InvoicePanel from "./InvoicePanel";
-import NotesPanel from "./NotesPanel.jsx";
-import PrivateNotesPanel from "./PrivateNotesPanel";
-import AttachmentsPanel from "./AttachmentsPanel";
+import JobNotesFilesPanel from "./JobNotesFilesPanel";
 import CustomerHistoryPanel from "./CustomerHistoryPanel";
 import AuditTimeline from "./AuditTimeline";
+import JobDetailsHeaderActions from "./JobDetailsHeaderActions";
 import ScheduleTab from "./mobile/ScheduleTab";
 import RepairTab from "./mobile/RepairTab";
 import MobileJobWorkspace from "./mobile/MobileJobWorkspace";
@@ -29,6 +28,7 @@ const TAB_LABELS = {
   repair: "Repair",
   billing: "Invoice",
   invoice: "Invoice",
+  notes: "Notes & Files",
   customer: "Customer",
   timeline: "Timeline",
 };
@@ -130,6 +130,12 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
           <>
             <JobModalHeader job={job} />
 
+            {/* Staff workflow actions — same strip the mobile workspace uses,
+                shown in full (no context) on desktop. */}
+            {canManage && (
+              <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} />
+            )}
+
             <div className="flex-1 overflow-y-auto">
               <Tabs value={safeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
                 <div className="border-b border-border px-5 pt-1.5 bg-background sticky top-0 z-10">
@@ -163,10 +169,12 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         canEdit={canManage}
                         labourReadOnly={labourReadOnly}
                         onChange={bump}
-                        role={role}
-                        canNote={can(role, "job.note.customer") || role === "admin"}
-                        canAttach={can(role, "job.attach") || role === "admin"}
                       />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="notes" className="mt-0">
+                    {safeTab === "notes" && (
+                      <JobNotesFilesPanel job={job} actor={actor} canManage={canManage} role={role} onChange={bump} />
                     )}
                   </TabsContent>
                   <TabsContent value="billing" className="mt-0">
@@ -182,12 +190,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                   </TabsContent>
                   <TabsContent value="customer" className="mt-0">
                     {safeTab === "customer" && (
-                      <div className="space-y-6">
-                        <CustomerHistoryPanel job={job} actor={actor} />
-                        <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
-                        <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-                        <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
-                      </div>
+                      <CustomerHistoryPanel job={job} actor={actor} />
                     )}
                   </TabsContent>
                   <TabsContent value="invoice" className="mt-0">

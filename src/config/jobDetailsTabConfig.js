@@ -11,16 +11,18 @@ const SETTLED_OR_CLOSED_STATUSES = ["completed", "cancelled"];
 
 // Status-based tab visibility — staff only see tabs relevant to the
 // current lifecycle stage.
+// Notes & files and the activity timeline are available at every stage —
+// staff need to record findings and audit a job regardless of its status.
 const STATUS_TABS = {
-  requested: ["schedule", "customer"],
-  scheduled: ["schedule", "customer", "repair"],
-  on_hold: ["schedule", "customer", "repair"],
-  repair_in_progress: ["repair", "customer"],
-  waiting_on_parts: ["repair", "customer"],
-  ready_for_pickup: ["billing", "customer"],
-  invoice_outstanding: ["billing", "customer"],
-  completed: ["invoice", "timeline", "customer"],
-  cancelled: ["timeline", "customer"],
+  requested: ["schedule", "notes", "customer", "timeline"],
+  scheduled: ["schedule", "repair", "notes", "customer", "timeline"],
+  on_hold: ["schedule", "repair", "notes", "customer", "timeline"],
+  repair_in_progress: ["repair", "notes", "customer", "timeline"],
+  waiting_on_parts: ["repair", "notes", "customer", "timeline"],
+  ready_for_pickup: ["billing", "notes", "customer", "timeline"],
+  invoice_outstanding: ["billing", "notes", "customer", "timeline"],
+  completed: ["invoice", "notes", "customer", "timeline"],
+  cancelled: ["notes", "customer", "timeline"],
 };
 
 export function normalizeJobStatus(status) {
@@ -31,7 +33,7 @@ export function normalizeJobStatus(status) {
 
 export function getVisibleJobTabs(status) {
   const normalized = normalizeJobStatus(status);
-  return STATUS_TABS[normalized] || ["schedule", "customer"];
+  return STATUS_TABS[normalized] || ["schedule", "notes", "customer", "timeline"];
 }
 
 // Labour and consumables can no longer be edited once the job is closed.

@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft, CalendarDays, Wrench, CreditCard, User, History,
-  Hash, Bike,
+  Hash, Bike, StickyNote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/config/permissions";
 import StatusPill from "@/components/shared/StatusPill";
 import JobDetailsHeaderActions from "../JobDetailsHeaderActions";
-import NotesPanel from "../NotesPanel.jsx";
-import PrivateNotesPanel from "../PrivateNotesPanel";
-import AttachmentsPanel from "../AttachmentsPanel";
+import JobNotesFilesPanel from "../JobNotesFilesPanel";
 import CustomerHistoryPanel from "../CustomerHistoryPanel";
 import AuditTimeline from "../AuditTimeline";
 import ScheduleTab from "./ScheduleTab";
@@ -19,8 +17,8 @@ import InvoicePanel from "../InvoicePanel";
 import ReferralCard from "./ReferralCard";
 import { getVisibleJobTabs } from "@/config/jobDetailsTabConfig";
 
-const TAB_LABELS = { schedule: "Scheduling", repair: "Repair", billing: "Invoice", invoice: "Invoice", customer: "Customer", timeline: "Timeline" };
-const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, invoice: CreditCard, customer: User, timeline: History };
+const TAB_LABELS = { schedule: "Schedule", repair: "Repair", billing: "Invoice", invoice: "Invoice", notes: "Notes", customer: "Customer", timeline: "Timeline" };
+const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard, invoice: CreditCard, notes: StickyNote, customer: User, timeline: History };
 
 // Contextual primary action + initial tab, driven by the job's current status.
 function contextualStep(status) {
@@ -68,9 +66,11 @@ export default function MobileJobWorkspace({
         {tab === "repair" && (
           <>
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />}
-            <RepairTab job={job} actor={actor} canEdit={canManage} labourReadOnly={labourReadOnly} onChange={bump}
-              role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
+            <RepairTab job={job} actor={actor} canEdit={canManage} labourReadOnly={labourReadOnly} onChange={bump} />
           </>
+        )}
+        {tab === "notes" && (
+          <JobNotesFilesPanel job={job} actor={actor} canManage={canManage} role={role} onChange={bump} />
         )}
         {tab === "billing" && (
           <div className="space-y-4">
@@ -81,9 +81,6 @@ export default function MobileJobWorkspace({
         {tab === "customer" && (
           <div className="space-y-4">
             <CustomerHistoryPanel job={job} actor={actor} />
-            <NotesPanel job={job} actor={actor} canCustomer={can(role, "job.note.customer") || role === "admin"} onChange={bump} />
-            <PrivateNotesPanel job={job} actor={actor} canEdit={canManage} onChange={bump} />
-            <AttachmentsPanel job={job} actor={actor} canUpload={can(role, "job.attach") || role === "admin"} />
             {canManage && <ReferralCard customerId={job.customer_account_id || job.customer_id} />}
           </div>
         )}
