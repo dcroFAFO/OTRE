@@ -1,6 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
+// Bulk customer edits are limited to the roles that can already edit a customer
+// record directly (see Customer RLS) — technicians are read-only here.
+const MANAGER_ROLES = new Set(['admin', 'employee']);
+const CUSTOMER_STATUSES = ['active', 'pending', 'in_review', 'onboarding', 'needs_follow_up', 'inactive', 'suspended', 'closed'];
 
 function isStaff(user) {
   return STAFF_ROLES.has(String(user?.role || user?.data?.role || '').toLowerCase());
