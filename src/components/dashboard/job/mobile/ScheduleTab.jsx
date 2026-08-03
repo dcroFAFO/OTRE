@@ -8,29 +8,33 @@ import { CalendarDays, Loader2, CheckCircle2, AlertTriangle, Bike } from "lucide
 import { rescheduleJob } from "@/services/jobService";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 import { getCanonicalJobStatus } from "@/config/jobConfig";
+import { TIME_WINDOWS, normalizeTimeWindow, timeWindowLabel } from "@/config/timeWindows";
+import BookingRequestCard from "../BookingRequestCard";
 import { toast } from "sonner";
 
-const TIME_WINDOWS = [
-  { key: "morning", label: "Morning (8am - 12pm)" },
-  { key: "afternoon", label: "Afternoon (12pm - 4pm)" },
-  { key: "evening", label: "Evening (4pm - 6pm)" },
-  { key: "asap", label: "ASAP / any time" },
-];
+// Until a job is scheduled, the form starts from what the customer asked for
+// so staff can confirm the requested slot with one tap.
+function requestedDate(job) {
+  return job.scheduled_date || job.booking_submission?.preferredDate || "";
+}
+function requestedWindow(job) {
+  return normalizeTimeWindow(job.preferred_time_window || job.booking_submission?.preferredTimeWindow);
+}
 
 // Mobile-first, tap/select based scheduling screen. Reuses the same
 // scheduled_date / preferred_time_window fields and reschedule workflow
 // as the desktop board — no new scheduling model is introduced.
 export default function ScheduleTab({ job, canEdit, onChange }) {
-  const [date, setDate] = useState(job.scheduled_date || "");
-  const [timeWindow, setTimeWindow] = useState(job.preferred_time_window || "");
+  const [date, setDate] = useState(requestedDate(job));
+  const [timeWindow, setTimeWindow] = useState(requestedWindow(job));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [nearbyJobs, setNearbyJobs] = useState([]);
   const [loadingNearby, setLoadingNearby] = useState(false);
 
   useEffect(() => {
-    setDate(job.scheduled_date || "");
-    setTimeWindow(job.preferred_time_window || "");
+    setDate(requestedDate(job));
+    setTimeWindow(requestedWindow(job));
   }, [job.id]);
 
   useEffect(() => {
@@ -52,7 +56,9 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
       if (date !== (job.scheduled_date || "")) {
         await rescheduleJob(job, date);
       }
-      if (timeWindow !== (job.preferred_time_window || "")) {
+      // Only write a real selection — never blank out a legacy free-text
+      // window just because it doesn't map to one of our keys.
+      if (timeWindow && timeWindow !== (job.preferred_time_window || "")) {
         await base44.entities.Job.update(job.id, { preferred_time_window: timeWindow });
       }
       // For requested jobs, saving the schedule confirms the booking and
@@ -76,6 +82,7 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
   if (!canEdit) {
     return (
       <div className="space-y-3">
+        <BookingRequestCard job={job} />
         <ScheduleSummary date={job.scheduled_date} timeWindow={job.preferred_time_window} />
       </div>
     );
@@ -83,8 +90,10 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
 
   return (
     <div className="space-y-4">
+      <BookingRequestCard job={job} />
+
       <div className="flex items-center gap-2 text-sm font-semibold">
-        <CalendarDays className="h-4 w-4 text-accent" /> Scheduling
+        <CalendarDays className="h-4 w-4 text-accent" /> Confirm schedule
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -133,7 +142,7 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
                   <span className="font-medium truncate">{j.customer_name}</span>
                   {j.preferred_time_window && (
                     <span className="shrink-0 text-[11px] text-muted-foreground capitalize">
-                      {TIME_WINDOWS.find((w) => w.key === j.preferred_time_window)?.label || j.preferred_time_window}
+                      {timeWindowLabel(j.preferred_time_window)}
                     </span>
                   )}
                 </div>
@@ -153,7 +162,7 @@ function ScheduleSummary({ date, timeWindow }) {
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm space-y-1">
       <p><span className="text-muted-foreground">Date:</span> {date || "Not scheduled"}</p>
-      <p><span className="text-muted-foreground">Time window:</span> {TIME_WINDOWS.find((w) => w.key === timeWindow)?.label || "Not set"}</p>
+      <p><span className="text-muted-foreground">Time window:</span> {timeWindowLabel(timeWindow) || "Not set"}</p>
     </div>
   );
 }
