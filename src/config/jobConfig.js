@@ -8,17 +8,22 @@ import {
   DEFAULT_INTAKE_STATUS as INTAKE_STATUS,
 } from "./platformConfig";
 
+// Canonical job lifecycle (frontend mirror of base44/shared/jobLifecycle.ts —
+// change both together). Main path is linear:
+//   requested → scheduled → repair_in_progress → ready_for_pickup
+//            → invoice_outstanding → completed
+// waiting_on_parts / on_hold / cancelled are side states reachable from anywhere.
+// Quote approval is retired: technicians build invoice line items directly.
 export const JOB_STATUSES = [
-  { key: "requested", label: "Requested", group: "intake", color: "slate", is_default_intake: true },
-  { key: "booked", label: "Job Scheduled", group: "active", color: "indigo" },
+  { key: "requested", label: "Booking Requested", group: "intake", color: "slate", is_default_intake: true },
+  { key: "scheduled", label: "Scheduled", group: "active", color: "indigo" },
   { key: "repair_in_progress", label: "Repair In Progress", group: "active", color: "teal" },
-  { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "ready_for_pickup", label: "Ready for Pickup", group: "done", color: "emerald" },
-  { key: "invoice_sent", label: "Invoice Sent", group: "billing", color: "rose" },
-  { key: "paid", label: "Paid", group: "billing", color: "emerald" },
+  { key: "invoice_outstanding", label: "Invoice Outstanding", group: "billing", color: "rose" },
   { key: "completed", label: "Completed", group: "done", color: "emerald", is_terminal: true },
-  { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
+  { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "on_hold", label: "On Hold", group: "waiting", color: "slate" },
+  { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
 ];
 
 export const JOB_STATUS_VALUES = JOB_STATUSES.map((status) => status.key);
@@ -41,18 +46,21 @@ export const STATUS_PILL_CLASSES = {
   rose: "bg-rose-100 text-rose-700 border-rose-200",
 };
 
+// Every retired status ever written, mapped to its canonical replacement.
 export const LEGACY_STATUS_MAP = {
+  booked: "scheduled",
+  technician_assigned: "scheduled",
   quote_required: "requested",
-  quote_sent: "booked",
+  quote_sent: "scheduled",
+  quote_approved: "scheduled",
   pending_confirmation: "on_hold",
-  quote_approved: "booked",
   active: "repair_in_progress",
-  technician_assigned: "booked",
+  in_progress: "repair_in_progress",
   waiting_parts: "waiting_on_parts",
   waiting_supplier: "on_hold",
   waiting_customer: "on_hold",
-  invoice_outstanding: "invoice_sent",
-  in_progress: "repair_in_progress",
+  invoice_sent: "invoice_outstanding",
+  paid: "completed",
 };
 
 export function normalizeStatusKey(key) {

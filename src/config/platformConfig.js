@@ -95,16 +95,15 @@ export const DEFAULT_SERVICES = [
 ];
 
 export const DEFAULT_JOB_STATUSES = [
-  { key: "requested", label: "Requested", group: "intake", color: "slate", is_default_intake: true },
-  { key: "booked", label: "Booked", group: "active", color: "indigo" },
+  { key: "requested", label: "Booking Requested", group: "intake", color: "slate", is_default_intake: true },
+  { key: "scheduled", label: "Scheduled", group: "active", color: "indigo" },
   { key: "repair_in_progress", label: "Repair In Progress", group: "active", color: "teal" },
-  { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "ready_for_pickup", label: "Ready for Pickup", group: "done", color: "emerald" },
-  { key: "invoice_sent", label: "Invoice Sent", group: "billing", color: "rose" },
-  { key: "paid", label: "Paid", group: "billing", color: "emerald" },
+  { key: "invoice_outstanding", label: "Invoice Outstanding", group: "billing", color: "rose" },
   { key: "completed", label: "Completed", group: "done", color: "emerald", is_terminal: true },
-  { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
+  { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "on_hold", label: "On Hold", group: "waiting", color: "slate" },
+  { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
 ];
 
 export const DEFAULT_JOB_TYPES = [
@@ -119,7 +118,7 @@ export const DEFAULT_INTAKE_STATUS = "requested";
 export const READY_STATUS_KEY = "ready_for_pickup";
 export const COMPLETE_STATUS_KEY = "completed";
 export const CANCELLED_STATUS_KEY = "cancelled";
-export const REOPEN_STATUS_KEY = "booked";
+export const REOPEN_STATUS_KEY = "scheduled";
 
 export const DEFAULT_WAITING_REASONS = [
   { key: "customer", label: "Customer" },

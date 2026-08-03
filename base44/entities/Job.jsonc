@@ -3,13 +3,16 @@
   "type": "object",
   "properties": {
     "job_id": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED \u2014 never read or write. Only ever held a copy of the record id. Use `id` for lookups and `reference` for display."
     },
     "tracking_token": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED \u2014 no longer written. Public access tokens are stored as SHA-256 hashes on PublicJobAccess."
     },
     "guest_access_token": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED \u2014 no longer written. See PublicJobAccess.tokenHash."
     },
     "customer_profile_id": {
       "type": "string"
@@ -18,13 +21,15 @@
       "type": "string"
     },
     "quote_id": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED \u2014 quote approval is retired. Technicians build invoice line items directly."
     },
     "invoice_id": {
       "type": "string"
     },
     "reference": {
-      "type": "string"
+      "type": "string",
+      "description": "The single human-facing job identifier, e.g. OTR-48213. Minted by shared/jobReference.ts."
     },
     "customerId": {
       "type": "string"
@@ -118,7 +123,8 @@
       "type": "string"
     },
     "job_status": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED \u2014 never read or write. Dead duplicate of `status`, permanently stale. Use `status`."
     },
     "private_notes": {
       "type": "string"
@@ -332,18 +338,17 @@
       "type": "string",
       "enum": [
         "requested",
-        "booked",
+        "scheduled",
         "repair_in_progress",
-        "waiting_on_parts",
         "ready_for_pickup",
-        "invoice_sent",
-        "paid",
+        "invoice_outstanding",
         "completed",
-        "cancelled",
+        "waiting_on_parts",
         "on_hold",
-        "quote_approved"
+        "cancelled"
       ],
-      "default": "requested"
+      "default": "requested",
+      "description": "Canonical lifecycle. Main path: requested \u2192 scheduled \u2192 repair_in_progress \u2192 ready_for_pickup \u2192 invoice_outstanding \u2192 completed. waiting_on_parts, on_hold and cancelled are side states reachable from anywhere. Quote statuses are retired."
     },
     "waiting_reason": {
       "type": "string"
@@ -365,7 +370,7 @@
     },
     "quote_status": {
       "type": "string",
-      "default": "draft"
+      "description": "DEPRECATED \u2014 quote approval is retired. Never read or write."
     },
     "ready_for_pickup": {
       "type": "boolean",

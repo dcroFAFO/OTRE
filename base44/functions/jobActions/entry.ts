@@ -1,48 +1,23 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import {
+  READY_STATUS,
+  CANCELLED_STATUS,
+  REOPEN_STATUS,
+  INVOICE_OUTSTANDING_STATUS,
+  normalizeStatus,
+  isCanonicalStatus,
+  statusLabel,
+} from '../../shared/jobLifecycle.ts';
 
 // All job mutations (status, scheduling, checklist, notes) run
 // server-side here, with audit events written in the same request.
+// The status vocabulary lives in shared/jobLifecycle.ts — never redefine it here.
 
-const JOB_STATUSES = [
-  "requested",
-  "booked",
-  "repair_in_progress",
-  "waiting_on_parts",
-  "ready_for_pickup",
-  "invoice_sent",
-  "paid",
-  "completed",
-  "cancelled",
-  "on_hold",
-];
-
-const LEGACY_STATUS_MAP = {
-  quote_required: "requested",
-  quote_sent: "booked",
-  pending_confirmation: "on_hold",
-  quote_approved: "booked",
-  active: "repair_in_progress",
-  technician_assigned: "booked",
-  waiting_parts: "waiting_on_parts",
-  waiting_supplier: "on_hold",
-  waiting_customer: "on_hold",
-  invoice_outstanding: "invoice_sent",
-  in_progress: "repair_in_progress",
-};
-
-const READY_STATUS = "ready_for_pickup";
-const CANCELLED_STATUS = "cancelled";
-const REOPEN_STATUS = "booked";
 const PARTS_MARKUP_PERCENT = 20;
 const PARTS_MARKUP_MULTIPLIER = 1.2;
 
 const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
-const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status || "requested";
-const isCanonicalStatus = (status) => JOB_STATUSES.includes(status);
-
-const statusLabel = (key) =>
-  String(key || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
 const findJobInvoice = async (base44, job) => {
   if (job.invoice_id) {
@@ -56,17 +31,8 @@ const findJobInvoice = async (base44, job) => {
   return invoices[0] || null;
 };
 
-const listJobPartUsages = async (base44, job) => {
-  const primary = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 100);
-  if (!job.job_id || job.job_id === job.id) return primary;
-  const legacy = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.job_id, source: "inventory" }, "-created_date", 100);
-  const seen = new Set();
-  return [...primary, ...legacy].filter((usage) => {
-    if (seen.has(usage.id)) return false;
-    seen.add(usage.id);
-    return true;
-  });
-};
+const listJobPartUsages = (base44, job) =>
+  base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.id, source: "inventory" }, "-created_date", 100);
 
 // Makes the invoice visible in the customer portal. Deliberately sends NO
 // email/SMS — notifications are handled by the single clean notification flow.
@@ -158,6 +124,7 @@ Deno.serve(async (req) => {
     const STAFF_ONLY_ACTIONS = [
       "change_status", "reschedule", "mark_ready", "cancel", "reopen", "toggle_checklist",
       "save_private_notes", "add_inventory_parts", "remove_inventory_part", "remove_inventory_parts",
+      "generate_and_send_invoice",
     ];
     if (STAFF_ONLY_ACTIONS.includes(action) && !isStaff) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -166,7 +133,7 @@ Deno.serve(async (req) => {
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal", metadata = {} }) =>
       base44.asServiceRole.entities.AuditEvent.create({
         event_type: eventType,
-        job_id: job.job_id || job.id,
+        job_id: job.id,
         customer_id: job.customer_id,
         actor_id: user.id,
         actor_name: user.full_name || "System",
@@ -196,23 +163,34 @@ Deno.serve(async (req) => {
           summary: `Status changed to "${statusLabel(nextStatus)}"`,
           visibility: "customer",
         });
-        if (nextStatus === READY_STATUS) {
-          const readyJob = { ...job, ...result };
-          const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
-          if (invoiceSync.addedCount > 0) {
-            await logAudit({
-              eventType: "parts_added_to_invoice",
-              summary: `Automatically added ${invoiceSync.addedCount} part(s) to invoice`,
-              visibility: "internal",
-            });
-          }
-          const visible = await makeInvoiceCustomerVisible(base44, readyJob);
+        break;
+      }
+      // Explicit technician step: pull any uninvoiced parts onto the invoice,
+      // make it customer-visible and move the job to Invoice Outstanding.
+      // Invoicing is deliberately NOT automatic on ready_for_pickup.
+      case "generate_and_send_invoice": {
+        const invoiceSync = await addUninvoicedPartsToInvoice(base44, job);
+        if (!invoiceSync.invoice) {
+          return Response.json({ error: "Create an invoice for this job before sending it." }, { status: 400 });
+        }
+        if (invoiceSync.addedCount > 0) {
           await logAudit({
-            eventType: visible.invoice ? "invoice_customer_visible" : "invoice_missing_on_ready",
-            summary: visible.invoice ? "Invoice made customer-visible" : "Ready for pickup set without an invoice",
-            visibility: visible.invoice ? "customer" : "internal",
+            eventType: "parts_added_to_invoice",
+            summary: `Added ${invoiceSync.addedCount} part(s) to the invoice`,
+            visibility: "internal",
           });
         }
+        const visible = await makeInvoiceCustomerVisible(base44, job);
+        const previousStatus = normalizeStatus(job.status);
+        result = await base44.asServiceRole.entities.Job.update(job.id, { status: INVOICE_OUTSTANDING_STATUS });
+        await logAudit({
+          eventType: "invoice_sent_to_customer",
+          previousValue: statusLabel(previousStatus),
+          newValue: statusLabel(INVOICE_OUTSTANDING_STATUS),
+          summary: "Invoice generated and sent to the customer",
+          visibility: "customer",
+        });
+        result = { ...result, invoice: visible.invoice };
         break;
       }
       case "reschedule": {
@@ -231,21 +209,6 @@ Deno.serve(async (req) => {
         if (normalizeStatus(job.status) === READY_STATUS && job.ready_for_pickup) { result = job; break; }
         result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
-        const readyJob = { ...job, ...result };
-        const invoiceSync = await addUninvoicedPartsToInvoice(base44, readyJob);
-        if (invoiceSync.addedCount > 0) {
-          await logAudit({
-            eventType: "parts_added_to_invoice",
-            summary: `Automatically added ${invoiceSync.addedCount} part(s) to invoice`,
-            visibility: "internal",
-          });
-        }
-        const visible = await makeInvoiceCustomerVisible(base44, readyJob);
-        await logAudit({
-          eventType: visible.invoice ? "invoice_customer_visible" : "invoice_missing_on_ready",
-          summary: visible.invoice ? "Invoice made customer-visible" : "Ready for pickup set without an invoice",
-          visibility: visible.invoice ? "customer" : "internal",
-        });
         break;
       }
       case "cancel": {
@@ -345,7 +308,7 @@ Deno.serve(async (req) => {
         for (const usageId of usageIds) {
           const usage = await base44.asServiceRole.entities.InventoryUsage.get(usageId);
           if (!usage) continue;
-          if (usage.job_id !== job.id && usage.job_id !== job.job_id) {
+          if (usage.job_id !== job.id) {
             return Response.json({ error: "Part does not belong to this job" }, { status: 403 });
           }
 
@@ -377,11 +340,8 @@ Deno.serve(async (req) => {
           return Response.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        const jobKeys = [job.id, job.job_id].filter(Boolean);
-        const auditLists = await Promise.all(jobKeys.map((key) =>
-          base44.asServiceRole.entities.AuditEvent.filter({ job_id: key }, "-created_date", 200)
-        ));
-        const audits = Array.from(new Map(auditLists.flat().map((event) => [event.id, event])).values())
+        const auditList = await base44.asServiceRole.entities.AuditEvent.filter({ job_id: job.id }, "-created_date", 200);
+        const audits = auditList
           .filter((event) => !["note_added", "customer_note_added"].includes(event.event_type));
         const notes = await base44.asServiceRole.entities.JobNote.filter({ job_id: job.id }, "-created_date", 200);
 

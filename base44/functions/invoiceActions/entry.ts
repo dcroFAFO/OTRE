@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { isCanonicalInvoiceStatus, INVOICE_STATUSES, COMPLETED_STATUS } from '../../shared/jobLifecycle.ts';
 
 // Invoice creation and payment status transitions run server-side,
 // keeping the job's payment fields and audit trail in sync atomically.
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.Job.update(job.id, {
           invoice_id: result.id,
           payment_status: result.status || DEFAULT_STATUS,
-          status: result.status === "paid" ? "completed" : job.status,
+          status: result.status === "paid" ? COMPLETED_STATUS : job.status,
         });
         await logAudit({ eventType: "costing_copied_to_invoice", summary: `Costing copied to internal invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "internal" });
         break;
@@ -287,6 +288,10 @@ Deno.serve(async (req) => {
       case "set_payment_status": {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const { invoiceId, status } = params;
+        // Validate before writing — this value comes straight off the request body.
+        if (!isCanonicalInvoiceStatus(status)) {
+          return Response.json({ error: `Invalid payment status. Expected one of: ${INVOICE_STATUSES.join(", ")}.` }, { status: 400 });
+        }
         const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
         if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
         if (invoice.status === status) { result = invoice; break; }
@@ -295,9 +300,10 @@ Deno.serve(async (req) => {
           status,
           paid_date: status === "paid" ? new Date().toISOString() : null,
         });
+        // A settled invoice completes the job — the final step of the lifecycle.
         await base44.asServiceRole.entities.Job.update(job.id, {
           payment_status: status,
-          status: status === "paid" ? "completed" : job.status,
+          status: status === "paid" ? COMPLETED_STATUS : job.status,
         });
         await logAudit({
           eventType: "payment_status_changed",
