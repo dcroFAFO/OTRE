@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     if (!user || !isStaff(user)) return Response.json({ error: "Unauthorized" }, { status: 401 });
     const { postId } = await req.json();
     const post = await base44.asServiceRole.entities.BlogPost.get(postId);
-    if (!post || post.user_id !== user.id) return Response.json({ error: "Post not found" }, { status: 404 });
+    if (!post) return Response.json({ error: "Post not found" }, { status: 404 });
     const now = new Date().toISOString();
     const updated = await base44.asServiceRole.entities.BlogPost.update(post.id, { status: "draft", scheduled_at: null, updated_at: now });
     await base44.asServiceRole.entities.BlogLog.create({ user_id: user.id, event_type: "post_schedule_cancelled", related_post_id: post.id, status: "success", message: `Cancelled schedule for ${post.title}`, created_at: now });
