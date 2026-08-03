@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useClients } from "@/hooks/useClients";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ClientSummaryCards from "@/components/admin/clients/ClientSummaryCards";
 import ClientFilters, { EMPTY_CLIENT_FILTERS } from "@/components/admin/clients/ClientFilters";
 import ClientTable from "@/components/admin/clients/ClientTable";
 import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
-import { bulkUpdateClients, deleteClients, listClients } from "@/services/clientService";
+import { bulkUpdateClients, deleteClients } from "@/services/clientService";
 import ClientBulkActionsBar from "@/components/admin/clients/ClientBulkActionsBar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -22,12 +22,7 @@ export default function AdminClients() {
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  const { data: clients, isLoading: loadingClients, error, refetch } = useQuery({
-    queryKey: ["adminCustomers"],
-    queryFn: listClients,
-    initialData: [],
-    enabled: hasAtLeastRole(user?.role, "technician"),
-  });
+  const { data: clients, isLoading: loadingClients, error, refetch } = useClients(user?.role);
 
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();

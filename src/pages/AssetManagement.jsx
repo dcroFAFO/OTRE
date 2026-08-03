@@ -20,10 +20,14 @@ export default function AssetManagement() {
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["assets"],
     queryFn: () => base44.entities.Scooter.list("-updated_date", 300),
+    staleTime: 30_000,
   });
+  // Owner names change rarely — cached for the session so revisiting this page
+  // doesn't refetch the whole customer list.
   const { data: customers = [] } = useQuery({
     queryKey: ["assetCustomers"],
     queryFn: () => base44.entities.Customer.list("", 300),
+    staleTime: 5 * 60_000,
   });
 
   const ownerName = useMemo(() => {

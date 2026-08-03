@@ -11,7 +11,10 @@ export function useJobs(filter = {}) {
         : base44.entities.Job.list("-created_date", 200);
     },
     placeholderData: [],
-    staleTime: 0,
+    // Jobs stay fresh for a short window so switching filters, opening a job or
+    // returning to the list renders from cache instead of refetching every
+    // time. Any mutation still calls useInvalidateJobs() for immediate refresh.
+    staleTime: 30_000,
   });
 }
 
@@ -20,6 +23,7 @@ export function useStaff() {
     queryKey: ["staff"],
     queryFn: () => base44.entities.StaffProfile.filter({ active: true }, "full_name", 100),
     initialData: [],
+    staleTime: 5 * 60_000,
   });
 }
 

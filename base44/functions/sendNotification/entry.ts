@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { resolveTrustedOrigin, validateOrigin } from '../../shared/origin.ts';
+import { fetchWithRetry } from '../../shared/httpRetry.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -47,6 +48,28 @@ function emailTemplate(content) {
 
 const AUDIT_EMAIL = "logs@ontherunelectrics.com.au";
 
+// Set once per request so send helpers can record failures without threading
+// the client through every call site.
+let auditClient = null;
+let auditContext = {};
+
+// A dropped notification used to be invisible outside the function logs. Record
+// it on the audit trail so staff can see — and manually follow up on — any
+// customer who never received their email or SMS.
+async function recordFailure(channel, to, reason) {
+  console.error(`[sendNotification] ${channel} to ${to || 'unknown'} failed: ${reason}`);
+  if (!auditClient) return;
+  await auditClient.asServiceRole.entities.AuditEvent.create({
+    event_type: 'notification_failed',
+    job_id: auditContext.jobId || '',
+    actor_name: 'System',
+    actor_role: 'system',
+    summary: `${channel === 'sms' ? 'SMS' : 'Email'} to ${to || 'unknown recipient'} could not be delivered`,
+    visibility: 'internal',
+    metadata: { channel, recipient: to || '', reason: String(reason).slice(0, 500), event_type: auditContext.eventType || '' },
+  }).catch((err) => console.warn('[sendNotification] failure audit skipped:', err.message));
+}
+
 async function sendEmail(to, subject, html, { audit = true } = {}) {
   if (!RESEND_API_KEY) { console.warn('[sendNotification] RESEND_API_KEY not set'); return false; }
   if (!to) { console.warn('[sendNotification] no email recipient'); return false; }
@@ -54,14 +77,14 @@ async function sendEmail(to, subject, html, { audit = true } = {}) {
     const payload = { from: FROM_EMAIL, to: [to], subject, html };
     // BCC the business inbox on every outgoing email for staff audit visibility.
     if (audit && to !== AUDIT_EMAIL) payload.bcc = [AUDIT_EMAIL];
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetchWithRetry('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
-    if (!res.ok) { console.error('[sendNotification] email failed:', await res.text()); return false; }
+    }, { label: `email to ${to}` });
+    if (!res.ok) { await recordFailure('email', to, await res.text()); return false; }
     return true;
-  } catch (e) { console.error('[sendNotification] email error:', e.message); return false; }
+  } catch (e) { await recordFailure('email', to, e.message); return false; }
 }
 
 async function sendSMS(to, body) {
@@ -69,18 +92,18 @@ async function sendSMS(to, body) {
   if (!to || !to.startsWith('+')) { console.warn('[sendNotification] invalid SMS number:', to); return false; }
   try {
     const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
+    const res = await fetchWithRetry(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
       method: 'POST',
       headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ From: TWILIO_FROM_NUMBER, To: to, Body: body }),
-    });
-    if (!res.ok) { console.error('[sendNotification] SMS failed:', await res.text()); return false; }
+    }, { label: `SMS to ${to}` });
+    if (!res.ok) { await recordFailure('sms', to, await res.text()); return false; }
     // Email an audit copy of every SMS to the business inbox for staff visibility.
     await sendEmail(AUDIT_EMAIL, `[SMS Audit] Sent to ${to}`, emailTemplate(
       `<p><strong>SMS sent to:</strong> ${to}</p><p><strong>Message:</strong></p><p style="white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px;">${body}</p>`
     ), { audit: false });
     return true;
-  } catch (e) { console.error('[sendNotification] SMS error:', e.message); return false; }
+  } catch (e) { await recordFailure('sms', to, e.message); return false; }
 }
 
 async function getStaffUsers(base44) {
@@ -136,6 +159,7 @@ function guestPerksBlock(origin, email) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    auditClient = base44;
     const body = await req.json().catch(() => ({}));
     const origin = await resolveOrigin(req, body, base44);
     const db = base44.asServiceRole.entities;
@@ -177,6 +201,7 @@ Deno.serve(async (req) => {
 
     if (!eventType) return Response.json({ skipped: 'no event type determined' });
 
+    auditContext = { eventType, jobId: jobId || '' };
     const results = [];
 
     // ── USER WELCOME ──

@@ -211,7 +211,22 @@ Deno.serve(async (req) => {
     // Send booking confirmation notifications directly (customer email + SMS, staff email + SMS).
     // The entity automation may not reliably deliver the payload, so we invoke sendNotification directly.
     const notifOrigin = await resolveTrustedOrigin(req, base44);
-    await base44.functions.invoke('sendNotification', { event_type: 'booking_request', job_id: job.id, origin: notifOrigin }).catch((notifErr) => console.warn('[createBooking] notification dispatch skipped:', notifErr?.message || notifErr));
+    // A failed dispatch must never fail the booking itself — but it can't stay
+    // silent either, or staff would never know the customer wasn't contacted.
+    await base44.functions.invoke('sendNotification', { event_type: 'booking_request', job_id: job.id, origin: notifOrigin }).catch(async (notifErr) => {
+      const reason = notifErr?.message || String(notifErr);
+      console.error('[createBooking] notification dispatch failed:', reason);
+      await base44.asServiceRole.entities.AuditEvent.create({
+        event_type: 'notification_failed',
+        job_id: job.id,
+        customer_id: customerRecord?.id || stableCustomerId,
+        actor_name: 'System',
+        actor_role: 'system',
+        summary: `Booking confirmation for ${job.reference} could not be sent — follow up with the customer`,
+        visibility: 'internal',
+        metadata: { channel: 'dispatch', recipient: email, reason: reason.slice(0, 500), event_type: 'booking_request' },
+      }).catch((auditErr) => console.warn('[createBooking] failure audit skipped:', auditErr.message));
+    });
 
     const managePath = customerUserId ? '/portal' : null;
     const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
