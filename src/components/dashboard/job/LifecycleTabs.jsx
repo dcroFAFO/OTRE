@@ -7,9 +7,9 @@ import { normalizeStatusKey } from "@/config/jobConfig";
 export const LIFECYCLE_GROUPS = [
   { key: "all", label: "All", statuses: null },
   { key: "request_review", label: "Request Review", statuses: ["requested"] },
-  { key: "approval_scheduling", label: "Approval / Scheduling", statuses: ["booked"] },
+  { key: "scheduling", label: "Scheduling", statuses: ["scheduled"] },
   { key: "repair", label: "Repair", statuses: ["repair_in_progress", "waiting_on_parts"] },
-  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_sent", "paid"] },
+  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_outstanding"] },
   { key: "complete", label: "Complete", statuses: ["completed", "cancelled", "on_hold"] },
 ];
 

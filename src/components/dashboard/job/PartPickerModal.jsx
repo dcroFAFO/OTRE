@@ -150,20 +150,8 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
       }));
       if (onAdd) await onAdd(prepared);
       else {
-        const { addPartsToQuote } = await import("@/services/quoteService");
-        await addPartsToQuote(job, prepared.map((p) => ({
-          name: p.name,
-          typical_price: p.customer_price,
-          cost_price: p.cost_price,
-          customer_price: p.customer_price,
-          customer_line_total: p.customer_line_total,
-          markup_percentage: PARTS_MARKUP_PERCENT,
-          qty: p.qty,
-          sku: p.sku,
-          product_code: p.sku,
-          is_custom_misc_part: !!p.is_custom_misc_part,
-          note: p.note || "",
-        })), actor);
+        const { addInventoryParts } = await import("@/services/jobService");
+        await addInventoryParts(job, prepared);
       }
       setSelected({});
       onAdded?.();
@@ -180,7 +168,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{onAdd ? "Add repair parts" : "Add part to quote"}</DialogTitle>
+          <DialogTitle>Add repair parts</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
@@ -274,7 +262,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
         {validationError && <p className="text-sm text-destructive">{validationError}</p>}
         <Button onClick={add} disabled={chosen.length === 0 || adding} className="gap-1.5">
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} {onAdd ? "to job" : "to quote"}
+          Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} to job
         </Button>
       </DialogContent>
     </Dialog>

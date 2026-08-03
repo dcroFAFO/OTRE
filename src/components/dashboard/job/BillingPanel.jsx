@@ -5,11 +5,11 @@ import InvoicePanel from "./InvoicePanel";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 import { toast } from "sonner";
 
-// Invoice tab for ready_for_pickup / invoice_sent status:
+// Invoice tab for ready_for_pickup / invoice_outstanding status:
 // - Editable summary of parts/labour/consumables (via InvoicePanel)
 // - Invoice creation, preview, and issuing tools
 // - "Invoice Settled" button for cash/external payments → completed
-export default function BillingPanel({ job, actor, canEdit, quoteReadOnly, invoiceReadOnly, onChange }) {
+export default function BillingPanel({ job, actor, canEdit, invoiceReadOnly, onChange }) {
   const [settling, setSettling] = useState(false);
 
   const settleInvoice = async () => {

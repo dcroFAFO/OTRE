@@ -18,7 +18,7 @@ import { can } from "@/config/permissions";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import {
   getVisibleJobTabs,
-  isQuoteReadOnlyForStatus,
+  isLabourReadOnlyForStatus,
   isInvoiceReadOnlyForStatus,
 } from "@/config/jobDetailsTabConfig";
 import { format } from "date-fns";
@@ -74,7 +74,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   const canManage = can(role, "job.update") || role === "admin";
 
   const visibleTabs = job ? getVisibleJobTabs(job.status) : ["billing"];
-  const quoteReadOnly = job ? isQuoteReadOnlyForStatus(job.status) : false;
+  const labourReadOnly = job ? isLabourReadOnlyForStatus(job.status) : false;
   const invoiceReadOnly = job ? isInvoiceReadOnlyForStatus(job.status) : false;
   const isMobileWorkspace = useMobileJobWorkspace();
 
@@ -107,7 +107,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
         role={role}
         bump={bump}
         refreshKey={refreshKey}
-        quoteReadOnly={quoteReadOnly}
+        labourReadOnly={labourReadOnly}
         invoiceReadOnly={invoiceReadOnly}
         onClose={onClose}
       />
@@ -161,7 +161,7 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         job={job}
                         actor={actor}
                         canEdit={canManage}
-                        quoteReadOnly={quoteReadOnly}
+                        labourReadOnly={labourReadOnly}
                         onChange={bump}
                         role={role}
                         canNote={can(role, "job.note.customer") || role === "admin"}
@@ -175,7 +175,6 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
                         job={job}
                         actor={actor}
                         canEdit={canManage}
-                        quoteReadOnly={quoteReadOnly || !(can(role, "job.quote.manage") || role === "admin")}
                         invoiceReadOnly={invoiceReadOnly || !(can(role, "job.invoice.manage") || role === "admin")}
                         onChange={bump}
                       />

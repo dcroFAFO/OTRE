@@ -39,11 +39,19 @@ export default function PartsSourcingPanel({ job, actor, onAdded }) {
     setSelected((s) => (s[p._id] ? { ...s, [p._id]: { ...s[p._id], qty: Math.max(1, Number(qty) || 1) } } : s));
 
   const chosen = Object.values(selected);
-  const addToQuote = async () => {
+  const addToJob = async () => {
     if (chosen.length === 0) return;
     setAdding(true);
-    const { addPartsToQuote } = await import("@/services/quoteService");
-    await addPartsToQuote(job, chosen, actor);
+    const { addInventoryParts } = await import("@/services/jobService");
+    await addInventoryParts(job, chosen.map((p) => ({
+      id: p.id || "",
+      name: p.name,
+      cost_price: Number(p.typical_price) || 0,
+      qty: Number(p.qty) || 1,
+      sku: p.sku || "",
+      note: p.note || "",
+      is_custom_misc_part: !p.id,
+    })));
     setAdding(false);
     setSelected({});
     onAdded?.();
@@ -127,9 +135,9 @@ export default function PartsSourcingPanel({ job, actor, onAdded }) {
             );
           })}
 
-          <Button size="sm" onClick={addToQuote} disabled={chosen.length === 0 || adding} className="gap-1.5 w-full">
+          <Button size="sm" onClick={addToJob} disabled={chosen.length === 0 || adding} className="gap-1.5 w-full">
             {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} to quote
+            Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} to job
           </Button>
         </div>
       )}

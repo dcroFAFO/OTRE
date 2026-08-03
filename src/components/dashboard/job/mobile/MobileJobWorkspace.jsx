@@ -25,15 +25,15 @@ const TAB_ICONS = { schedule: CalendarDays, repair: Wrench, billing: CreditCard,
 // Contextual primary action + initial tab, driven by the job's current status.
 function contextualStep(status) {
   if (["requested"].includes(status)) return { tab: "schedule", label: "Schedule job" };
-  if (["booked", "on_hold"].includes(status)) return { tab: "repair", label: "Begin repair" };
+  if (["scheduled", "on_hold"].includes(status)) return { tab: "repair", label: "Begin repair" };
   if (["repair_in_progress", "waiting_on_parts"].includes(status)) return { tab: "repair", label: "Continue repair" };
-  if (["ready_for_pickup", "invoice_sent"].includes(status)) return { tab: "billing", label: "Manage invoice" };
-  if (["paid", "completed", "cancelled"].includes(status)) return { tab: "timeline", label: "View timeline" };
+  if (["ready_for_pickup", "invoice_outstanding"].includes(status)) return { tab: "billing", label: "Manage invoice" };
+  if (["completed", "cancelled"].includes(status)) return { tab: "timeline", label: "View timeline" };
   return { tab: "schedule", label: "Schedule job" };
 }
 
 export default function MobileJobWorkspace({
-  job, actor, canManage, role, bump, refreshKey, quoteReadOnly, invoiceReadOnly, onClose,
+  job, actor, canManage, role, bump, refreshKey, labourReadOnly, invoiceReadOnly, onClose,
 }) {
   const step = contextualStep(job.status);
   const visibleTabs = getVisibleJobTabs(job.status);
@@ -52,7 +52,7 @@ export default function MobileJobWorkspace({
         {tab === "repair" && (
           <>
             {canManage && <JobDetailsHeaderActions job={job} actor={actor} onChange={bump} context="repair" />}
-            <RepairTab job={job} actor={actor} canEdit={canManage} quoteReadOnly={quoteReadOnly} onChange={bump}
+            <RepairTab job={job} actor={actor} canEdit={canManage} labourReadOnly={labourReadOnly} onChange={bump}
               role={role} canNote={can(role, "job.note.customer") || role === "admin"} canAttach={can(role, "job.attach") || role === "admin"} />
           </>
         )}

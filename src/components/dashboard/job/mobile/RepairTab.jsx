@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Package, Wrench, StickyNote, Paperclip, PlayCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import JobPartsPanel from "../JobPartsPanel";
-import QuotePanel from "../QuotePanel";
+import JobLabourPanel from "../JobLabourPanel";
+import DiagnosisNotesCard from "../DiagnosisNotesCard";
 import NotesPanel from "../NotesPanel";
 import PrivateNotesPanel from "../PrivateNotesPanel";
 import AttachmentsPanel from "../AttachmentsPanel";
@@ -10,13 +11,13 @@ import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 import { toast } from "sonner";
 
 // Status-driven repair workspace:
-// - booked/on_hold: "Begin Repair" button → repair_in_progress
+// - scheduled/on_hold: "Begin Repair" button → repair_in_progress
 // - repair_in_progress/waiting_on_parts: parts + labour catalogues (no invoice
 //   actions) + "Complete Repair" button → ready_for_pickup
-export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange, role, canNote, canAttach }) {
+export default function RepairTab({ job, actor, canEdit, labourReadOnly, onChange, role, canNote, canAttach }) {
   const status = job.status;
 
-  if (["booked", "on_hold", "quote_approved", "requested"].includes(status)) {
+  if (["scheduled", "on_hold", "requested"].includes(status)) {
     return <BeginRepairCard job={job} onChange={onChange} />;
   }
 
@@ -27,10 +28,11 @@ export default function RepairTab({ job, actor, canEdit, quoteReadOnly, onChange
       </RepairSection>
 
       <RepairSection title="Labour and Consumables" icon={Wrench}>
-        <QuotePanel job={job} actor={actor} canEdit={canEdit && !quoteReadOnly} onChange={onChange} repairMode />
+        <JobLabourPanel job={job} canEdit={canEdit && !labourReadOnly} onChange={onChange} />
       </RepairSection>
 
       <RepairSection title="Notes" icon={StickyNote}>
+        <DiagnosisNotesCard job={job} canEdit={canEdit && !labourReadOnly} onChange={onChange} />
         <NotesPanel job={job} actor={actor} canCustomer={canNote} onChange={onChange} />
         <PrivateNotesPanel job={job} actor={actor} canEdit={canEdit} onChange={onChange} />
       </RepairSection>

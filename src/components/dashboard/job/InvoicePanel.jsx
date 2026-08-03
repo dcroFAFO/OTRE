@@ -5,18 +5,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, copyQuoteToInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems, sendPaymentReminder } from "@/services/paymentService";
-import { getJobQuote } from "@/services/quoteService";
+import { getJobInvoice, createInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems, sendPaymentReminder } from "@/services/paymentService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import PartPickerModal from "./PartPickerModal";
 import LabourConsumablePickerModal from "./LabourConsumablePickerModal";
 import InvoiceLineItemCard from "./InvoiceLineItemCard";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { AlertCircle, Bell, CheckCircle2, Clock, Copy, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Trash2, Wrench } from "lucide-react";
+import { AlertCircle, Bell, CheckCircle2, Clock, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { PARTS_MARKUP_PERCENT, getUsageCustomerUnitPrice, roundMoney } from "@/lib/partsPricing";
-import { addInventoryParts } from "@/services/jobService";
-import { saveQuote } from "@/services/quoteService";
+import { addInventoryParts, generateAndSendInvoice } from "@/services/jobService";
 
 function normalizeDraftItem(item = {}) {
   const qty = Number(item.qty) || 1;
@@ -97,10 +95,8 @@ function usageToLineItem(usage) {
 
 export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly = false }) {
   const [invoice, setInvoice] = useState(null);
-  const [quote, setQuote] = useState(null);
   const [usageRecords, setUsageRecords] = useState([]);
   const [sending, setSending] = useState(false);
-  const [copying, setCopying] = useState(false);
   const [creating, setCreating] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pdfDocument, setPdfDocument] = useState(null);
@@ -121,40 +117,27 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
 
   const loadInvoiceData = async () => {
     setLoading(true);
-    const [inv, q, primaryUsage, legacyUsage] = await Promise.all([
+    const [inv, usage] = await Promise.all([
       getJobInvoice(job.id),
-      getJobQuote(job.id),
       base44.entities.InventoryUsage.filter({ job_id: job.id }),
-      job.job_id && job.job_id !== job.id ? base44.entities.InventoryUsage.filter({ job_id: job.job_id }) : Promise.resolve([]),
     ]);
-    const seen = new Set();
-    const usage = [...(primaryUsage || []), ...(legacyUsage || [])].filter((item) => {
-      if (seen.has(item.id)) return false;
-      seen.add(item.id);
-      return true;
-    });
-    const usageById = new Map(usage.map((item) => [item.id, item]));
+    const usageById = new Map((usage || []).map((item) => [item.id, item]));
     setInvoice(inv);
-    setQuote(q);
-    setUsageRecords(usage);
+    setUsageRecords(usage || []);
     setDraftItems((inv?.line_items || []).map((item) => {
       const usage = usageById.get(item.source_usage_id);
       if (!usage || item.kind !== "part") return normalizeDraftItem(item);
       return normalizeDraftItem({ ...item, internal_cost_price: usage.unit_cost, markup_percentage: usage.markup_percentage, is_custom_misc_part: usage.is_custom_misc_part, staff_notes: usage.note });
     }));
     setInternalNotes(inv?.internalCostingNotes || "");
-    setCustomerNotes(inv?.customer_notes ?? (q?.diagnosis_notes || job.issue_description || ""));
+    setCustomerNotes(inv?.customer_notes ?? (job.diagnosis_notes || job.issue_description || ""));
     setFinaliseStatus(inv?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
     setLoading(false);
   };
 
   useEffect(() => { loadInvoiceData(); }, [job.id]);
 
-  const usageSourceIds = new Set(usageRecords.map((usage) => usage.id));
-  const billingItems = [
-    ...usageRecords.map(usageToLineItem),
-    ...((quote?.line_items || []).filter((item) => item.kind !== "part" && !usageSourceIds.has(item.source_usage_id)).map(normalizeDraftItem)),
-  ];
+  const billingItems = usageRecords.map(usageToLineItem);
 
   const activeItems = invoice ? draftItems : billingItems;
   const lineTotal = activeItems.reduce((sum, item) => sum + calculateLineTotal(item), 0);
@@ -268,9 +251,12 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     setFinaliseStatus(ASYNC_STATES.SENDING);
     try {
       await emailInvoicePdf(job, draft, invoiceNotes, pdfRevision);
+      // Explicit lifecycle step — syncs any uninvoiced parts, makes the invoice
+      // customer-visible and moves the job to Invoice Outstanding.
+      await generateAndSendInvoice(job);
       await loadInvoiceData();
       setFinaliseStatus(ASYNC_STATES.SENT);
-      toast.success("Invoice finalised and visible to the customer.");
+      toast.success("Invoice sent. Job is now awaiting payment.");
       onChange?.();
     } catch (err) {
       const message = staffErrorMessage(err, "Email sending failed.");
@@ -288,23 +274,6 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       setFinaliseStatus(invoice?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
     }
     setPreviewOpen(false);
-  };
-
-  const copyQuote = async () => {
-    setCopying(true);
-    try {
-      const inv = await copyQuoteToInvoice(job);
-      setInvoice(inv);
-      setDraftItems((inv?.line_items || []).map(normalizeDraftItem));
-      setInternalNotes(inv?.internalCostingNotes || "");
-      await loadInvoiceData();
-      onChange?.();
-      toast.success("Costing copied to invoice.");
-    } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to copy costing.");
-    } finally {
-      setCopying(false);
-    }
   };
 
   const setStatus = async (status) => {
@@ -354,12 +323,13 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     }
   };
 
+  // Labour, fees and consumables go straight onto the invoice.
   const handleAddLabour = async (items) => {
     setAddingLabour(true);
     try {
-      const currentQuote = quote || await getJobQuote(job.id);
-      const nextItems = [...(currentQuote?.line_items || []), ...items];
-      await saveQuote(job, { ...currentQuote, id: currentQuote?.id, line_items: nextItems }, "invoice");
+      const nextItems = [...getFinaliseItems(), ...items.map(normalizeDraftItem)];
+      if (invoice) await updateInvoiceLineItems(job, invoice, nextItems, internalNotes, customerNotes);
+      else await createInvoice(job, 0, nextItems);
       await loadInvoiceData();
       onChange?.();
       toast.success("Labour / consumable added to invoice.");
@@ -488,7 +458,6 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
 
           {canEdit ? (
             <div className="flex flex-wrap gap-2 pt-1">
-              {quote && <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Copy costing</Button>}
               <Button size="sm" variant="outline" onClick={() => setPartsPickerOpen(true)} disabled={addingParts} className="gap-1.5">
                 {addingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />} Add parts
               </Button>
@@ -520,7 +489,6 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {quote && <Button size="sm" variant="outline" onClick={copyQuote} disabled={copying} className="gap-1.5">{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Copy costing</Button>}
             <Button size="sm" variant="outline" onClick={() => setPartsPickerOpen(true)} disabled={addingParts} className="gap-1.5">
               {addingParts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />} Add parts
             </Button>

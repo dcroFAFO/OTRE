@@ -22,7 +22,7 @@
     },
     "quote_id": {
       "type": "string",
-      "description": "DEPRECATED \u2014 quote approval is retired. Technicians build invoice line items directly."
+      "description": "RETIRED \u2014 quote approval no longer exists. Technicians build invoice line items directly."
     },
     "invoice_id": {
       "type": "string"
@@ -128,6 +128,10 @@
     },
     "private_notes": {
       "type": "string"
+    },
+    "diagnosis_notes": {
+      "type": "string",
+      "description": "Technician diagnosis findings recorded during the repair. Replaces the retired Quote.diagnosis_notes."
     },
     "bookingRequestSmsSentAt": {
       "type": "string",
@@ -370,7 +374,7 @@
     },
     "quote_status": {
       "type": "string",
-      "description": "DEPRECATED \u2014 quote approval is retired. Never read or write."
+      "description": "RETIRED \u2014 quote approval no longer exists. Never read or write."
     },
     "ready_for_pickup": {
       "type": "boolean",
