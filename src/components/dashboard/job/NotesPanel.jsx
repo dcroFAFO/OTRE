@@ -49,9 +49,9 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
           placeholder="Add a note…"
           className="min-h-[72px] resize-none border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
         />
-        <div className="flex items-center justify-between gap-2 border-t border-border pt-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2.5">
           {canCustomer ? (
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <Toggle active={visibility === "internal"} onClick={() => setVisibility("internal")} icon={Lock} label="Internal" />
               <Toggle active={visibility === "customer"} onClick={() => setVisibility("customer")} icon={Eye} label="Customer-visible" />
             </div>
@@ -65,8 +65,9 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
         </div>
       </div>
 
-      {/* Thread */}
-      <div className="space-y-4 max-h-80 overflow-auto pr-1">
+      {/* Thread — no inner scroll area on mobile, where a nested scroller traps
+          the page scroll. Capped again from large screens up. */}
+      <div className="space-y-4 lg:max-h-80 lg:overflow-auto lg:pr-1">
         {notes.map((n) => <NoteBubble key={n.id} note={n} />)}
         {notes.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border/60 py-10 text-center">
@@ -82,7 +83,7 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
 function Toggle({ active, onClick, icon: Icon, label }) {
   return (
     <button type="button" onClick={onClick}
-      className={cn("flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium border transition-colors",
+      className={cn("flex min-h-9 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors",
         active ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:bg-secondary")}>
       <Icon className="h-3 w-3" /> {label}
     </button>

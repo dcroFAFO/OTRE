@@ -34,12 +34,12 @@ export default function AttachmentsPanel({ job, actor, canUpload }) {
       {canUpload && (
         <div className="space-y-2">
           {/* Visibility toggle */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground font-medium">Upload as:</span>
             <button
               onClick={() => setVisibility("internal")}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                "flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
                 visibility === "internal"
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-transparent text-muted-foreground border-border hover:border-primary/50"
@@ -50,7 +50,7 @@ export default function AttachmentsPanel({ job, actor, canUpload }) {
             <button
               onClick={() => setVisibility("customer")}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                "flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
                 visibility === "customer"
                   ? "bg-accent text-accent-foreground border-accent"
                   : "bg-transparent text-muted-foreground border-border hover:border-accent/50"
@@ -61,9 +61,11 @@ export default function AttachmentsPanel({ job, actor, canUpload }) {
           </div>
 
           {/* Upload dropzone */}
-          <label className="flex items-center gap-2 cursor-pointer rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-accent transition-colors">
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? "Uploading…" : `Upload file (${visibility === "customer" ? "visible to customer" : "private / internal"})`}
+          <label className="flex min-h-12 items-center gap-2 cursor-pointer rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-accent transition-colors">
+            {uploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Upload className="h-4 w-4 shrink-0" />}
+            <span className="min-w-0">
+              {uploading ? "Uploading…" : `Upload file (${visibility === "customer" ? "visible to customer" : "private / internal"})`}
+            </span>
             <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
           </label>
         </div>

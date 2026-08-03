@@ -61,6 +61,9 @@ export default function MobileJobWorkspace({
       />
 
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-28">
+        {/* Keyed so each tab switch plays a short fade/rise — enough to signal
+            the change without delaying access to the content. */}
+        <div key={tab} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
         {tab === "schedule" && <ScheduleTab job={job} canEdit={canManage} onChange={bump} />}
         {tab === "repair" && (
           <>
@@ -86,6 +89,7 @@ export default function MobileJobWorkspace({
         )}
         {tab === "invoice" && <InvoicePanel job={job} actor={actor} canEdit={canManage && (can(role, "job.invoice.manage") || role === "admin")} onChange={bump} />}
         {tab === "timeline" && <AuditTimeline job={job} refreshKey={refreshKey} />}
+        </div>
       </div>
 
       <MobileJobTabBar activeTab={tab} onChange={setTab} visibleTabs={visibleTabs} />
@@ -136,7 +140,7 @@ function MobileJobTabBar({ activeTab, onChange, visibleTabs }) {
           const active = activeTab === t;
           return (
             <button key={t} onClick={() => select(t)} aria-current={active ? "page" : undefined}
-              className={cn("flex flex-1 min-w-0 min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition-colors",
+              className={cn("flex flex-1 min-w-0 min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition-all active:scale-95",
                 active ? "text-accent" : "text-muted-foreground")}>
               <Icon className="h-5 w-5 shrink-0" />
               <span className="max-w-full truncate">{TAB_LABELS[t]}</span>

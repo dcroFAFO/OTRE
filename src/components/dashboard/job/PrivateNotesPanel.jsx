@@ -47,7 +47,7 @@ export default function PrivateNotesPanel({ job, actor, canEdit, onChange }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="e.g. Rear hub motor bearing seized — likely water ingress. Controller showing intermittent fault under load."
-            className="h-48 leading-relaxed"
+            className="h-32 leading-relaxed sm:h-48"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex items-center justify-end gap-2">
