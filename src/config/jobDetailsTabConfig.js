@@ -1,36 +1,24 @@
 /**
  * jobDetailsTabConfig.js
  * Central utility for job status normalisation and tab visibility rules.
+ * Status vocabulary mirrors src/config/jobConfig.js.
  */
 
-const LEGACY_STATUS_MAP = {
-  quote_required: "requested",
-  quote_sent: "booked",
-  pending_confirmation: "on_hold",
-  quote_approved: "booked",
-  active: "repair_in_progress",
-  technician_assigned: "booked",
-  waiting_parts: "waiting_on_parts",
-  waiting_supplier: "on_hold",
-  waiting_customer: "on_hold",
-  invoice_outstanding: "invoice_sent",
-  in_progress: "repair_in_progress",
-};
+import { normalizeStatusKey } from "@/config/jobConfig";
 
 const CLOSED_STATUSES = ["completed", "cancelled"];
-const PAID_OR_CLOSED_STATUSES = ["paid", "completed", "cancelled"];
+const SETTLED_OR_CLOSED_STATUSES = ["completed", "cancelled"];
 
 // Status-based tab visibility — staff only see tabs relevant to the
 // current lifecycle stage.
 const STATUS_TABS = {
   requested: ["schedule", "customer"],
-  booked: ["schedule", "customer", "repair"],
+  scheduled: ["schedule", "customer", "repair"],
   on_hold: ["schedule", "customer", "repair"],
   repair_in_progress: ["repair", "customer"],
   waiting_on_parts: ["repair", "customer"],
   ready_for_pickup: ["billing", "customer"],
-  invoice_sent: ["billing", "customer"],
-  paid: ["timeline", "customer"],
+  invoice_outstanding: ["billing", "customer"],
   completed: ["invoice", "timeline", "customer"],
   cancelled: ["timeline", "customer"],
 };
@@ -38,7 +26,7 @@ const STATUS_TABS = {
 export function normalizeJobStatus(status) {
   if (!status) return "";
   const key = status.trim().toLowerCase().replace(/\s+/g, "_");
-  return LEGACY_STATUS_MAP[key] || key;
+  return normalizeStatusKey(key);
 }
 
 export function getVisibleJobTabs(status) {
@@ -46,10 +34,11 @@ export function getVisibleJobTabs(status) {
   return STATUS_TABS[normalized] || ["schedule", "customer"];
 }
 
-export function isQuoteReadOnlyForStatus(status) {
+// Labour and consumables can no longer be edited once the job is closed.
+export function isLabourReadOnlyForStatus(status) {
   return CLOSED_STATUSES.includes(normalizeJobStatus(status));
 }
 
 export function isInvoiceReadOnlyForStatus(status) {
-  return PAID_OR_CLOSED_STATUSES.includes(normalizeJobStatus(status));
+  return SETTLED_OR_CLOSED_STATUSES.includes(normalizeJobStatus(status));
 }

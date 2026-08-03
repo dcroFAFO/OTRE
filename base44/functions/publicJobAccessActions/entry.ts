@@ -60,21 +60,6 @@ function publicJob(job) {
   };
 }
 
-function publicQuote(quote) {
-  if (!quote || !['sent', 'approved', 'rejected'].includes(quote.status)) return null;
-  return {
-    id: quote.id,
-    status: quote.status,
-    approval_status: quote.approval_status,
-    diagnosis_notes: quote.diagnosis_notes,
-    recommended_repair: quote.recommended_repair,
-    total: quote.total,
-    currency: quote.currency || 'AUD',
-    line_items: quote.line_items || [],
-    sent_date: quote.sent_date || null,
-  };
-}
-
 function publicInvoice(invoice) {
   if (!invoice || invoice.invoiceVisibility !== 'customer_visible') return null;
   return {
@@ -97,8 +82,7 @@ function publicInvoice(invoice) {
 }
 
 async function buildPayload(base44, job, access) {
-  const [quotes, invoices, notes, attachments] = await Promise.all([
-    base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, '-created_date', 1),
+  const [invoices, notes, attachments] = await Promise.all([
     base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, '-created_date', 1),
     base44.asServiceRole.entities.JobNote.filter({ job_id: job.id, visibility: 'customer' }, '-created_date', 100),
     base44.asServiceRole.entities.Attachment.filter({ job_id: job.id, visibility: 'customer' }, '-created_date', 50),
@@ -106,7 +90,6 @@ async function buildPayload(base44, job, access) {
 
   return {
     job: publicJob(job),
-    quote: hasPermission(access, 'view_quote') || hasPermission(access, 'quote') ? publicQuote(quotes[0]) : null,
     invoice: hasPermission(access, 'view_invoice') || hasPermission(access, 'invoice') ? publicInvoice(invoices[0]) : null,
     notes: notes.map((n) => ({ id: n.id, body: n.body, author_name: n.author_name, created_date: n.created_date })),
     attachments: attachments.map((a) => ({ id: a.id, file_url: a.file_url, file_name: a.file_name, kind: a.kind, created_date: a.created_date })),
@@ -124,7 +107,7 @@ Deno.serve(async (req) => {
   const meta = { fn: 'publicJobAccessActions' };
   try {
     const base44 = createClientFromRequest(req);
-    const { action, jobId, trackingToken, token, permissions, note, file_url, file_name, kind, quoteId, approved, invoiceId } = await req.json().catch(() => ({}));
+    const { action, jobId, trackingToken, token, permissions, note, file_url, file_name, kind, invoiceId } = await req.json().catch(() => ({}));
     meta.action = action;
     meta.jobId = jobId;
 
@@ -142,7 +125,7 @@ Deno.serve(async (req) => {
 
       const rawToken = makeToken();
       const tokenHash = await sha256(rawToken);
-      const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_quote', 'view_invoice', 'pay_invoice'];
+      const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_invoice', 'pay_invoice'];
       // Only the hash is persisted; the raw token is returned once, below.
       await base44.asServiceRole.entities.PublicJobAccess.create({
         jobId,
@@ -205,27 +188,6 @@ Deno.serve(async (req) => {
         uploaded_by_name: job.customer_name || 'Customer',
       });
       return Response.json(await buildPayload(base44, job, access));
-    }
-
-    if (action === 'quote_decision') {
-      if (!hasPermission(access, 'quote_decision')) return Response.json({ error: 'This link cannot approve or reject quotes.' }, { status: 403 });
-      const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, '-created_date', 1);
-      const quote = quotes[0];
-      if (!quote || quote.id !== quoteId) return Response.json({ error: 'Quote not found.' }, { status: 404 });
-      const ok = !!approved;
-      await base44.asServiceRole.entities.Quote.update(quote.id, { status: ok ? 'approved' : 'rejected', approval_status: ok ? 'approved' : 'rejected' });
-      await base44.asServiceRole.entities.Job.update(job.id, { quote_status: ok ? 'approved' : 'rejected', status: ok ? 'quote_approved' : job.status });
-      await base44.asServiceRole.entities.AuditEvent.create({
-        event_type: ok ? 'quote_approved' : 'quote_rejected',
-        job_id: job.id,
-        customer_id: job.customer_id || null,
-        actor_name: job.customer_name || 'Customer',
-        actor_role: 'customer',
-        summary: ok ? 'Quote approved from public tracking link' : 'Quote rejected from public tracking link',
-        visibility: 'customer',
-      });
-      const freshJob = await base44.asServiceRole.entities.Job.get(job.id);
-      return Response.json(await buildPayload(base44, freshJob, access));
     }
 
     if (action === 'start_payment') {

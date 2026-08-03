@@ -4,7 +4,7 @@
   "properties": {
     "quote_id": {
       "type": "string",
-      "description": "Stable quote identifier used to link jobs, invoices, and inventory usage."
+      "description": "RETIRED \u2014 historical quote identifier."
     },
     "job_id": {
       "type": "string"
@@ -16,8 +16,7 @@
       "type": "string"
     },
     "labour_hours": {
-      "type": "number",
-      "description": "Estimated time to complete in hours (labour billed at $80/hr, min 1hr)"
+      "type": "number"
     },
     "labour_estimate": {
       "type": "number",
@@ -28,7 +27,8 @@
       "default": 0
     },
     "diagnosis_notes": {
-      "type": "string"
+      "type": "string",
+      "description": "RETIRED \u2014 diagnosis notes now live on Job.diagnosis_notes."
     },
     "recommended_repair": {
       "type": "string"
@@ -43,8 +43,7 @@
     },
     "status": {
       "type": "string",
-      "default": "draft",
-      "description": "Configurable quote status key"
+      "description": "RETIRED \u2014 quote statuses are no longer used."
     },
     "sent_date": {
       "type": "string",
@@ -52,7 +51,7 @@
     },
     "approval_status": {
       "type": "string",
-      "default": "pending"
+      "description": "RETIRED \u2014 quote approval no longer exists. Technicians build invoice line items directly."
     },
     "line_items": {
       "type": "array",
@@ -66,12 +65,10 @@
             "type": "number"
           },
           "unit_price": {
-            "type": "number",
-            "description": "Customer-facing unit price."
+            "type": "number"
           },
           "internal_cost_price": {
-            "type": "number",
-            "description": "Internal staff-only cost price."
+            "type": "number"
           },
           "markup_percentage": {
             "type": "number",
@@ -99,12 +96,10 @@
             "default": 0
           },
           "kind": {
-            "type": "string",
-            "description": "Configurable line item type"
+            "type": "string"
           },
           "sku": {
-            "type": "string",
-            "description": "SKU or product code for parts."
+            "type": "string"
           },
           "source_usage_id": {
             "type": "string"
@@ -125,80 +120,13 @@
     "job_id"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
+    "create": false,
     "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "$and": [
-            {
-              "data.customer_id": "{{user.data.customer_id}}"
-            },
-            {
-              "data.approval_status": "pending"
-            }
-          ]
-        }
-      ]
-    },
-    "delete": {
       "user_condition": {
         "role": "admin"
       }
-    }
+    },
+    "update": false,
+    "delete": false
   }
 }

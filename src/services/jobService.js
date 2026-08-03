@@ -28,6 +28,12 @@ export async function reopenJob(job) {
   return invoke({ action: "reopen", jobId: job.id });
 }
 
+// Explicit technician step — pulls uninvoiced parts onto the invoice, makes it
+// customer-visible and moves the job to Invoice Outstanding.
+export async function generateAndSendInvoice(job) {
+  return invoke({ action: "generate_and_send_invoice", jobId: job.id });
+}
+
 export async function toggleChecklistItem(job, index) {
   return invoke({ action: "toggle_checklist", jobId: job.id, index });
 }

@@ -4,6 +4,11 @@
  * Guarded workflow transitions for jobs.
  * Status MUST only change through updateJobStatusFromEvent() — never via a
  * raw status dropdown or direct field edit.
+ *
+ * Canonical main path:
+ *   requested → scheduled → repair_in_progress → ready_for_pickup
+ *            → invoice_outstanding → completed
+ * waiting_on_parts / on_hold / cancelled are side states reachable from anywhere.
  */
 
 import { changeStatus, reopenJob } from "./jobService";
@@ -21,8 +26,8 @@ const TRANSITION_RULES = {
     allowedFrom: null,
     check() { return { ok: true }; },
   },
-  booked: {
-    targetStatus: "booked",
+  scheduled: {
+    targetStatus: "scheduled",
     allowedFrom: ["requested", "on_hold"],
     check(job) {
       if (!job.scheduled_date) return { ok: false, reason: "A drop-off date must be arranged before this job can be scheduled." };
@@ -32,7 +37,7 @@ const TRANSITION_RULES = {
   },
   repair_in_progress: {
     targetStatus: "repair_in_progress",
-    allowedFrom: ["requested", "booked", "on_hold", "waiting_on_parts"],
+    allowedFrom: ["requested", "scheduled", "on_hold", "waiting_on_parts"],
     check(job) {
       if (job.status === "requested" && !job.scheduled_date) {
         return { ok: false, reason: "A drop-off date must be arranged before starting repair on this job." };
@@ -42,12 +47,12 @@ const TRANSITION_RULES = {
   },
   waiting_on_parts: {
     targetStatus: "waiting_on_parts",
-    allowedFrom: ["booked", "repair_in_progress", "ready_for_pickup", "on_hold"],
+    allowedFrom: ["scheduled", "repair_in_progress", "ready_for_pickup", "on_hold"],
     check() { return { ok: true }; },
   },
   ready_for_pickup: {
     targetStatus: "ready_for_pickup",
-    allowedFrom: ["booked", "repair_in_progress", "waiting_on_parts", "on_hold"],
+    allowedFrom: ["scheduled", "repair_in_progress", "waiting_on_parts", "on_hold"],
     check(job) {
       const pending = (job.checklist || []).filter((c) => !c.done).length;
       if (pending > 0) {
@@ -56,29 +61,21 @@ const TRANSITION_RULES = {
       return { ok: true };
     },
   },
-  invoice_sent: {
-    targetStatus: "invoice_sent",
-    allowedFrom: ["repair_in_progress", "waiting_on_parts", "ready_for_pickup", "paid"],
+  // Reached by the explicit "Send Invoice" action, which also makes the invoice
+  // customer-visible. See jobService.generateAndSendInvoice.
+  invoice_outstanding: {
+    targetStatus: "invoice_outstanding",
+    allowedFrom: ["repair_in_progress", "waiting_on_parts", "ready_for_pickup"],
     check(job) {
       if (!job.invoice_id && (!job.payment_status || job.payment_status === "unpaid")) {
-        return { ok: false, reason: "An invoice must be created before marking it as sent." };
-      }
-      return { ok: true };
-    },
-  },
-  paid: {
-    targetStatus: "paid",
-    allowedFrom: ["ready_for_pickup", "invoice_sent"],
-    check(job) {
-      if (!["outstanding", "paid"].includes(job.payment_status)) {
-        return { ok: false, reason: "Payment cannot be recorded until an invoice has been created." };
+        return { ok: false, reason: "An invoice must be created before it can be sent to the customer." };
       }
       return { ok: true };
     },
   },
   completed: {
     targetStatus: "completed",
-    allowedFrom: ["paid", "invoice_sent", "ready_for_pickup"],
+    allowedFrom: ["invoice_outstanding", "ready_for_pickup"],
     check(job) {
       const pending = (job.checklist || []).filter((c) => !c.done).length;
       if (pending > 0) {
@@ -98,7 +95,7 @@ const TRANSITION_RULES = {
     check() { return { ok: true }; },
   },
   reopen: {
-    targetStatus: "booked",
+    targetStatus: "scheduled",
     allowedFrom: ["completed", "cancelled", "on_hold"],
     check() { return { ok: true }; },
   },

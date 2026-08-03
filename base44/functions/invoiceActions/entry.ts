@@ -150,46 +150,6 @@ Deno.serve(async (req) => {
         await logAudit({ eventType: "invoice_created", summary: `Internal invoice created (${CURRENCY} ${amount})`, visibility: "internal" });
         break;
       }
-      case "copy_quote": {
-        if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
-        const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
-        const quote = quotes[0];
-        if (!quote) return Response.json({ error: "No estimate or costing found for this job" }, { status: 404 });
-
-        const lineItems = normalizeLineItems((quote.line_items || []).map((item) => ({
-          ...item,
-          sku: item.sku || item.product_sku || item.product_code || item.code || "",
-        })));
-        const amount = Number(quote.total) || invoiceTotal(lineItems);
-        const existing = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
-        const invoiceData = {
-          quote_id: quote.id,
-          job_id: job.id,
-          customer_id: job.customer_id || quote.customer_id || "",
-          amount,
-          currency: quote.currency || CURRENCY,
-          status: existing[0]?.status || DEFAULT_STATUS,
-          invoiceVisibility: existing[0]?.invoiceVisibility || INTERNAL_VISIBILITY,
-          line_items: lineItems,
-          internalCostingNotes: existing[0]?.internalCostingNotes || quote.diagnosis_notes || "",
-        };
-
-        if (existing[0]) {
-          result = await base44.asServiceRole.entities.Invoice.update(existing[0].id, invoiceData);
-        } else {
-          result = await base44.asServiceRole.entities.Invoice.create({
-            ...invoiceData,
-            number: `${PREFIX}-${Date.now().toString().slice(-6)}`,
-          });
-        }
-        await base44.asServiceRole.entities.Job.update(job.id, {
-          invoice_id: result.id,
-          payment_status: result.status || DEFAULT_STATUS,
-          status: result.status === "paid" ? COMPLETED_STATUS : job.status,
-        });
-        await logAudit({ eventType: "costing_copied_to_invoice", summary: `Costing copied to internal invoice (${invoiceData.currency} ${amount.toFixed(2)})`, visibility: "internal" });
-        break;
-      }
       case "add_parts_to_invoice": {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const usageIds = Array.isArray(params.usageIds) ? params.usageIds : [];
