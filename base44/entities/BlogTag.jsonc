@@ -3,7 +3,8 @@
   "type": "object",
   "properties": {
     "user_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Staff user who created the tag. Authorship history only \u2014 it no longer controls visibility."
     },
     "account_id": {
       "type": "string"
@@ -38,16 +39,66 @@
   ],
   "rls": {
     "create": {
-      "data.user_id": "{{user.id}}"
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
     },
     "read": {
-      "data.user_id": "{{user.id}}"
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
     },
     "update": {
-      "data.user_id": "{{user.id}}"
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "employee"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "technician"
+          }
+        }
+      ]
     },
     "delete": {
-      "data.user_id": "{{user.id}}"
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
