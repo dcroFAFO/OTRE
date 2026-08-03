@@ -1,6 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolveTrustedOrigin, isTrustedFileUrl } from '../../shared/origin.ts';
+import { checkRateLimit, clientIp, findRecentDuplicateJob } from '../../shared/rateLimit.ts';
 
 const SLUG = 'otr-scooters';
+const MAX_BOOKINGS_PER_IP = 5;
+const MAX_BOOKINGS_PER_EMAIL = 3;
 const INTAKE_STATUS = 'requested';
 const JOB_TYPE = 'repair';
 const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice', 'pay_invoice'];
@@ -18,14 +22,6 @@ function makeToken() {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function originFrom(req) {
-  const origin = req.headers.get('origin');
-  if (origin) return origin;
-  const referer = req.headers.get('referer');
-  if (referer) return new URL(referer).origin;
-  return 'https://ontherunelectrics.com.au';
 }
 
 function normalizePhone(value) {
@@ -64,7 +60,14 @@ function classifyServiceType(text = '') {
 function bookingSnapshot(form, email, phone) {
   const make = bookingMake(form);
   const model = bookingModel(form);
-  const files = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
+  // Only persist file URLs that point at our own storage. Anything else is an
+  // attacker-supplied link that staff would later click from the job record.
+  const submittedFiles = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
+  const files = submittedFiles.filter((url) => {
+    if (isTrustedFileUrl(url)) return true;
+    console.warn('[createBooking] rejected untrusted file url');
+    return false;
+  });
   const issueText = [form.issue_description, form.serviceRequested, form.issue_type].filter(Boolean).join(' ');
   return {
     customerName: form.customer_name || form.customerName || '',
@@ -177,6 +180,21 @@ Deno.serve(async (req) => {
     const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
     if (!E164_PATTERN.test(phone)) return Response.json({ error: 'Enter a valid Australian mobile number' }, { status: 400 });
 
+    // Abuse controls — this endpoint is unauthenticated and sends metered SMS/email.
+    const ipLimit = await checkRateLimit(base44, `booking:ip:${clientIp(req)}`, MAX_BOOKINGS_PER_IP);
+    const emailLimit = await checkRateLimit(base44, `booking:email:${email}`, MAX_BOOKINGS_PER_EMAIL);
+    if (!ipLimit.allowed || !emailLimit.allowed) {
+      console.warn('[createBooking] rate limited', JSON.stringify({ ip: ipLimit.count, email: emailLimit.count }));
+      return Response.json({ error: "You've submitted several booking requests just now. Please wait a few minutes or call us on 0415 505 908." }, { status: 429 });
+    }
+
+    // Idempotency — a repeated submission returns the original booking instead of
+    // creating a duplicate job, customer and notification set.
+    const duplicate = await findRecentDuplicateJob(base44, email, form.issue_description);
+    if (duplicate) {
+      return Response.json({ reference: duplicate.reference, managePath: duplicate.customer_user_id ? '/portal' : null, accountPath: `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`, job_id: duplicate.id, duplicate: true });
+    }
+
     const now = new Date().toISOString();
     const profile = await findOrCreateProfile(base44, { name: form.customer_name, email, phone, user, now });
     const customerRecord = await syncLegacyCustomer(base44, { profile, name: form.customer_name, email, phone, user, now });
@@ -199,7 +217,9 @@ Deno.serve(async (req) => {
     const scooter = await resolveBookingScooter(base44, customerRecord, submittedBooking);
     const resolvedAssetLabel = scooter ? [scooter.make, scooter.model].filter(Boolean).join(' ') : (form.asset_label || submittedBooking.assetLabel);
     const initialIntake = { customerName: submittedBooking.customerName, customerEmail: submittedBooking.customerEmail, customerPhone: submittedBooking.customerPhone, customerPhoneE164: submittedBooking.customerPhoneE164, scooterMake: submittedBooking.scooterMake, scooterModel: submittedBooking.scooterModel, make: submittedBooking.scooterMake, model: submittedBooking.scooterModel, serial_number: submittedBooking.serial_number || '', issueOrService: submittedBooking.issueOrService, initial_issue_notes: [submittedBooking.issueOrService, submittedBooking.urgencyOrSafetyNotes].filter(Boolean).join('\n'), service_type: submittedBooking.serviceType, date: submittedBooking.preferredDate, isRideable: submittedBooking.isRideable, booking_files: submittedBooking.files };
-    const job = await base44.asServiceRole.entities.Job.create({ reference, tracking_token: rawToken, guest_access_token: rawToken, customer_profile_id: profile.id, customer_user_id: customerUserId, customerId: stableCustomerId, customer_id: stableCustomerId, customer_account_id: customerRecord?.id || '', claimed_by_customer: !!customerUserId, customer_name: form.customer_name, customer_email: email, customer_phone: phone, customer_phone_e164: phone, customer_phone_display: phone, asset_id: scooter?.id || '', asset_label: resolvedAssetLabel, scooter_make_model: resolvedAssetLabel, scooterDetails: resolvedAssetLabel, scooter_details: resolvedAssetLabel, issueDescription: form.issue_description, issue_description: form.issue_description, issue_summary: form.issue_description, rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable', job_status: INTAKE_STATUS, source: 'public_booking', job_type: JOB_TYPE, service_type: submittedBooking.serviceType, priority: 'medium', status: INTAKE_STATUS, scheduled_date: form.asap ? null : (form.preferred_date || null), preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window, rideable: submittedBooking.isRideable, intake: initialIntake, booking_submission: submittedBooking, business_slug: SLUG, createdAt: now, created_at: now, updatedAt: now });
+    // NOTE: the raw public access token is deliberately NOT stored on the Job.
+    // Only its SHA-256 hash is persisted, on PublicJobAccess below.
+    const job = await base44.asServiceRole.entities.Job.create({ reference, customer_profile_id: profile.id, customer_user_id: customerUserId, customerId: stableCustomerId, customer_id: stableCustomerId, customer_account_id: customerRecord?.id || '', claimed_by_customer: !!customerUserId, customer_name: form.customer_name, customer_email: email, customer_phone: phone, customer_phone_e164: phone, customer_phone_display: phone, asset_id: scooter?.id || '', asset_label: resolvedAssetLabel, scooter_make_model: resolvedAssetLabel, scooterDetails: resolvedAssetLabel, scooter_details: resolvedAssetLabel, issueDescription: form.issue_description, issue_description: form.issue_description, issue_summary: form.issue_description, rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable', job_status: INTAKE_STATUS, source: 'public_booking', job_type: JOB_TYPE, service_type: submittedBooking.serviceType, priority: 'medium', status: INTAKE_STATUS, scheduled_date: form.asap ? null : (form.preferred_date || null), preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window, rideable: submittedBooking.isRideable, intake: initialIntake, booking_submission: submittedBooking, business_slug: SLUG, createdAt: now, created_at: now, updatedAt: now });
 
     if (scooter?.id) await base44.asServiceRole.entities.Scooter.update(scooter.id, { job_id: addIdList(scooter.job_id, job.id), last_service_date: job.scheduled_date || scooter.last_service_date || '' }).catch((assetErr) => console.warn('[createBooking] scooter job link skipped:', assetErr.message));
     if (customerRecord?.id) await base44.asServiceRole.entities.Customer.update(customerRecord.id, { job_id: addIdList(customerRecord.job_id, job.id), last_activity_date: now }).catch((customerErr) => console.warn('[createBooking] customer job link skipped:', customerErr.message));
@@ -209,14 +229,17 @@ Deno.serve(async (req) => {
 
     // Send booking confirmation notifications directly (customer email + SMS, staff email + SMS).
     // The entity automation may not reliably deliver the payload, so we invoke sendNotification directly.
-    const notifOrigin = originFrom(req);
+    const notifOrigin = await resolveTrustedOrigin(req, base44);
     await base44.functions.invoke('sendNotification', { event_type: 'booking_request', job_id: job.id, origin: notifOrigin }).catch((notifErr) => console.warn('[createBooking] notification dispatch skipped:', notifErr?.message || notifErr));
 
     const managePath = customerUserId ? '/portal' : null;
     const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
-    return Response.json({ reference: job.reference, managePath, accountPath, job_id: job.id, customer_profile_id: profile.id, customer_account_id: customerRecord?.id || '', asset_id: scooter?.id || '', linked: !!customerUserId });
+    // The raw token is returned once, here — it is never readable from the DB again.
+    const trackingPath = rawToken ? `/track/${encodeURIComponent(rawToken)}` : null;
+    return Response.json({ reference: job.reference, managePath, accountPath, trackingPath, job_id: job.id, customer_profile_id: profile.id, customer_account_id: customerRecord?.id || '', asset_id: scooter?.id || '', linked: !!customerUserId });
   } catch (error) {
+    // Detail stays in the logs — unauthenticated callers get a generic message.
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    return Response.json({ error: error.message || "Sorry — we couldn't submit your booking just now. Please try again." }, { status: 500 });
+    return Response.json({ error: "Sorry — we couldn't submit your booking just now. Please try again or call us on 0415 505 908." }, { status: 500 });
   }
 });

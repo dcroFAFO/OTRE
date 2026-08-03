@@ -1,0 +1,43 @@
+{
+  "name": "RateLimit",
+  "type": "object",
+  "properties": {
+    "scope_key": {
+      "type": "string",
+      "description": "Throttle bucket identifier, e.g. 'booking:ip:1.2.3.4' or 'booking:email:someone@example.com'."
+    },
+    "window_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of the fixed counting window this record belongs to."
+    },
+    "count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of requests seen for this scope_key within the window."
+    },
+    "last_seen_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the most recent request counted."
+    }
+  },
+  "required": [
+    "scope_key",
+    "window_start"
+  ],
+  "rls": {
+    "create": false,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": false,
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

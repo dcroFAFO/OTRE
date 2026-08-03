@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.5.0';
+import { resolveTrustedOrigin, isTrustedFileUrl } from '../../shared/origin.ts';
 
 const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file'];
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician']);
@@ -16,36 +17,25 @@ function makeToken() {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function originFrom(req) {
-  const origin = req.headers.get('origin');
-  if (origin) return origin;
-  const referer = req.headers.get('referer');
-  if (referer) return new URL(referer).origin;
-  return 'https://app.base44.com';
-}
-
 function hasPermission(access, permission) {
   return (access.permissions || []).includes(permission);
 }
 
+const INVALID_LINK = 'This tracking link is not valid. Please check the link or contact On The Run Electrics for help.';
+
+// Resolves a raw public token to its job using ONLY the stored SHA-256 hash. The
+// raw token is never persisted, so it cannot be recovered by reading any record.
 async function getValidAccess(base44, jobIdentifier, rawToken) {
   const trackingToken = rawToken || jobIdentifier;
   if (!trackingToken) return { error: 'Tracking link is missing required information.', status: 400 };
 
-  let job = null;
-  if (rawToken && jobIdentifier) {
-    job = await base44.asServiceRole.entities.Job.get(jobIdentifier).catch(() => null);
-  }
-  if (!job) {
-    const jobs = await base44.asServiceRole.entities.Job.filter({ tracking_token: trackingToken }, '-created_date', 1);
-    job = jobs[0] || null;
-  }
-  if (!job) return { error: 'This tracking link is not valid. Please check the link or contact On The Run Electrics for help.', status: 403 };
-
   const tokenHash = await sha256(trackingToken);
-  const records = await base44.asServiceRole.entities.PublicJobAccess.filter({ jobId: job.id, tokenHash }, '-created_date', 1);
+  const records = await base44.asServiceRole.entities.PublicJobAccess.filter({ tokenHash }, '-created_date', 1);
   const access = records[0] || null;
-  if (!access) return { error: 'This tracking link is not valid. Please check the link or contact On The Run Electrics for help.', status: 403 };
+  if (!access) return { error: INVALID_LINK, status: 403 };
+
+  const job = await base44.asServiceRole.entities.Job.get(access.jobId || access.job_id).catch(() => null);
+  if (!job) return { error: INVALID_LINK, status: 403 };
   if (access.revokedAt || access.revoked_at) return { error: 'This tracking link has been revoked.', status: 403 };
   const expires = access.expiresAt || access.expires_at;
   if (expires && new Date(expires).getTime() < Date.now()) return { error: 'This tracking link has expired.', status: 403 };
@@ -153,7 +143,7 @@ Deno.serve(async (req) => {
       const rawToken = makeToken();
       const tokenHash = await sha256(rawToken);
       const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_quote', 'view_invoice', 'pay_invoice'];
-      await base44.asServiceRole.entities.Job.update(jobId, { tracking_token: rawToken, updatedAt: now });
+      // Only the hash is persisted; the raw token is returned once, below.
       await base44.asServiceRole.entities.PublicJobAccess.create({
         jobId,
         job_id: jobId,
@@ -162,7 +152,7 @@ Deno.serve(async (req) => {
         permissions: accessPermissions,
         createdAt: now,
       });
-      const trackingLink = `${originFrom(req)}/track/${encodeURIComponent(rawToken)}`;
+      const trackingLink = `${await resolveTrustedOrigin(req, base44)}/track/${encodeURIComponent(rawToken)}`;
       return Response.json({ trackingLink, permissions: accessPermissions });
     }
 
@@ -201,6 +191,10 @@ Deno.serve(async (req) => {
     if (action === 'upload_file') {
       if (!hasPermission(access, 'upload_file')) return Response.json({ error: 'This link cannot upload files.' }, { status: 403 });
       if (!file_url) return Response.json({ error: 'file_url is required.' }, { status: 400 });
+      if (!isTrustedFileUrl(file_url)) {
+        console.warn('[publicJobAccessActions] rejected untrusted file url');
+        return Response.json({ error: 'That file could not be accepted. Please upload the file again.' }, { status: 400 });
+      }
       await base44.asServiceRole.entities.Attachment.create({
         job_id: job.id,
         customer_id: job.customer_id || null,
@@ -243,7 +237,9 @@ Deno.serve(async (req) => {
       const amount = Math.round((Number(invoice.amount) || 0) * 100);
       if (amount <= 0) return Response.json({ error: 'Invoice amount must be greater than zero.' }, { status: 400 });
       const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
-      const origin = originFrom(req);
+      // Must be an allowlisted origin — a spoofed Origin header here would redirect
+      // the paying customer off-site with the tracking token in the URL.
+      const origin = await resolveTrustedOrigin(req, base44);
       const metadata = { base44_app_id: Deno.env.get('BASE44_APP_ID') || '', invoice_id: invoice.id, job_id: job.id, customer_id: job.customer_id || '' };
       const returnUrl = `${origin}/track/${encodeURIComponent(accessResult.trackingToken)}`;
       const session = await stripe.checkout.sessions.create({
