@@ -12,6 +12,10 @@ export const DEFAULT_ORIGIN = 'https://ontherunelectrics.com.au';
 const ALLOWED_HOSTS = [
   'ontherunelectrics.com.au',
   'www.ontherunelectrics.com.au',
+  // Uploaded files are served from the bare platform host (verified against
+  // existing Attachment records), so these must be exact matches too.
+  'base44.app',
+  'base44.com',
 ];
 
 // Base44 preview/published hosts are allowed as suffix matches so the app keeps

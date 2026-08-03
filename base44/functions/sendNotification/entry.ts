@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { resolveTrustedOrigin, validateOrigin } from '../../shared/origin.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -10,21 +11,17 @@ const BUSINESS_NAME = "On The Run Electrics";
 const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
 const BUSINESS_PHONE = "0415 505 908";
 
-const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
-
+// Origins used in outbound emails/SMS must be allowlisted — a spoofed value here
+// would send customers a phishing link from our own domain's mailbox.
+// Precedence is unchanged from before: BusinessProfile.website_url wins, then an
+// explicit body.origin, then request headers — every candidate now allowlisted.
 async function resolveOrigin(req, body, base44) {
-  // Prefer the BusinessProfile website_url — always correct for published app.
-  try {
-    const profiles = await base44.asServiceRole.entities.BusinessProfile.list('-created_date', 1).catch(() => []);
-    if (profiles[0]?.website_url) return profiles[0].website_url.replace(/\/$/, '');
-  } catch (_) {}
-  // Fall back to explicit origin in body, then request headers.
-  if (body?.origin) return body.origin.replace(/\/$/, '');
-  const origin = req.headers.get('origin');
-  if (origin) return origin.replace(/\/$/, '');
-  const referer = req.headers.get('referer');
-  if (referer) { try { return new URL(referer).origin.replace(/\/$/, ''); } catch (_) {} }
-  return DEFAULT_ORIGIN;
+  const profiles = await base44.asServiceRole.entities.BusinessProfile.list('-created_date', 1).catch(() => []);
+  const configured = validateOrigin(profiles?.[0]?.website_url);
+  if (configured) return configured;
+  const supplied = validateOrigin(body?.origin);
+  if (supplied) return supplied;
+  return await resolveTrustedOrigin(req, base44);
 }
 
 function fmtMoney(amount, currency = 'AUD') {
