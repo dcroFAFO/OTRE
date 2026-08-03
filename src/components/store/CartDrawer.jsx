@@ -35,14 +35,14 @@ export default function CartDrawer({ open, onOpenChange, onCheckout }) {
                     <p className="text-sm font-medium line-clamp-2">{i.product.name}</p>
                     <p className="text-xs text-muted-foreground">${Number(i.product.price || 0).toFixed(2)}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(i.product.id, i.qty - 1)}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label={`Decrease quantity of ${i.product.name}`} onClick={() => updateQty(i.product.id, i.qty - 1)}>
                         <Minus className="h-3 w-3" />
                       </Button>
                       <span className="text-sm w-6 text-center">{i.qty}</span>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(i.product.id, i.qty + 1)}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label={`Increase quantity of ${i.product.name}`} onClick={() => updateQty(i.product.id, i.qty + 1)}>
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-muted-foreground" onClick={() => removeItem(i.product.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-muted-foreground" aria-label={`Remove ${i.product.name} from cart`} onClick={() => removeItem(i.product.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

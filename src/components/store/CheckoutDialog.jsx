@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useCart } from "@/lib/CartContext";
 import { SUPPLIER_NAME } from "@/config/storeConfig";
 import { startStorePayment } from "@/services/paymentService";
@@ -18,11 +19,14 @@ export default function CheckoutDialog({ open, onOpenChange }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
+  const [error, setError] = useState(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setError(null);
     setSubmitting(true);
     try {
       const result = await startStorePayment({
@@ -38,13 +42,15 @@ export default function CheckoutDialog({ open, onOpenChange }) {
       });
       if (result?.blocked) setSubmitting(false);
       if (result?.url) clear();
-    } catch (error) {
-      alert(error?.response?.data?.error || "Could not start checkout.");
+    } catch (err) {
+      const message = err?.response?.data?.error || "Could not start checkout. Please try again.";
+      setError(message);
+      toast.error(message);
       setSubmitting(false);
     }
   };
 
-  const close = () => { setDone(null); onOpenChange(false); };
+  const close = () => { setDone(null); setError(null); onOpenChange(false); };
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
@@ -90,6 +96,11 @@ export default function CheckoutDialog({ open, onOpenChange }) {
               <Field label="Notes (optional)">
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} />
               </Field>
+              {error && (
+                <p role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+                </p>
+              )}
               <div className="flex items-center justify-between pt-2">
                 <span className="font-heading font-semibold">Total: ${subtotal.toFixed(2)}</span>
                 <Button type="submit" disabled={submitting || items.length === 0} className="bg-accent hover:bg-accent/90 text-accent-foreground">

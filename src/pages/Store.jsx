@@ -42,10 +42,10 @@ function StoreInner() {
     ? ALL_CATEGORIES.find((c) => c.key === activeCategory)?.label || "Products"
     : "All products";
 
-  const storeTitle = activeCategory ? `${activeLabel} | OTR Scooter Store` : "Scooter Parts & Accessories | OTR Scooters";
+  const storeTitle = activeCategory ? `${activeLabel} | On The Run Electrics Store` : "Scooter Parts & Accessories | On The Run Electrics";
   const storeDescription = activeCategory
-    ? `Browse ${activeLabel.toLowerCase()} selected by OTR Scooters for reliable electric scooter repairs, servicing, maintenance and upgrades.`
-    : "Shop electric scooter parts, accessories and service items selected by OTR Scooters for reliable repairs, servicing and maintenance.";
+    ? `Browse ${activeLabel.toLowerCase()} selected by On The Run Electrics for reliable electric scooter repairs, servicing, maintenance and upgrades.`
+    : "Shop electric scooter parts, accessories and service items selected by On The Run Electrics for reliable repairs, servicing and maintenance.";
 
   return (
     <>
@@ -69,7 +69,7 @@ function StoreInner() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <Button variant="outline" size="icon" className="relative" onClick={() => setCartOpen(true)}>
+          <Button variant="outline" size="icon" className="relative" aria-label={`Open cart${count > 0 ? ` (${count} items)` : ""}`} onClick={() => setCartOpen(true)}>
             <ShoppingCart className="h-5 w-5" />
             {count > 0 && (
               <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-accent text-accent-foreground text-xs grid place-items-center font-medium">

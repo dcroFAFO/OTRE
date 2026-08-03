@@ -68,7 +68,7 @@ export default function ClientTable({ clients, onView, selected, onToggleSelect,
                   {c.created_date ? format(new Date(c.created_date), "d MMM yyyy") : "—"}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" title="View" onClick={() => onView(c)}><Eye className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="View" aria-label={`View ${c.full_name || "customer"}`} onClick={() => onView(c)}><Eye className="h-4 w-4" /></Button>
                 </td>
               </tr>
             ))}

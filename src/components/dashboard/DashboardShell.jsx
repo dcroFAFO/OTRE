@@ -116,7 +116,7 @@ export default function DashboardShell({ user, children }) {
       <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="w-64 bg-card"><Sidebar /></div>
           <div className="flex-1 bg-black/40" onClick={() => setOpen(false)}>
-            <button className="m-4 text-white"><X className="h-6 w-6" /></button>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="m-4 text-white"><X className="h-6 w-6" /></button>
           </div>
         </div>
       }

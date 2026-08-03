@@ -24,6 +24,8 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
       toast({ title: `Updated ${count} job${count !== 1 ? "s" : ""}`, description: `Status set to "${JOB_STATUSES.find(s => s.key === statusValue)?.label || statusValue}"` });
       setStatusValue("");
       onDone();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Couldn't update jobs", description: err?.message || "Please try again." });
     } finally {
       setLoading(false);
     }
@@ -35,6 +37,8 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
       await Promise.all(selectedIds.map((id) => base44.entities.Job.delete(id)));
       toast({ title: `Deleted ${count} job${count !== 1 ? "s" : ""}`, description: "The selected jobs have been permanently removed." });
       onDone();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Couldn't delete jobs", description: err?.message || "Please try again." });
     } finally {
       setLoading(false);
     }
@@ -57,6 +61,8 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
       );
       toast({ title: `Notifications sent`, description: `Emailed ${selectedJobs.filter(j => j.customer_email).length} customer${selectedJobs.filter(j => j.customer_email).length !== 1 ? "s" : ""}` });
       onDone();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Couldn't send notifications", description: err?.message || "Please try again." });
     } finally {
       setLoading(false);
     }

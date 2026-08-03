@@ -12,7 +12,7 @@ export default function DashboardLayout() {
     setUserContext(user);
   }, [user]);
 
-  const dashboardSeo = <SEO title="Staff Dashboard | OTR Scooters" description="Private staff dashboard for managing OTR Scooters repairs, customers, inventory, invoices and operations." canonical="/dashboard" noindex />;
+  const dashboardSeo = <SEO title="Staff Dashboard | On The Run Electrics" description="Private staff dashboard for managing On The Run Electrics repairs, customers, inventory, invoices and operations." canonical="/dashboard" noindex />;
 
   if (isLoading) {
     return <>{dashboardSeo}<div className="fixed inset-0 grid place-items-center bg-background"><div className="h-8 w-8 rounded-full border-4 border-border border-t-accent animate-spin" /></div></>;
