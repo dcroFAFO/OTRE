@@ -7,9 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
-import { Loader2, ClipboardList, User, Search, X, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, Wrench, Package } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2, ClipboardList, User, Search, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { DEFAULT_SERVICE_TYPE, SERVICE_TYPES, classifyServiceType } from "@/config/serviceTypes";
 import { toast } from "sonner";
@@ -21,15 +19,6 @@ const BATTERY_CONDITIONS = [
   { key: "faulty", label: "Faulty" },
   { key: "unknown", label: "Unknown" },
 ];
-
-const CATEGORY_COLORS = {
-  tyre: "bg-blue-100 text-blue-700",
-  brake: "bg-rose-100 text-rose-700",
-  battery: "bg-amber-100 text-amber-700",
-  service: "bg-emerald-100 text-emerald-700",
-  electrical: "bg-purple-100 text-purple-700",
-  other: "bg-slate-100 text-slate-600",
-};
 
 function blankIntake() {
   return {
@@ -101,10 +90,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  // Template section
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-
   // Customer search state per field
   const [nameSearch, setNameSearch] = useState("");
   const [emailSearch, setEmailSearch] = useState("");
@@ -116,13 +101,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
   const debouncedName = useDebounce(nameSearch, 300);
   const debouncedEmail = useDebounce(emailSearch, 300);
   const debouncedPhone = useDebounce(phoneSearch, 300);
-
-  const { data: templates = [] } = useQuery({
-    queryKey: ["jobTemplates"],
-    queryFn: () => base44.entities.JobTemplate.filter({ active: true }, "order", 50),
-    staleTime: 2 * 60 * 1000,
-    enabled: open,
-  });
 
   // Run customer search
   const runSearch = useCallback(async (field, query) => {
@@ -173,16 +151,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
 
   const models = intake.make ? (SCOOTER_BRANDS[intake.make] || []) : [];
 
-  const selectTemplate = (t) => {
-    setSelectedTemplate(t);
-    setIntake((f) => ({
-      ...f,
-      initial_issue_notes: t.issue_description || f.initial_issue_notes,
-      service_type: t.service_type || classifyServiceType(t.issue_description || t.name || "") || f.service_type,
-    }));
-    setShowTemplates(false);
-  };
-
   const handleClose = () => {
     setIntake(blankIntake());
     setLinkedCustomer(null);
@@ -191,8 +159,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
     setNameSearch("");
     setEmailSearch("");
     setPhoneSearch("");
-    setSelectedTemplate(null);
-    setShowTemplates(false);
     setError(null);
     setBusy(false);
     onClose();
@@ -210,7 +176,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
       const res = await base44.functions.invoke("staffCreateJob", {
         intake,
         linked_customer_id: linkedCustomer?.id || linkedCustomer?.customer_id || null,
-        template: selectedTemplate ? { checklist: selectedTemplate.checklist, parts_required: selectedTemplate.parts_required } : null,
       });
       const job = res.data?.job;
       if (!job) throw new Error(res.data?.error || "Job creation failed");
@@ -236,49 +201,6 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-1 space-y-4 py-1">
-
-          {/* Template picker (collapsible) */}
-          {templates.length > 0 && (
-            <div className="rounded-xl border border-border bg-secondary/30 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowTemplates((v) => !v)}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold"
-              >
-                <span className="flex items-center gap-2">
-                  <Wrench className="h-4 w-4 text-muted-foreground" />
-                  {selectedTemplate ? `Template: ${selectedTemplate.name}` : "Start from template"}
-                  <span className="text-xs font-normal text-muted-foreground">(optional)</span>
-                </span>
-                {showTemplates ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-              </button>
-              {showTemplates && (
-                <div className="px-3 pb-3 grid sm:grid-cols-2 gap-2 max-h-48 overflow-auto border-t border-border pt-2">
-                  {templates.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => selectTemplate(t)}
-                      className={cn("text-left flex items-start gap-2 p-2.5 rounded-lg border transition-all", selectedTemplate?.id === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40 hover:bg-card")}
-                    >
-                      <Wrench className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold truncate">{t.name}</p>
-                        {t.category && (
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", CATEGORY_COLORS[t.category] || CATEGORY_COLORS.other)}>
-                            {t.category}
-                          </span>
-                        )}
-                        <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground">
-                          {t.parts_required?.length > 0 && <span className="flex items-center gap-0.5"><Package className="h-2.5 w-2.5" />{t.parts_required.length} parts</span>}
-                          {t.checklist?.length > 0 && <span className="flex items-center gap-0.5"><ClipboardList className="h-2.5 w-2.5" />{t.checklist.length} steps</span>}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Customer section */}
           <div className="space-y-3">
@@ -495,7 +417,7 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
               <Input type="date" value={intake.date || ""} onChange={(e) => set("date", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Issue / requested service {selectedTemplate && <span className="text-muted-foreground">(from template)</span>}</Label>
+              <Label className="text-xs">Issue / requested service</Label>
               <Textarea
                 value={intake.initial_issue_notes || ""}
                 onChange={(e) => setIntake((f) => ({
