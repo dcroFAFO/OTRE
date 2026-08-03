@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Pencil, Trash2, Bike } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Bike, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AssetEditDialog from "@/components/assets/AssetEditDialog";
 import { createScooter, updateScooter, deleteScooter } from "@/services/clientService";
@@ -16,6 +16,7 @@ export default function AssetManagement() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["assets"],
@@ -68,13 +69,18 @@ export default function AssetManagement() {
   };
 
   const handleDelete = async (a) => {
+    if (deletingId) return;
     if (!window.confirm(`Delete ${a.make || ""} ${a.model}? This cannot be undone.`)) return;
+    setDeletingId(a.id);
     try {
       await deleteScooter(a.id);
+      toast.success("Asset deleted");
       refresh();
     } catch (error) {
       console.error("[AssetManagement] delete failed:", error);
       toast.error(error?.response?.data?.error || error?.message || "Couldn't delete this asset.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -127,11 +133,11 @@ export default function AssetManagement() {
                   <td className="px-4 py-3">{a.odometer_km != null ? `${a.odometer_km} km` : "—"}</td>
                   <td className="px-4 py-3">{a.last_service_date || "—"}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditing({ ...a })}>
+                    <Button variant="ghost" size="sm" className="h-7 px-2" aria-label={`Edit ${[a.make, a.model].filter(Boolean).join(" ") || "asset"}`} onClick={() => setEditing({ ...a })}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-rose-500 hover:text-rose-600" onClick={() => handleDelete(a)}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-rose-500 hover:text-rose-600" aria-label={`Delete ${[a.make, a.model].filter(Boolean).join(" ") || "asset"}`} disabled={deletingId === a.id} onClick={() => handleDelete(a)}>
+                      {deletingId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     </Button>
                   </td>
                 </tr>

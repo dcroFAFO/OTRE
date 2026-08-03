@@ -14,6 +14,7 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
   const [loading, setLoading] = useState(false);
 
   const count = selectedIds.length;
+  const emailableCount = allJobs.filter((j) => selectedIds.includes(j.id) && j.customer_email).length;
 
   const applyStatus = async () => {
     if (!statusValue) return;
@@ -96,10 +97,28 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
       <div className="hidden sm:block h-4 w-px bg-border" />
 
       {/* Send notifications */}
-      <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={loading} onClick={sendNotifications}>
-        <Bell className="h-3.5 w-3.5" />
-        Send notification
-      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={loading}>
+            <Bell className="h-3.5 w-3.5" />
+            Send notification
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Email {emailableCount} customer{emailableCount !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A status update email will be sent immediately to each selected customer with an email address. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={sendNotifications} disabled={emailableCount === 0}>
+              Send {emailableCount} email{emailableCount !== 1 ? "s" : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="hidden sm:block h-4 w-px bg-border" />
 

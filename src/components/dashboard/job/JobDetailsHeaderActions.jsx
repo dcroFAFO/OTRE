@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,7 @@ const normalizeStatus = (status) => normalizeStatusKey(status);
 const WORKFLOW_EVENTS = [
   { key: "scheduled", label: "Schedule job", variant: "default", applicableStatuses: ["requested", "on_hold"] },
   { key: "repair_in_progress", label: "Start repair", variant: "default", applicableStatuses: ["requested", "scheduled", "on_hold", "waiting_on_parts"] },
-  { key: "waiting_on_parts", label: "Waiting on parts", variant: "amber", applicableStatuses: ["scheduled", "repair_in_progress", "ready_for_pickup", "on_hold"] },
+  { key: "waiting_on_parts", label: "Waiting on parts", variant: "amber", requiresReason: true, applicableStatuses: ["scheduled", "repair_in_progress", "ready_for_pickup", "on_hold"] },
   { key: "ready_for_pickup", label: "Ready for pickup", variant: "emerald", applicableStatuses: ["scheduled", "repair_in_progress", "waiting_on_parts", "on_hold"] },
   { key: "completed", label: "Complete job", variant: "emerald", applicableStatuses: ["ready_for_pickup", "invoice_outstanding"] },
   { key: "on_hold", label: "Put on hold", variant: "rose", applicableStatuses: ["requested", "scheduled", "repair_in_progress", "waiting_on_parts", "ready_for_pickup", "invoice_outstanding"] },
@@ -51,6 +52,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange, context 
   const [waitingPrompt, setWaitingPrompt] = useState(false);
   const [waitingReason, setWaitingReason] = useState("");
   const [copiedManageLink, setCopiedManageLink] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const currentStatus = normalizeStatus(job.status);
   const isTerminal = TERMINAL.includes(currentStatus);
@@ -85,6 +87,10 @@ export default function JobDetailsHeaderActions({ job, actor, onChange, context 
   const handleEventClick = (ev) => {
     if (ev.requiresReason) {
       setWaitingPrompt(true);
+      return;
+    }
+    if (ev.key === "cancelled") {
+      setConfirmCancel(true);
       return;
     }
     if (ev.key === "ready_for_pickup" && !job.invoice_id && (!job.payment_status || job.payment_status === "unpaid")) {
@@ -193,6 +199,27 @@ export default function JobDetailsHeaderActions({ job, actor, onChange, context 
           </button>
         </div>
       )}
+
+      {/* Cancel job confirmation */}
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The job will be moved to Cancelled and the customer may be notified. You can reopen it afterwards if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep job</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => runEvent("cancelled")}
+            >
+              Cancel job
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Waiting reason prompt */}
       <Dialog open={waitingPrompt} onOpenChange={(o) => !o && setWaitingPrompt(false)}>

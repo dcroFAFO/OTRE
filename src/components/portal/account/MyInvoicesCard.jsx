@@ -5,6 +5,7 @@ import { Receipt, CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusPill from "@/components/shared/StatusPill";
 import { startInvoicePayment } from "@/services/paymentService";
+import { toast } from "sonner";
 
 // Reuses the Invoice entity directly — RLS already restricts results to
 // this customer's own customer-visible invoices (see CustomerJobModal's
@@ -55,8 +56,16 @@ export default function MyInvoicesCard({ userEmail }) {
                     disabled={paying === inv.id}
                     onClick={async () => {
                       setPaying(inv.id);
-                      const result = await startInvoicePayment(inv);
-                      if (result?.blocked) setPaying(null);
+                      try {
+                        const result = await startInvoicePayment(inv);
+                        if (result?.blocked) {
+                          toast.error(result.reason);
+                          setPaying(null);
+                        }
+                      } catch (err) {
+                        toast.error(err?.response?.data?.error || "Could not start payment. Please try again.");
+                        setPaying(null);
+                      }
                     }}
                   >
                     {paying === inv.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}

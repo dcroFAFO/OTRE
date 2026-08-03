@@ -40,7 +40,10 @@ export default function CheckoutDialog({ open, onOpenChange }) {
         shipping_address: form.shipping_address,
         notes: form.notes,
       });
-      if (result?.blocked) setSubmitting(false);
+      if (result?.blocked) {
+        setError(result.reason);
+        setSubmitting(false);
+      }
       if (result?.url) clear();
     } catch (err) {
       const message = err?.response?.data?.error || "Could not start checkout. Please try again.";

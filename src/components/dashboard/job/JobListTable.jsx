@@ -17,6 +17,15 @@ const fmtSchedule = (j) => {
 
 const SECTION_CATEGORIES = JOB_CATEGORIES.filter((c) => c.key !== "all");
 
+// Lets mouse-clickable rows/cards also be reached and opened by keyboard.
+const openOnKey = (open) => (e) => {
+  if (e.target !== e.currentTarget) return;
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    open();
+  }
+};
+
 // List view of jobs grouped by status category, with section headers always visible.
 export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelectionChange }) {
   const allSelected = jobs.length > 0 && jobs.every((j) => selectedIds.includes(j.id));
@@ -125,8 +134,12 @@ function MobileCard({ j, onOpen, isSelected, toggleOne }) {
   return (
     <div
       onClick={() => onOpen(j.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={openOnKey(() => onOpen(j.id))}
+      aria-label={`Open job for ${j.customer_name || "customer"}`}
       className={cn(
-        "rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer min-h-[88px]",
+        "rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer min-h-[88px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         j.payment_status === "outstanding" && "border-l-2 border-l-rose-400",
         isSelected && "bg-accent/10 border-accent/40"
       )}
@@ -170,8 +183,11 @@ function DesktopRow({ j, onOpen, isSelected, toggleOne }) {
   return (
     <tr
       onClick={() => onOpen(j.id)}
+      tabIndex={0}
+      onKeyDown={openOnKey(() => onOpen(j.id))}
+      aria-label={`Open job for ${j.customer_name || "customer"}`}
       className={cn(
-        "cursor-pointer hover:bg-secondary/40 transition-colors",
+        "cursor-pointer hover:bg-secondary/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         j.payment_status === "outstanding" && "border-l-2 border-l-rose-400",
         isSelected && "bg-accent/10"
       )}

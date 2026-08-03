@@ -58,10 +58,13 @@ export async function emailInvoicePdf(job, invoiceDraft, notes = "", regenerateC
   return res.data;
 }
 
+// Shown when checkout is attempted from inside the builder preview iframe.
+export const PREVIEW_CHECKOUT_MESSAGE =
+  "Online checkout only works from the published site, not inside the preview.";
+
 export async function startInvoicePayment(invoice) {
   if (window.self !== window.top) {
-    alert("Online checkout works only from the published app, not inside the preview.");
-    return { blocked: true };
+    return { blocked: true, reason: PREVIEW_CHECKOUT_MESSAGE };
   }
   const res = await base44.functions.invoke("createInvoiceCheckout", { invoiceId: invoice.id });
   if (res.data?.url) window.location.href = res.data.url;
@@ -70,8 +73,7 @@ export async function startInvoicePayment(invoice) {
 
 export async function startStorePayment({ customer, items, fulfilment_method, shipping_address, notes }) {
   if (window.self !== window.top) {
-    alert("Online checkout works only from the published app, not inside the preview.");
-    return { blocked: true };
+    return { blocked: true, reason: PREVIEW_CHECKOUT_MESSAGE };
   }
   const res = await base44.functions.invoke("createStoreCheckout", {
     customer,
