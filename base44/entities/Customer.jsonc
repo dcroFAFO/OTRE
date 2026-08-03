@@ -63,14 +63,14 @@
         "closed"
       ],
       "default": "active",
-      "description": "Account management status"
+      "description": "Staff-managed account status. Customers can never set this themselves."
     },
     "tags": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Segments e.g. vip, active_client, past_client, high_priority, needs_attention"
+      "description": "Staff-managed segments e.g. vip, active_client, past_client, high_priority, needs_attention"
     },
     "last_activity_date": {
       "type": "string",
@@ -160,9 +160,6 @@
           "user_condition": {
             "role": "employee"
           }
-        },
-        {
-          "data.email": "{{user.email}}"
         }
       ]
     },
