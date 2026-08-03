@@ -1,15 +1,15 @@
 // Job navigation groups used by the Jobs nav dropdown and the Jobs list page.
 // Each group maps to a set of job status keys. "all" shows everything.
-import { JOB_STATUSES } from "@/config/jobConfig";
+import { JOB_STATUSES, normalizeStatusKey } from "@/config/jobConfig";
 
 export const JOB_GROUPS = [
   { key: "all", label: "All", statuses: null },
-  { key: "request_review", label: "Request Review", statuses: ["requested", "pending_confirmation"] },
-  { key: "approval_scheduling", label: "Approval / Scheduling", statuses: ["booked", "technician_assigned", "quote_required", "quote_sent", "quote_approved"] },
-  { key: "repair", label: "Repair", statuses: ["active", "repair_in_progress", "waiting_on_parts"] },
-  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_sent", "paid"] },
+  { key: "request_review", label: "Request Review", statuses: ["requested"] },
+  { key: "scheduling", label: "Scheduling", statuses: ["scheduled"] },
+  { key: "repair", label: "Repair", statuses: ["repair_in_progress", "waiting_on_parts"] },
+  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_outstanding"] },
   { key: "complete", label: "Complete", statuses: ["completed", "cancelled"] },
-  { key: "on_hold", label: "On Hold", statuses: ["on_hold", "waiting_customer", "waiting_technician", "waiting_supplier", "waiting_parts"] },
+  { key: "on_hold", label: "On Hold", statuses: ["on_hold"] },
 ];
 
 // Anything not explicitly captured by another group falls into "Other".
@@ -36,5 +36,5 @@ export function getJobGroup(key) {
 export function jobMatchesGroup(job, groupKey) {
   const group = getJobGroup(groupKey);
   if (!group.statuses) return true; // "all"
-  return group.statuses.includes(job.status);
+  return group.statuses.includes(normalizeStatusKey(job.status));
 }

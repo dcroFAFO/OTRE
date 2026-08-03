@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { rescheduleJob } from "@/services/jobService";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
+import { normalizeStatusKey } from "@/config/jobConfig";
 
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import { cn } from "@/lib/utils";
@@ -18,31 +19,17 @@ import { format } from "date-fns";
 // applicableStatuses: which current statuses show this button.
 //                     null = all non-terminal statuses.
 // ---------------------------------------------------------------------------
-const LEGACY_STATUS_MAP = {
-  quote_required: "requested",
-  quote_sent: "booked",
-  pending_confirmation: "on_hold",
-  quote_approved: "booked",
-  active: "repair_in_progress",
-  technician_assigned: "booked",
-  waiting_parts: "waiting_on_parts",
-  waiting_supplier: "on_hold",
-  waiting_customer: "on_hold",
-  invoice_outstanding: "invoice_sent",
-  in_progress: "repair_in_progress",
-};
+const normalizeStatus = (status) => normalizeStatusKey(status);
 
-const normalizeStatus = (status) => LEGACY_STATUS_MAP[status] || status;
-
+// Invoicing is deliberately absent here — the job reaches Invoice Outstanding
+// only through the explicit "Send Invoice" action on the invoice itself.
 const WORKFLOW_EVENTS = [
-  { key: "booked", label: "Book job", variant: "default", applicableStatuses: ["requested", "on_hold"] },
-  { key: "repair_in_progress", label: "Start repair", variant: "default", applicableStatuses: ["requested", "booked", "on_hold", "waiting_on_parts"] },
-  { key: "waiting_on_parts", label: "Waiting on parts", variant: "amber", applicableStatuses: ["booked", "repair_in_progress", "ready_for_pickup", "on_hold"] },
-  { key: "ready_for_pickup", label: "Ready for pickup", variant: "emerald", applicableStatuses: ["booked", "repair_in_progress", "waiting_on_parts", "on_hold"] },
-  { key: "invoice_sent", label: "Invoice sent", variant: "default", applicableStatuses: ["repair_in_progress", "waiting_on_parts", "ready_for_pickup", "paid"] },
-  { key: "paid", label: "Record payment", variant: "emerald", applicableStatuses: ["ready_for_pickup", "invoice_sent"] },
-  { key: "completed", label: "Complete job", variant: "emerald", applicableStatuses: ["paid", "ready_for_pickup", "invoice_sent"] },
-  { key: "on_hold", label: "Put on hold", variant: "rose", applicableStatuses: ["requested", "booked", "repair_in_progress", "waiting_on_parts", "ready_for_pickup", "invoice_sent"] },
+  { key: "scheduled", label: "Schedule job", variant: "default", applicableStatuses: ["requested", "on_hold"] },
+  { key: "repair_in_progress", label: "Start repair", variant: "default", applicableStatuses: ["requested", "scheduled", "on_hold", "waiting_on_parts"] },
+  { key: "waiting_on_parts", label: "Waiting on parts", variant: "amber", applicableStatuses: ["scheduled", "repair_in_progress", "ready_for_pickup", "on_hold"] },
+  { key: "ready_for_pickup", label: "Ready for pickup", variant: "emerald", applicableStatuses: ["scheduled", "repair_in_progress", "waiting_on_parts", "on_hold"] },
+  { key: "completed", label: "Complete job", variant: "emerald", applicableStatuses: ["ready_for_pickup", "invoice_outstanding"] },
+  { key: "on_hold", label: "Put on hold", variant: "rose", applicableStatuses: ["requested", "scheduled", "repair_in_progress", "waiting_on_parts", "ready_for_pickup", "invoice_outstanding"] },
   { key: "cancelled", label: "Cancel job", variant: "rose", applicableStatuses: null },
 ];
 
@@ -51,9 +38,9 @@ const TERMINAL = ["completed", "cancelled"];
 // Groups events by lifecycle step, used to show only the relevant tools
 // within each mobile tab instead of one giant always-visible action bar.
 const EVENT_GROUPS = {
-  schedule: ["booked", "repair_in_progress"],
+  schedule: ["scheduled", "repair_in_progress"],
   repair: ["waiting_on_parts", "ready_for_pickup"],
-  invoice: ["invoice_sent", "paid", "completed"],
+  invoice: ["completed"],
   customer: ["on_hold", "cancelled"],
 };
 
