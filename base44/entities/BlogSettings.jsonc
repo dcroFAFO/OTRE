@@ -3,8 +3,7 @@
   "type": "object",
   "properties": {
     "user_id": {
-      "type": "string",
-      "description": "Staff user who last created the settings record. Provenance only. There is exactly ONE settings record for the whole blog \u2014 do not create per-user records."
+      "type": "string"
     },
     "account_id": {
       "type": "string"
@@ -69,66 +68,16 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "data.user_id": "{{user.id}}"
     }
   }
 }

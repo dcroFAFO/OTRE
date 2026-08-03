@@ -3,8 +3,7 @@
   "type": "object",
   "properties": {
     "user_id": {
-      "type": "string",
-      "description": "Staff user who created the post. Retained for provenance and author attribution only \u2014 it no longer restricts access."
+      "type": "string"
     },
     "account_id": {
       "type": "string"
@@ -81,16 +80,6 @@
       "type": "number",
       "default": 0
     },
-    "generated_by": {
-      "type": "string",
-      "enum": [
-        "manual",
-        "ai",
-        "autopilot"
-      ],
-      "default": "manual",
-      "description": "How this post was created. Set by generateBlogPost and the autopilot workflow."
-    },
     "scheduled_at": {
       "type": "string",
       "format": "date-time"
@@ -115,66 +104,16 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "data.user_id": "{{user.id}}"
     }
   }
 }
