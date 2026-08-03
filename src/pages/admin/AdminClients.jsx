@@ -7,8 +7,7 @@ import ClientSummaryCards from "@/components/admin/clients/ClientSummaryCards";
 import ClientFilters, { EMPTY_CLIENT_FILTERS } from "@/components/admin/clients/ClientFilters";
 import ClientTable from "@/components/admin/clients/ClientTable";
 import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
-import { deleteClients, listClients } from "@/services/clientService";
-import { base44 } from "@/api/base44Client";
+import { bulkUpdateClients, deleteClients, listClients } from "@/services/clientService";
 import ClientBulkActionsBar from "@/components/admin/clients/ClientBulkActionsBar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -62,51 +61,25 @@ export default function AdminClients() {
   });
   const clearSelection = () => setSelectedIds(new Set());
 
-  const bulkStatusChange = async (status) => {
+  // All bulk edits go through the backend so each one is written to the
+  // customer history timeline.
+  const runBulkUpdate = async (changes, failureMessage) => {
     const ids = [...selectedIds];
     try {
-      await base44.entities.Customer.bulkUpdate(ids.map((id) => ({ id, status })));
-      toast.success(`Updated status for ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
+      const result = await bulkUpdateClients(ids, changes);
       clearSelection();
-      refetch();
+      await refetch();
+      toast.success(result.updated === 0
+        ? "No changes needed — those customers were already up to date."
+        : `Updated ${result.updated} customer${result.updated === 1 ? "" : "s"}.`);
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to update status.");
+      toast.error(err?.response?.data?.error || err?.message || failureMessage);
     }
   };
 
-  const bulkAddTag = async (tag) => {
-    const ids = [...selectedIds];
-    try {
-      const updates = ids.map((id) => {
-        const c = clients.find((c) => c.id === id);
-        const currentTags = c?.tags || [];
-        return { id, tags: [...new Set([...currentTags, tag])] };
-      });
-      await base44.entities.Customer.bulkUpdate(updates);
-      toast.success(`Added tag to ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
-      clearSelection();
-      refetch();
-    } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to add tag.");
-    }
-  };
-
-  const bulkRemoveTag = async (tag) => {
-    const ids = [...selectedIds];
-    try {
-      const updates = ids.map((id) => {
-        const c = clients.find((c) => c.id === id);
-        const currentTags = c?.tags || [];
-        return { id, tags: currentTags.filter((t) => t !== tag) };
-      });
-      await base44.entities.Customer.bulkUpdate(updates);
-      toast.success(`Removed tag from ${ids.length} customer${ids.length > 1 ? "s" : ""}.`);
-      clearSelection();
-      refetch();
-    } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to remove tag.");
-    }
-  };
+  const bulkStatusChange = (status) => runBulkUpdate({ status }, "Failed to update status.");
+  const bulkAddTag = (tag) => runBulkUpdate({ add_tag: tag }, "Failed to add tag.");
+  const bulkRemoveTag = (tag) => runBulkUpdate({ remove_tag: tag }, "Failed to remove tag.");
 
   const bulkDelete = async () => {
     const ids = [...selectedIds].filter(Boolean);

@@ -541,6 +541,61 @@ async function updateCustomer(entities, actor, customerId, changes) {
   return updated;
 }
 
+// Bulk status / tag edits. Applied with the service role so every change is
+// audited here — the admin UI must never write to Customer directly.
+async function bulkUpdateCustomers(entities, actor, ids, changes = {}) {
+  const uniqueIds = [...new Set((Array.isArray(ids) ? ids : []).filter(Boolean))];
+  if (!uniqueIds.length) throw new Error('No customers selected');
+
+  const status = String(changes.status || '').trim();
+  if (status && !CUSTOMER_STATUSES.includes(status)) {
+    throw new Error(`Invalid customer status. Expected one of: ${CUSTOMER_STATUSES.join(', ')}`);
+  }
+  const addTag = String(changes.add_tag || '').trim();
+  const removeTag = String(changes.remove_tag || '').trim();
+  if (!status && !addTag && !removeTag) throw new Error('No changes supplied');
+
+  const now = new Date().toISOString();
+  const updates = [];
+  const audits = [];
+
+  for (const id of uniqueIds) {
+    const existing = await entities.Customer.get(id).catch(() => null);
+    if (!existing) continue;
+    const tags = Array.isArray(existing.tags) ? existing.tags : [];
+    const patch = { last_activity_date: now };
+    const parts = [];
+
+    if (status && existing.status !== status) {
+      patch.status = status;
+      parts.push(`status → ${status}`);
+    }
+    let nextTags = tags;
+    if (addTag && !nextTags.includes(addTag)) {
+      nextTags = [...nextTags, addTag];
+      parts.push(`tag added: ${addTag}`);
+    }
+    if (removeTag && nextTags.includes(removeTag)) {
+      nextTags = nextTags.filter((tag) => tag !== removeTag);
+      parts.push(`tag removed: ${removeTag}`);
+    }
+    if (nextTags !== tags) patch.tags = nextTags;
+    if (!parts.length) continue;
+
+    updates.push({ id, ...patch });
+    audits.push({ customer: existing, summary: `${customerName(existing)}: ${parts.join(', ')}` });
+  }
+
+  if (!updates.length) return { updated: 0, requested: uniqueIds.length };
+
+  await entities.Customer.bulkUpdate(updates);
+  // bulkUpdate skips per-record side effects, so audit rows are written explicitly.
+  for (const entry of audits) {
+    await logCustomerAudit(entities, actor, entry.customer, entry.summary, { bulk: true });
+  }
+  return { updated: updates.length, requested: uniqueIds.length };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -556,6 +611,10 @@ Deno.serve(async (req) => {
     if (action === 'get') return Response.json({ customer: await entities.Customer.get(payload.customer_id) });
     if (action === 'resolveForJob') return Response.json({ customer: await resolveCustomerForJob(entities, payload.job_id, payload.job) });
     if (action === 'update') return Response.json({ customer: await updateCustomer(entities, user, payload.customer_id, payload.changes || {}) });
+    if (action === 'bulkUpdate') {
+      if (!MANAGER_ROLES.has(String(user.role || '').toLowerCase())) return Response.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json(await bulkUpdateCustomers(entities, user, payload.customer_ids, payload.changes || {}));
+    }
     if (action === 'delete') {
       if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
       return Response.json(await deleteCustomers(entities, payload.customer_ids));

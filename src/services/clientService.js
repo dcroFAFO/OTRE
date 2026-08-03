@@ -21,6 +21,12 @@ export async function deleteClients(ids) {
   return res.data;
 }
 
+// Bulk status / tag edits. Routed through the backend so each change is audited.
+export async function bulkUpdateClients(ids, changes) {
+  const res = await base44.functions.invoke("customerActions", { action: "bulkUpdate", customer_ids: ids, changes });
+  return res.data;
+}
+
 export async function resolveCustomerForJob(job) {
   const res = await base44.functions.invoke("customerActions", { action: "resolveForJob", job_id: job?.id, job });
   return res.data.customer;
