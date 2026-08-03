@@ -31,13 +31,27 @@ Deno.serve(async (req) => {
     // Fetch inventory usage for this job (parts used)
     const usageRecords = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: jobId });
 
-    // Build line items from inventory usage
-    const partsLineItems = usageRecords.map((u) => ({
-      description: u.item_name,
-      qty: u.qty_used,
-      unit_price: u.unit_sell || u.unit_cost || 0,
-      kind: "part",
-    }));
+    // Build line items from inventory usage. Each line is stamped with
+    // source_usage_id so a re-run (or a later top-up) can tell which usage
+    // records have already been invoiced and never bills the same part twice.
+    // Usage records are also de-duplicated by id in case the filter returns
+    // repeats, so one usage record can only ever produce one line item.
+    const seenUsageIds = new Set();
+    const partsLineItems = [];
+    for (const u of usageRecords) {
+      if (u.id && seenUsageIds.has(u.id)) {
+        console.warn(`[autoGenerateInvoice] duplicate usage record ${u.id} ignored for job ${jobId}`);
+        continue;
+      }
+      if (u.id) seenUsageIds.add(u.id);
+      partsLineItems.push({
+        description: u.item_name,
+        qty: u.qty_used,
+        unit_price: u.unit_sell || u.unit_cost || 0,
+        kind: "part",
+        source_usage_id: u.id || "",
+      });
+    }
 
     // Add labour line item from quote if available
     const labourLineItems = [];
