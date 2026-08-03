@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { resolveInlineImages, generateBlogImage } from '../../shared/blogImages.ts';
 
 const slugify = (value) => String(value || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90);
 const wordCount = (text) => String(text || "").trim().split(/\s+/).filter(Boolean).length;
@@ -14,7 +13,7 @@ Deno.serve(async (req) => {
     const input = await req.json();
     if (!input.topic) return Response.json({ error: "Topic is required" }, { status: 400 });
 
-    const settings = (await base44.asServiceRole.entities.BlogSettings.list("-created_date", 1))[0];
+    const settings = (await base44.asServiceRole.entities.BlogSettings.filter({ user_id: user.id }, "-created_date", 1))[0];
     if (settings && settings.enable_ai_generation === false) return Response.json({ error: "AI blog generation is disabled in blog settings" }, { status: 403 });
 
     const LENGTH_MAP = {
@@ -111,7 +110,7 @@ Return the full article in the full_article_markdown field as markdown. It must 
     const now = new Date().toISOString();
     const title = result.recommended_title || input.topic;
     let slug = slugify(result.slug || title);
-    const existing = await base44.asServiceRole.entities.BlogPost.filter({ slug }, "", 1);
+    const existing = await base44.asServiceRole.entities.BlogPost.filter({ user_id: user.id, slug }, "", 1);
     if (existing.length) slug = `${slug}-${Date.now().toString().slice(-5)}`;
     const content = result.full_article_markdown || "";
     const actualWordCount = wordCount(content);
@@ -119,30 +118,14 @@ Return the full article in the full_article_markdown field as markdown. It must 
       await base44.asServiceRole.entities.BlogLog.create({ user_id: user.id, event_type: "post_generation_rejected_short", status: "error", message: `Draft rejected: ${actualWordCount} words (minimum ${lengthSpec.min_words} for "${input.article_length}" length). Regenerate or choose a shorter length.`, created_at: new Date().toISOString() });
       return Response.json({ error: `Article too short: ${actualWordCount} words. Minimum for "${input.article_length}" length is ${lengthSpec.min_words} words. Please regenerate or adjust the article length setting.`, word_count: actualWordCount, min_required: lengthSpec.min_words }, { status: 422 });
     }
-    // The writer emits ![alt](image:PROMPT) placeholders. These are not valid
-    // URLs, so they must be turned into real generated images before the post is
-    // saved — otherwise the published article renders broken images.
-    const inlineImages = await resolveInlineImages(base44, content);
-    let featuredImageUrl = "";
-    let featuredImageError = null;
-    if (result.featured_image_prompt) {
-      try {
-        featuredImageUrl = await generateBlogImage(base44, result.featured_image_prompt);
-      } catch (imageError) {
-        featuredImageError = imageError.message;
-      }
-    }
-
     const post = await base44.asServiceRole.entities.BlogPost.create({
       user_id: user.id,
       title,
       slug,
       excerpt: result.excerpt || "",
-      content_markdown: inlineImages.markdown,
+      content_markdown: content,
       content_html: "",
       status: "draft",
-      generated_by: input.generated_by === "autopilot" ? "autopilot" : "ai",
-      featured_image_url: featuredImageUrl,
       target_keyword: input.target_keyword || "",
       category_id: input.category_id || "",
       tag_ids: Array.isArray(input.tag_ids) ? input.tag_ids : [],
@@ -157,20 +140,8 @@ Return the full article in the full_article_markdown field as markdown. It must 
       created_at: now,
       updated_at: now
     });
-    const imageProblems = [
-      inlineImages.failed ? `${inlineImages.failed} inline image(s) failed` : null,
-      inlineImages.skipped ? `${inlineImages.skipped} extra placeholder(s) removed` : null,
-      featuredImageError ? `featured image failed: ${featuredImageError}` : null,
-    ].filter(Boolean);
-    await base44.asServiceRole.entities.BlogLog.create({
-      user_id: user.id,
-      event_type: "post_generated_with_ai",
-      related_post_id: post.id,
-      status: imageProblems.length ? "warning" : "success",
-      message: `Generated draft: ${title} (${inlineImages.resolved} inline image(s)${featuredImageUrl ? " + featured image" : ""})${imageProblems.length ? `. ${imageProblems.join("; ")}` : ""}`,
-      created_at: now,
-    });
-    return Response.json({ post, generated: result, images: { inline_resolved: inlineImages.resolved, inline_failed: inlineImages.failed, featured: !!featuredImageUrl } });
+    await base44.asServiceRole.entities.BlogLog.create({ user_id: user.id, event_type: "post_generated_with_ai", related_post_id: post.id, status: "success", message: `Generated draft: ${title}`, created_at: now });
+    return Response.json({ post, generated: result });
   } catch (error) {
     console.error("[generateBlogPost]", error.message, error.stack);
     return Response.json({ error: error.message }, { status: 500 });

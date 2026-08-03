@@ -10,13 +10,11 @@ Deno.serve(async (req) => {
     const payload = await req.json().catch(() => ({}));
     const action = payload.action || "dashboard";
     const [posts, categories, tags, settingsList, logs] = await Promise.all([
-      // The blog is a single shared publication — every staff member sees the
-      // same posts, taxonomy, settings and logs. Do NOT filter by user_id.
-      base44.asServiceRole.entities.BlogPost.list("-updated_at", 500),
-      base44.asServiceRole.entities.BlogCategory.list("name", 200),
-      base44.asServiceRole.entities.BlogTag.list("name", 200),
-      base44.asServiceRole.entities.BlogSettings.list("-created_date", 1),
-      action === "logs" ? base44.asServiceRole.entities.BlogLog.list("-created_at", 500) : Promise.resolve([])
+      base44.asServiceRole.entities.BlogPost.filter({ user_id: user.id }, "-updated_at", 500),
+      base44.asServiceRole.entities.BlogCategory.filter({ user_id: user.id }, "name", 200),
+      base44.asServiceRole.entities.BlogTag.filter({ user_id: user.id }, "name", 200),
+      base44.asServiceRole.entities.BlogSettings.filter({ user_id: user.id }, "-created_date", 1),
+      action === "logs" ? base44.asServiceRole.entities.BlogLog.filter({ user_id: user.id }, "-created_at", 500) : Promise.resolve([])
     ]);
     return Response.json({ posts, categories, tags, settings: settingsList[0] || null, logs });
   } catch (error) {

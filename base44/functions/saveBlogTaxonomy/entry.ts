@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     const slug = slugify(data.slug || data.name);
     if (!data.name || !slug) return Response.json({ error: "Name is required" }, { status: 400 });
-    const existing = await base44.asServiceRole.entities[entityName].filter({ slug }, "", 5);
+    const existing = await base44.asServiceRole.entities[entityName].filter({ user_id: user.id, slug }, "", 5);
     if (existing.some((item) => item.id !== id)) return Response.json({ error: "This slug already exists" }, { status: 409 });
     const payload = { ...data, user_id: user.id, slug, updated_at: now, is_active: data.is_active !== false };
     const item = id ? await base44.asServiceRole.entities[entityName].update(id, payload) : await base44.asServiceRole.entities[entityName].create({ ...payload, created_at: now });

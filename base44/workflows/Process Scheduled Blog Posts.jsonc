@@ -1,13 +1,13 @@
 {
   "name": "Process Scheduled Blog Posts",
-  "description": "Publishes blog posts when their scheduled publish time is due. Runs hourly so scheduled_at is honoured within the hour.",
+  "description": "Publishes blog posts when their scheduled publish time is due.",
   "trigger": {
     "condition": null,
     "config": {
       "trigger_type": "scheduled",
       "events": [],
       "schedule_mode": "recurring",
-      "cron_expression": "0 * * * *",
+      "cron_expression": "0 19 * * *",
       "one_time_date": null,
       "timezone": "Australia/Brisbane",
       "interval_value": null,

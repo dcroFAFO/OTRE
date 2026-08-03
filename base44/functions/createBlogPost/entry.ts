@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const title = String(payload.title || "Untitled post").trim();
     const slug = slugify(payload.slug || title);
     if (!slug) return Response.json({ error: "Slug is required" }, { status: 400 });
-    const existing = await base44.asServiceRole.entities.BlogPost.filter({ slug }, "", 1);
+    const existing = await base44.asServiceRole.entities.BlogPost.filter({ user_id: user.id, slug }, "", 1);
     if (existing.length) return Response.json({ error: "A post with this slug already exists" }, { status: 409 });
     const now = new Date().toISOString();
     const content = payload.content_markdown || "";

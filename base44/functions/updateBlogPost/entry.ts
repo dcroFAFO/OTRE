@@ -13,10 +13,10 @@ Deno.serve(async (req) => {
     const { postId, data = {} } = await req.json();
     if (!postId) return Response.json({ error: "postId is required" }, { status: 400 });
     const current = await base44.asServiceRole.entities.BlogPost.get(postId);
-    if (!current) return Response.json({ error: "Post not found" }, { status: 404 });
+    if (!current || current.user_id !== user.id) return Response.json({ error: "Post not found" }, { status: 404 });
     const nextSlug = data.slug ? slugify(data.slug) : current.slug;
     if (nextSlug !== current.slug) {
-      const existing = await base44.asServiceRole.entities.BlogPost.filter({ slug: nextSlug }, "", 2);
+      const existing = await base44.asServiceRole.entities.BlogPost.filter({ user_id: user.id, slug: nextSlug }, "", 2);
       if (existing.some((post) => post.id !== postId)) return Response.json({ error: "A post with this slug already exists" }, { status: 409 });
     }
     const content = data.content_markdown ?? current.content_markdown ?? "";

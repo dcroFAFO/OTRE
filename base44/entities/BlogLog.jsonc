@@ -3,8 +3,7 @@
   "type": "object",
   "properties": {
     "user_id": {
-      "type": "string",
-      "description": "Staff user (or service account) that triggered the event. Authorship history only \u2014 it no longer controls visibility."
+      "type": "string"
     },
     "event_type": {
       "type": "string"
@@ -34,52 +33,16 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "data.user_id": "{{user.id}}"
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "data.user_id": "{{user.id}}"
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "data.user_id": "{{user.id}}"
     }
   }
 }
