@@ -1,33 +1,21 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-
-function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
+import { cleanEmail, isStaff, normalizePhone } from '../../shared/customerCore.ts';
 
 function buildCustomerId(user) {
   if (user.customer_id) return user.customer_id;
   return `CUST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
-function normalizePhone(value) {
-  let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
-  if (cleaned.startsWith('+61')) cleaned = cleaned.slice(3);
-  else if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
-  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-  const phone = `+61${cleaned.replace(/\D/g, '')}`;
-  return /^\+614\d{8}$/.test(phone) ? phone : '';
-}
-
 async function syncCustomerForUser(base44, user) {
   if (!user?.id) {
     return { created: false, skipped: true, reason: 'User is missing' };
   }
-  const isStaffAccount = ['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) || user.is_customer === false || user.data?.is_customer === false;
+  const isStaffAccount = isStaff(user) || user.is_customer === false || user.data?.is_customer === false;
   if (isStaffAccount) {
     return { created: false, skipped: true, reason: 'User is staff' };
   }
 
-  const email = normalizeEmail(user.email);
+  const email = cleanEmail(user.email);
   if (!email) {
     return { created: false, skipped: true, reason: 'User has no email' };
   }
@@ -118,7 +106,7 @@ Deno.serve(async (req) => {
     }
 
     const users = await base44.asServiceRole.entities.User.list('-created_date', 1000);
-    const customerUsers = users.filter((user) => !['admin', 'employee', 'technician', 'staff'].includes(String(user.role || '').toLowerCase()) && user.is_customer !== false && user.data?.is_customer !== false);
+    const customerUsers = users.filter((user) => !isStaff(user) && user.is_customer !== false && user.data?.is_customer !== false);
     const results = [];
 
     for (const user of customerUsers) {

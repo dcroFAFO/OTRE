@@ -4,7 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Pencil, Trash2, Bike } from "lucide-react";
+import { toast } from "sonner";
 import AssetEditDialog from "@/components/assets/AssetEditDialog";
+import { createScooter, updateScooter, deleteScooter } from "@/services/clientService";
+
+// Editable asset fields. Anything else on the record (ids, ownership, system
+// timestamps) is never sent back on save.
+const ASSET_FIELDS = ["make", "model", "year", "serial_number", "colour", "battery_voltage", "odometer_km", "last_service_date", "notes"];
 
 export default function AssetManagement() {
   const qc = useQueryClient();
@@ -39,17 +45,33 @@ export default function AssetManagement() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["assets"] });
 
+  // Saves route through scooterActions so every staff asset edit is written to
+  // the audit trail, matching edits made from the client detail drawer.
   const handleSave = async (data) => {
-    if (data.id) await base44.entities.Scooter.update(data.id, data);
-    else await base44.entities.Scooter.create(data);
-    refresh();
-    setEditing(null);
+    const fields = {};
+    ASSET_FIELDS.forEach((key) => {
+      if (data[key] !== undefined) fields[key] = data[key];
+    });
+    try {
+      if (data.id) await updateScooter(data.id, { ...fields, customer_id: data.customer_id || "" });
+      else await createScooter("", fields);
+      refresh();
+      setEditing(null);
+    } catch (error) {
+      console.error("[AssetManagement] save failed:", error);
+      toast.error(error?.response?.data?.error || error?.message || "Couldn't save this asset.");
+    }
   };
 
   const handleDelete = async (a) => {
     if (!window.confirm(`Delete ${a.make || ""} ${a.model}? This cannot be undone.`)) return;
-    await base44.entities.Scooter.delete(a.id);
-    refresh();
+    try {
+      await deleteScooter(a.id);
+      refresh();
+    } catch (error) {
+      console.error("[AssetManagement] delete failed:", error);
+      toast.error(error?.response?.data?.error || error?.message || "Couldn't delete this asset.");
+    }
   };
 
   return (

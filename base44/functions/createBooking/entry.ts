@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { resolveTrustedOrigin, isTrustedFileUrl } from '../../shared/origin.ts';
 import { checkRateLimit, clientIp, findRecentDuplicateJob } from '../../shared/rateLimit.ts';
 import { mintJobReference } from '../../shared/jobReference.ts';
+import { addIdList, cleanEmail, isStaff, normalizePhone, scooterMatches } from '../../shared/customerCore.ts';
 
 const SLUG = 'otr-scooters';
 const MAX_BOOKINGS_PER_IP = 5;
@@ -10,7 +11,6 @@ const INTAKE_STATUS = 'requested';
 const JOB_TYPE = 'repair';
 const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice', 'pay_invoice'];
 const DEFAULT_SERVICE_TYPE = 'general_repair';
-const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 const E164_PATTERN = /^\+614\d{8}$/;
 const encoder = new TextEncoder();
 
@@ -23,14 +23,6 @@ function makeToken() {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function normalizePhone(value) {
-  let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
-  if (cleaned.startsWith('+61')) cleaned = cleaned.slice(3);
-  else if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
-  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-  return `+61${cleaned.replace(/\D/g, '')}`;
 }
 
 function bookingMake(form) {
@@ -102,7 +94,7 @@ function bookingSnapshot(form, email, phone) {
 }
 
 function isCustomerUser(user) {
-  return !!user?.id && !STAFF_ROLES.has(String(user.role || '').toLowerCase()) && user.is_customer !== false && user.data?.is_customer !== false;
+  return !!user?.id && !isStaff(user) && user.is_customer !== false && user.data?.is_customer !== false;
 }
 
 async function currentUser(base44) {
@@ -142,18 +134,6 @@ async function syncLegacyCustomer(base44, { profile, name, email, phone, user, n
   } catch (error) { console.warn('[createBooking] legacy customer sync skipped:', error.message); return null; }
 }
 
-function cleanText(value) { return String(value || '').trim().toLowerCase(); }
-function addIdList(existing, nextId) {
-  const ids = String(existing || '').split(',').map((id) => id.trim()).filter(Boolean);
-  if (nextId && !ids.includes(nextId)) ids.push(nextId);
-  return ids.join(',');
-}
-function scooterMatches(a, b) {
-  const aSerial = cleanText(a.serial_number);
-  const bSerial = cleanText(b.serial_number);
-  if (aSerial && bSerial && aSerial === bSerial) return true;
-  return !!cleanText(a.model) && cleanText(a.make) === cleanText(b.make) && cleanText(a.model) === cleanText(b.model);
-}
 async function resolveBookingScooter(base44, customer, booking) {
   if (!customer) return null;
   const stableId = customer.customer_id || customer.id;
@@ -177,7 +157,7 @@ Deno.serve(async (req) => {
     requestMeta.fields = Object.keys(form || {});
 
     if (!form.customer_name || !form.customer_email || !form.phone || !form.asset_label || !form.issue_description) return Response.json({ error: 'Name, email, phone, scooter details and issue description are required.' }, { status: 400 });
-    const email = String(form.customer_email || '').trim().toLowerCase();
+    const email = cleanEmail(form.customer_email);
     const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
     if (!E164_PATTERN.test(phone)) return Response.json({ error: 'Enter a valid Australian mobile number' }, { status: 400 });
 

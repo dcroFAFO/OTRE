@@ -76,25 +76,32 @@ async function listScootersForCustomer(entities, customerId) {
   });
 }
 
+async function findCustomerRecord(entities, customerId) {
+  const direct = await entities.Customer.get(customerId).catch(() => null);
+  if (direct) return direct;
+  const matches = await entities.Customer.filter({ customer_id: customerId }, '-updated_date', 1).catch(() => []);
+  return matches[0] || null;
+}
+
 async function saveScooter(entities, actor, payload) {
   const data = payload.data || {};
   const existing = payload.scooter_id ? await entities.Scooter.get(payload.scooter_id).catch(() => null) : null;
-  const customerId = payload.customer_id || existing?.customer_account_id || existing?.customer_id;
-  if (!customerId) throw new Error('customer_id is required');
+  // Assets managed from the staff Asset Management screen can legitimately have
+  // no owner yet, so a missing customer is allowed here. When one IS supplied it
+  // must resolve, otherwise we'd silently detach the asset from its customer.
+  const customerId = payload.customer_id || existing?.customer_account_id || existing?.customer_id || '';
   if (!String(data.model || '').trim()) throw new Error('Scooter model is required');
-  const customer = await entities.Customer.get(customerId).catch(async () => {
-    const matches = await entities.Customer.filter({ customer_id: customerId }, '-updated_date', 1).catch(() => []);
-    return matches[0] || null;
-  });
-  if (!customer) throw new Error('Customer not found');
-  const stableId = customer.customer_id || customer.id;
-  const scooter = payload.scooter_id
-    ? await entities.Scooter.update(payload.scooter_id, { ...data, customer_id: stableId, customer_account_id: customer.id })
-    : await findOrCreateScooterForCustomer(entities, customer, data);
+  const customer = customerId ? await findCustomerRecord(entities, customerId) : null;
+  if (customerId && !customer) throw new Error('Customer not found');
+  const ownership = customer ? { customer_id: customer.customer_id || customer.id, customer_account_id: customer.id } : {};
+  let scooter;
+  if (payload.scooter_id) scooter = await entities.Scooter.update(payload.scooter_id, { ...data, ...ownership });
+  else if (customer) scooter = await findOrCreateScooterForCustomer(entities, customer, data);
+  else scooter = await entities.Scooter.create({ ...data });
   await logCustomerAudit(
     entities,
     actor,
-    customer,
+    customer || { id: '' },
     `Scooter ${payload.scooter_id ? 'updated' : 'added'}: ${[data.make, data.model].filter(Boolean).join(' ')}`,
     { scooter_id: scooter?.id || '' },
   );
