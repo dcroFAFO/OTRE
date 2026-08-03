@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       const asset = scooterById[job.asset_id];
       return {
         id: job.id,
-        reference: job.reference || job.job_id || job.id,
+        reference: job.reference || job.id,
         status: job.status || job.job_status || 'requested',
         asset_id: job.asset_id || '',
         asset_label: asset ? [asset.make, asset.model].filter(Boolean).join(' ') : (job.asset_label || job.scooter_make_model || job.scooter_details || ''),
@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
         id: invoice.id,
         number: invoice.number || invoice.invoice_id || invoice.id,
         job_id: invoice.job_id || '',
-        job_reference: job?.reference || job?.job_id || invoice.job_id || '',
+        job_reference: job?.reference || invoice.job_id || '',
         status: invoice.status || 'outstanding',
         issue_date: invoice.invoiceSentAt || invoice.created_date || '',
         due_date: invoice.due_date || invoice.dueDate || '',

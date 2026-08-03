@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { resolveTrustedOrigin, isTrustedFileUrl } from '../../shared/origin.ts';
 import { checkRateLimit, clientIp, findRecentDuplicateJob } from '../../shared/rateLimit.ts';
+import { mintJobReference } from '../../shared/jobReference.ts';
 
 const SLUG = 'otr-scooters';
 const MAX_BOOKINGS_PER_IP = 5;
@@ -202,7 +203,7 @@ Deno.serve(async (req) => {
 
     const customerUserId = isCustomerUser(user) ? user.id : null;
     const rawToken = customerUserId ? null : makeToken();
-    const reference = `${SLUG.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+    const reference = await mintJobReference(base44.asServiceRole.entities);
     const submittedBooking = bookingSnapshot(form, email, phone);
     await base44.asServiceRole.entities.CustomerProfile.update(profile.id, {
       display_name: profile.display_name || form.customer_name,

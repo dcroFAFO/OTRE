@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     const logAudit = ({ eventType, previousValue = null, newValue = null, summary = "", visibility = "internal" }) =>
       base44.asServiceRole.entities.AuditEvent.create({
         event_type: eventType,
-        job_id: job.job_id || job.id,
+        job_id: job.id,
         customer_id: job.customer_id || "",
         actor_id: user.id,
         actor_name: user.full_name || "System",
@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
         const usages = [];
         for (const usageId of usageIds) {
           const usage = await base44.asServiceRole.entities.InventoryUsage.get(usageId);
-          if (usage && (usage.job_id === job.id || usage.job_id === job.job_id)) usages.push(usage);
+          if (usage && usage.job_id === job.id) usages.push(usage);
         }
         if (usages.length === 0) return Response.json({ error: "No matching parts found" }, { status: 404 });
 

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { mintJobReference } from '../../shared/jobReference.ts';
 
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 
@@ -12,7 +13,6 @@ function normalizePhone(value) {
   const phone = `+61${cleaned.replace(/\D/g, '')}`;
   return /^\+614\d{8}$/.test(phone) ? phone : '';
 }
-function generateJobReference() { return `OTR-${Math.floor(Math.random() * 90000) + 10000}`; }
 function generateCustomerId() { return `CUST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`; }
 function addIdList(existing, nextId) {
   const ids = String(existing || '').split(',').map((id) => id.trim()).filter(Boolean);
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     const stableCustomerId = customer.customer_id || customer.id;
     const scooter = await resolveScooter(entities, customer, intake);
     const assetLabel = scooter ? [scooter.make, scooter.model].filter(Boolean).join(' ') : ([intake.make, intake.model].filter(Boolean).join(' ') || intake.asset_label || '');
-    const reference = generateJobReference();
+    const reference = await mintJobReference(entities);
     const now = new Date().toISOString();
 
     const intakeRecord = {
