@@ -8,12 +8,16 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import SEO from "@/components/SEO";
+import { safeReturnTo } from "@/lib/authReturnTo";
 
 const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
 
 function authParams() {
   const params = new URLSearchParams(window.location.search);
-  const next = params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH;
+  // ?returnTo= is used by flows that must resume after sign-in (e.g. the MCP
+  // OAuth consent page). It wins over ?next= and is validated centrally.
+  const returnTo = safeReturnTo();
+  const next = returnTo !== "/" ? returnTo : (params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH);
   return {
     email: params.get("email") || "",
     next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,

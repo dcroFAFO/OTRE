@@ -12,12 +12,15 @@ import AppleIcon from "@/components/AppleIcon";
 import { toast } from "@/components/ui/use-toast";
 import SEO from "@/components/SEO";
 import { isStaff } from "@/config/permissions";
+import { safeReturnTo } from "@/lib/authReturnTo";
 
 const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
 
 function authParams() {
   const params = new URLSearchParams(window.location.search);
-  const next = params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH;
+  // ?returnTo= (e.g. the MCP OAuth consent flow) takes precedence over ?next=.
+  const returnTo = safeReturnTo();
+  const next = returnTo !== "/" ? returnTo : (params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH);
   return {
     email: params.get("email") || "",
     phone: params.get("phone") || "",
