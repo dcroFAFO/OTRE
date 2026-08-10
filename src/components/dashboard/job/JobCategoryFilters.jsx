@@ -13,9 +13,9 @@ export const EMPTY_FILTERS = { q: "", status: "all", service_type: "all", priori
 export const JOB_CATEGORIES = [
   { key: "all", label: "All", statuses: null, order: 0 },
   { key: "requested", label: "Requested", statuses: ["requested"], order: 1 },
-  { key: "scheduled", label: "Scheduled", statuses: ["booked"], order: 2 },
+  { key: "scheduled", label: "Scheduled", statuses: ["scheduled"], order: 2 },
   { key: "repair", label: "Repair Underway", statuses: ["repair_in_progress", "waiting_on_parts", "on_hold"], order: 3 },
-  { key: "ready", label: "Ready for Pickup", statuses: ["ready_for_pickup", "invoice_sent", "paid"], order: 4 },
+  { key: "ready", label: "Ready for Pickup", statuses: ["ready_for_pickup", "invoice_outstanding"], order: 4 },
   { key: "completed", label: "Completed", statuses: ["completed", "cancelled"], order: 5 },
 ];
 
