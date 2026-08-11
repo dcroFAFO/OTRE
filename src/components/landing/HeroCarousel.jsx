@@ -1,119 +1,168 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { HERO_SLIDES } from "@/components/landing/heroSlides";
 
+const AUTOPLAY_DELAY_MS = 7000;
+const SWIPE_THRESHOLD_PX = 48;
+
 export default function HeroCarousel({ children }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const swipeStart = useRef(null);
   const reduceMotion = useReducedMotion();
   const slide = HERO_SLIDES[index];
 
-  const go = (step) => setIndex((prev) => (prev + step + HERO_SLIDES.length) % HERO_SLIDES.length);
+  const go = (step) => {
+    setIndex((current) => (current + step + HERO_SLIDES.length) % HERO_SLIDES.length);
+  };
 
   useEffect(() => {
-    if (paused) return;
-    const timer = setInterval(() => setIndex((prev) => (prev + 1) % HERO_SLIDES.length), 6000);
-    return () => clearInterval(timer);
-  }, [paused, index]);
+    if (paused || reduceMotion || HERO_SLIDES.length < 2) return undefined;
 
-  // Preload only the next image so mobile never downloads all slides at once.
+    const timer = window.setTimeout(() => {
+      setIndex((current) => (current + 1) % HERO_SLIDES.length);
+    }, AUTOPLAY_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [index, paused, reduceMotion]);
+
   useEffect(() => {
-    const next = (index + 1) % HERO_SLIDES.length;
-    const url = HERO_SLIDES[next]?.image;
-    if (url) {
-      const img = new Image();
-      img.src = url;
-    }
+    const nextSlide = HERO_SLIDES[(index + 1) % HERO_SLIDES.length];
+    if (!nextSlide) return;
+
+    const image = new Image();
+    image.src = nextSlide.image;
   }, [index]);
+
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0];
+    swipeStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    setPaused(true);
+  };
+
+  const handleTouchEnd = (event) => {
+    const start = swipeStart.current;
+    const touch = event.changedTouches[0];
+    swipeStart.current = null;
+    setPaused(false);
+
+    if (!start || !touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const isHorizontalSwipe =
+      Math.abs(deltaX) >= SWIPE_THRESHOLD_PX &&
+      Math.abs(deltaX) > Math.abs(deltaY) * 1.2;
+
+    if (isHorizontalSwipe) go(deltaX > 0 ? -1 : 1);
+  };
 
   return (
     <section
       aria-label="On The Run Electrics electric scooter repair services"
       aria-roledescription="carousel"
-      className="relative w-full overflow-hidden border-y border-border bg-foreground shadow-gentle"
+      className="relative w-full touch-pan-y overflow-hidden border-y border-border bg-foreground shadow-gentle"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
+        swipeStart.current = null;
+        setPaused(false);
+      }}
     >
-      <div className="relative min-h-[88svh]">
-        <AnimatePresence>
-          <motion.img
-            key={slide.id}
-            src={slide.image}
-            alt={slide.eyebrow}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/20" />
-
-        <div className="relative mx-auto flex min-h-[88svh] w-full max-w-7xl flex-col justify-end p-6 sm:p-12">
-          {/* Stable, SEO-optimised H1 — does not rotate so search engines always
-              index the primary keyword target for this page. */}
-          <h1 className="font-heading text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl">
-            Electric Scooter Repairs Brisbane
-          </h1>
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
-            Expert repairs, servicing and diagnostics in Woolloongabba — open until midnight, 7 days a week.
-          </p>
-
-          {/* Rotating service highlight (secondary content, not the H1).
-              mode="wait" ensures only one text block is in the flow at a time,
-              so exiting/entering never stack and create a layout gap. */}
-          <AnimatePresence mode="wait">
-            <motion.div
+      <div className="relative bg-foreground lg:min-h-[88svh]">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-black sm:aspect-[16/9] lg:absolute lg:inset-0 lg:h-full lg:aspect-auto">
+          <AnimatePresence initial={false}>
+            <motion.img
               key={slide.id}
+              src={slide.image}
+              alt={slide.alt}
+              decoding="async"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="mt-5"
-            >
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
-                <Zap className="h-3.5 w-3.5" />
-                {slide.eyebrow}
-              </span>
-              <h2 className="mt-3 font-heading text-xl font-bold text-white sm:text-2xl">
-                {slide.title}
-              </h2>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
-                {slide.body}
-              </p>
-            </motion.div>
+              transition={{ duration: reduceMotion ? 0 : 0.45, ease: "easeInOut" }}
+              style={{ "--desktop-position": slide.desktopPosition }}
+              className="absolute inset-0 h-full w-full object-contain lg:object-cover lg:[object-position:var(--desktop-position)]"
+            />
           </AnimatePresence>
+          <div className="absolute inset-0 hidden bg-gradient-to-r from-black/85 via-black/55 to-black/10 lg:block" />
+        </div>
+
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col bg-foreground px-5 pb-8 pt-6 text-white sm:px-8 sm:pb-10 lg:min-h-[88svh] lg:justify-end lg:bg-transparent lg:pb-12 lg:pt-28">
+          <h1 className="font-heading text-3xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">
+            Electric Scooter Repairs Brisbane
+          </h1>
+          <p className="mt-3 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
+            Repairs, servicing and diagnostics from our Woolloongabba workshop, with online booking and clear job updates.
+          </p>
+
+          <div className="mt-5 min-h-[9rem] sm:min-h-[7.5rem]" aria-live={paused ? "polite" : "off"}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={slide.id}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${index + 1} of ${HERO_SLIDES.length}: ${slide.title}`}
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
+                transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeInOut" }}
+              >
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
+                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                  {slide.eyebrow}
+                </span>
+                <h2 className="mt-3 font-heading text-xl font-bold text-white sm:text-2xl">
+                  {slide.title}
+                </h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
+                  {slide.body}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
           {children}
 
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-7 flex items-center gap-2">
             <button
               type="button"
               onClick={() => go(-1)}
               aria-label="Previous slide"
-              className="grid h-11 w-11 place-items-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={() => go(1)}
               aria-label="Next slide"
-              className="grid h-11 w-11 place-items-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>
-            <div className="ml-2 flex items-center gap-2">
-              {HERO_SLIDES.map((item, i) => (
+            <div className="ml-1 flex items-center" role="group" aria-label="Choose a slide">
+              {HERO_SLIDES.map((item, slideIndex) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setIndex(i)}
-                  aria-label={`Go to slide ${i + 1}`}
-                  aria-current={i === index}
-                  className={`h-1.5 rounded-full transition-all ${i === index ? "w-8 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`}
-                />
+                  onClick={() => setIndex(slideIndex)}
+                  aria-label={`Show ${item.eyebrow}`}
+                  aria-current={slideIndex === index ? "true" : undefined}
+                  className="grid h-11 w-8 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <span
+                    className={`h-1.5 rounded-full transition-all ${slideIndex === index ? "w-6 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`}
+                    aria-hidden="true"
+                  />
+                </button>
               ))}
             </div>
           </div>
