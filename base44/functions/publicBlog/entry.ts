@@ -148,12 +148,19 @@ Deno.serve(async (req) => {
     }
     const settings = (await base44.asServiceRole.entities.BlogSettings.list("-created_date", 1))[0] || null;
     if (settings && settings.blog_enabled === false) return Response.json({ settings, posts: [], categories: [], tags: [], post: null });
-    const [allPosts, contentfulPosts, categories, tags] = await Promise.all([
+    const [allPosts, contentfulPostsResult, categories, tags] = await Promise.all([
       base44.asServiceRole.entities.BlogPost.filter({ status: "published" }, "-published_at", 500),
-      listContentfulPosts(base44),
+      listContentfulPosts(base44).catch((error) => {
+        // Contentful is a supplemental source — if the connector is unavailable
+        // or the API errors, degrade gracefully to local posts only instead of
+        // failing the whole public blog endpoint.
+        console.warn("[publicBlog] Contentful unavailable, falling back to local posts:", error?.message || error);
+        return [];
+      }),
       base44.asServiceRole.entities.BlogCategory.filter({ is_active: true }, "name", 200),
       base44.asServiceRole.entities.BlogTag.filter({ is_active: true }, "name", 200)
     ]);
+    const contentfulPosts = contentfulPostsResult;
     const localPosts = allPosts.filter((post) => post.title && post.slug && post.published_at).map(postPublic);
     // Local posts take precedence over Contentful posts with the same slug,
     // so regenerated local versions override the original Contentful articles.

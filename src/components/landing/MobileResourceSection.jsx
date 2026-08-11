@@ -15,6 +15,10 @@ export default function MobileResourceSection() {
         setPosts((data?.posts || []).slice(0, 3));
         setCategories(data?.categories || []);
       })
+      .catch(() => {
+        // Backend degrades to local posts on Contentful failure; if it still
+        // errors, keep the section hidden rather than surfacing an unhandled error.
+      })
       .finally(() => setLoading(false));
   }, []);
 

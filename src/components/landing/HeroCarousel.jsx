@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { HERO_SLIDES } from "@/components/landing/heroSlides";
 
-const AUTOPLAY_DELAY_MS = 7000;
+const AUTOPLAY_DELAY_MS = 8000;
 const SWIPE_THRESHOLD_PX = 48;
 
 export default function HeroCarousel({ children }) {
@@ -76,8 +76,9 @@ export default function HeroCarousel({ children }) {
         setPaused(false);
       }}
     >
-      <div className="relative bg-foreground lg:min-h-[88svh]">
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-black sm:aspect-[16/9] lg:absolute lg:inset-0 lg:h-full lg:aspect-auto">
+      <div className="relative min-h-[82svh] lg:min-h-[88svh]">
+        {/* Full-bleed background image (all viewports) */}
+        <div className="absolute inset-0 overflow-hidden bg-black">
           <AnimatePresence initial={false}>
             <motion.img
               key={slide.id}
@@ -89,13 +90,32 @@ export default function HeroCarousel({ children }) {
               exit={{ opacity: 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.45, ease: "easeInOut" }}
               style={{ "--desktop-position": slide.desktopPosition }}
-              className="absolute inset-0 h-full w-full object-contain lg:object-cover lg:[object-position:var(--desktop-position)]"
+              className="absolute inset-0 h-full w-full object-cover [object-position:center_center] lg:[object-position:var(--desktop-position)]"
             />
           </AnimatePresence>
-          <div className="absolute inset-0 hidden bg-gradient-to-r from-black/85 via-black/55 to-black/10 lg:block" />
+          {/* Legibility overlays — visible on every viewport so copy stays readable over the photo */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/30" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent sm:from-black/50" aria-hidden="true" />
         </div>
 
-        <div className="relative mx-auto flex w-full max-w-7xl flex-col bg-foreground px-5 pb-8 pt-6 text-white sm:px-8 sm:pb-10 lg:min-h-[88svh] lg:justify-end lg:bg-transparent lg:pb-12 lg:pt-28">
+        {/* Edge tap zones — tap left/right to change slide (invisible, non-blocking) */}
+        <button
+          type="button"
+          onClick={() => go(-1)}
+          aria-label="Previous slide"
+          className="absolute left-0 top-0 z-10 h-full w-12 cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/50 sm:w-16"
+          tabIndex={-1}
+        />
+        <button
+          type="button"
+          onClick={() => go(1)}
+          aria-label="Next slide"
+          className="absolute right-0 top-0 z-10 h-full w-12 cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/50 sm:w-16"
+          tabIndex={-1}
+        />
+
+        {/* Foreground content */}
+        <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-col px-5 pb-8 pt-6 text-white sm:px-8 sm:pb-10 lg:min-h-[88svh] lg:justify-end lg:pb-12 lg:pt-28">
           <h1 className="font-heading text-3xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">
             Electric Scooter Repairs Brisbane
           </h1>
