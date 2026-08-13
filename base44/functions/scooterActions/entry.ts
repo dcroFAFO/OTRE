@@ -132,6 +132,6 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {
     console.error('[scooterActions] failed:', error?.message, error?.stack);
-    return Response.json({ error: error.message || 'Scooter action failed' }, { status: 500 });
+    return Response.json({ error: 'The asset action could not be completed.' }, { status: 500 });
   }
 });

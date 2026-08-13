@@ -54,6 +54,27 @@ export const REOPEN_STATUS = 'scheduled';
 // Canonical payment/invoice vocabulary. `paid` on an Invoice drives the job to
 // `completed`; there is no separate `paid` job status.
 export const INVOICE_STATUSES = ['outstanding', 'paid', 'refunded'];
+export const MUTABLE_INVOICE_STATUSES = ['outstanding', 'paid'];
+
+export const JOB_CATEGORY_STATUSES = {
+  requested: ['requested'],
+  scheduled: ['scheduled'],
+  repair: ['repair_in_progress'],
+  waiting: ['waiting_on_parts', 'on_hold'],
+  ready: ['ready_for_pickup'],
+  billing: ['invoice_outstanding'],
+  completed: ['completed'],
+  cancelled: ['cancelled'],
+};
+
+export const CUSTOMER_MILESTONE_STATUSES = [
+  'requested',
+  'scheduled',
+  'repair_in_progress',
+  'ready_for_pickup',
+  'invoice_outstanding',
+  'completed',
+];
 
 export function normalizeStatus(status) {
   return LEGACY_STATUS_MAP[status] || status || INTAKE_STATUS;
@@ -65,6 +86,23 @@ export function isCanonicalStatus(status) {
 
 export function isCanonicalInvoiceStatus(status) {
   return INVOICE_STATUSES.includes(status);
+}
+
+export function isMutableInvoiceStatus(status) {
+  return MUTABLE_INVOICE_STATUSES.includes(status);
+}
+
+export function customerMilestoneForStatus(status) {
+  const normalized = normalizeStatus(status);
+  if (normalized === CANCELLED_STATUS) return { status: normalized, index: -1, cancelled: true };
+  const milestoneStatus = ['waiting_on_parts', 'on_hold'].includes(normalized)
+    ? 'repair_in_progress'
+    : normalized;
+  return {
+    status: normalized,
+    index: Math.max(0, CUSTOMER_MILESTONE_STATUSES.indexOf(milestoneStatus)),
+    cancelled: false,
+  };
 }
 
 export function statusLabel(key) {

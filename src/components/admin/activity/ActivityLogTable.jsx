@@ -1,42 +1,47 @@
 import React from "react";
 import { UserCircle } from "lucide-react";
-import { roleLabel, roleBadgeClass } from "@/config/roles";
+import { roleBadgeClass, roleLabel } from "@/config/roles";
 import { cn } from "@/lib/utils";
 
+/** @param {{ events: Array<Record<string, any>> }} props */
 export default function ActivityLogTable({ events }) {
   return (
-    <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
-      <div className="hidden md:grid grid-cols-[1fr_180px_160px_180px] gap-3 px-4 py-2.5 border-b border-border bg-secondary/40 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <span>Activity</span>
-        <span>User</span>
-        <span>Action</span>
-        <span>When</span>
+    <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm" aria-label="Activity events">
+      <div className="hidden grid-cols-[1fr_180px_160px_180px] gap-3 border-b border-border bg-secondary/40 px-4 py-2.5 text-[11px] font-semibold uppercase text-muted-foreground md:grid" aria-hidden="true">
+        <span>Activity</span><span>User</span><span>Action</span><span>When</span>
       </div>
-      <div className="divide-y divide-border">
-        {events.map((e) => (
-          <div key={e.id} className="grid md:grid-cols-[1fr_180px_160px_180px] gap-1 md:gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors">
+      <ol className="divide-y divide-border">
+        {events.map((event) => (
+          <li key={event.id} className="grid gap-3 px-4 py-4 transition-colors hover:bg-secondary/30 md:grid-cols-[1fr_180px_160px_180px] md:py-3">
             <div className="min-w-0">
-              <p className="text-sm text-foreground leading-snug">{e.summary || e.event_type}</p>
-              {(e.previous_value || e.new_value) && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                  {e.previous_value ? `${e.previous_value} → ` : ""}{e.new_value}
-                </p>
-              )}
+              <p className="text-sm leading-snug text-foreground">{event.summary || formatEventType(event.event_type)}</p>
+              {(event.previous_value || event.new_value) ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{event.previous_value ? `${event.previous_value} to ` : ""}{event.new_value}</p> : null}
             </div>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-sm truncate">{e.actor_name || "System"}</span>
-              {e.actor_role && e.actor_role !== "system" && (
-                <span className={cn("hidden lg:inline rounded-full px-1.5 py-0.5 text-[9px] font-semibold shrink-0", roleBadgeClass(e.actor_role))}>
-                  {roleLabel(e.actor_role)}
-                </span>
-              )}
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="w-14 shrink-0 text-xs text-muted-foreground md:sr-only">User</span>
+              <UserCircle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="truncate text-sm">{event.actor_name || "System"}</span>
+              {event.actor_role && event.actor_role !== "system" ? <span className={cn("hidden shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold lg:inline", roleBadgeClass(event.actor_role))}>{roleLabel(event.actor_role)}</span> : null}
             </div>
-            <span className="text-xs text-muted-foreground self-center">{(e.event_type || "").replace(/_/g, " ")}</span>
-            <span className="text-xs text-muted-foreground self-center">{e.created_date ? new Date(e.created_date).toLocaleString() : ""}</span>
-          </div>
+            <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="w-14 shrink-0 md:sr-only">Action</span><span className="truncate">{formatEventType(event.event_type)}</span>
+            </div>
+            <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="w-14 shrink-0 md:sr-only">When</span><time dateTime={event.created_date || undefined}>{formatDateTime(event.created_date)}</time>
+            </div>
+          </li>
         ))}
-      </div>
-    </div>
+      </ol>
+    </section>
   );
+}
+
+/** @param {any} value */
+function formatEventType(value) {
+  return String(value || "Activity").replace(/_/g, " ");
+}
+
+/** @param {any} value */
+function formatDateTime(value) {
+  return value ? new Date(value).toLocaleString("en-AU") : "Time not recorded";
 }

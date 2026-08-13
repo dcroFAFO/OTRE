@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -45,6 +44,7 @@ export default function AssetIntakeForm({ scooter, customerName, actor, onSaved 
   const hasIntake = !!(scooter.intake?.intake_date);
 
   const save = async () => {
+    if (saving) return;
     setSaving(true);
     try {
       const data = {
@@ -75,11 +75,13 @@ export default function AssetIntakeForm({ scooter, customerName, actor, onSaved 
   };
 
   return (
-    <div className="rounded-xl border border-border bg-background">
+    <div className="rounded-lg border border-border bg-background">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left"
+        aria-expanded={expanded}
+        aria-controls={`asset-intake-${scooter.id}`}
+        className="flex min-h-11 w-full items-center gap-2 px-3 text-left"
       >
         <ClipboardCheck className="h-3.5 w-3.5 text-primary shrink-0" />
         <span className="text-xs font-semibold flex-1">Intake form</span>
@@ -93,24 +95,24 @@ export default function AssetIntakeForm({ scooter, customerName, actor, onSaved 
       </button>
 
       {expanded && (
-        <div className="space-y-3 border-t border-border px-3 py-3">
-          <div className="grid grid-cols-2 gap-2">
+        <div id={`asset-intake-${scooter.id}`} className="space-y-3 border-t border-border px-3 py-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label className="text-xs">Serial / frame number</Label>
-              <Input value={form.serial_number} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" className="h-8 text-xs" />
+              <Label htmlFor={`asset-intake-serial-${scooter.id}`} className="text-xs">Serial / frame number</Label>
+              <Input id={`asset-intake-serial-${scooter.id}`} value={form.serial_number} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Battery voltage</Label>
-              <Input value={form.battery_voltage} onChange={(e) => set("battery_voltage", e.target.value)} placeholder="54.6V" className="h-8 text-xs" />
+              <Label htmlFor={`asset-intake-voltage-${scooter.id}`} className="text-xs">Battery voltage</Label>
+              <Input id={`asset-intake-voltage-${scooter.id}`} value={form.battery_voltage} onChange={(e) => set("battery_voltage", e.target.value)} placeholder="54.6V" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Odometer (km)</Label>
-              <Input type="number" value={form.odometer_km ?? ""} onChange={(e) => set("odometer_km", e.target.value === "" ? "" : e.target.value)} placeholder="0" className="h-8 text-xs" />
+              <Label htmlFor={`asset-intake-odometer-${scooter.id}`} className="text-xs">Odometer (km)</Label>
+              <Input id={`asset-intake-odometer-${scooter.id}`} type="number" min="0" inputMode="numeric" value={form.odometer_km ?? ""} onChange={(e) => set("odometer_km", e.target.value === "" ? "" : e.target.value)} placeholder="0" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Battery condition</Label>
+              <Label htmlFor={`asset-intake-battery-${scooter.id}`} className="text-xs">Battery condition</Label>
               <Select value={form.battery_condition || ""} onValueChange={(v) => set("battery_condition", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger id={`asset-intake-battery-${scooter.id}`}><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   {BATTERY_CONDITIONS.map((b) => <SelectItem key={b.key} value={b.key}>{b.label}</SelectItem>)}
                 </SelectContent>
@@ -119,23 +121,23 @@ export default function AssetIntakeForm({ scooter, customerName, actor, onSaved 
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-            <Label className="text-xs">Powers on at intake</Label>
-            <Switch checked={!!form.powers_on} onCheckedChange={(v) => set("powers_on", v)} />
+            <Label htmlFor={`asset-intake-powers-${scooter.id}`} className="text-xs">Powers on at intake</Label>
+            <Switch id={`asset-intake-powers-${scooter.id}`} checked={!!form.powers_on} onCheckedChange={(v) => set("powers_on", v)} />
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs">Physical condition / existing damage</Label>
-            <Textarea value={form.physical_condition} onChange={(e) => set("physical_condition", e.target.value)} placeholder="Scratches, dents, worn tyres..." className="h-16 text-xs" />
+            <Label htmlFor={`asset-intake-condition-${scooter.id}`} className="text-xs">Physical condition / existing damage</Label>
+            <Textarea id={`asset-intake-condition-${scooter.id}`} value={form.physical_condition} onChange={(e) => set("physical_condition", e.target.value)} placeholder="Scratches, dents, worn tyres..." className="h-20 text-xs" />
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs">Accessories received</Label>
-            <Input value={form.accessories_received} onChange={(e) => set("accessories_received", e.target.value)} placeholder="Charger, key, phone mount..." className="h-8 text-xs" />
+            <Label htmlFor={`asset-intake-accessories-${scooter.id}`} className="text-xs">Accessories received</Label>
+            <Input id={`asset-intake-accessories-${scooter.id}`} value={form.accessories_received} onChange={(e) => set("accessories_received", e.target.value)} placeholder="Charger, key, phone mount..." />
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs">Issue / requested service</Label>
-            <Textarea value={form.initial_issue_notes} onChange={(e) => set("initial_issue_notes", e.target.value)} placeholder="Customer's reported issue..." className="h-16 text-xs" />
+            <Label htmlFor={`asset-intake-issue-${scooter.id}`} className="text-xs">Issue / requested service</Label>
+            <Textarea id={`asset-intake-issue-${scooter.id}`} value={form.initial_issue_notes} onChange={(e) => set("initial_issue_notes", e.target.value)} placeholder="Customer's reported issue..." className="h-20 text-xs" />
           </div>
 
           {hasIntake && (
@@ -146,11 +148,11 @@ export default function AssetIntakeForm({ scooter, customerName, actor, onSaved 
           )}
 
           <div className="flex gap-2 pt-1">
-            <Button size="sm" className="h-7 gap-1 text-xs" disabled={saving} onClick={save}>
+            <Button type="button" size="touch" className="gap-1 text-xs" disabled={saving} onClick={save}>
               {saving && <Loader2 className="h-3 w-3 animate-spin" />}
               {saving ? "Saving..." : "Save intake"}
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setExpanded(false)}>Cancel</Button>
+            <Button type="button" size="touch" variant="ghost" className="text-xs" onClick={() => setExpanded(false)} disabled={saving}>Cancel</Button>
           </div>
         </div>
       )}

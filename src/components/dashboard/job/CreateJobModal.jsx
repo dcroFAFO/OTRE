@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,13 +216,14 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
               )}
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               {/* Name with search */}
               <div className="relative space-y-1">
-                <Label className="text-xs">Customer name <span className="text-destructive">*</span></Label>
+                <Label htmlFor="new-job-customer-name" className="text-xs">Customer name <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                   <Input
+                    id="new-job-customer-name"
                     value={linkedCustomer ? (linkedCustomer.full_name || linkedCustomer.name || "") : nameSearch}
                     onChange={(e) => {
                       if (linkedCustomer) return;
@@ -245,10 +246,11 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
 
               {/* Email with search */}
               <div className="relative space-y-1">
-                <Label className="text-xs">Email</Label>
+                <Label htmlFor="new-job-customer-email" className="text-xs">Email</Label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                   <Input
+                    id="new-job-customer-email"
                     type="email"
                     value={linkedCustomer ? (linkedCustomer.email || "") : emailSearch}
                     onChange={(e) => {
@@ -272,10 +274,12 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
 
               {/* Phone with search */}
               <div className="relative space-y-1">
-                <Label className="text-xs">Phone</Label>
+                <Label htmlFor="new-job-customer-phone" className="text-xs">Phone</Label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                   <Input
+                    id="new-job-customer-phone"
+                    type="tel"
                     value={linkedCustomer ? (linkedCustomer.phone_display || linkedCustomer.phone || "") : phoneSearch}
                     onChange={(e) => {
                       if (linkedCustomer) return;
@@ -308,60 +312,60 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
           {/* Scooter details */}
           <div className="space-y-3">
             <p className="text-sm font-semibold text-foreground">Scooter details</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs">Make / brand</Label>
+                <Label htmlFor="new-job-make" className="text-xs">Make / brand</Label>
                 <Select value={intake.make || ""} onValueChange={(v) => setIntake((f) => ({ ...f, make: v, model: "" }))}>
-                  <SelectTrigger><SelectValue placeholder="Select make" /></SelectTrigger>
+                  <SelectTrigger id="new-job-make"><SelectValue placeholder="Select make" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {BRAND_NAMES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Model</Label>
+                <Label htmlFor="new-job-model" className="text-xs">Model</Label>
                 {models.length > 0 ? (
                   <Select value={intake.model || ""} onValueChange={(v) => set("model", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
+                    <SelectTrigger id="new-job-model"><SelectValue placeholder="Select model" /></SelectTrigger>
                     <SelectContent className="max-h-72">
                       {models.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input value={intake.model || ""} onChange={(e) => set("model", e.target.value)} placeholder="Model" />
+                  <Input id="new-job-model" value={intake.model || ""} onChange={(e) => set("model", e.target.value)} placeholder="Model" />
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
-                <Label className="text-xs">Serial / frame no.</Label>
-                <Input value={intake.serial_number || ""} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" />
+                <Label htmlFor="new-job-serial" className="text-xs">Serial / frame no.</Label>
+                <Input id="new-job-serial" value={intake.serial_number || ""} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Battery voltage</Label>
-                <Input value={intake.battery_voltage || ""} onChange={(e) => set("battery_voltage", e.target.value)} placeholder="e.g. 54.6V" />
+                <Label htmlFor="new-job-battery-voltage" className="text-xs">Battery voltage</Label>
+                <Input id="new-job-battery-voltage" value={intake.battery_voltage || ""} onChange={(e) => set("battery_voltage", e.target.value)} placeholder="e.g. 54.6V" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Odometer (km)</Label>
-                <Input type="number" value={intake.odometer_km ?? ""} onChange={(e) => set("odometer_km", e.target.value)} placeholder="0" />
+                <Label htmlFor="new-job-odometer" className="text-xs">Odometer (km)</Label>
+                <Input id="new-job-odometer" type="number" min="0" inputMode="numeric" value={intake.odometer_km ?? ""} onChange={(e) => set("odometer_km", e.target.value)} placeholder="0" />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs">Battery condition</Label>
+                <Label htmlFor="new-job-battery-condition" className="text-xs">Battery condition</Label>
                 <Select value={intake.battery_condition || ""} onValueChange={(v) => set("battery_condition", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectTrigger id="new-job-battery-condition"><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
                     {BATTERY_CONDITIONS.map((b) => <SelectItem key={b.key} value={b.key}>{b.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Rideable?</Label>
+                <Label htmlFor="new-job-rideable" className="text-xs">Rideable?</Label>
                 <Select value={intake.isRideable === true ? "yes" : intake.isRideable === false ? "no" : ""} onValueChange={(v) => set("isRideable", v === "yes")}>
-                  <SelectTrigger><SelectValue placeholder="Not assessed" /></SelectTrigger>
+                  <SelectTrigger id="new-job-rideable"><SelectValue placeholder="Not assessed" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="yes">Yes</SelectItem>
                     <SelectItem value="no">No</SelectItem>
@@ -370,39 +374,39 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5">
-              <Label className="text-sm">Powers on at intake</Label>
-              <Switch checked={!!intake.powers_on} onCheckedChange={(v) => set("powers_on", v)} />
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+              <Label htmlFor="new-job-powers-on" className="text-sm">Powers on at intake</Label>
+              <Switch id="new-job-powers-on" checked={!!intake.powers_on} onCheckedChange={(v) => set("powers_on", v)} />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Physical condition / existing damage</Label>
-              <Textarea value={intake.physical_condition || ""} onChange={(e) => set("physical_condition", e.target.value)} placeholder="Scratches, dents, worn tyres..." className="h-16" />
+              <Label htmlFor="new-job-condition" className="text-xs">Physical condition / existing damage</Label>
+              <Textarea id="new-job-condition" value={intake.physical_condition || ""} onChange={(e) => set("physical_condition", e.target.value)} placeholder="Scratches, dents, worn tyres..." className="h-16" />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Accessories received</Label>
-              <Input value={intake.accessories_received || ""} onChange={(e) => set("accessories_received", e.target.value)} placeholder="Charger, key, phone mount..." />
+              <Label htmlFor="new-job-accessories" className="text-xs">Accessories received</Label>
+              <Input id="new-job-accessories" value={intake.accessories_received || ""} onChange={(e) => set("accessories_received", e.target.value)} placeholder="Charger, key, phone mount..." />
             </div>
           </div>
 
           {/* Service / issue */}
           <div className="space-y-3">
             <p className="text-sm font-semibold text-foreground">Service details</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs">Service type</Label>
+                <Label htmlFor="new-job-service-type" className="text-xs">Service type</Label>
                 <Select value={intake.service_type || DEFAULT_SERVICE_TYPE} onValueChange={(v) => set("service_type", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select service type" /></SelectTrigger>
+                  <SelectTrigger id="new-job-service-type"><SelectValue placeholder="Select service type" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     {SERVICE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Priority</Label>
+                <Label htmlFor="new-job-priority" className="text-xs">Priority</Label>
                 <Select value={intake.priority || "medium"} onValueChange={(v) => set("priority", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="new-job-priority"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -413,12 +417,13 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Preferred date</Label>
-              <Input type="date" value={intake.date || ""} onChange={(e) => set("date", e.target.value)} />
+              <Label htmlFor="new-job-date" className="text-xs">Preferred date</Label>
+              <Input id="new-job-date" type="date" value={intake.date || ""} onChange={(e) => set("date", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Issue / requested service</Label>
+              <Label htmlFor="new-job-issue" className="text-xs">Issue / requested service</Label>
               <Textarea
+                id="new-job-issue"
                 value={intake.initial_issue_notes || ""}
                 onChange={(e) => setIntake((f) => ({
                   ...f,

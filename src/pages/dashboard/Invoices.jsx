@@ -1,19 +1,21 @@
 import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, CalendarDays, CreditCard, FileText, RefreshCw, Search } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import StatusPill from "@/components/shared/StatusPill";
+import { CardSkeleton, EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
 import { useDashboardUser } from "@/components/dashboard/DashboardLayout";
 import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, CalendarDays, CreditCard, FileText, Loader2, Search } from "lucide-react";
 
 const OVERDUE_DAYS = 14;
 const OPEN_STATUSES = new Set(["outstanding", "unpaid"]);
+const STATUS_FILTERS = ["all", "outstanding", "paid", "refunded", "overdue"];
 
 function currency(amount, code = "AUD") {
-  return `${code} ${Number(amount || 0).toFixed(2)}`;
+  return new Intl.NumberFormat("en-AU", { style: "currency", currency: code || "AUD" }).format(Number(amount || 0));
 }
 
 function daysSince(dateValue) {
@@ -38,26 +40,26 @@ export default function Invoices() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedJobId, setSelectedJobId] = useState(null);
+  const [selectedJobId, setSelectedJobId] = useState(/** @type {string | null} */ (null));
 
-  const { data: invoices = [], isLoading } = useQuery({
+  const invoiceQuery = useQuery({
     queryKey: ["dashboardInvoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 200),
   });
-
-  const { data: jobs = [] } = useQuery({
+  const jobsQuery = useQuery({
     queryKey: ["invoiceJobs"],
     queryFn: () => base44.entities.Job.list("-created_date", 300),
   });
 
+  const invoices = /** @type {Array<Record<string, any>>} */ (invoiceQuery.data || []);
+  const jobs = /** @type {Array<Record<string, any>>} */ (jobsQuery.data || []);
   const jobById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
-
-  const enriched = useMemo(() => invoices.map((invoice) => ({
+  const enriched = /** @type {Array<Record<string, any>>} */ (useMemo(() => invoices.map((invoice) => ({
     ...invoice,
     job: jobById.get(invoice.job_id),
     overdue: isOverdue(invoice),
     dueDate: dueDateFor(invoice),
-  })), [invoices, jobById]);
+  })), [invoices, jobById]));
 
   const filtered = enriched.filter((invoice) => {
     const term = search.trim().toLowerCase();
@@ -81,100 +83,86 @@ export default function Invoices() {
     return acc;
   }, { total: 0, paid: 0, outstanding: 0, overdue: 0 });
 
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+  };
+  const hasFilters = Boolean(search.trim()) || statusFilter !== "all";
+  const openInvoiceJob = (invoice) => {
+    if (invoice.job_id) setSelectedJobId(invoice.job_id);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-extrabold text-foreground">Invoices</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Track issued invoices, payment status, and overdue payments.</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Track issued invoices, payment status, and overdue payments.</p>
+        </div>
+        {invoiceQuery.isFetching && !invoiceQuery.isLoading ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
+            <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Refreshing invoices
+          </span>
+        ) : null}
+      </header>
+
+      {invoiceQuery.isLoading ? (
+        <CardSkeleton count={4} />
+      ) : invoiceQuery.error && !invoices.length ? null : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <SummaryCard label="Total issued" value={currency(totals.total)} icon={FileText} />
+          <SummaryCard label="Outstanding" value={currency(totals.outstanding)} icon={CreditCard} />
+          <SummaryCard label="Paid" value={currency(totals.paid)} icon={CalendarDays} />
+          <SummaryCard label="Overdue" value={currency(totals.overdue)} icon={AlertTriangle} danger={totals.overdue > 0} />
+        </div>
+      )}
+
+      <div className="space-y-3 border-y border-border py-4">
+        <label className="relative block max-w-md">
+          <span className="sr-only">Search invoices or customers</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search invoices or customers" className="h-11 pl-9" />
+        </label>
+        <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter invoices by status">
+          {STATUS_FILTERS.map((status) => (
+            <Button
+              key={status}
+              type="button"
+              size="touch"
+              variant={statusFilter === status ? "default" : "outline"}
+              className="shrink-0 capitalize sm:h-9"
+              aria-pressed={statusFilter === status}
+              onClick={() => setStatusFilter(status)}
+            >
+              {status}
+            </Button>
+          ))}
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="Total issued" value={currency(totals.total)} icon={FileText} />
-        <SummaryCard label="Outstanding" value={currency(totals.outstanding)} icon={CreditCard} />
-        <SummaryCard label="Paid" value={currency(totals.paid)} icon={CalendarDays} />
-        <SummaryCard label="Overdue" value={currency(totals.overdue)} icon={AlertTriangle} danger={totals.overdue > 0} />
-      </div>
+      {invoiceQuery.error && invoices.length ? (
+        <ErrorState title="Latest invoice changes could not be loaded" description="Previously loaded invoices remain visible." error={invoiceQuery.error} onRetry={invoiceQuery.refetch} />
+      ) : null}
+      {jobsQuery.error ? (
+        <ErrorState title="Linked job details could not be loaded" description="Invoice totals and statuses remain available." error={jobsQuery.error} onRetry={jobsQuery.refetch} />
+      ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoices, customers…" className="pl-9 rounded-xl" />
-        </div>
-        {["all", "outstanding", "paid", "refunded", "overdue"].map((status) => (
-          <Button
-            key={status}
-            size="sm"
-            variant={statusFilter === status ? "default" : "outline"}
-            className="rounded-xl capitalize"
-            onClick={() => setStatusFilter(status)}
-          >
-            {status}
-          </Button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="py-16 flex justify-center"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center text-muted-foreground">
-          <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p className="font-semibold">No invoices found</p>
-          <p className="text-sm mt-1">Issued invoices will appear here.</p>
-        </div>
+      {invoiceQuery.isLoading ? (
+        <TableSkeleton rows={7} columns={5} label="Loading invoices" />
+      ) : invoiceQuery.error && !invoices.length ? (
+        <ErrorState title="Invoices could not be loaded" error={invoiceQuery.error} onRetry={invoiceQuery.refetch} />
+      ) : !invoices.length ? (
+        <EmptyState icon={FileText} title="No invoices have been issued" description="Invoices created from a job will appear here with their payment status." />
+      ) : !filtered.length ? (
+        <NoResultsState title="No invoices match these filters" description="Clear the search or status filter to return to all invoices." onClear={clearFilters} />
       ) : (
-        <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
-          <table className="w-full table-fixed text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="px-3 sm:px-4 py-3 text-left w-[40%] md:w-[28%] lg:w-[20%]">Invoice</th>
-                <th className="px-3 sm:px-4 py-3 text-left hidden md:table-cell w-[26%] lg:w-[22%]">Customer</th>
-                <th className="px-3 sm:px-4 py-3 text-left hidden lg:table-cell w-[22%]">Issued / Due</th>
-                <th className="px-3 sm:px-4 py-3 text-right w-[24%] md:w-[18%] lg:w-[16%]">Amount</th>
-                <th className="px-3 sm:px-4 py-3 text-left w-[36%] md:w-[28%] lg:w-[20%]">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((invoice) => (
-                <tr
-                  key={invoice.id}
-                  onClick={() => invoice.job_id && setSelectedJobId(invoice.job_id)}
-                  className={cn(
-                    "transition-colors hover:bg-secondary/30",
-                    invoice.overdue && "bg-rose-50/70 hover:bg-rose-50",
-                    invoice.job_id && "cursor-pointer"
-                  )}
-                >
-                  <td className="px-3 sm:px-4 py-3 overflow-hidden">
-                    <p className="font-semibold text-foreground truncate">{invoice.number || "Invoice"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{invoice.job?.reference || invoice.job_id || "No linked job"}</p>
-                    {invoice.overdue && <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-rose-600"><AlertTriangle className="h-3 w-3" /> Overdue</p>}
-                  </td>
-                  <td className="px-3 sm:px-4 py-3 hidden md:table-cell overflow-hidden">
-                    <p className="font-medium text-foreground truncate">{invoice.job?.customer_name || "—"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{invoice.job?.customer_email || invoice.customer_id || "—"}</p>
-                  </td>
-                  <td className="px-3 sm:px-4 py-3 hidden lg:table-cell text-muted-foreground overflow-hidden">
-                    <p className="truncate">Issued {invoice.created_date ? new Date(invoice.created_date).toLocaleDateString() : "—"}</p>
-                    <p className={cn("text-xs truncate", invoice.overdue && "font-semibold text-rose-600")}>Due {invoice.dueDate ? invoice.dueDate.toLocaleDateString() : "—"}</p>
-                  </td>
-                  <td className="px-3 sm:px-4 py-3 text-right font-heading font-bold whitespace-nowrap">{currency(invoice.amount, invoice.currency)}</td>
-                  <td className="px-3 sm:px-4 py-3">
-                    <StatusPill kind="payment" value={invoice.status || "outstanding"} />
-                    {invoice.paid_date && <p className="mt-1 text-xs text-muted-foreground truncate">Paid {new Date(invoice.paid_date).toLocaleDateString()}</p>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <InvoiceResults invoices={filtered} jobsLoading={jobsQuery.isLoading} onOpenJob={openInvoiceJob} />
       )}
 
       <JobDetailModal
         jobId={selectedJobId}
         actor={user}
-        open={!!selectedJobId}
+        open={Boolean(selectedJobId)}
         onClose={() => {
           setSelectedJobId(null);
           queryClient.invalidateQueries({ queryKey: ["dashboardInvoices"] });
@@ -184,12 +172,98 @@ export default function Invoices() {
   );
 }
 
+/** @param {{ invoices: Array<Record<string, any>>, jobsLoading: boolean, onOpenJob: (invoice: Record<string, any>) => void }} props */
+function InvoiceResults({ invoices, jobsLoading, onOpenJob }) {
+  return (
+    <>
+      <div className="space-y-3 md:hidden">
+        {invoices.map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} jobsLoading={jobsLoading} onOpenJob={onOpenJob} />)}
+      </div>
+      <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm md:block">
+        <table className="w-full table-fixed text-sm">
+          <caption className="sr-only">Issued invoices and payment statuses</caption>
+          <thead>
+            <tr className="border-b border-border bg-secondary/40 text-xs font-semibold uppercase text-muted-foreground">
+              <th className="w-[28%] px-4 py-3 text-left lg:w-[22%]">Invoice</th>
+              <th className="w-[28%] px-4 py-3 text-left lg:w-[24%]">Customer</th>
+              <th className="hidden w-[22%] px-4 py-3 text-left lg:table-cell">Issued / Due</th>
+              <th className="w-[18%] px-4 py-3 text-right lg:w-[14%]">Amount</th>
+              <th className="w-[26%] px-4 py-3 text-left lg:w-[18%]">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {invoices.map((invoice) => (
+              <tr key={invoice.id} className={cn("transition-colors", invoice.overdue && "bg-rose-50/70")}>
+                <td className="overflow-hidden px-4 py-3">
+                  {invoice.job_id ? (
+                    <button type="button" onClick={() => onOpenJob(invoice)} className="max-w-full text-left font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <span className="block truncate">{invoice.number || "Invoice"}</span>
+                    </button>
+                  ) : <p className="truncate font-semibold">{invoice.number || "Invoice"}</p>}
+                  <p className="truncate text-xs text-muted-foreground">{invoice.job?.reference || invoice.job_id || "No linked job"}</p>
+                  {invoice.overdue ? <OverdueLabel /> : null}
+                </td>
+                <td className="overflow-hidden px-4 py-3">
+                  <p className="truncate font-medium">{invoice.job?.customer_name || (jobsLoading ? "Loading job details..." : "Not available")}</p>
+                  <p className="truncate text-xs text-muted-foreground">{invoice.job?.customer_email || invoice.customer_id || ""}</p>
+                </td>
+                <td className="hidden overflow-hidden px-4 py-3 text-muted-foreground lg:table-cell">
+                  <p className="truncate">Issued {formatDate(invoice.created_date)}</p>
+                  <p className={cn("truncate text-xs", invoice.overdue && "font-semibold text-rose-700")}>Due {invoice.dueDate ? invoice.dueDate.toLocaleDateString("en-AU") : "Not set"}</p>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right font-heading font-bold">{currency(invoice.amount, invoice.currency)}</td>
+                <td className="px-4 py-3">
+                  <StatusPill kind="payment" value={invoice.status || "outstanding"} />
+                  {invoice.paid_date ? <p className="mt-1 truncate text-xs text-muted-foreground">Paid {formatDate(invoice.paid_date)}</p> : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/** @param {{ invoice: Record<string, any>, jobsLoading: boolean, onOpenJob: (invoice: Record<string, any>) => void }} props */
+function InvoiceCard({ invoice, jobsLoading, onOpenJob }) {
+  return (
+    <article className={cn("rounded-lg border border-border bg-card p-4 shadow-sm", invoice.overdue && "border-rose-200 bg-rose-50/70")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate font-semibold">{invoice.number || "Invoice"}</h2>
+          <p className="truncate text-xs text-muted-foreground">{invoice.job?.reference || invoice.job_id || "No linked job"}</p>
+        </div>
+        <StatusPill kind="payment" value={invoice.status || "outstanding"} />
+      </div>
+      {invoice.overdue ? <OverdueLabel /> : null}
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <div><dt className="text-xs text-muted-foreground">Customer</dt><dd className="mt-0.5 truncate font-medium">{invoice.job?.customer_name || (jobsLoading ? "Loading..." : "Not available")}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Amount</dt><dd className="mt-0.5 font-heading font-bold">{currency(invoice.amount, invoice.currency)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Issued</dt><dd className="mt-0.5">{formatDate(invoice.created_date)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Due</dt><dd className={cn("mt-0.5", invoice.overdue && "font-semibold text-rose-700")}>{invoice.dueDate ? invoice.dueDate.toLocaleDateString("en-AU") : "Not set"}</dd></div>
+      </dl>
+      {invoice.job_id ? <Button type="button" variant="outline" size="touch" className="mt-4 w-full" onClick={() => onOpenJob(invoice)}>Open linked job</Button> : null}
+    </article>
+  );
+}
+
+function OverdueLabel() {
+  return <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-rose-700"><AlertTriangle className="h-3 w-3" aria-hidden="true" /> Overdue</p>;
+}
+
+/** @param {any} value */
+function formatDate(value) {
+  return value ? new Date(value).toLocaleDateString("en-AU") : "Not set";
+}
+
+/** @param {{ label: string, value: string, icon: React.ElementType, danger?: boolean }} props */
 function SummaryCard({ label, value, icon: Icon, danger = false }) {
   return (
-    <div className={cn("rounded-3xl border bg-card p-4 shadow-sm", danger ? "border-rose-200 bg-rose-50" : "border-border")}>
+    <div className={cn("rounded-lg border bg-card p-4 shadow-sm", danger ? "border-rose-200 bg-rose-50" : "border-border")}>
       <div className="flex items-center justify-between gap-3">
-        <p className={cn("text-xs font-semibold uppercase tracking-wide", danger ? "text-rose-600" : "text-muted-foreground")}>{label}</p>
-        {React.createElement(Icon, { className: cn("h-4 w-4", danger ? "text-rose-500" : "text-muted-foreground") })}
+        <p className={cn("text-xs font-semibold uppercase", danger ? "text-rose-700" : "text-muted-foreground")}>{label}</p>
+        <Icon className={cn("h-4 w-4", danger ? "text-rose-600" : "text-muted-foreground")} aria-hidden="true" />
       </div>
       <p className="mt-2 font-heading text-xl font-extrabold text-foreground">{value}</p>
     </div>

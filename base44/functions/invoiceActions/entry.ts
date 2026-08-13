@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { isCanonicalInvoiceStatus, INVOICE_STATUSES, COMPLETED_STATUS } from '../../shared/jobLifecycle.ts';
+import { isMutableInvoiceStatus, MUTABLE_INVOICE_STATUSES, COMPLETED_STATUS, INVOICE_OUTSTANDING_STATUS } from '../../shared/jobLifecycle.ts';
+import { settleInvoiceRewards } from '../../shared/rewardLifecycle.ts';
 
 // Invoice creation and payment status transitions run server-side,
 // keeping the job's payment fields and audit trail in sync atomically.
@@ -14,7 +15,7 @@ const PARTS_MARKUP_MULTIPLIER = 1.2;
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const BUSINESS_NAME = "On The Run Electrics";
-const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
+const FROM_EMAIL = "On The Run Electrics <info@ontherunelectrics.com.au>";
 const BUSINESS_PHONE = "0415 505 908";
 const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
 
@@ -25,7 +26,7 @@ function reminderEmailTemplate(content) {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
 <div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">${BUSINESS_NAME}</h1></div>
 <div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
-<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>hello@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
+<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>info@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
 </body></html>`;
 }
 
@@ -249,11 +250,17 @@ Deno.serve(async (req) => {
         if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
         const { invoiceId, status } = params;
         // Validate before writing — this value comes straight off the request body.
-        if (!isCanonicalInvoiceStatus(status)) {
-          return Response.json({ error: `Invalid payment status. Expected one of: ${INVOICE_STATUSES.join(", ")}.` }, { status: 400 });
+        if (status === "refunded") {
+          return Response.json({ error: "Refunds cannot be initiated or recorded from this action." }, { status: 400 });
+        }
+        if (!isMutableInvoiceStatus(status)) {
+          return Response.json({ error: `Invalid payment status. Expected one of: ${MUTABLE_INVOICE_STATUSES.join(", ")}.` }, { status: 400 });
         }
         const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
-        if (!invoice) return Response.json({ error: "Invoice not found" }, { status: 404 });
+        if (!invoice || invoice.job_id !== job.id) return Response.json({ error: "Invoice not found" }, { status: 404 });
+        if (invoice.status === "refunded") {
+          return Response.json({ error: "Historical refunded invoices cannot be changed here." }, { status: 409 });
+        }
         if (invoice.status === status) { result = invoice; break; }
 
         result = await base44.asServiceRole.entities.Invoice.update(invoice.id, {
@@ -263,15 +270,18 @@ Deno.serve(async (req) => {
         // A settled invoice completes the job — the final step of the lifecycle.
         await base44.asServiceRole.entities.Job.update(job.id, {
           payment_status: status,
-          status: status === "paid" ? COMPLETED_STATUS : job.status,
+          status: status === "paid" ? COMPLETED_STATUS : INVOICE_OUTSTANDING_STATUS,
         });
         await logAudit({
           eventType: "payment_status_changed",
           previousValue: invoice.status,
           newValue: status,
-          summary: `Payment marked "${status}"`,
+          summary: `Payment manually marked "${status}"`,
           visibility: "customer",
         });
+        if (status === "paid") {
+          await settleInvoiceRewards(base44.asServiceRole.entities, result, job, result.paid_date || new Date().toISOString());
+        }
 
         break;
       }

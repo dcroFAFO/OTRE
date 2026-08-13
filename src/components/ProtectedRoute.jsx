@@ -1,15 +1,17 @@
 import { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import PageLoader from '@/components/shared/PageLoader';
 
-const DefaultFallback = () => (
-  <div className="fixed inset-0 flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-  </div>
-);
+export function LoginRedirect() {
+  const location = useLocation();
+  const next = `${location.pathname}${location.search}${location.hash}`;
+  return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
+}
 
-export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
+/** @param {{ fallback?: React.ReactNode, unauthenticatedElement?: React.ReactNode }} props */
+export default function ProtectedRoute({ fallback = <PageLoader label="Checking your account" />, unauthenticatedElement = <LoginRedirect /> }) {
   const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
 
   useEffect(() => {

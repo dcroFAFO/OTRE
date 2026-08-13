@@ -15,7 +15,7 @@ export default function BlogPosts() {
   const { data, isLoading } = useQuery({ queryKey: ["blogAdmin", "posts"], queryFn: () => listBlogAdminData("posts") });
   const posts = data?.posts || [];
   const refresh = () => qc.invalidateQueries({ queryKey: ["blogAdmin"] });
-  const duplicate = useMutation({ mutationFn: (post) => createBlogPost({ ...post, title: `${post.title} Copy`, slug: `${post.slug}-copy-${Date.now().toString().slice(-4)}`, status: "draft", published_at: "", scheduled_at: "" }), onSuccess: refresh });
+  const duplicate = useMutation({ mutationFn: (/** @type {Record<string, any>} */ post) => createBlogPost({ ...post, title: `${post.title} Copy`, slug: `${post.slug}-copy-${Date.now().toString().slice(-4)}`, status: "draft", published_at: "", scheduled_at: "" }), onSuccess: refresh });
   const publish = useMutation({ mutationFn: publishBlogPostNow, onSuccess: refresh });
   const archive = useMutation({ mutationFn: archiveBlogPost, onSuccess: refresh });
   const filtered = useMemo(() => posts.filter((p) => (status === "all" || p.status === status) && (!q || [p.title, p.slug, p.excerpt].some((v) => v?.toLowerCase?.().includes(q.toLowerCase())))), [posts, q, status]);

@@ -40,7 +40,7 @@ export default function FeedbackRating() {
 
   return (
     <>
-    <SEO title="Customer Feedback | OTR Scooters" description="Share private feedback about your completed OTR Scooters repair experience." canonical="/feedback" noindex />
+    <SEO title="Customer Feedback | On The Run Electrics" description="Share private feedback about your completed On The Run Electrics repair experience." canonical="/feedback" noindex />
     <main className="min-h-screen bg-background px-4 py-10 flex items-center justify-center">
       <Card className="w-full max-w-lg shadow-gentle border-border/70">
         <CardContent className="p-8">
@@ -55,7 +55,7 @@ export default function FeedbackRating() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="text-center space-y-2">
-                <p className="text-sm font-semibold uppercase tracking-wide text-primary">OTR Scooters</p>
+                <p className="text-sm font-semibold uppercase text-primary">On The Run Electrics</p>
                 <h1 className="text-3xl font-bold text-foreground">How did we do?</h1>
                 <p className="text-muted-foreground">Choose a rating and optionally leave a note for the team.</p>
               </div>

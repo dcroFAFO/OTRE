@@ -3,26 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X, SlidersHorizontal, ChevronDown } from "lucide-react";
-import { PAYMENT_STATUSES, JOB_TYPES, WAITING_REASONS, normalizeStatusKey } from "@/config/jobConfig";
+import { JOB_CATEGORIES, JOB_TYPES, PAYMENT_STATUSES, WAITING_REASONS, getJobCategoryOrder } from "@/config/jobConfig";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { JOB_PRIORITIES, SERVICE_TYPES } from "@/config/serviceTypes";
 import { cn } from "@/lib/utils";
 
 export const EMPTY_FILTERS = { q: "", status: "all", service_type: "all", priority: "all", payment: "all", type: "all", waiting: "all" };
 
-export const JOB_CATEGORIES = [
-  { key: "all", label: "All", statuses: null, order: 0 },
-  { key: "requested", label: "Requested", statuses: ["requested"], order: 1 },
-  { key: "scheduled", label: "Scheduled", statuses: ["scheduled"], order: 2 },
-  { key: "repair", label: "Repair Underway", statuses: ["repair_in_progress", "waiting_on_parts", "on_hold"], order: 3 },
-  { key: "ready", label: "Ready for Pickup", statuses: ["ready_for_pickup", "invoice_outstanding"], order: 4 },
-  { key: "completed", label: "Completed", statuses: ["completed", "cancelled"], order: 5 },
-];
-
-export function getCategoryOrder(status) {
-  const normalized = normalizeStatusKey(status);
-  return JOB_CATEGORIES.find((c) => c.statuses?.includes(normalized))?.order ?? 99;
-}
+export { JOB_CATEGORIES };
+export const getCategoryOrder = getJobCategoryOrder;
 
 const isFilterActive = (filters) =>
   Object.entries(filters).some(([k, v]) => (k !== "q" ? v !== "all" : v !== ""));
@@ -44,7 +33,7 @@ export default function JobCategoryFilters({ filters, setFilters, counts }) {
   }, [localQ]);
 
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm w-full">
+    <div className="rounded-lg border border-border bg-card shadow-sm w-full">
       {/* Search + Filters toggle — always visible */}
       <div className="flex gap-2 p-3">
         <div className="relative flex-1 min-w-[160px]">

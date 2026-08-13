@@ -1,6 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { checkRateLimit, clientIp } from '../../shared/rateLimit.ts';
 
 const ACTIVE_STATUSES_EXCLUDED = new Set(['completed', 'cancelled']);
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_SENDS_PER_IP = 8;
 
 function normalizePhone(value) {
   let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
@@ -12,6 +15,10 @@ function normalizePhone(value) {
 
 function cleanEmail(value) {
   return String(value || '').trim().toLowerCase();
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 }
 
 function createCode() {
@@ -39,25 +46,39 @@ async function sendSms({ to, body }) {
   if (!res.ok) throw new Error(`Twilio SMS failed: ${await res.text()}`);
 }
 
-async function sendEmail({ to, subject, body }) {
+async function sendEmail({ to, subject, body, fromEmail, businessName }) {
   const apiKey = Deno.env.get('RESEND_API_KEY');
   if (!apiKey) throw new Error('Email verification is not configured.');
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 'On The Run Electrics <hello@ontherunelectrics.com.au>', to: [to], subject, html: body }),
+    body: JSON.stringify({ from: `${businessName} <${fromEmail}>`, to: [to], subject, html: body }),
   });
   if (!res.ok) throw new Error(`Resend send failed: ${await res.text()}`);
 }
 
-async function handleSend(entities, body) {
+async function getBusinessContact(entities) {
+  const profiles = await entities.BusinessProfile.filter({ is_default: true }, '-updated_date', 1).catch(() => []);
+  const profile = profiles[0] || (await entities.BusinessProfile.list('-updated_date', 1).catch(() => []))[0] || {};
+  const candidateEmail = String(profile.invoice_sender_email || profile.email || '').trim().toLowerCase();
+  return {
+    businessName: String(profile.business_name || profile.name || 'On The Run Electrics').replace(/[<>\r\n]/g, '').trim() || 'On The Run Electrics',
+    fromEmail: /^[^\s@]+@ontherunelectrics\.com\.au$/i.test(candidateEmail) ? candidateEmail : 'info@ontherunelectrics.com.au',
+  };
+}
+
+async function handleSend(base44, req, body) {
+  const entities = base44.asServiceRole.entities;
   const name = String(body.name || '').trim();
   const email = cleanEmail(body.email);
   const phone = normalizePhone(body.phone);
   const channel = body.channel === 'email' ? 'email' : 'sms';
 
   if (!/^\+614\d{8}$/.test(phone)) return Response.json({ error: 'A valid Australian mobile number is required.' }, { status: 400 });
-  if (channel === 'email' && !email) return Response.json({ error: 'A valid email address is required.' }, { status: 400 });
+  if (!EMAIL_PATTERN.test(email)) return Response.json({ error: 'A valid email address is required.' }, { status: 400 });
+
+  const ipLimit = await checkRateLimit(base44, `booking-verification:ip:${clientIp(req)}`, MAX_SENDS_PER_IP);
+  if (!ipLimit.allowed) return Response.json({ error: 'Too many verification codes were requested. Please wait a few minutes and try again.' }, { status: 429 });
 
   const recent = await entities.PhoneVerification.filter({ phone_e164: phone, purpose: 'booking' }, '-created_date', 5);
   const oneMinuteAgo = Date.now() - 60 * 1000;
@@ -68,13 +89,15 @@ async function handleSend(entities, body) {
   const codeHash = await sha256(`${phone}:${email}:${code}`);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  await entities.PhoneVerification.create({ phone_e164: phone, email, purpose: 'booking', code_hash: codeHash, expires_at: expiresAt, attempts: 0 });
+  await entities.PhoneVerification.create({ phone_e164: phone, email, purpose: 'booking', code_hash: codeHash, expires_at: expiresAt, attempts: 0, delivery_channel: channel });
 
   if (channel === 'email') {
+    const contact = await getBusinessContact(entities);
     await sendEmail({
       to: email,
       subject: 'Your verification code — On The Run Electrics',
-      body: `<p>Hi ${name || 'there'},</p><p>Your verification code is <strong style="font-size:20px;">${code}</strong>. It expires in 10 minutes.</p>`,
+      body: `<p>Hi ${escapeHtml(name || 'there')},</p><p>Your verification code is <strong style="font-size:20px;">${code}</strong>. It expires in 10 minutes.</p>`,
+      ...contact,
     });
   } else {
     await sendSms({ to: phone, body: `Your On The Run Electrics verification code is ${code}. It expires in 10 minutes.` });
@@ -103,11 +126,9 @@ async function findActiveJobsForCustomer(entities, customer) {
 }
 
 async function findExistingCustomer(entities, email, phone) {
-  const [byEmail, byPhone] = await Promise.all([
-    email ? entities.Customer.filter({ email }, '-updated_date', 1).catch(() => []) : [],
-    phone ? entities.Customer.filter({ phone_e164: phone }, '-updated_date', 1).catch(() => []) : [],
-  ]);
-  return byEmail[0] || byPhone[0] || null;
+  if (!email || !phone) return null;
+  const byEmail = await entities.Customer.filter({ email }, '-updated_date', 10).catch(() => []);
+  return byEmail.find((customer) => normalizePhone(customer.phone_e164 || customer.phone || customer.phone_display) === phone) || null;
 }
 
 async function handleVerify(entities, body) {
@@ -115,6 +136,7 @@ async function handleVerify(entities, body) {
   const phone = normalizePhone(body.phone);
   const code = String(body.code || '').replace(/\D/g, '').slice(0, 6);
 
+  if (!EMAIL_PATTERN.test(email) || !/^\+614\d{8}$/.test(phone)) return Response.json({ error: 'Enter the same valid email and mobile used to request the code.' }, { status: 400 });
   if (code.length !== 6) return Response.json({ error: 'Enter the 6-digit code.' }, { status: 400 });
 
   const records = await entities.PhoneVerification.filter({ phone_e164: phone, purpose: 'booking' }, '-created_date', 10);
@@ -137,6 +159,8 @@ async function handleVerify(entities, body) {
 
   return Response.json({
     verified: true,
+    verification_id: record.id,
+    verified_at: new Date().toISOString(),
     existing: !!existingCustomer,
     customer_name: existingCustomer?.full_name || existingCustomer?.name || '',
     active_jobs: activeJobs,
@@ -151,11 +175,11 @@ Deno.serve(async (req) => {
     const entities = base44.asServiceRole.entities;
     const body = await req.json().catch(() => ({}));
 
-    if (body.action === 'send') return await handleSend(entities, body);
+    if (body.action === 'send') return await handleSend(base44, req, body);
     if (body.action === 'verify') return await handleVerify(entities, body);
     return Response.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {
     console.error('bookingVerification error:', error);
-    return Response.json({ error: error.message || 'Verification failed.' }, { status: 500 });
+    return Response.json({ error: 'We could not complete verification just now. Please try again.' }, { status: 500 });
   }
 });

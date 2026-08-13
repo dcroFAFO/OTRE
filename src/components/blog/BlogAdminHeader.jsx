@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
+/** @param {{ title: string, description?: string, actionTo?: string, actionLabel?: string }} props */
 export default function BlogAdminHeader({ title, description, actionTo, actionLabel }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -146,7 +146,7 @@ Return the full article in the full_article_markdown field as markdown. It must 
       target_keyword: input.target_keyword || "",
       category_id: input.category_id || "",
       tag_ids: Array.isArray(input.tag_ids) ? input.tag_ids : [],
-      author_name: settings?.default_author_name || user.full_name || "OTR Scooters",
+      author_name: settings?.default_author_name || user.full_name || "On The Run Electrics",
       author_bio: settings?.default_author_bio || "",
       author_avatar_url: settings?.default_author_avatar_url || "",
       featured_image_alt: result.featured_image_alt_text || "",

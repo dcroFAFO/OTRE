@@ -32,7 +32,7 @@ export default function JobPartsPanel({ job, actor, canEdit, onChange }) {
   });
 
   const removeUsage = useMutation({
-    mutationFn: (payload) => Array.isArray(payload)
+    mutationFn: (/** @type {any | any[]} */ payload) => Array.isArray(payload)
       ? removeInventoryParts(job, payload)
       : removeInventoryPart(job, payload),
     onSuccess: () => {

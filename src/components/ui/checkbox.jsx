@@ -4,6 +4,8 @@ import { Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/** @typedef {{ checked?: boolean | "indeterminate", defaultChecked?: boolean | "indeterminate", onCheckedChange?: (checked: boolean | "indeterminate") => void, disabled?: boolean, required?: boolean, name?: string, value?: string, id?: string, className?: string, "aria-label"?: string, [key: string]: any }} CheckboxProps */
+/** @type {React.ForwardRefExoticComponent<CheckboxProps & React.RefAttributes<HTMLButtonElement>>} */
 const Checkbox = React.forwardRef(({ className, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}

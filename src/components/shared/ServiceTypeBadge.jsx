@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BADGE_CLASSES } from "@/config/serviceTypes";
 
+/** @param {{ job?: Record<string, any>, value?: string, className?: string }} props */
 export default function ServiceTypeBadge({ job, value, className }) {
   const key = value || job?.service_type || DEFAULT_SERVICE_TYPE;
   const serviceType = getServiceType(key);

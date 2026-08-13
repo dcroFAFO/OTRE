@@ -28,7 +28,7 @@ export default function ForgotPassword() {
 
   return (
     <>
-    <SEO title="Reset Password | OTR Scooters" description="Request a secure password reset link for your OTR Scooters customer portal account." canonical="/forgot-password" noindex />
+    <SEO title="Reset Password | On The Run Electrics" description="Request a secure password reset link for your On The Run Electrics customer account." canonical="/forgot-password" noindex />
     <AuthLayout
       icon={Mail}
       title="Reset password"

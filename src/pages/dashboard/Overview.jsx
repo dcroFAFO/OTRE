@@ -16,12 +16,13 @@ import { isThisWeek } from "date-fns";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { CardSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/shared";
+import { countJobsByCategory, normalizeStatusKey } from "@/config/jobConfig";
 
 export default function Overview() {
   const navigate = useNavigate();
-  const { data: jobs } = useJobs();
-  const { data: audit } = useQuery({ queryKey: ["recentAudit"], queryFn: () => listRecentAudit(16), initialData: [], staleTime: 60 * 1000 });
+  const { data: jobs = [], isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useJobs();
+  const { data: audit = [], isLoading: auditLoading, error: auditError, refetch: refetchAudit } = useQuery({ queryKey: ["recentAudit"], queryFn: () => listRecentAudit(16), staleTime: 60 * 1000 });
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
 
@@ -30,20 +31,24 @@ export default function Overview() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const m = useMemo(() => ({
-    active: jobs.filter((j) => ["active", "booked", "repair_in_progress"].includes(j.status)).length,
-    awaitingCustomer: jobs.filter((j) => j.status === "waiting_customer").length,
-    waitingParts: jobs.filter((j) => ["waiting_parts", "waiting_supplier"].includes(j.status)).length,
-    readyPickup: jobs.filter((j) => j.ready_for_pickup || j.status === "ready_for_pickup").length,
-    outstanding: jobs.filter((j) => j.payment_status === "outstanding").length,
-    completedWeek: jobs.filter((j) => j.status === "completed" && j.updated_date && isThisWeek(new Date(j.updated_date))).length,
-    requested: jobs.filter((j) => j.status === "requested").length,
-    total: jobs.length,
-  }), [jobs]);
+  const m = useMemo(() => {
+    const counts = countJobsByCategory(jobs);
+    return {
+      requested: counts.requested || 0,
+      scheduled: counts.scheduled || 0,
+      repair: counts.repair || 0,
+      waiting: counts.waiting || 0,
+      ready: counts.ready || 0,
+      billing: counts.billing || 0,
+      completedWeek: jobs.filter((job) => normalizeStatusKey(job.status) === "completed" && job.updated_date && isThisWeek(new Date(job.updated_date))).length,
+      cancelled: counts.cancelled || 0,
+      total: jobs.length,
+    };
+  }, [jobs]);
 
   const upcoming = useMemo(() =>
     [...jobs]
-      .filter((j) => j.scheduled_date && !["completed", "cancelled"].includes(j.status))
+      .filter((j) => j.scheduled_date && !["completed", "cancelled"].includes(normalizeStatusKey(j.status)))
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
       .slice(0, 6),
     [jobs]
@@ -63,13 +68,14 @@ export default function Overview() {
   const goJob = (j) => navigate(`/dashboard/jobs?id=${j.id}`);
 
   const metrics = [
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.active, value: m.active, icon: Briefcase, tone: "default", filter: "status=active" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.awaitingCustomer, value: m.awaitingCustomer, icon: Clock, tone: "amber", filter: "status=waiting_customer" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.waitingParts, value: m.waitingParts, icon: Package, tone: "amber", filter: "status=waiting_parts" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.readyPickup, value: m.readyPickup, icon: PackageCheck, tone: "emerald", filter: "status=ready_for_pickup" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.outstanding, value: m.outstanding, icon: CreditCard, tone: "rose", filter: "payment=outstanding" },
-    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.completedWeek, value: m.completedWeek, icon: CheckCircle2, tone: "emerald", filter: "status=completed" },
     { label: DEFAULT_APP_SETTINGS.dashboard.metrics.requested, value: m.requested, icon: Inbox, tone: "accent", filter: "status=requested" },
+    { label: "Scheduled", value: m.scheduled, icon: CalendarDays, tone: "default", filter: "status=scheduled" },
+    { label: "Repair underway", value: m.repair, icon: Briefcase, tone: "default", filter: "status=repair" },
+    { label: "Waiting", value: m.waiting, icon: Clock, tone: "amber", filter: "status=waiting" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.readyPickup, value: m.ready, icon: PackageCheck, tone: "emerald", filter: "status=ready" },
+    { label: "Billing", value: m.billing, icon: CreditCard, tone: "rose", filter: "status=billing" },
+    { label: DEFAULT_APP_SETTINGS.dashboard.metrics.completedWeek, value: m.completedWeek, icon: CheckCircle2, tone: "emerald", filter: "status=completed" },
+    { label: "Cancelled", value: m.cancelled, icon: Package, tone: "default", filter: "status=cancelled" },
     { label: DEFAULT_APP_SETTINGS.dashboard.metrics.total, value: m.total, icon: Activity, tone: "default" },
   ];
 
@@ -91,7 +97,7 @@ export default function Overview() {
             className="pl-9 rounded-xl bg-card shadow-sm"
           />
           {quickSearch.length > 0 && (
-            <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-2xl shadow-gentle overflow-hidden">
+            <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border rounded-lg shadow-gentle overflow-hidden">
               {quickSearch.map((j) => (
                 <button key={j.id} onClick={() => { goJob(j); setQ(""); }}
                   className="w-full text-left px-3 py-2.5 hover:bg-secondary text-sm flex items-center justify-between border-b border-border last:border-0">
@@ -108,7 +114,7 @@ export default function Overview() {
       </div>
 
       {/* Pending requests alert */}
-      {m.requested > 0 && (
+      {!jobsLoading && !jobsError && m.requested > 0 && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
@@ -124,21 +130,27 @@ export default function Overview() {
       )}
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {metrics.map((m) => (
-          <MetricCard key={m.label} label={m.label} value={m.value} icon={m.icon} tone={m.tone}
-            onClick={() => navigate(m.filter ? `/dashboard/jobs?${m.filter}` : "/dashboard/jobs")} />
-        ))}
-      </div>
+      {jobsError ? (
+        <ErrorState title="Job overview could not be loaded" error={jobsError} onRetry={refetchJobs} />
+      ) : jobsLoading ? (
+        <CardSkeleton count={8} compact />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+          {metrics.map((metric) => (
+            <MetricCard key={metric.label} label={metric.label} value={metric.value} icon={metric.icon} tone={metric.tone}
+              onClick={() => navigate(metric.filter ? `/dashboard/jobs?${metric.filter}` : "/dashboard/jobs")} />
+          ))}
+        </div>
+      )}
 
       {/* Monthly summary */}
-      <MonthlySummary jobs={jobs} />
+      {!jobsLoading && !jobsError && <MonthlySummary jobs={jobs} />}
 
       {/* Financial charts */}
       <DeferredRevenueCharts />
 
       {/* Turnaround tracker */}
-      <TurnaroundTracker jobs={jobs} />
+      {!jobsLoading && !jobsError && <TurnaroundTracker jobs={jobs} />}
 
       {/* Body: upcoming + activity */}
       <div className="grid lg:grid-cols-3 gap-6">
@@ -153,8 +165,17 @@ export default function Overview() {
               Calendar <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
-          {upcoming.length === 0
-            ? <EmptyState message={`No upcoming ${DEFAULT_APP_SETTINGS.terminology.jobPlural} scheduled.`} />
+          {jobsError ? (
+            <ErrorState title="Upcoming jobs could not be loaded" error={jobsError} onRetry={refetchJobs} />
+          ) : jobsLoading ? (
+            <CardSkeleton count={2} compact />
+          ) : upcoming.length === 0
+            ? <EmptyState
+                compact
+                title={jobs.length === 0 ? "No jobs have been created" : "No upcoming jobs are scheduled"}
+                description={jobs.length === 0 ? "Create a job to begin planning repair work." : "Use the calendar or job list to schedule the next booking."}
+                action={<Button variant="outline" onClick={() => navigate("/dashboard/jobs")}>View jobs</Button>}
+              />
             : <div className="grid sm:grid-cols-2 gap-3">
                 {upcoming.map((j) => <JobCard key={j.id} job={j} onClick={() => goJob(j)} />)}
               </div>
@@ -166,7 +187,12 @@ export default function Overview() {
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold flex items-center gap-2"><Activity className="h-4 w-4 text-accent" /> Recent activity</h2>
           </div>
-          <div className="rounded-3xl border border-border bg-card divide-y divide-border overflow-hidden shadow-sm">
+          {auditError ? (
+            <ErrorState title="Recent activity could not be loaded" error={auditError} onRetry={refetchAudit} />
+          ) : auditLoading ? (
+            <TableSkeleton rows={5} columns={1} label="Loading recent activity" />
+          ) : (
+          <div className="rounded-lg border border-border bg-card divide-y divide-border overflow-hidden shadow-sm">
             {recentAudit.map((a) => (
               <div key={a.id} className="px-3.5 py-2.5 hover:bg-secondary/40 transition-colors cursor-default">
                 <p className="text-sm text-foreground leading-snug">{a.summary}</p>
@@ -175,16 +201,9 @@ export default function Overview() {
             ))}
             {audit.length === 0 && <p className="p-4 text-sm text-muted-foreground">No activity yet.</p>}
           </div>
+          )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function EmptyState({ message }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-border bg-card/70 py-10 text-center shadow-sm">
-      <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
 }

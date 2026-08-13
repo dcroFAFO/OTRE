@@ -10,10 +10,11 @@ import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { normalizeStatusKey } from "@/config/jobConfig";
 import { DEFAULT_SERVICE_TYPE } from "@/config/serviceTypes";
-import { SlidersHorizontal, Plus, LayoutGrid, List } from "lucide-react";
+import { Plus, LayoutGrid, List } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
 import { isStaffRole } from "@/config/roles";
+import { CardSkeleton, EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
 
 const FILTER_PARAM_KEYS = ["status", "service_type", "priority", "payment", "type", "waiting", "q"];
 
@@ -72,7 +73,7 @@ export default function Jobs() {
     ...(filters.type !== "all" ? { job_type: filters.type } : {}),
     ...(filters.waiting !== "all" ? { waiting_reason: filters.waiting } : {}),
   }), [filters.payment, filters.type, filters.waiting]);
-  const { data: jobs } = useJobs(queryFilter);
+  const { data: jobs = [], isLoading, isFetching, error, refetch } = useJobs(queryFilter);
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -101,7 +102,7 @@ export default function Jobs() {
         const catA = getCategoryOrder(a.status);
         const catB = getCategoryOrder(b.status);
         if (catA !== catB) return catA - catB;
-        return new Date(b.created_date || 0) - new Date(a.created_date || 0);
+        return new Date(b.created_date || 0).getTime() - new Date(a.created_date || 0).getTime();
       });
   }, [jobs, filters.q, filters.status, filters.service_type, filters.priority, activeCategory]);
 
@@ -116,6 +117,12 @@ export default function Jobs() {
     return counts;
   }, [jobs]);
 
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => key === "q" ? value.trim() !== "" : value !== "all");
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    navigate("/dashboard/jobs", { replace: true });
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -125,7 +132,8 @@ export default function Jobs() {
             {DEFAULT_APP_SETTINGS.dashboard.nav.jobs}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {filtered.length} {DEFAULT_APP_SETTINGS.terminology.jobPlural}
+            {isLoading ? "Loading jobs" : `${filtered.length} ${DEFAULT_APP_SETTINGS.terminology.jobPlural}`}
+            {isFetching && !isLoading ? <span className="ml-2" role="status">Refreshing…</span> : null}
           </p>
         </div>
         <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
@@ -159,13 +167,26 @@ export default function Jobs() {
         />
       )}
 
-      {filtered.length === 0 ?
-      <div className="rounded-2xl border border-dashed border-border bg-card py-16 text-center shadow-sm">
-          <SlidersHorizontal className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No jobs to show here.</p>
-        </div> :
-
-      view === "board" ? (
+      {error ? (
+        <ErrorState title="Jobs could not be loaded" error={error} onRetry={refetch} />
+      ) : isLoading ? (
+        view === "board" ? <CardSkeleton count={4} /> : <TableSkeleton rows={7} columns={6} label="Loading jobs" />
+      ) : filtered.length === 0 ? (
+        jobs.length === 0 && !hasActiveFilters ? (
+          <EmptyState
+            title="No jobs have been created"
+            description="Create the first job to start scheduling and tracking repair work."
+            action={isStaffRole(user.role) ? <Button onClick={() => setCreateModal(true)}><Plus className="h-4 w-4" /> New Job</Button> : null}
+          />
+        ) : (
+          <NoResultsState
+            title="No jobs match the active filters"
+            description={filters.q ? `No jobs match “${filters.q}”. Clear the search or broaden the filters.` : "Clear the active status, service, priority, payment, type, or waiting filters."}
+            onClear={clearFilters}
+            clearLabel="Clear all filters"
+          />
+        )
+      ) : view === "board" ? (
         <JobBoard
           jobs={filtered}
           statusKeys={activeCategory?.statuses || null}
@@ -179,8 +200,7 @@ export default function Jobs() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
         />
-      )
-      }
+      )}
 
       {/* Spacer so the floating New Job button never covers the last row */}
       <div className="h-16" aria-hidden />

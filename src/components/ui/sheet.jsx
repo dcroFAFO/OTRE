@@ -14,6 +14,7 @@ const SheetClose = SheetPrimitive.Close
 
 const SheetPortal = SheetPrimitive.Portal
 
+/** @type {React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay> & React.RefAttributes<any>>} */
 const SheetOverlay = React.forwardRef(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
@@ -44,6 +45,8 @@ const sheetVariants = cva(
   }
 )
 
+/** @typedef {React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & { side?: "top" | "bottom" | "left" | "right" }} SheetContentProps */
+/** @type {React.ForwardRefExoticComponent<SheetContentProps & React.RefAttributes<any>>} */
 const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
@@ -59,6 +62,7 @@ const SheetContent = React.forwardRef(({ side = "right", className, children, ..
 ))
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
+/** @param {React.HTMLAttributes<HTMLDivElement>} props */
 const SheetHeader = ({
   className,
   ...props
@@ -69,6 +73,7 @@ const SheetHeader = ({
 )
 SheetHeader.displayName = "SheetHeader"
 
+/** @param {React.HTMLAttributes<HTMLDivElement>} props */
 const SheetFooter = ({
   className,
   ...props
@@ -79,6 +84,7 @@ const SheetFooter = ({
 )
 SheetFooter.displayName = "SheetFooter"
 
+/** @type {React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title> & React.RefAttributes<any>>} */
 const SheetTitle = React.forwardRef(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
@@ -87,6 +93,7 @@ const SheetTitle = React.forwardRef(({ className, ...props }, ref) => (
 ))
 SheetTitle.displayName = SheetPrimitive.Title.displayName
 
+/** @type {React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description> & React.RefAttributes<any>>} */
 const SheetDescription = React.forwardRef(({ className, ...props }, ref) => (
   <SheetPrimitive.Description
     ref={ref}

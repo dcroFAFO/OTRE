@@ -38,7 +38,7 @@ export default function ResetPassword() {
   if (!resetToken) {
     return (
       <>
-      <SEO title="Invalid Reset Link | OTR Scooters" description="This password reset link is invalid or incomplete. Request a new secure reset link for your account." canonical="/reset-password" noindex />
+      <SEO title="Invalid Reset Link | On The Run Electrics" description="This password reset link is invalid or incomplete. Request a new secure reset link for your account." canonical="/reset-password" noindex />
       <AuthLayout
         icon={AlertTriangle}
         title="Invalid reset link"
@@ -59,7 +59,7 @@ export default function ResetPassword() {
 
   return (
     <>
-    <SEO title="Set New Password | OTR Scooters" description="Set a new password for your secure OTR Scooters customer portal account." canonical="/reset-password" noindex />
+    <SEO title="Set New Password | On The Run Electrics" description="Set a new password for your secure On The Run Electrics customer account." canonical="/reset-password" noindex />
     <AuthLayout
       icon={Lock}
       title="New password"

@@ -71,6 +71,6 @@ Deno.serve(async (req) => {
     return Response.json({ verified: true, phone_e164: phoneE164 });
   } catch (error) {
     console.error('verifySignupPhoneOtp error:', error);
-    return Response.json({ error: error.message || 'Could not verify mobile code.' }, { status: 500 });
+    return Response.json({ error: 'Could not verify the mobile code. Please try again.' }, { status: 500 });
   }
 });

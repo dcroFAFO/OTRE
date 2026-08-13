@@ -2,7 +2,8 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function PhoneNumberField({ label = "Phone", required, value, onChange, error }) {
+/** @param {{ label?: string, required?: boolean, value?: string, onChange: React.ChangeEventHandler<HTMLInputElement>, error?: string | null }} props */
+export default function PhoneNumberField({ label = "Phone", required = false, value, onChange, error }) {
   const inputId = "booking-phone";
   const errorId = "booking-phone-error";
 
@@ -13,7 +14,7 @@ export default function PhoneNumberField({ label = "Phone", required, value, onC
       </Label>
       <div className="relative">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center gap-1.5 border-r border-border px-3 text-sm font-semibold text-foreground/80">
-          <span aria-hidden="true" className="text-base leading-none">🇦🇺</span>
+          <span aria-hidden="true" className="text-xs font-semibold leading-none">AU</span>
           <span>+61</span>
         </div>
         <Input

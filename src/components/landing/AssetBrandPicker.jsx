@@ -8,7 +8,10 @@ import { cn } from "@/lib/utils";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 
 // Searchable brand + model picker. Composes the final label string via onChange.
-export default function AssetBrandPicker({ make, model, customMake, customModel, onChange }) {
+/**
+ * @param {{ make?: string, model?: string, customMake?: string, customModel?: string, onChange: (value: { make: string, model: string, customMake: string, customModel: string, label: string }) => void, id?: string, describedBy?: string, invalid?: boolean }} props
+ */
+export default function AssetBrandPicker({ make, model, customMake, customModel, onChange, id = "asset-picker", describedBy, invalid = false }) {
   const set = (patch) => {
     const next = { make, model, customMake, customModel, ...patch };
     const brand = next.make === "Other" ? next.customMake : next.make;
@@ -22,6 +25,10 @@ export default function AssetBrandPicker({ make, model, customMake, customModel,
   return (
     <div className="space-y-3">
       <SearchSelect
+        id={`${id}-make`}
+        ariaLabel="Scooter brand"
+        describedBy={describedBy}
+        invalid={invalid}
         value={make}
         options={BRAND_NAMES}
         placeholder="Select scooter brand"
@@ -30,11 +37,15 @@ export default function AssetBrandPicker({ make, model, customMake, customModel,
       />
 
       {make === "Other" && (
-        <Input value={customMake || ""} onChange={(e) => set({ customMake: e.target.value })} placeholder="Enter scooter brand" />
+        <Input id={`${id}-custom-make`} aria-label="Custom scooter brand" aria-describedby={describedBy} aria-invalid={invalid || undefined} value={customMake || ""} onChange={(e) => set({ customMake: e.target.value })} placeholder="Enter scooter brand" />
       )}
 
       {make && make !== "Other" && (
         <SearchSelect
+          id={`${id}-model`}
+          ariaLabel="Scooter model"
+          describedBy={describedBy}
+          invalid={invalid}
           value={model}
           options={models}
           placeholder="Select model"
@@ -44,18 +55,25 @@ export default function AssetBrandPicker({ make, model, customMake, customModel,
       )}
 
       {(model === "Other model" || (make === "Other" && customMake)) && (
-        <Input value={customModel || ""} onChange={(e) => set({ customModel: e.target.value })} placeholder="Enter model" />
+        <Input id={`${id}-custom-model`} aria-label="Custom scooter model" aria-describedby={describedBy} aria-invalid={invalid || undefined} value={customModel || ""} onChange={(e) => set({ customModel: e.target.value })} placeholder="Enter model" />
       )}
     </div>
   );
 }
 
-function SearchSelect({ value, options, placeholder, searchPlaceholder, onSelect }) {
+/**
+ * @param {{ id: string, ariaLabel: string, describedBy?: string, invalid?: boolean, value?: string, options: string[], placeholder: string, searchPlaceholder: string, onSelect: (value: string) => void }} props
+ */
+function SearchSelect({ id, ariaLabel, describedBy, invalid, value, options, placeholder, searchPlaceholder, onSelect }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
+          aria-label={ariaLabel}
+          aria-describedby={describedBy}
+          aria-invalid={invalid || undefined}
           type="button"
           variant="outline"
           role="combobox"

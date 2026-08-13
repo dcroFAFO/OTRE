@@ -12,6 +12,30 @@
       "type": "string",
       "description": "Human-readable order reference e.g. ORD-1042"
     },
+    "checkout_attempt_id": {
+      "type": "string",
+      "description": "Client-generated idempotency key for a checkout attempt."
+    },
+    "stripe_checkout_session_id": {
+      "type": "string"
+    },
+    "payment_intent_ref": {
+      "type": "string"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "failed",
+        "expired"
+      ],
+      "default": "pending"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date-time"
+    },
     "customer_name": {
       "type": "string"
     },
@@ -31,6 +55,12 @@
         "click_collect"
       ],
       "default": "delivery"
+    },
+    "pickup_address": {
+      "type": "string"
+    },
+    "pickup_instructions": {
+      "type": "string"
     },
     "items": {
       "type": "array",
@@ -70,11 +100,13 @@
     "status": {
       "type": "string",
       "enum": [
+        "pending_payment",
         "received",
         "forwarded_to_supplier",
         "processing",
         "shipped",
         "completed",
+        "payment_failed",
         "cancelled"
       ],
       "default": "received"

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Timer, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { DEFAULT_TURNAROUND_TARGET_DAYS } from "@/config/platformConfig";
 import { cn } from "@/lib/utils";
+import { normalizeStatusKey } from "@/config/jobConfig";
 
 const prettify = (s) =>
   String(s || "")
@@ -13,13 +14,13 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 export default function TurnaroundTracker({ jobs = [], targetDays = DEFAULT_TURNAROUND_TARGET_DAYS }) {
   const categories = useMemo(() => {
     const completed = jobs.filter(
-      (j) => j.status === "completed" && j.created_date && j.updated_date
+      (j) => normalizeStatusKey(j.status) === "completed" && j.created_date && j.updated_date
     );
 
     const groups = {};
     completed.forEach((j) => {
       const key = prettify(j.service_category_key || j.job_type || "Uncategorised");
-      const days = (new Date(j.updated_date) - new Date(j.created_date)) / MS_PER_DAY;
+      const days = (new Date(j.updated_date).getTime() - new Date(j.created_date).getTime()) / MS_PER_DAY;
       if (days < 0) return;
       (groups[key] ||= []).push(days);
     });
@@ -36,7 +37,7 @@ export default function TurnaroundTracker({ jobs = [], targetDays = DEFAULT_TURN
   const maxAvg = Math.max(targetDays, ...categories.map((c) => c.avg), 1);
 
   return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4">
+    <div className="rounded-lg border border-border bg-card p-5 shadow-sm space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="font-heading font-bold flex items-center gap-2">
           <Timer className="h-4 w-4 text-accent" />

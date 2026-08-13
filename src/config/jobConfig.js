@@ -18,12 +18,12 @@ export const JOB_STATUSES = [
   { key: "requested", label: "Booking Requested", group: "intake", color: "slate", is_default_intake: true },
   { key: "scheduled", label: "Scheduled", group: "active", color: "indigo" },
   { key: "repair_in_progress", label: "Repair In Progress", group: "active", color: "teal" },
-  { key: "ready_for_pickup", label: "Ready for Pickup", group: "done", color: "emerald" },
+  { key: "ready_for_pickup", label: "Ready for Pickup", group: "ready", color: "emerald" },
   { key: "invoice_outstanding", label: "Invoice Outstanding", group: "billing", color: "rose" },
-  { key: "completed", label: "Completed", group: "done", color: "emerald", is_terminal: true },
+  { key: "completed", label: "Completed", group: "completed", color: "emerald", is_terminal: true },
   { key: "waiting_on_parts", label: "Waiting on Parts", group: "waiting", color: "amber" },
   { key: "on_hold", label: "On Hold", group: "waiting", color: "slate" },
-  { key: "cancelled", label: "Cancelled", group: "closed", color: "slate", is_terminal: true },
+  { key: "cancelled", label: "Cancelled", group: "cancelled", color: "slate", is_terminal: true },
 ];
 
 export const JOB_STATUS_VALUES = JOB_STATUSES.map((status) => status.key);
@@ -63,6 +63,29 @@ export const LEGACY_STATUS_MAP = {
   paid: "completed",
 };
 
+// Operational groupings used by metrics, filters and list sections. These are
+// display selectors only; the stored status remains one of JOB_STATUSES.
+export const JOB_CATEGORIES = [
+  { key: "all", label: "All", statuses: null, order: 0 },
+  { key: "requested", label: "Requested", statuses: ["requested"], order: 1 },
+  { key: "scheduled", label: "Scheduled", statuses: ["scheduled"], order: 2 },
+  { key: "repair", label: "Repair Underway", statuses: ["repair_in_progress"], order: 3 },
+  { key: "waiting", label: "Waiting", statuses: ["waiting_on_parts", "on_hold"], order: 4 },
+  { key: "ready", label: "Ready for Pickup", statuses: ["ready_for_pickup"], order: 5 },
+  { key: "billing", label: "Billing", statuses: ["invoice_outstanding"], order: 6 },
+  { key: "completed", label: "Completed", statuses: ["completed"], order: 7 },
+  { key: "cancelled", label: "Cancelled", statuses: ["cancelled"], order: 8 },
+];
+
+export const CUSTOMER_JOB_MILESTONES = [
+  { key: "requested", label: "Request", active: "border-red-500 bg-red-500 text-white", done: "border-red-300 bg-red-50 text-red-600" },
+  { key: "scheduled", label: "Scheduled", active: "border-blue-600 bg-blue-600 text-white", done: "border-blue-300 bg-blue-50 text-blue-700" },
+  { key: "repair_in_progress", label: "Repair", active: "border-amber-500 bg-amber-500 text-white", done: "border-amber-300 bg-amber-50 text-amber-700" },
+  { key: "ready_for_pickup", label: "Ready", active: "border-emerald-600 bg-emerald-600 text-white", done: "border-emerald-300 bg-emerald-50 text-emerald-700" },
+  { key: "invoice_outstanding", label: "Payment", active: "border-violet-600 bg-violet-600 text-white", done: "border-violet-300 bg-violet-50 text-violet-700" },
+  { key: "completed", label: "Complete", active: "border-teal-600 bg-teal-600 text-white", done: "border-teal-300 bg-teal-50 text-teal-700" },
+];
+
 export function normalizeStatusKey(key) {
   return LEGACY_STATUS_MAP[key] || key || "requested";
 }
@@ -97,4 +120,40 @@ export const TIME_WINDOW_LABELS = {
 
 export function getTimeWindowLabel(key) {
   return TIME_WINDOW_LABELS[key] || (key ? key : "");
+}
+
+export function getJobCategory(status) {
+  const normalized = getCanonicalJobStatus(status);
+  return JOB_CATEGORIES.find((category) => category.statuses?.includes(normalized)) || JOB_CATEGORIES[1];
+}
+
+export function getJobCategoryOrder(status) {
+  return getJobCategory(status).order;
+}
+
+export function countJobsByCategory(jobs = []) {
+  const counts = Object.fromEntries(JOB_CATEGORIES.map((category) => [category.key, 0]));
+  counts.all = jobs.length;
+  jobs.forEach((job) => {
+    const category = getJobCategory(job.status).key;
+    counts[category] += 1;
+  });
+  return counts;
+}
+
+export function getCustomerJobProgress(status) {
+  const normalized = getCanonicalJobStatus(status);
+  if (normalized === "cancelled") {
+    return { status: normalized, currentIndex: -1, cancelled: true };
+  }
+
+  const milestoneStatus = ["waiting_on_parts", "on_hold"].includes(normalized)
+    ? "repair_in_progress"
+    : normalized;
+  const currentIndex = CUSTOMER_JOB_MILESTONES.findIndex((milestone) => milestone.key === milestoneStatus);
+  return {
+    status: normalized,
+    currentIndex: Math.max(0, currentIndex),
+    cancelled: false,
+  };
 }

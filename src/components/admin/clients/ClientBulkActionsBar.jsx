@@ -32,6 +32,7 @@ export default function ClientBulkActionsBar({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const run = async (key, fn) => {
+    if (busy) return;
     setBusy(key);
     try {
       await fn();
@@ -42,13 +43,13 @@ export default function ClientBulkActionsBar({
 
   return (
     <>
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-secondary/40 px-4 py-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary/40 px-4 py-3">
       <span className="text-sm font-semibold">{selectedCount} selected</span>
       <div className="h-4 w-px bg-border" />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5" disabled={!!busy}>
+          <Button type="button" variant="outline" size="touch" className="gap-1.5 sm:h-9" disabled={!!busy}>
             <UserCog className="h-3.5 w-3.5" /> Set status
           </Button>
         </DropdownMenuTrigger>
@@ -63,7 +64,7 @@ export default function ClientBulkActionsBar({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5" disabled={!!busy}>
+          <Button type="button" variant="outline" size="touch" className="gap-1.5 sm:h-9" disabled={!!busy}>
             <Tag className="h-3.5 w-3.5" /> Add tag
           </Button>
         </DropdownMenuTrigger>
@@ -78,7 +79,7 @@ export default function ClientBulkActionsBar({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5" disabled={!!busy}>
+          <Button type="button" variant="outline" size="touch" className="gap-1.5 sm:h-9" disabled={!!busy}>
             <Minus className="h-3.5 w-3.5" /> Remove tag
           </Button>
         </DropdownMenuTrigger>
@@ -93,9 +94,10 @@ export default function ClientBulkActionsBar({
 
       {canDelete && (
         <Button
+          type="button"
           variant="destructive"
-          size="sm"
-          className="gap-1.5 ml-auto"
+          size="touch"
+          className="ml-auto gap-1.5 sm:h-9"
           disabled={!!busy}
           onClick={() => setConfirmOpen(true)}
         >
@@ -103,7 +105,7 @@ export default function ClientBulkActionsBar({
           Delete
         </Button>
       )}
-      <Button variant="ghost" size="sm" className="gap-1.5" onClick={onClear} disabled={!!busy}>
+      <Button type="button" variant="ghost" size="touch" className="gap-1.5 sm:h-9" onClick={onClear} disabled={!!busy}>
         <X className="h-3.5 w-3.5" /> Clear
       </Button>
     </div>
@@ -120,9 +122,15 @@ export default function ClientBulkActionsBar({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={() => run("delete", onDelete)}
+            disabled={Boolean(busy)}
+            onClick={async (event) => {
+              event.preventDefault();
+              await run("delete", onDelete);
+              setConfirmOpen(false);
+            }}
           >
-            Delete
+            {busy === "delete" ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
+            {busy === "delete" ? "Deleting customers..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

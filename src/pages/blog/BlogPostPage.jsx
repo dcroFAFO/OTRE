@@ -113,7 +113,7 @@ function Author({ post }) {
         />
       )}
       <div>
-        <p className="font-semibold">{post.author_name || "OTR Scooters"}</p>
+        <p className="font-semibold">{post.author_name || "On The Run Electrics"}</p>
         {post.author_bio && <p className="text-sm text-muted-foreground">{post.author_bio}</p>}
       </div>
     </div>

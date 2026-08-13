@@ -53,14 +53,14 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user || !['admin', 'technician'].includes(user?.role)) {
+    if (!user || user?.role !== 'admin') {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Parse optional pagination params: offset into Ecwid, page_size (max products per call)
     const body = await req.json().catch(() => ({}));
-    const ecwidOffset = body.offset ?? 0;
-    const pageSize = Math.min(body.page_size ?? 25, 50); // max 50 per invocation
+    const ecwidOffset = Math.max(0, Number(body.offset) || 0);
+    const pageSize = Math.max(1, Math.min(Number(body.page_size) || 25, 50));
 
     // Fetch this page of Ecwid products
     const ecwidUrl = `https://app.ecwid.com/api/v3/${STORE_ID}/products?limit=${pageSize}&offset=${ecwidOffset}&enabled=true`;
@@ -135,6 +135,7 @@ Deno.serve(async (req) => {
       message: `Synced ${created + updated} products (${created} new, ${updated} updated). ${hasMore ? `${ecwidTotal - nextOffset} remaining.` : "All done!"}`,
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[syncEcwidProducts] failed:', error?.message);
+    return Response.json({ error: 'The catalogue could not be refreshed.' }, { status: 500 });
   }
 });

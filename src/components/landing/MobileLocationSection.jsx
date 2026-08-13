@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MapPin, Navigation, ParkingCircle, Building2 } from "lucide-react";
-import { CONTACT_DETAILS } from "@/config/contactDetails";
 import { base44 } from "@/api/base44Client";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 
 const LOCATION_NOTES = [
   { icon: Building2, text: "Look for the James Trowse building — we're right next to Woolloongabba Rotary Park." },
@@ -11,12 +11,13 @@ const LOCATION_NOTES = [
 
 export default function MobileLocationSection() {
   const [embedUrl, setEmbedUrl] = useState(null);
+  const { data: { business } } = usePlatformConfig();
 
   useEffect(() => {
-    base44.functions.invoke("getMapEmbedUrl", { address: CONTACT_DETAILS.address })
+    base44.functions.invoke("getMapEmbedUrl", { address: business.address })
       .then((res) => setEmbedUrl(res.data?.embedUrl || null))
       .catch(() => setEmbedUrl(null));
-  }, []);
+  }, [business.address]);
 
   return (
     <section className="px-4 py-12 sm:px-8 sm:py-16">
@@ -25,7 +26,7 @@ export default function MobileLocationSection() {
           <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Finding us
         </div>
         <h2 className="mt-4 font-heading text-2xl font-extrabold tracking-tight sm:text-3xl">A little tricky to spot? Here's how to find us.</h2>
-        <p className="mt-2 text-sm text-muted-foreground sm:text-base">{CONTACT_DETAILS.address}</p>
+        <p className="mt-2 text-sm text-muted-foreground sm:text-base">{business.address}</p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {LOCATION_NOTES.map(({ icon: Icon, text }) => (

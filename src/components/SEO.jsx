@@ -13,6 +13,22 @@ function absoluteUrl(value) {
   return new URL(value, window.location.origin).toString();
 }
 
+/**
+ * @param {{
+ *   title?: string,
+ *   description?: string,
+ *   canonical?: string,
+ *   ogTitle?: string,
+ *   ogDescription?: string,
+ *   ogImage?: string,
+ *   ogType?: string,
+ *   twitterTitle?: string,
+ *   twitterDescription?: string,
+ *   twitterImage?: string,
+ *   noindex?: boolean,
+ *   structuredData?: Record<string, any> | Record<string, any>[]
+ * }} props
+ */
 export default function SEO({
   title = DEFAULT_TITLE,
   description = DEFAULT_DESCRIPTION,

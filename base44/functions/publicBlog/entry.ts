@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
     }
     return Response.json({ settings, posts, categories, tags, synced_at: action === "sync" ? new Date().toISOString() : undefined });
   } catch (error) {
-    console.error("[publicBlog]", error.message, error.stack);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("[publicBlog]", error?.message || "Unknown error");
+    return Response.json({ error: "Articles are temporarily unavailable." }, { status: 500 });
   }
 });

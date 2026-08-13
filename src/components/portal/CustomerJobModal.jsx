@@ -2,39 +2,25 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { getStatus, normalizeStatusKey } from "@/config/jobConfig";
-import { Loader2, CheckCircle2, Circle, Clock, Wrench, Receipt, CreditCard } from "lucide-react";
+import { CUSTOMER_JOB_MILESTONES, getCustomerJobProgress, getStatus, normalizeStatusKey } from "@/config/jobConfig";
+import { AlertCircle, CheckCircle2, Circle, Clock, Wrench, Receipt } from "lucide-react";
 import { startInvoicePayment } from "@/services/paymentService";
 import SignatureCapture from "@/components/portal/SignatureCapture";
-
-// Distinct logo/theme colour per customer-facing milestone (literal Tailwind classes).
-const MILESTONES = [
-  { key: "requested", label: "Request", active: "border-red-500 bg-red-500 text-white", done: "border-red-300 bg-red-50 text-red-600" },
-  { key: "scheduled", label: "Scheduling", active: "border-blue-500 bg-blue-500 text-white", done: "border-blue-300 bg-blue-50 text-blue-600" },
-  { key: "repair_in_progress", label: "Repair", active: "border-amber-500 bg-amber-500 text-white", done: "border-amber-300 bg-amber-50 text-amber-600" },
-  { key: "invoice_outstanding", label: "Invoice", active: "border-violet-500 bg-violet-500 text-white", done: "border-violet-300 bg-violet-50 text-violet-600" },
-  { key: "completed", label: "Complete", active: "border-teal-500 bg-teal-500 text-white", done: "border-teal-300 bg-teal-50 text-teal-600" },
-];
+import CustomerInvoiceCard from "@/components/portal/CustomerInvoiceCard";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/shared";
+import { getSafeErrorMessage } from "@/lib/errors";
+import { toast } from "sonner";
 
 function normalizedStatus(status) {
   return normalizeStatusKey(status);
 }
 
-function getMilestoneIndex(statusKey) {
-  const status = normalizedStatus(statusKey);
-  if (status === "ready_for_pickup" || status === "completed") return MILESTONES.length - 1;
-  const direct = MILESTONES.findIndex((m) => m.key === status);
-  if (direct !== -1) return direct;
-  if (status === "waiting_on_parts" || status === "on_hold") return 2;
-  if (status === "cancelled") return MILESTONES.length - 1;
-  return 0;
-}
-
 function StatusTab({ job }) {
-  const current = getMilestoneIndex(job.status);
+  const progress = getCustomerJobProgress(job.status);
+  const current = progress.currentIndex;
   const statusDef = getStatus(job.status);
   const canAcknowledgeCompletion = normalizedStatus(job.status) === "completed";
 
@@ -53,13 +39,20 @@ function StatusTab({ job }) {
         <Clock className="h-4 w-4 shrink-0" />
         Current status: <span className="font-semibold text-foreground ml-1">{statusDef?.label || job.status}</span>
       </div>
-      <ol className="relative space-y-0">
-        {MILESTONES.map((m, i) => {
+      {progress.cancelled ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
+          <AlertTitle>Job cancelled</AlertTitle>
+          <AlertDescription>This job is closed as cancelled. It has not been marked complete.</AlertDescription>
+        </Alert>
+      ) : (
+      <ol className="relative space-y-0" aria-label="Job progress">
+        {CUSTOMER_JOB_MILESTONES.map((m, i) => {
           const done = i < current;
           const active = i === current;
           return (
             <li key={m.key} className="flex gap-4 pb-6 last:pb-0 relative">
-              {i < MILESTONES.length - 1 && <div className={`absolute left-[15px] top-8 bottom-0 w-0.5 ${done || active ? "bg-primary/40" : "bg-border"}`} />}
+              {i < CUSTOMER_JOB_MILESTONES.length - 1 && <div className={`absolute left-[15px] top-8 bottom-0 w-0.5 ${done || active ? "bg-primary/40" : "bg-border"}`} />}
               <div className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${active ? m.active : done ? m.done : "border-border bg-background text-muted-foreground"}`}>
                 {done ? <CheckCircle2 className="h-4 w-4" /> : active ? <Wrench className="h-4 w-4" /> : <Circle className="h-4 w-4 opacity-40" />}
               </div>
@@ -71,6 +64,7 @@ function StatusTab({ job }) {
           );
         })}
       </ol>
+      )}
     </div>
   );
 }
@@ -86,86 +80,96 @@ function jobBalance(job, invoices) {
 }
 
 function HistoryTab({ userEmail }) {
-  const { data: jobs = [], isLoading } = useQuery({
+  const jobsQuery = useQuery({
     queryKey: ["portalHistory", userEmail],
     queryFn: () => base44.entities.Job.filter({ customer_email: userEmail, archived: false }, "-created_date", 50),
     enabled: !!userEmail,
   });
   // RLS restricts results to the customer's own customer-visible invoices.
-  const { data: invoices = [] } = useQuery({
+  const invoicesQuery = useQuery({
     queryKey: ["portalHistoryInvoices", userEmail],
     queryFn: () => base44.entities.Invoice.list("-created_date", 100),
     enabled: !!userEmail,
   });
+  const jobs = jobsQuery.data || [];
+  const invoices = invoicesQuery.data || [];
 
-  if (isLoading) return <Loader2 className="h-5 w-5 animate-spin mx-auto mt-8 text-muted-foreground" />;
-  if (!jobs.length) return <p className="text-sm text-muted-foreground text-center py-8">No previous repairs found.</p>;
-
-  return (
-    <ul className="space-y-3 py-2">
-      {jobs.map((j) => {
-        const statusDef = getStatus(j.status);
-        const balance = jobBalance(j, invoices);
-        return (
-          <li key={j.id} className="rounded-xl border border-border bg-card px-4 py-3 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{j.asset_label || j.scooter_label || "Scooter"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{j.issue_description || "—"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{j.reference} · {new Date(j.created_date).toLocaleDateString()}</p>
-              <p className={`text-xs font-semibold mt-1 ${balance.startsWith("Owing") ? "text-rose-600" : balance.startsWith("Paid") ? "text-emerald-600" : "text-muted-foreground"}`}>{balance}</p>
-            </div>
-            <Badge variant="outline" className="shrink-0 text-xs capitalize">{statusDef?.label || j.status}</Badge>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function InvoiceTab({ invoices = [], isLoading }) {
-  const [paying, setPaying] = useState(null);
-  const visible = invoices.filter((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
-
-  if (isLoading) return <Loader2 className="h-5 w-5 animate-spin mx-auto mt-8 text-muted-foreground" />;
-  if (!visible.length) return <div className="py-8 text-center text-muted-foreground text-sm"><Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />No invoice has been issued yet.</div>;
+  if (jobsQuery.isLoading) return <CardSkeleton compact label="Loading repair history" className="py-2" />;
+  if (jobsQuery.error) return <ErrorState title="Repair history could not be loaded" error={jobsQuery.error} onRetry={jobsQuery.refetch} />;
+  if (!jobs.length) return <EmptyState compact icon={Wrench} title="No repair history yet" description="Completed and previous repairs will appear here." />;
 
   return (
-    <div className="space-y-4 py-2">
-      {visible.map((inv) => {
-        const isPaid = inv.status === "paid";
-        return (
-          <div key={inv.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-foreground">{inv.number ? `Invoice ${inv.number}` : "Invoice"}</span>
-              <Badge variant="outline" className={`text-xs capitalize ${isPaid ? "border-emerald-300 text-emerald-600" : "border-rose-300 text-rose-500"}`}>{inv.status}</Badge>
-            </div>
-            {inv.line_items?.length > 0 && <LineItems items={inv.line_items} currency={inv.currency} />}
-            <div className="flex items-center justify-between border-t border-border pt-3">
-              <span className="text-sm font-semibold">Amount Due</span>
-              <span className="text-base font-bold text-foreground">{inv.currency || "AUD"} ${Number(inv.amount || 0).toFixed(2)}</span>
-            </div>
-            {inv.paid_date && <p className="text-xs text-muted-foreground">Paid {new Date(inv.paid_date).toLocaleDateString()}</p>}
-            {!isPaid && (
-              <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={paying === inv.id} onClick={async () => {
-                setPaying(inv.id);
-                const result = await startInvoicePayment(inv);
-                if (result?.blocked) setPaying(null);
-              }}>
-                {paying === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Pay securely with Stripe
-              </Button>
-            )}
-          </div>
-        );
-      })}
+    <div className="space-y-3 py-2">
+      {invoicesQuery.isLoading ? <CardSkeleton compact label="Loading repair balances" /> : null}
+      {invoicesQuery.error ? <ErrorState title="Repair balances could not be loaded" error={invoicesQuery.error} onRetry={invoicesQuery.refetch} /> : null}
+      <ul className="space-y-3">
+        {jobs.map((job) => {
+          const statusDef = getStatus(job.status);
+          const balance = invoicesQuery.error || invoicesQuery.isLoading ? "Balance unavailable" : jobBalance(job, invoices);
+          return (
+            <li key={job.id} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">{job.asset_label || job.scooter_label || "Scooter"}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{job.issue_description || "No issue description supplied"}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{job.reference} · {new Date(job.created_date).toLocaleDateString("en-AU")}</p>
+                <p className={`mt-1 text-xs font-semibold ${balance.startsWith("Owing") ? "text-rose-700" : balance.startsWith("Paid") ? "text-emerald-700" : "text-muted-foreground"}`}>{balance}</p>
+              </div>
+              <Badge variant="outline" className="shrink-0 text-xs">{statusDef?.label || job.status}</Badge>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
 
-export default function CustomerJobModal({ job, open, onClose, userEmail }) {
+function InvoiceTab({ invoices = [], isLoading, error, onRetry, userId, onChanged }) {
+  const [paying, setPaying] = useState(null);
+  const visible = invoices.filter((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
+
+  const pay = async (invoice) => {
+    if (paying) return;
+    setPaying(invoice.id);
+    try {
+      const result = await startInvoicePayment(invoice);
+      if (result?.blocked) {
+        toast.error(result.reason);
+        setPaying(null);
+      } else if (!result?.url) {
+        toast.error("Secure checkout could not be started. Please try again.");
+        setPaying(null);
+      }
+    } catch (caught) {
+      toast.error(getSafeErrorMessage(caught, "Could not start payment. Please try again."));
+      setPaying(null);
+    }
+  };
+
+  if (isLoading) return <CardSkeleton compact label="Loading job invoices" className="py-2" />;
+  if (error) return <ErrorState title="Invoices could not be loaded" error={error} onRetry={onRetry} />;
+  if (!visible.length) return <EmptyState compact icon={Receipt} title="No invoice issued yet" description="An invoice will appear here after it is finalised by the workshop." />;
+
+  return (
+    <div className="space-y-4 py-2">
+      {visible.map((invoice) => (
+        <CustomerInvoiceCard
+          key={invoice.id}
+          invoice={invoice}
+          userId={userId}
+          onChanged={onChanged}
+          onPay={() => pay(invoice)}
+          paymentPending={paying === invoice.id}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** @param {{ job: any, open: boolean, onClose: () => void, onUpdate?: () => void, userEmail?: string, userId?: string }} props */
+export default function CustomerJobModal({ job, open, onClose, onUpdate, userEmail, userId }) {
   const [tab, setTab] = useState("status");
   // All invoices issued to this customer — RLS restricts results to their own customer-visible invoices.
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
+  const { data: invoices = [], isLoading: invoicesLoading, error: invoicesError, refetch: refetchInvoices } = useQuery({
     queryKey: ["portalInvoices", userEmail],
     queryFn: () => base44.entities.Invoice.list("-created_date", 50),
     enabled: open,
@@ -190,46 +194,11 @@ export default function CustomerJobModal({ job, open, onClose, userEmail }) {
           </TabsList>
           <div className="overflow-y-auto flex-1 pr-1">
             <TabsContent value="status" className="mt-0">{tab === "status" && <StatusTab job={job} />}</TabsContent>
-            <TabsContent value="invoice" className="mt-0">{tab === "invoice" && <InvoiceTab invoices={invoices} isLoading={invoicesLoading} />}</TabsContent>
+            <TabsContent value="invoice" className="mt-0">{tab === "invoice" && <InvoiceTab invoices={invoices} isLoading={invoicesLoading} error={invoicesError} onRetry={refetchInvoices} userId={userId} onChanged={refetchInvoices} />}</TabsContent>
             <TabsContent value="history" className="mt-0">{tab === "history" && <HistoryTab userEmail={userEmail} />}</TabsContent>
           </div>
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Field({ label, children }) {
-  return <div><p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p><p className="text-sm text-foreground">{children}</p></div>;
-}
-
-function lineTotal(item) {
-  const base = (Number(item.unit_price) || 0) * (Number(item.qty) || 1);
-  const tax = base * ((Number(item.tax_rate) || 0) / 100);
-  return base + tax - (Number(item.discount_amount) || 0);
-}
-
-function LineItems({ items, currency = "AUD" }) {
-  return (
-    <table className="w-full text-sm border-t border-border pt-2">
-      <thead>
-        <tr className="text-xs text-muted-foreground">
-          <th className="py-1.5 text-left font-medium">Item</th>
-          <th className="py-1.5 text-center font-medium">Qty</th>
-          <th className="py-1.5 text-right font-medium">Unit</th>
-          <th className="py-1.5 text-right font-medium">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((li, i) => (
-          <tr key={i} className="border-b border-border/50 last:border-0">
-            <td className="py-1.5 text-muted-foreground">{li.description}</td>
-            <td className="py-1.5 text-center text-muted-foreground">{Number(li.qty) || 1}</td>
-            <td className="py-1.5 text-right text-muted-foreground">{currency} ${(Number(li.unit_price) || 0).toFixed(2)}</td>
-            <td className="py-1.5 text-right font-medium">{currency} ${lineTotal(li).toFixed(2)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }

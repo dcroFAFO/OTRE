@@ -5,8 +5,9 @@ import { createBookingRequest } from "@/services/bookingService";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import BookingWizard from "@/components/portal/booking/BookingWizard";
 import BookingConfirmation from "@/components/portal/booking/BookingConfirmation";
+import { ErrorState } from "@/components/shared";
 
-export default function CustomerBookingModal({ open, onClose, user, profile, profileLoading = false, onSuccess, onManage }) {
+export default function CustomerBookingModal({ open, onClose, user, profile, profileLoading = false, profileError, onRetryProfile, onSuccess, onManage }) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -73,6 +74,8 @@ export default function CustomerBookingModal({ open, onClose, user, profile, pro
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading your profile…
           </div>
+        ) : profileError ? (
+          <ErrorState title="Your booking details could not be loaded" error={profileError} onRetry={onRetryProfile} />
         ) : done ? (
           <BookingConfirmation
             result={done}

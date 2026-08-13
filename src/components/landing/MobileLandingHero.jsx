@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
-import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
+import { businessContactLinks } from "@/config/platformConfig";
 import HeroCarousel from "@/components/landing/HeroCarousel";
 
 export default function MobileLandingHero() {
   const { data: { business } } = usePlatformConfig();
+  const links = businessContactLinks(business);
   const benefits = ["No payment to request", "Clear repair updates", "Track your repair online"];
 
   return (
@@ -20,9 +21,9 @@ export default function MobileLandingHero() {
                 Request a repair booking <ArrowRight aria-hidden="true" />
               </Button>
             </Link>
-            <a href={CONTACT_LINKS.phone} className="w-full sm:w-auto">
+            <a href={links.phone} className="w-full sm:w-auto">
               <Button size="lg" variant="outline" className="h-12 w-full rounded-xl border-white/30 bg-white/10 px-6 text-base text-white backdrop-blur hover:bg-white/20 hover:text-white sm:w-auto">
-                <Phone aria-hidden="true" /> Call {CONTACT_DETAILS.phone}
+                <Phone aria-hidden="true" /> Call {business.phone}
               </Button>
             </a>
           </div>

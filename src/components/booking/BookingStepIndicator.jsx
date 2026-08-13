@@ -1,11 +1,11 @@
 import React from "react";
 import { Check } from "lucide-react";
 
-const STEPS = ["Your Details", "Scooter & Issue"];
+const STEPS = ["Your Details", "Scooter & Issue", "Verify"];
 
 export default function BookingStepIndicator({ step }) {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center justify-between mb-4" aria-label={`Booking step ${step} of ${STEPS.length}`}>
       {STEPS.map((label, i) => {
         const index = i + 1;
         const active = index === step;
@@ -14,6 +14,7 @@ export default function BookingStepIndicator({ step }) {
           <div key={label} className="flex-1 flex items-center">
             <div className="flex flex-col items-center gap-1 flex-1">
               <span
+                aria-current={active ? "step" : undefined}
                 className={
                   "grid h-7 w-7 place-items-center rounded-full text-xs font-bold border-2 transition-colors " +
                   (complete

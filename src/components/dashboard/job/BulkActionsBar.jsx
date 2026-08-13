@@ -4,12 +4,11 @@ import { changeStatus } from "@/services/jobService";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { X, ChevronDown, Loader2, Bell, Trash2 } from "lucide-react";
-import { JOB_STATUSES } from "@/config/jobConfig";
-import { useToast } from "@/components/ui/use-toast";
+import { X, Loader2, Bell, Trash2 } from "lucide-react";
+import { getStatus, JOB_STATUSES } from "@/config/jobConfig";
+import { toast } from "sonner";
 
 export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }) {
-  const { toast } = useToast();
   const [statusValue, setStatusValue] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,11 +21,11 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
     try {
       const selectedJobs = allJobs.filter((job) => selectedIds.includes(job.id));
       await Promise.all(selectedJobs.map((job) => changeStatus(job, statusValue)));
-      toast({ title: `Updated ${count} job${count !== 1 ? "s" : ""}`, description: `Status set to "${JOB_STATUSES.find(s => s.key === statusValue)?.label || statusValue}"` });
+      toast.success(`Updated ${count} job${count !== 1 ? "s" : ""}`, { description: `Status set to "${JOB_STATUSES.find(s => s.key === statusValue)?.label || statusValue}"` });
       setStatusValue("");
       onDone();
     } catch (err) {
-      toast({ variant: "destructive", title: "Couldn't update jobs", description: err?.message || "Please try again." });
+      toast.error("Couldn't update jobs", { description: "Please try again." });
     } finally {
       setLoading(false);
     }
@@ -36,10 +35,10 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
     setLoading(true);
     try {
       await Promise.all(selectedIds.map((id) => base44.entities.Job.delete(id)));
-      toast({ title: `Deleted ${count} job${count !== 1 ? "s" : ""}`, description: "The selected jobs have been permanently removed." });
+      toast.success(`Deleted ${count} job${count !== 1 ? "s" : ""}`, { description: "The selected jobs have been permanently removed." });
       onDone();
     } catch (err) {
-      toast({ variant: "destructive", title: "Couldn't delete jobs", description: err?.message || "Please try again." });
+      toast.error("Couldn't delete jobs", { description: "Please try again." });
     } finally {
       setLoading(false);
     }
@@ -56,21 +55,21 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
             base44.integrations.Core.SendEmail({
               to: j.customer_email,
               subject: `Update on your job: ${j.asset_label || j.reference || "your repair"}`,
-              body: `Hi ${j.customer_name},\n\nThis is an update regarding your job (${j.reference || j.id}).\n\nCurrent status: ${j.status?.replace(/_/g, " ")}\n\nPlease contact us if you have any questions.\n\nThank you.`,
+              body: `Hi ${j.customer_name},\n\nThis is an update regarding your job (${j.reference || j.id}).\n\nCurrent status: ${getStatus(j.status).label}\n\nPlease contact us if you have any questions.\n\nThank you.`,
             })
           )
       );
-      toast({ title: `Notifications sent`, description: `Emailed ${selectedJobs.filter(j => j.customer_email).length} customer${selectedJobs.filter(j => j.customer_email).length !== 1 ? "s" : ""}` });
+      toast.success("Notifications sent", { description: `Emailed ${selectedJobs.filter(j => j.customer_email).length} customer${selectedJobs.filter(j => j.customer_email).length !== 1 ? "s" : ""}` });
       onDone();
     } catch (err) {
-      toast({ variant: "destructive", title: "Couldn't send notifications", description: err?.message || "Please try again." });
+      toast.error("Couldn't send notifications", { description: "Please try again." });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center gap-3 flex-wrap rounded-2xl border border-accent/30 bg-accent/10 px-4 py-2.5 shadow-sm">
+    <div className="flex items-center gap-3 flex-wrap rounded-lg border border-accent/30 bg-accent/10 px-4 py-2.5 shadow-sm">
       <span className="text-sm font-semibold text-accent whitespace-nowrap">
         {count} selected
       </span>

@@ -1,4 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { checkRateLimit, clientIp } from '../../shared/rateLimit.ts';
+
+const MAX_SENDS_PER_IP = 8;
 
 function normalizePhoneToE164(localNumber) {
   let cleaned = String(localNumber || '').trim().replace(/[^\d+]/g, '');
@@ -43,6 +46,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Enter a valid Australian mobile number.' }, { status: 400 });
     }
 
+    const ipLimit = await checkRateLimit(base44, `signup-verification:ip:${clientIp(req)}`, MAX_SENDS_PER_IP);
+    if (!ipLimit.allowed) {
+      return Response.json({ error: 'Too many verification codes were requested. Please wait a few minutes and try again.' }, { status: 429 });
+    }
+
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     const fromNumber = Deno.env.get('TWILIO_FROM_NUMBER');
@@ -77,7 +85,7 @@ Deno.serve(async (req) => {
       attempts: 0,
     });
 
-    const smsBody = `Your OTR Scooters verification code is ${code}. It expires in 10 minutes.`;
+    const smsBody = `Your On The Run Electrics verification code is ${code}. It expires in 10 minutes.`;
     const params = new URLSearchParams({ To: phoneE164, From: fromNumber, Body: smsBody });
     const twilioResponse = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
       method: 'POST',
@@ -97,6 +105,6 @@ Deno.serve(async (req) => {
     return Response.json({ sent: true, phone_e164: phoneE164, masked_phone: maskPhone(phoneE164) });
   } catch (error) {
     console.error('sendSignupPhoneOtp error:', error);
-    return Response.json({ error: error.message || 'Could not send verification code.' }, { status: 500 });
+    return Response.json({ error: 'Could not send the verification code. Please try again.' }, { status: 500 });
   }
 });

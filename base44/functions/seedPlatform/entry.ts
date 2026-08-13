@@ -9,7 +9,11 @@ const APP_SETTINGS = {
     assetPlural: "scooters", serviceRequestLabel: "booking request", readyStateLabel: "Ready for pickup", operationalAreaLabel: "workshop",
   },
   landing: {
-    navLinks: [{ label: "Services", href: "#services" }, { label: "How it works", href: "#journey" }, { label: "Book a repair", href: "#book" }],
+    navLinks: [
+      { label: "Services", href: "#services" }, { label: "About Us", href: "/about" },
+      { label: "Pricing", href: "/service-pricing" }, { label: "News and Events", href: "/blog" },
+      { label: "Contact", href: "/contact" }, { label: "Book a repair", href: "/book" },
+    ],
     heroEyebrow: "Repairs · Servicing · Sales",
     heroBenefits: ["All major brands serviced", "Genuine & compatible parts", "Transparent fixed-price quotes"],
     servicesEyebrow: "What we do", servicesTitle: "Everything your scooter needs, in one place",
@@ -29,10 +33,17 @@ const BUSINESS = {
   name: "On The Run Electrics", legal_name: "On The Run Electrics",
   tagline: "Expert electric scooter repairs, servicing, and sales.",
   subheading: "From puncture fixes and battery replacements to full diagnostics and brand-new scooters — handled by specialists who know e-scooters inside out.",
-  email: "hello@otrscooters.com", phone: "(03) 9000 1234", address: "12 Workshop Lane, Melbourne VIC",
-  currency: CURRENCY, timezone: "Australia/Melbourne",
-  locations: [{ name: "Main Workshop", address: "12 Workshop Lane, Melbourne VIC", phone: "(03) 9000 1234", email: "hello@otrscooters.com", is_default: true }],
-  opening_hours: [{ day: "Mon – Fri", hours: "9:00 — 17:30" }, { day: "Saturday", hours: "10:00 — 15:00" }, { day: "Sunday", hours: "Closed" }],
+  email: "info@ontherunelectrics.com.au", invoice_sender_email: "info@ontherunelectrics.com.au",
+  phone: "0415 505 908", phone_e164: "+61415505908",
+  address: "11 Lucinda Street, Woolloongabba QLD 4102", address_line_1: "11 Lucinda Street", locality: "Woolloongabba", region: "QLD", postcode: "4102", country: "Australia",
+  currency: CURRENCY, timezone: "Australia/Brisbane", website_url: "https://ontherunelectrics.com.au",
+  locations: [{ name: "Woolloongabba Workshop", address: "11 Lucinda Street, Woolloongabba QLD 4102", phone: "0415 505 908", email: "info@ontherunelectrics.com.au", is_default: true }],
+  opening_hours: [
+    { day: "Monday", hours: "11:00 am – midnight" }, { day: "Tuesday", hours: "11:00 am – midnight" },
+    { day: "Wednesday", hours: "11:00 am – midnight" }, { day: "Thursday", hours: "11:00 am – midnight" },
+    { day: "Friday", hours: "11:00 am – midnight" }, { day: "Saturday", hours: "11:00 am – midnight" },
+    { day: "Sunday", hours: "11:00 am – midnight" },
+  ],
   is_default: true,
 };
 

@@ -1,104 +1,81 @@
-import React from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import SEO from "@/components/SEO";
 import LandingNav from "@/components/landing/LandingNav";
-import LandingParallaxBackground from "@/components/landing/LandingParallaxBackground";
+import LandingFooter from "@/components/landing/LandingFooter";
+import PublicBookingForm from "@/components/booking/PublicBookingForm";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import GoogleIcon from "@/components/GoogleIcon";
-import { ArrowRight, LogIn, Sparkles } from "lucide-react";
+import AppleIcon from "@/components/AppleIcon";
+import { CheckCircle2, ChevronDown, LogIn, UserRound } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
 
-const providers = [
-  { key: "microsoft", label: "Continue with Microsoft" },
-  { key: "facebook", label: "Continue with Facebook" },
-  { key: "apple", label: "Continue with Apple" },
-];
+function referralCode() {
+  return String(new URLSearchParams(window.location.search).get("ref") || "").trim().toUpperCase().slice(0, 32);
+}
 
 export default function BookAccount() {
+  const [accountOpen, setAccountOpen] = useState(false);
+  const referral = referralCode();
   const loginHref = `/login?next=${encodeURIComponent(BOOK_NEXT)}`;
-  const registerHref = `/register?next=${encodeURIComponent(SETUP_NEXT)}&customerFlow=1`;
+  const registerParams = new URLSearchParams({ next: SETUP_NEXT, customerFlow: "1" });
+  if (referral) registerParams.set("ref", referral);
+  const registerHref = `/register?${registerParams.toString()}`;
 
   const oauth = (provider) => {
-    base44.auth.loginWithProvider(provider, SETUP_NEXT);
+    const callbackParams = new URLSearchParams({ oauthComplete: "1", next: SETUP_NEXT, customerFlow: "1" });
+    if (referral) callbackParams.set("ref", referral);
+    base44.auth.loginWithProvider(provider, `/register?${callbackParams.toString()}`);
   };
 
   return (
-    <>
-      <SEO title="Book a Scooter Repair | OTR Scooters" description="Choose a secure booking option for your electric scooter repair, including customer account booking or a quick guest repair request." canonical="/book" noindex />
-      <main className="min-h-screen bg-background text-foreground">
-        <LandingParallaxBackground />
-        <LandingNav />
-        <section className="relative z-10 px-5 pb-16 pt-24 sm:px-8 sm:pb-24 sm:pt-28">
-          <div className="mx-auto max-w-md">
-            <Link to="/" className="inline-flex items-center text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">← Back to home</Link>
+    <div className="min-h-screen bg-background text-foreground">
+      <SEO title="Book an Electric Scooter Repair | On The Run Electrics" description="Send a guest repair request first, or sign in to manage bookings and invoices in your customer account." canonical="/book" noindex />
+      <LandingNav />
+      <main id="main-content" className="mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
+          <section className="lg:sticky lg:top-24" aria-labelledby="booking-heading">
+            <p className="text-xs font-bold uppercase text-primary">Repair booking</p>
+            <h1 id="booking-heading" className="mt-3 font-heading text-3xl font-extrabold sm:text-4xl">Tell us about your scooter</h1>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">Send the repair request as a guest. No payment is required, and we will verify one contact method before submission.</p>
+            <ul className="mt-5 space-y-3 text-sm">
+              {["We review the request before confirming a time", "Your details stay available while you verify", "Create an account later to track repairs and invoices"].map((item) => (
+                <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" /><span>{item}</span></li>
+              ))}
+            </ul>
 
-            <section className="mt-6 rounded-3xl border border-border bg-card/95 p-6 shadow-gentle backdrop-blur-xl sm:p-8">
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-accent">
-                <Sparkles className="h-3.5 w-3.5" /> Repair booking
-              </span>
-              <h1 className="mt-4 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">Book your repair</h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Sign in or create a free account to book, track your repair and manage invoices — or continue as a guest.
-              </p>
-
-              <div className="mt-6 flex w-full flex-col gap-3">
-                <Button variant="outline" className="h-12 w-full justify-start rounded-2xl border-border bg-background/70 px-4 text-base font-semibold shadow-soft hover:bg-secondary/70" onClick={() => oauth("google")}>
-                  <GoogleIcon className="h-5 w-5" />
-                  <span className="flex-1 text-center">Continue with Google</span>
+            <Collapsible open={accountOpen} onOpenChange={setAccountOpen} className="mt-8 border-t border-border pt-5">
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="outline" className="h-12 w-full justify-between" aria-label="Show account booking options">
+                  <span className="inline-flex items-center gap-2"><UserRound className="h-4 w-4" /> Prefer to use an account?</span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", accountOpen && "rotate-180")} aria-hidden="true" />
                 </Button>
-
-                {providers.map((provider) => (
-                  <Button key={provider.key} variant="outline" className="h-12 w-full justify-start rounded-2xl border-border bg-background/70 px-4 text-base font-semibold shadow-soft hover:bg-secondary/70" onClick={() => oauth(provider.key)}>
-                    {provider.key === "microsoft" && (
-                      <span className="grid h-5 w-5 shrink-0 grid-cols-2 gap-0.5">
-                        <span className="bg-[#F25022]" />
-                        <span className="bg-[#7FBA00]" />
-                        <span className="bg-[#00A4EF]" />
-                        <span className="bg-[#FFB900]" />
-                      </span>
-                    )}
-                    {provider.key === "facebook" && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#1877F2] text-base font-bold leading-none text-white">f</span>}
-                    {provider.key === "apple" && (
-                      <svg className="h-5 w-5 shrink-0 text-foreground" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M16.8 12.45c-.03-3.04 2.48-4.5 2.59-4.57-1.41-2.06-3.61-2.35-4.39-2.38-1.87-.19-3.65 1.1-4.6 1.1-.94 0-2.4-1.07-3.95-1.04-2.03.03-3.9 1.18-4.95 3-2.11 3.66-.54 9.08 1.52 12.05 1 1.45 2.2 3.08 3.77 3.02 1.51-.06 2.08-.98 3.91-.98 1.82 0 2.34.98 3.94.95 1.63-.03 2.66-1.48 3.65-2.94 1.15-1.68 1.62-3.31 1.65-3.39-.04-.02-3.16-1.21-3.19-4.82ZM13.78 3.53c.83-1 1.39-2.39 1.24-3.78-1.2.05-2.65.8-3.51 1.8-.77.89-1.45 2.31-1.27 3.67 1.34.1 2.71-.68 3.54-1.69Z" />
-                      </svg>
-                    )}
-                    <span className="flex-1 text-center">{provider.label}</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <div className="grid gap-2">
+                  <Button type="button" variant="outline" className="h-12 justify-start" onClick={() => oauth("google")}>
+                    <GoogleIcon className="h-5 w-5" /><span className="flex-1 text-center">Continue with Google</span>
                   </Button>
-                ))}
-
-                <div className="my-2 flex items-center gap-4 text-sm font-semibold text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" />
-                  <span>or</span>
-                  <span className="h-px flex-1 bg-border" />
+                  <Button type="button" variant="outline" className="h-12 justify-start" onClick={() => oauth("apple")}>
+                    <AppleIcon className="h-5 w-5" /><span className="flex-1 text-center">Continue with Apple</span>
+                  </Button>
+                  <Button asChild className="h-12"><Link to={registerHref}>Create a customer account</Link></Button>
+                  <Button asChild variant="ghost" className="h-11"><Link to={loginHref}><LogIn className="h-4 w-4" /> Sign in to an existing account</Link></Button>
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">Account registration verifies your mobile by SMS and your email with separate one-time codes.</p>
+              </CollapsibleContent>
+            </Collapsible>
+          </section>
 
-                <Button asChild className="h-12 w-full rounded-2xl bg-accent px-4 text-base font-semibold text-accent-foreground shadow-soft hover:bg-accent/90">
-                  <Link to={registerHref}>Sign Up Now <ArrowRight className="h-4 w-4" /></Link>
-                </Button>
-
-                <Button asChild variant="outline" className="h-12 w-full justify-start rounded-2xl border-border bg-background/70 px-4 text-base font-semibold shadow-soft hover:bg-secondary/70">
-                  <Link to={loginHref}>
-                    <LogIn className="h-5 w-5 text-accent" />
-                    <span className="flex-1 text-center">Already have an account? Sign in</span>
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-12 w-full justify-start rounded-2xl border-border bg-background/70 px-4 text-base font-semibold shadow-soft hover:bg-secondary/70">
-                  <Link to="/book/guest">
-                    <ArrowRight className="h-5 w-5 text-accent" />
-                    <span className="flex-1 text-center">Continue as guest</span>
-                  </Link>
-                </Button>
-              </div>
-
-              <p className="mt-5 text-center text-xs text-muted-foreground">Free accounts include repair tracking, status updates and online invoice payments.</p>
-            </section>
-          </div>
-        </section>
+          <PublicBookingForm guestOnly />
+        </div>
       </main>
-    </>
+      <LandingFooter />
+    </div>
   );
 }

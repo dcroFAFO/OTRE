@@ -6,6 +6,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 const PLATFORMS = new Set(['facebook', 'instagram', 'tiktok', 'youtube', 'x_twitter', 'linkedin', 'website']);
+const VERIFIABLE_HOSTS = {
+  facebook: ['facebook.com'],
+  instagram: ['instagram.com'],
+  tiktok: ['tiktok.com'],
+  youtube: ['youtube.com'],
+  x_twitter: ['x.com', 'twitter.com'],
+  linkedin: ['linkedin.com'],
+};
+const VERIFY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const VERIFY_COOLDOWN_MS = 60 * 1000;
+const VERIFY_LIMIT = 5;
+const MAX_PROFILE_BYTES = 1024 * 1024;
 const E164_PATTERN = /^\+614\d{8}$/;
 
 function normalizeEmail(email) { return String(email || '').trim().toLowerCase(); }
@@ -23,6 +35,81 @@ function generateReferralCode(seed) {
   const base = String(seed || Math.random()).replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || 'ABCD';
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `OTR-${base}${rand}`.slice(0, 14);
+}
+
+function generateVerificationCode() {
+  const bytes = new Uint8Array(5);
+  crypto.getRandomValues(bytes);
+  const token = Array.from(bytes).map((byte) => byte.toString(36).toUpperCase()).join('').slice(0, 8);
+  return `OTR-VERIFY-${token}`;
+}
+
+function normalizeProfileUrl(value, platform) {
+  const raw = String(value || '').trim().slice(0, 500);
+  if (!raw) return { error: 'Add the public profile link you want to verify.' };
+  let parsed;
+  try { parsed = new URL(raw.includes('://') ? raw : `https://${raw}`); } catch { return { error: 'Enter a valid public profile link.' }; }
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || (parsed.port && parsed.port !== '443')) {
+    return { error: 'Use a secure public HTTPS profile link.' };
+  }
+  const hosts = VERIFIABLE_HOSTS[platform];
+  if (!hosts) return { error: 'This profile type cannot be automatically verified.' };
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+  if (!hosts.some((allowed) => host === allowed || host.endsWith(`.${allowed}`))) {
+    return { error: `Use the official ${platform === 'x_twitter' ? 'X or Twitter' : platform} profile address.` };
+  }
+  parsed.hash = '';
+  return { url: parsed.toString(), host };
+}
+
+async function readLimitedText(response) {
+  const declared = Number(response.headers.get('content-length') || 0);
+  if (declared > MAX_PROFILE_BYTES) throw new Error('profile_too_large');
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let text = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_PROFILE_BYTES) {
+      await reader.cancel();
+      throw new Error('profile_too_large');
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
+async function fetchVerifiedProfile(profileUrl, platform) {
+  let current = profileUrl;
+  for (let redirect = 0; redirect <= 3; redirect += 1) {
+    const normalized = normalizeProfileUrl(current, platform);
+    if (normalized.error) return { blocked: true };
+    let response;
+    try {
+      response = await fetch(normalized.url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(8000),
+        headers: { 'User-Agent': 'OTRE-Profile-Verification/1.0', Accept: 'text/html,text/plain' },
+      });
+    } catch {
+      return { blocked: true };
+    }
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      if (!location) return { blocked: true };
+      current = new URL(location, normalized.url).toString();
+      continue;
+    }
+    if (!response.ok) return { blocked: true };
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    if (!contentType.includes('text/html') && !contentType.includes('text/plain')) return { blocked: true };
+    try { return { text: await readLimitedText(response) }; } catch { return { blocked: true }; }
+  }
+  return { blocked: true };
 }
 
 function scooterMatches(a, b) {
@@ -58,7 +145,16 @@ async function listScooters(db, ctx) {
 
 async function listConnections(db, ctx, userId) {
   const rows = await db.SocialConnection.filter({ auth_user_id: userId }, '-updated_date', 50).catch(() => []);
-  return rows.map((c) => ({ id: c.id, platform: c.platform, handle: c.handle || '', profile_url: c.profile_url || '', status: c.status || 'manual' }));
+  return rows.map((c) => ({
+    id: c.id,
+    platform: c.platform,
+    handle: c.handle || '',
+    profile_url: c.profile_url || '',
+    status: c.status === 'verified' ? 'verified' : 'unverified',
+    verification_code: c.verification_code || '',
+    verification_result: c.verification_result || 'not_checked',
+    verification_checked_at: c.verification_checked_at || '',
+  }));
 }
 
 function ownsScooter(scooter, ctx) {
@@ -194,17 +290,87 @@ Deno.serve(async (req) => {
       const platform = String(body.platform || '').toLowerCase();
       if (!PLATFORMS.has(platform)) return Response.json({ error: 'Unknown platform.' }, { status: 400 });
       const handle = String(body.handle || '').trim().slice(0, 120);
-      let profileUrl = String(body.profile_url || '').trim().slice(0, 500);
-      if (profileUrl && !/^https?:\/\//i.test(profileUrl)) profileUrl = `https://${profileUrl}`;
-      if (!handle && !profileUrl) return Response.json({ error: 'Add a handle or profile link.' }, { status: 400 });
+      const normalized = normalizeProfileUrl(body.profile_url, platform);
+      if (normalized.error) return Response.json({ error: normalized.error }, { status: 400 });
+      const profileUrl = normalized.url;
 
       const existing = await db.SocialConnection.filter({ auth_user_id: user.id, platform }, '-updated_date', 1).catch(() => []);
       if (existing[0]) {
-        await db.SocialConnection.update(existing[0].id, { handle, profile_url: profileUrl, status: 'manual', updated_at: now });
+        const urlChanged = existing[0].profile_url !== profileUrl;
+        await db.SocialConnection.update(existing[0].id, {
+          handle,
+          profile_url: profileUrl,
+          status: urlChanged ? 'unverified' : (existing[0].status === 'verified' ? 'verified' : 'unverified'),
+          verification_code: urlChanged ? generateVerificationCode() : (existing[0].verification_code || generateVerificationCode()),
+          verification_result: urlChanged ? 'not_checked' : (existing[0].verification_result || 'not_checked'),
+          verification_attempt_count: urlChanged ? 0 : Number(existing[0].verification_attempt_count || 0),
+          verification_window_started_at: urlChanged ? now : (existing[0].verification_window_started_at || now),
+          updated_at: now,
+        });
         return Response.json({ saved: true, connection_id: existing[0].id });
       }
-      const created = await db.SocialConnection.create({ customer_id: ctx.stableId, customer_account_id: ctx.customer?.id || '', auth_user_id: user.id, platform, handle, profile_url: profileUrl, status: 'manual', created_at: now, updated_at: now });
+      const created = await db.SocialConnection.create({
+        customer_id: ctx.stableId,
+        customer_account_id: ctx.customer?.id || '',
+        auth_user_id: user.id,
+        platform,
+        handle,
+        profile_url: profileUrl,
+        status: 'unverified',
+        verification_code: generateVerificationCode(),
+        verification_result: 'not_checked',
+        verification_attempt_count: 0,
+        verification_window_started_at: now,
+        created_at: now,
+        updated_at: now,
+      });
       return Response.json({ saved: true, connection_id: created.id });
+    }
+
+    if (body.action === 'verifyConnection') {
+      const row = await db.SocialConnection.get(body.connection_id).catch(() => null);
+      if (!row || row.auth_user_id !== user.id) return Response.json({ error: 'Profile not found.' }, { status: 404 });
+      if (row.status === 'verified') return Response.json({ verified: true, status: 'verified' });
+      const normalized = normalizeProfileUrl(row.profile_url, row.platform);
+      if (normalized.error) return Response.json({ error: normalized.error }, { status: 400 });
+      const windowStarted = new Date(row.verification_window_started_at || 0).getTime();
+      const inWindow = windowStarted && Date.now() - windowStarted < VERIFY_WINDOW_MS;
+      const attempts = inWindow ? Number(row.verification_attempt_count || 0) : 0;
+      const lastAttempt = new Date(row.last_verification_attempt_at || 0).getTime();
+      if (lastAttempt && Date.now() - lastAttempt < VERIFY_COOLDOWN_MS) {
+        return Response.json({ error: 'Please wait a minute before checking this profile again.' }, { status: 429 });
+      }
+      if (attempts >= VERIFY_LIMIT) {
+        await db.SocialConnection.update(row.id, { verification_result: 'rate_limited' }).catch(() => null);
+        return Response.json({ error: 'Verification limit reached. Try again tomorrow.' }, { status: 429 });
+      }
+      const attemptAt = new Date().toISOString();
+      await db.SocialConnection.update(row.id, {
+        verification_attempt_count: attempts + 1,
+        verification_window_started_at: inWindow ? row.verification_window_started_at : attemptAt,
+        last_verification_attempt_at: attemptAt,
+      });
+      const result = await fetchVerifiedProfile(normalized.url, row.platform);
+      if (result.blocked) {
+        await db.SocialConnection.update(row.id, {
+          status: 'unverified',
+          verification_result: 'blocked',
+          verification_checked_at: attemptAt,
+        });
+        return Response.json({ verified: false, blocked: true, status: 'unverified', message: 'This public profile could not be checked automatically. It remains unverified.' });
+      }
+      const verified = String(result.text || '').toUpperCase().includes(String(row.verification_code || '').toUpperCase());
+      await db.SocialConnection.update(row.id, {
+        status: verified ? 'verified' : 'unverified',
+        verification_result: verified ? 'verified' : 'code_not_found',
+        verification_checked_at: attemptAt,
+        updated_at: attemptAt,
+      });
+      return Response.json({
+        verified,
+        status: verified ? 'verified' : 'unverified',
+        message: verified ? 'Profile verified.' : 'Verification code not found on the public profile yet.',
+      });
     }
 
     if (body.action === 'deleteConnection') {

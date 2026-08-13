@@ -5,21 +5,22 @@ import StatusPill from "./StatusPill";
 import ServiceTypeBadge from "./ServiceTypeBadge";
 import { cn } from "@/lib/utils";
 import { DEFAULT_SERVICE_TYPE, getServiceType, SERVICE_TYPE_BORDER_CLASSES, SERVICE_TYPE_STRIP_CLASSES } from "@/config/serviceTypes";
-import { getPaymentStatus, getStatus, getTimeWindowLabel } from "@/config/jobConfig";
+import { getPaymentStatus, getTimeWindowLabel } from "@/config/jobConfig";
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 
 const fmtDate = (d) => {
   if (!d) return "";
   const date = new Date(d);
-  return isNaN(date) ? d : format(date, "d MMM yyyy");
+  return Number.isNaN(date.getTime()) ? d : format(date, "d MMM yyyy");
 };
 
 const fmtDateTime = (d) => {
   if (!d) return "";
   const date = new Date(d);
-  return isNaN(date) ? d : format(date, "d MMM, h:mma");
+  return Number.isNaN(date.getTime()) ? d : format(date, "d MMM, h:mma");
 };
 
+/** @param {{ job: Record<string, any>, onClick?: () => void, dragHandleProps?: Record<string, any>, compact?: boolean, className?: string }} props */
 export default function JobCard({ job, onClick, dragHandleProps, compact = false, className }) {
   const paymentStatus = getPaymentStatus(job.payment_status);
   const serviceType = getServiceType(job.service_type || DEFAULT_SERVICE_TYPE);
@@ -27,12 +28,15 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
   const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
   const waitingLabel = DEFAULT_WAITING_REASONS.find((r) => r.key === job.waiting_reason)?.label;
   const ownershipLabel = !job.customer_user_id && !job.customer_account_id && job.customer_profile_id ? "Guest" : null;
+  const CardElement = onClick ? "button" : "div";
 
   return (
-    <div
+    <CardElement
+      type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-2xl border border-l-4 border-border bg-card p-4 sm:p-3 shadow-sm transition-shadow hover:shadow-gentle select-none",
+        "group relative w-full overflow-hidden rounded-lg border border-l-4 border-border bg-card p-4 text-left shadow-sm transition-shadow hover:shadow-gentle sm:p-3",
+        onClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         SERVICE_TYPE_BORDER_CLASSES[serviceType.key],
         className
       )}
@@ -52,8 +56,8 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
               {job.customer_name}
             </p>
             <div className="flex items-center gap-1 shrink-0">
-              {outstanding && <CreditCard className="h-3.5 w-3.5 text-rose-500" title="Invoice outstanding" />}
-              {isWaiting && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" title={`Waiting: ${waitingLabel}`} />}
+              {outstanding && <span title="Invoice outstanding"><CreditCard className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" /></span>}
+              {isWaiting && <span title={`Waiting: ${waitingLabel || "customer response"}`}><AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" /></span>}
             </div>
           </div>
 
@@ -112,6 +116,6 @@ export default function JobCard({ job, onClick, dragHandleProps, compact = false
           )}
         </div>
       </div>
-    </div>
+    </CardElement>
   );
 }

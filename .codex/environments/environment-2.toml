@@ -3,4 +3,8 @@ version = 1
 name = "OTRE"
 
 [setup]
-script = ""
+script = '''
+cd "CODEX_SOURCE_TREE_PATH"
+npm install -y @base44/sdk
+npx base44 whoami
+'''

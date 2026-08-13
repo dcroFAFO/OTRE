@@ -25,18 +25,21 @@ export default function PartsNavItem({ onNavigate }) {
   return (
     <div>
       <button
+        type="button"
         onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+        aria-controls="parts-navigation-categories"
         className={cn(
-          "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+          "flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
           onParts && !activeCategory ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-secondary"
         )}
       >
-        <ShoppingBag className="h-4.5 w-4.5" /> Parts
-        <ChevronRight className={cn("h-4 w-4 ml-auto transition-transform", expanded && "rotate-90")} />
+        <ShoppingBag className="h-[18px] w-[18px]" aria-hidden="true" /> Parts
+        <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform", expanded && "rotate-90")} aria-hidden="true" />
       </button>
 
       {expanded && categories.length > 0 && (
-        <div className="mt-1 ml-4 space-y-0.5 border-l border-border pl-3">
+        <div id="parts-navigation-categories" className="mt-1 ml-4 space-y-0.5 border-l border-border pl-3">
           <CategoryLink to="/dashboard/parts" label="All parts" active={onParts && !activeCategory} onNavigate={onNavigate} />
           {categories.map((c) => (
             <CategoryLink
@@ -59,7 +62,7 @@ function CategoryLink({ to, label, active, onNavigate }) {
       to={to}
       onClick={onNavigate}
       className={cn(
-        "block rounded-lg px-3 py-1.5 text-sm transition-colors truncate",
+        "flex min-h-10 items-center truncate rounded-md px-3 text-sm transition-colors",
         active ? "bg-secondary text-foreground font-semibold" : "text-muted-foreground hover:bg-secondary/60"
       )}
     >

@@ -3,9 +3,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
+import EmptyState from "@/components/shared/EmptyState";
 
 export default function CartDrawer({ open, onOpenChange, onCheckout }) {
   const { items, updateQty, removeItem, subtotal } = useCart();
+  const { data: { business } } = usePlatformConfig();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -15,12 +18,13 @@ export default function CartDrawer({ open, onOpenChange, onCheckout }) {
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex-1 grid place-items-center text-center text-muted-foreground">
-            <div>
-              <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm">Your cart is empty</p>
-            </div>
-          </div>
+          <EmptyState
+            className="flex-1"
+            icon={ShoppingCart}
+            title="Your cart is empty"
+            description="Add a product before starting checkout."
+            action={<Button variant="outline" onClick={() => onOpenChange(false)}>Browse products</Button>}
+          />
         ) : (
           <>
             <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">
@@ -28,21 +32,21 @@ export default function CartDrawer({ open, onOpenChange, onCheckout }) {
                 <div key={i.product.id} className="py-4 flex gap-3">
                   <div className="h-16 w-16 rounded-md bg-muted overflow-hidden shrink-0">
                     {i.product.image_url && (
-                      <img src={i.product.image_url} alt={i.product.name} className="h-full w-full object-cover" />
+                      <img src={i.product.image_url} alt="" className="h-full w-full object-cover" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium line-clamp-2">{i.product.name}</p>
                     <p className="text-xs text-muted-foreground">${Number(i.product.price || 0).toFixed(2)}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label={`Decrease quantity of ${i.product.name}`} onClick={() => updateQty(i.product.id, i.qty - 1)}>
+                      <Button variant="outline" size="iconTouch" className="sm:h-8 sm:w-8" aria-label={`Decrease quantity of ${i.product.name}`} onClick={() => updateQty(i.product.id, i.qty - 1)}>
                         <Minus className="h-3 w-3" />
                       </Button>
                       <span className="text-sm w-6 text-center">{i.qty}</span>
-                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label={`Increase quantity of ${i.product.name}`} onClick={() => updateQty(i.product.id, i.qty + 1)}>
+                      <Button variant="outline" size="iconTouch" className="sm:h-8 sm:w-8" aria-label={`Increase quantity of ${i.product.name}`} onClick={() => updateQty(i.product.id, i.qty + 1)}>
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-muted-foreground" aria-label={`Remove ${i.product.name} from cart`} onClick={() => removeItem(i.product.id)}>
+                      <Button variant="ghost" size="iconTouch" className="sm:h-8 sm:w-8 ml-auto text-muted-foreground" aria-label={`Remove ${i.product.name} from cart`} onClick={() => removeItem(i.product.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -57,7 +61,7 @@ export default function CartDrawer({ open, onOpenChange, onCheckout }) {
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Shipping calculated at fulfilment. Orders are forwarded to eScootNow.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Click and collect from {business.address}. We will contact you when the order is ready for pickup.</p>
               <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={onCheckout}>
                 Checkout
               </Button>

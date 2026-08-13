@@ -46,7 +46,7 @@
     "hasSeenCustomerPortalTutorial": {
       "type": "boolean",
       "default": false,
-      "description": "Whether this customer has completed or dismissed the one-time portal onboarding tutorial."
+      "description": "Whether this customer has dismissed the portal getting-started checklist."
     }
   },
   "required": []

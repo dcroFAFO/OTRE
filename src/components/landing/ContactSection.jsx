@@ -2,17 +2,19 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
+import { businessContactLinks, businessHoursSummary } from "@/config/platformConfig";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import ScrollReveal from "./ScrollReveal";
 
-const ITEMS = [
-  { icon: Mail, label: "Email", value: CONTACT_DETAILS.email, href: CONTACT_LINKS.email },
-  { icon: Phone, label: "Phone", value: CONTACT_DETAILS.phone, href: CONTACT_LINKS.phone },
-  { icon: MapPin, label: "Address", value: CONTACT_DETAILS.address, href: CONTACT_LINKS.maps, external: true },
-  { icon: Clock, label: "Opening Hours", value: CONTACT_DETAILS.openingHours },
-];
-
 export default function ContactSection() {
+  const { data: { business } } = usePlatformConfig();
+  const links = businessContactLinks(business);
+  const items = [
+    { icon: Mail, label: "Email", value: business.email, href: links.email },
+    { icon: Phone, label: "Phone", value: business.phone, href: links.phone },
+    { icon: MapPin, label: "Address", value: business.address, href: links.maps, external: true },
+    { icon: Clock, label: "Opening Hours", value: businessHoursSummary(business) },
+  ];
   return (
     <section id="contact" className="border-y border-border/70 bg-card/35 py-14 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
@@ -33,7 +35,7 @@ export default function ContactSection() {
           </ScrollReveal>
 
           <ScrollReveal className="grid gap-4 sm:grid-cols-2">
-            {ITEMS.map(({ icon: Icon, label, value, href, external }) => {
+            {items.map(({ icon: Icon, label, value, href, external }) => {
               const content = (
                 <>
                   <span className="grid h-11 w-11 place-items-center rounded-2xl bg-accent/15 text-accent">

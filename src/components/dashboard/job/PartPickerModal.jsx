@@ -10,6 +10,8 @@ import { Search, Package, Plus, Check, Loader2, ChevronDown, ChevronRight } from
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PARTS_MARKUP_PERCENT, customerUnitPriceFromCost, roundMoney } from "@/lib/partsPricing";
+import { EmptyState, ErrorState, LoadingSpinner, NoResultsState } from "@/components/shared";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 const MISC_PART_ID = "parts-misc";
 const MISC_PART_NAME = "Parts - Misc";
@@ -68,6 +70,7 @@ function miscPart() {
   };
 }
 
+/** @param {{ job: any, actor?: any, open: boolean, onOpenChange: (open: boolean) => void, onAdded?: () => void, onAdd?: (items: any[]) => Promise<any> | any }} props */
 export default function PartPickerModal({ job, actor, open, onOpenChange, onAdded, onAdd }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState({});
@@ -75,11 +78,12 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
   const [expanded, setExpanded] = useState({});
   const [validationError, setValidationError] = useState("");
 
-  const { data: products = [], isLoading } = useQuery({
+  const productsQuery = useQuery({
     queryKey: ["estore-products"],
     queryFn: () => base44.entities.Product.filter({ supplier: "eScootNow" }, "name", 500),
     enabled: open,
   });
+  const products = productsQuery.data || [];
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -131,7 +135,7 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
   };
 
   const add = async () => {
-    if (chosen.length === 0) return;
+    if (adding || chosen.length === 0) return;
     const validation = validate();
     if (validation !== true) {
       setValidationError(validation);
@@ -157,28 +161,28 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
       onAdded?.();
       onOpenChange(false);
     } catch (err) {
-      console.error("Add parts failed:", err);
-      toast.error(`Couldn't add parts: ${err?.response?.data?.error || err?.message || "Please try again."}`);
+      toast.error(getSafeErrorMessage(err, "The selected parts could not be added."));
     } finally {
       setAdding(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !adding && onOpenChange(nextOpen)}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add repair parts</DialogTitle>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search parts within categories…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl" />
-        </div>
+        <label className="relative block">
+          <span className="sr-only">Search repair parts</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input placeholder="Search repair parts" value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 pl-9" />
+        </label>
 
         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-          <div onClick={toggleMisc} className={cn("rounded-xl border p-3 text-sm transition-colors cursor-pointer hover:bg-secondary/50", miscSelected ? "border-accent bg-accent/5" : "border-border bg-card")}>
-            <div className="flex items-center gap-2.5">
+          <div className={cn("rounded-lg border text-sm transition-colors", miscSelected ? "border-accent bg-accent/5" : "border-border bg-card")}>
+            <button type="button" onClick={toggleMisc} aria-pressed={Boolean(miscSelected)} className="flex min-h-11 w-full items-center gap-2.5 p-3 text-left hover:bg-secondary/50">
               <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border", miscSelected ? "border-accent bg-accent text-accent-foreground" : "border-input")}>{miscSelected && <Check className="h-3.5 w-3.5" />}</span>
               <div className="h-9 w-9 rounded-lg bg-secondary shrink-0 grid place-items-center"><Package className="h-4 w-4 text-muted-foreground" /></div>
               <div className="flex-1 min-w-0">
@@ -186,43 +190,49 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
                 <p className="text-xs text-muted-foreground">Custom part or charge not listed in the catalogue</p>
               </div>
               {miscSelected && <span className="text-xs font-medium text-muted-foreground">Custom</span>}
-            </div>
+            </button>
             {miscSelected && (
-              <div onClick={(e) => e.stopPropagation()} className="mt-3 grid gap-3 rounded-lg border border-border bg-background p-3">
+              <div className="grid gap-3 border-t border-border bg-background p-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Part name/description</Label>
-                  <Input value={miscSelected.name} onChange={(e) => updateSelected(MISC_PART_ID, { name: e.target.value })} />
+                  <Label htmlFor="misc-part-name" className="text-xs">Part name or description</Label>
+                  <Input id="misc-part-name" value={miscSelected.name} onChange={(e) => updateSelected(MISC_PART_ID, { name: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <Label className="text-xs">Quantity</Label>
-                    <Input type="number" min="0.01" step="0.01" value={miscSelected.qty} onChange={(e) => updateSelected(MISC_PART_ID, { qty: e.target.value })} />
+                    <Label htmlFor="misc-part-quantity" className="text-xs">Quantity</Label>
+                    <Input id="misc-part-quantity" type="number" min="0.01" step="0.01" inputMode="decimal" value={miscSelected.qty} onChange={(e) => updateSelected(MISC_PART_ID, { qty: e.target.value })} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Cost price</Label>
-                    <Input type="number" min="0" step="0.01" value={miscSelected.cost_price} onChange={(e) => updateSelected(MISC_PART_ID, { cost_price: e.target.value })} />
+                    <Label htmlFor="misc-part-cost" className="text-xs">Cost price</Label>
+                    <Input id="misc-part-cost" type="number" min="0" step="0.01" inputMode="decimal" value={miscSelected.cost_price} onChange={(e) => updateSelected(MISC_PART_ID, { cost_price: e.target.value })} />
                   </div>
                 </div>
                 <div className="rounded-lg bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
                   Customer price: <span className="font-semibold text-foreground">${miscSelected.customer_price.toFixed(2)}</span> per unit
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Optional notes</Label>
-                  <Textarea value={miscSelected.note || ""} onChange={(e) => updateSelected(MISC_PART_ID, { note: e.target.value })} className="h-16 resize-none" />
+                  <Label htmlFor="misc-part-notes" className="text-xs">Optional notes</Label>
+                  <Textarea id="misc-part-notes" value={miscSelected.note || ""} onChange={(e) => updateSelected(MISC_PART_ID, { note: e.target.value })} className="h-20 resize-none" />
                 </div>
               </div>
             )}
           </div>
 
-          {isLoading ? (
-            <div className="py-12 flex justify-center"><div className="h-6 w-6 border-4 border-border border-t-primary rounded-full animate-spin" /></div>
+          {productsQuery.error && products.length > 0 ? <ErrorState title="Latest catalogue changes could not be loaded" description="Previously loaded parts remain available." error={productsQuery.error} onRetry={productsQuery.refetch} /> : null}
+
+          {productsQuery.isLoading ? (
+            <LoadingSpinner label="Loading parts catalogue" className="flex py-12" />
+          ) : productsQuery.error && products.length === 0 ? (
+            <ErrorState title="Parts catalogue could not be loaded" error={productsQuery.error} onRetry={productsQuery.refetch} />
+          ) : products.length === 0 ? (
+            <EmptyState icon={Package} title="No catalogue parts yet" description="Use the custom part option above or refresh the parts catalogue." />
           ) : grouped.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-sm"><Package className="h-8 w-8 mx-auto mb-2 opacity-30" />No catalogue parts found.</div>
+            <NoResultsState title="No parts match this search" onClear={() => setSearch("")} />
           ) : grouped.map((group) => {
             const isOpen = !!expanded[group.category] || !!search;
             return (
-              <div key={group.category} className="rounded-xl border border-border overflow-hidden">
-                <button type="button" onClick={() => setExpanded((current) => ({ ...current, [group.category]: !current[group.category] }))} className="w-full flex items-center justify-between bg-secondary/40 px-3 py-2 text-sm font-semibold">
+              <div key={group.category} className="overflow-hidden rounded-lg border border-border">
+                <button type="button" onClick={() => setExpanded((current) => ({ ...current, [group.category]: !current[group.category] }))} aria-expanded={isOpen} className="flex min-h-11 w-full items-center justify-between bg-secondary/40 px-3 text-sm font-semibold">
                   <span className="flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />{group.category}</span>
                   <span className="flex items-center gap-2 text-xs text-muted-foreground">{group.products.length}{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
                 </button>
@@ -233,22 +243,25 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
                       const costPrice = roundMoney(p.price ?? 0);
                       const customerPrice = customerUnitPriceFromCost(costPrice);
                       return (
-                        <div key={p.id} onClick={() => toggle(p)} className={cn("p-2.5 text-sm transition-colors cursor-pointer hover:bg-secondary/50", isSel && "bg-accent/5 hover:bg-accent/10")}>
-                          <div className="flex items-center gap-2.5">
-                            <span onClick={(e) => e.stopPropagation()} className="contents">
-                              <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border pointer-events-none", isSel ? "border-accent bg-accent text-accent-foreground" : "border-input")}>{isSel && <Check className="h-3.5 w-3.5" />}</span>
-                            </span>
-                            {p.image_url ? <img src={p.image_url} alt={p.name} className="h-8 w-8 rounded-lg object-cover shrink-0 bg-secondary" /> : <div className="h-8 w-8 rounded-lg bg-secondary shrink-0 grid place-items-center"><Package className="h-4 w-4 text-muted-foreground" /></div>}
+                        <div key={p.id} className={cn("p-2.5 text-sm transition-colors", isSel && "bg-accent/5")}>
+                          <button type="button" onClick={() => toggle(p)} aria-pressed={isSel} className="flex min-h-11 w-full items-center gap-2.5 rounded-md text-left hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <span className={cn("pointer-events-none grid h-5 w-5 shrink-0 place-items-center rounded border", isSel ? "border-accent bg-accent text-accent-foreground" : "border-input")}>{isSel && <Check className="h-3.5 w-3.5" />}</span>
+                            {p.image_url ? <img src={p.image_url} alt="" className="h-8 w-8 shrink-0 rounded-md bg-secondary object-cover" /> : <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-secondary"><Package className="h-4 w-4 text-muted-foreground" /></span>}
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-foreground line-clamp-1">{p.name}</p>
                               {p.sku && <p className="text-[11px] text-muted-foreground font-mono">{p.sku}</p>}
                             </div>
-                            {isSel && <Input type="number" min={1} value={selected[p.id].qty} onClick={(e) => e.stopPropagation()} onChange={(e) => { e.stopPropagation(); setQty(p.id, e.target.value); }} className="h-7 w-14 px-1.5 py-0 text-xs" />}
                             <span className="text-right shrink-0">
                               <span className="block text-[11px] text-muted-foreground">Cost price ${costPrice.toFixed(2)}</span>
                               <span className="block font-heading font-bold tabular-nums">Customer price ${customerPrice.toFixed(2)}</span>
                             </span>
-                          </div>
+                          </button>
+                          {isSel ? (
+                            <div className="mt-2 flex items-center justify-end gap-2">
+                              <Label htmlFor={`part-quantity-${p.id}`} className="text-xs">Quantity</Label>
+                              <Input id={`part-quantity-${p.id}`} type="number" min={1} inputMode="numeric" value={selected[p.id].qty} onChange={(e) => setQty(p.id, e.target.value)} className="h-11 w-20 text-xs" />
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -259,8 +272,8 @@ export default function PartPickerModal({ job, actor, open, onOpenChange, onAdde
           })}
         </div>
 
-        {validationError && <p className="text-sm text-destructive">{validationError}</p>}
-        <Button onClick={add} disabled={chosen.length === 0 || adding} className="gap-1.5">
+        {validationError && <p className="text-sm text-destructive" role="alert">{validationError}</p>}
+        <Button type="button" size="touch" onClick={add} disabled={chosen.length === 0 || adding} className="gap-1.5">
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Add {chosen.length > 0 ? `${chosen.length} part${chosen.length !== 1 ? "s" : ""}` : "parts"} to job
         </Button>

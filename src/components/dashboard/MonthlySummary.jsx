@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { CheckCircle2, Layers, Bike } from "lucide-react";
 import { isThisMonth } from "date-fns";
 import { cn } from "@/lib/utils";
+import { normalizeStatusKey } from "@/config/jobConfig";
 
 const prettify = (s) =>
   String(s || "")
@@ -23,7 +24,7 @@ function rank(items, keyFn, limit = 5) {
 
 export default function MonthlySummary({ jobs = [] }) {
   const completedThisMonth = useMemo(
-    () => jobs.filter((j) => j.status === "completed" && j.updated_date && isThisMonth(new Date(j.updated_date))),
+    () => jobs.filter((j) => normalizeStatusKey(j.status) === "completed" && j.updated_date && isThisMonth(new Date(j.updated_date))),
     [jobs]
   );
 
@@ -48,10 +49,10 @@ export default function MonthlySummary({ jobs = [] }) {
   return (
     <div className="grid lg:grid-cols-3 gap-4">
       {/* Completed this month */}
-      <div className="rounded-3xl border border-border bg-card p-5 flex flex-col justify-between shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-5 flex flex-col justify-between shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Repairs completed</p>
-          <span className="grid place-items-center h-8 w-8 rounded-xl bg-emerald-100 text-emerald-600">
+          <span className="grid place-items-center h-8 w-8 rounded-md bg-emerald-100 text-emerald-600">
             <CheckCircle2 className="h-4 w-4" />
           </span>
         </div>
@@ -86,9 +87,9 @@ export default function MonthlySummary({ jobs = [] }) {
 
 function RankList({ title, icon: Icon, items, max, barClass, emptyText }) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
-        <span className="grid place-items-center h-8 w-8 rounded-xl bg-secondary text-foreground">
+        <span className="grid place-items-center h-8 w-8 rounded-md bg-secondary text-foreground">
           <Icon className="h-4 w-4" />
         </span>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>

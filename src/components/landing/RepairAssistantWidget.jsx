@@ -75,7 +75,7 @@ export default function RepairAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", text: OPENING }]);
   const [input, setInput] = useState("");
-  const [context, setContext] = useState({ intent: "", issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, activeJobs: [], selectedJobId: "", existingCustomerName: "" });
+  const [context, setContext] = useState({ intent: "", issue: "", category: "", make: "", model: "", customModelPending: false, safety: undefined, safetyPending: false, name: "", email: "", phone: "", otpChannel: "", otpVerified: false, verificationId: "", activeJobs: [], selectedJobId: "", existingCustomerName: "" });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [unread, setUnread] = useState(0);
@@ -136,6 +136,7 @@ export default function RepairAssistantWidget() {
         scooter_make_model: label,
         urgency_or_safety_notes: finalContext.safety || "",
         suspected_service_category: finalContext.category,
+        verification_id: finalContext.verificationId,
       });
       setResult(res);
       setMessages((prev) => [...prev, { role: "assistant", text: `Thanks ${finalContext.name}! Your repair request has been submitted${res?.reference ? ` — reference ${res.reference}` : ""}. Our team will be in touch shortly.` }]);
@@ -226,6 +227,7 @@ export default function RepairAssistantWidget() {
         const nextContext = {
           ...context,
           otpVerified: true,
+          verificationId: res.verification_id || "",
           activeJobs: res.active_jobs || [],
           existingCustomerName: res.existing ? (res.customer_name || "") : "",
         };

@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import BlogAdminHeader from "@/components/blog/BlogAdminHeader";
 import { listBlogAdminData, saveBlogSettings } from "@/services/blogService";
 
-const defaults = { blog_enabled: true, blog_name: "OTR Scooters Blog", blog_description: "Helpful scooter repair and maintenance advice.", default_author_name: "OTR Scooters", default_author_bio: "Electric scooter repair specialists.", default_author_avatar_url: "", default_blog_route: "/blog", posts_per_page: 9, show_author_box: true, show_related_posts: true, enable_ai_generation: true, enable_scheduled_publishing: true };
+const defaults = { blog_enabled: true, blog_name: "On The Run Electrics Blog", blog_description: "Helpful scooter repair and maintenance advice.", default_author_name: "On The Run Electrics", default_author_bio: "Electric scooter repair specialists.", default_author_avatar_url: "", default_blog_route: "/blog", posts_per_page: 9, show_author_box: true, show_related_posts: true, enable_ai_generation: true, enable_scheduled_publishing: true };
 
 export default function BlogSettings() {
   const qc = useQueryClient();

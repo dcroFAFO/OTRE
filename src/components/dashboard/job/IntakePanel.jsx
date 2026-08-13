@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useId, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import { logError } from "@/lib/logger";
 import { format } from "date-fns";
 import ScooterSpecBox from "./ScooterSpecBox";
 import { DEFAULT_SERVICE_TYPE, SERVICE_TYPES } from "@/config/serviceTypes";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 const BATTERY_CONDITIONS = [
   { key: "good", label: "Good" },
@@ -83,7 +84,10 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   const [saving, setSaving] = useState(false);
   const [spec, setSpec] = useState(null);
   const [photos, setPhotos] = useState([]);
+  const [filesLoading, setFilesLoading] = useState(true);
+  const [filesError, setFilesError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [removingPhotoId, setRemovingPhotoId] = useState("");
   const [editingSpec, setEditingSpec] = useState(false);
   const [editableSpec, setEditableSpec] = useState(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -92,18 +96,32 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
     setForm(initialIntakeForm(job));
   }, [job.id]);
 
-  // Load existing booking and intake files for this job
-  useEffect(() => {
-    base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50)
-      .then((rows) => setPhotos(rows.filter(isBookingOrIntakeFile)));
+  const loadPhotos = useCallback(async () => {
+    setFilesLoading(true);
+    setFilesError("");
+    try {
+      const rows = await base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50);
+      setPhotos(rows.filter(isBookingOrIntakeFile));
+    } catch (error) {
+      setFilesError(getSafeErrorMessage(error, "Intake files could not be loaded."));
+    } finally {
+      setFilesLoading(false);
+    }
   }, [job.id]);
 
+  useEffect(() => { loadPhotos(); }, [loadPhotos]);
+
   const uploadPhoto = async (e) => {
+    if (uploading) return;
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploading(true);
     try {
       for (const file of files) {
+        if (!String(file.type || "").startsWith("image/") || file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} must be an image smaller than 10 MB.`);
+          continue;
+        }
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         const record = await base44.entities.Attachment.create({
           job_id: job.id,
@@ -115,6 +133,8 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         });
         setPhotos((prev) => [record, ...prev]);
       }
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error, "The intake photo could not be uploaded."));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -122,8 +142,16 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   };
 
   const removePhoto = async (photo) => {
-    await base44.entities.Attachment.delete(photo.id);
-    setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+    if (removingPhotoId) return;
+    setRemovingPhotoId(photo.id);
+    try {
+      await base44.entities.Attachment.delete(photo.id);
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error, "The intake photo could not be removed."));
+    } finally {
+      setRemovingPhotoId("");
+    }
   };
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -148,6 +176,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   }, [form.make, form.model]);
 
   const handleSaveClick = () => {
+    if (saving) return;
     // If specs were edited, ask what to do with them
     if (editingSpec && editableSpec) {
       setSaveDialogOpen(true);
@@ -157,6 +186,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
   };
 
   const doSave = async (updateRefDb) => {
+    if (saving) return;
     setSaving(true);
     setSaveDialogOpen(false);
     try {
@@ -221,7 +251,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Make / brand">
           <Select value={form.make || ""} onValueChange={(v) => { setForm((f) => ({ ...f, make: v, scooterMake: v, model: "", scooterModel: "" })); }}>
             <SelectTrigger><SelectValue placeholder="Select make" /></SelectTrigger>
@@ -257,7 +287,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         <Input value={form.serial_number || ""} onChange={(e) => set("serial_number", e.target.value)} placeholder="e.g. SN-12345678" />
       </Field>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Battery condition">
           <Select value={form.battery_condition || ""} onValueChange={(v) => set("battery_condition", v)}>
             <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
@@ -274,9 +304,9 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </Field>
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5">
-        <Label className="text-sm">Powers on at intake</Label>
-        <Switch checked={!!form.powers_on} onCheckedChange={(v) => set("powers_on", v)} />
+      <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+        <Label htmlFor="job-intake-powers-on" className="text-sm">Powers on at intake</Label>
+        <Switch id="job-intake-powers-on" checked={!!form.powers_on} onCheckedChange={(v) => set("powers_on", v)} />
       </div>
 
       <Field label="Physical condition / existing damage">
@@ -323,14 +353,22 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
       {/* Booking and intake files */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-xs flex items-center gap-1.5"><Camera className="h-3.5 w-3.5" /> Booking & intake files</Label>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-accent cursor-pointer hover:opacity-80">
+          <p className="flex items-center gap-1.5 text-xs font-medium"><Camera className="h-3.5 w-3.5" aria-hidden="true" /> Booking & intake files</p>
+          <label className="flex min-h-11 cursor-pointer items-center gap-1.5 text-xs font-medium text-accent hover:opacity-80">
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
             {uploading ? "Uploading..." : "Add photos"}
             <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
           </label>
         </div>
-        {photos.length > 0 ? (
+        {filesError ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">
+            <span>{filesError}</span>
+            <Button type="button" variant="outline" size="touch" className="text-xs sm:h-9" onClick={loadPhotos}>Try again</Button>
+          </div>
+        ) : null}
+        {filesLoading && photos.length === 0 ? (
+          <p className="text-xs text-muted-foreground" role="status">Loading intake files...</p>
+        ) : photos.length > 0 ? (
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
               <div key={p.id} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-secondary">
@@ -345,16 +383,19 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
                   )}
                 </a>
                 <button
+                  type="button"
                   onClick={() => removePhoto(p)}
-                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  disabled={Boolean(removingPhotoId)}
+                  aria-label={`Remove ${p.file_name || "intake file"}`}
+                  className="absolute right-1 top-1 grid h-11 w-11 place-items-center rounded-full bg-black/70 text-white transition-opacity sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 >
-                  <X className="h-3 w-3" />
+                  {removingPhotoId === p.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
                 </button>
               </div>
             ))}
           </div>
         ) : (
-          <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-6 cursor-pointer hover:border-accent/50 transition-colors">
+          <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-6 transition-colors hover:border-accent/50">
             <ImageIcon className="h-6 w-6 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Upload intake photos</span>
             <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
@@ -369,7 +410,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
         </p>
       )}
 
-      <Button className="w-full gap-2" disabled={saving} onClick={handleSaveClick}>
+      <Button type="button" size="touch" className="w-full gap-2" disabled={saving} onClick={handleSaveClick}>
         {saving && <Loader2 className="h-4 w-4 animate-spin" />}{saving ? "Saving..." : "Save intake"}
       </Button>
 
@@ -456,5 +497,15 @@ function IntakeReadOnly({ intake, jobId }) {
 }
 
 function Field({ label, children }) {
-  return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
+  const id = `job-intake-${useId().replace(/:/g, "")}`;
+  let control;
+  if (children.type === Select) {
+    const selectChildren = React.Children.map(children.props.children, (child, index) => (
+      index === 0 && React.isValidElement(child) ? React.cloneElement(child, { id: child.props.id || id }) : child
+    ));
+    control = React.cloneElement(children, {}, selectChildren);
+  } else {
+    control = React.cloneElement(children, { id: children.props.id || id });
+  }
+  return <div className="space-y-1.5"><Label htmlFor={id} className="text-xs">{label}</Label>{control}</div>;
 }

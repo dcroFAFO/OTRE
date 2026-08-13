@@ -18,13 +18,13 @@ export default function MetricCard({ label, value, icon: Icon, tone = "default",
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "text-left rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-gentle hover:border-accent/30 hover:ring-2",
+        "text-left rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-gentle hover:border-accent/30 hover:ring-2",
         t.ring,
         onClick ? "cursor-pointer" : "cursor-default"
       )}
     >
       <div className="flex items-center justify-between">
-        <span className={cn("grid h-9 w-9 place-items-center rounded-xl shrink-0", t.icon)}>
+        <span className={cn("grid h-9 w-9 place-items-center rounded-md shrink-0", t.icon)}>
           <Icon className="h-4.5 w-4.5" />
         </span>
       </div>

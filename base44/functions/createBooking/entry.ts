@@ -12,7 +12,9 @@ const JOB_TYPE = 'repair';
 const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice', 'pay_invoice'];
 const DEFAULT_SERVICE_TYPE = 'general_repair';
 const E164_PATTERN = /^\+614\d{8}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const encoder = new TextEncoder();
+const FALLBACK_PHONE = '0415 505 908';
 
 async function sha256(value) {
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(value));
@@ -101,6 +103,23 @@ async function currentUser(base44) {
   try { return await base44.auth.me(); } catch (_) { return null; }
 }
 
+async function getBusinessPhone(base44) {
+  const profiles = await base44.asServiceRole.entities.BusinessProfile.filter({ is_default: true }, '-updated_date', 1).catch(() => []);
+  const profile = profiles[0] || (await base44.asServiceRole.entities.BusinessProfile.list('-updated_date', 1).catch(() => []))[0];
+  return String(profile?.phone_display || profile?.phone || FALLBACK_PHONE).trim() || FALLBACK_PHONE;
+}
+
+async function verifyGuestBooking(base44, form, email, phone) {
+  const verificationId = String(form.verification_id || '').trim();
+  if (!verificationId) return null;
+  const record = await base44.asServiceRole.entities.PhoneVerification.get(verificationId).catch(() => null);
+  if (!record || record.purpose !== 'booking' || record.booking_id || !record.consumed_at) return null;
+  const consumedAt = new Date(record.consumed_at).getTime();
+  const isRecent = Number.isFinite(consumedAt) && consumedAt >= Date.now() - 30 * 60 * 1000;
+  const detailsMatch = normalizePhone(record.phone_e164) === phone && cleanEmail(record.email) === email;
+  return isRecent && detailsMatch ? record : null;
+}
+
 async function findOrCreateProfile(base44, { name, email, phone, user, now }) {
   let profile = null;
   const emailMatches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 1).catch(() => []);
@@ -150,6 +169,7 @@ async function resolveBookingScooter(base44, customer, booking) {
 
 Deno.serve(async (req) => {
   const requestMeta = { fn: 'createBooking' };
+  let businessPhone = FALLBACK_PHONE;
   try {
     const base44 = createClientFromRequest(req);
     const form = await req.json();
@@ -159,20 +179,28 @@ Deno.serve(async (req) => {
     if (!form.customer_name || !form.customer_email || !form.phone || !form.asset_label || !form.issue_description) return Response.json({ error: 'Name, email, phone, scooter details and issue description are required.' }, { status: 400 });
     const email = cleanEmail(form.customer_email);
     const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
+    if (!EMAIL_PATTERN.test(email)) return Response.json({ error: 'Enter a valid email address.' }, { status: 400 });
     if (!E164_PATTERN.test(phone)) return Response.json({ error: 'Enter a valid Australian mobile number' }, { status: 400 });
+    businessPhone = await getBusinessPhone(base44);
+
+    const guestVerification = isCustomerUser(user) ? null : await verifyGuestBooking(base44, form, email, phone);
+    if (!isCustomerUser(user) && !guestVerification) {
+      return Response.json({ error: 'Please verify your contact details before submitting this booking.' }, { status: 403 });
+    }
 
     // Abuse controls — this endpoint is unauthenticated and sends metered SMS/email.
     const ipLimit = await checkRateLimit(base44, `booking:ip:${clientIp(req)}`, MAX_BOOKINGS_PER_IP);
     const emailLimit = await checkRateLimit(base44, `booking:email:${email}`, MAX_BOOKINGS_PER_EMAIL);
     if (!ipLimit.allowed || !emailLimit.allowed) {
       console.warn('[createBooking] rate limited', JSON.stringify({ ip: ipLimit.count, email: emailLimit.count }));
-      return Response.json({ error: "You've submitted several booking requests just now. Please wait a few minutes or call us on 0415 505 908." }, { status: 429 });
+      return Response.json({ error: `You've submitted several booking requests just now. Please wait a few minutes or call us on ${businessPhone}.` }, { status: 429 });
     }
 
     // Idempotency — a repeated submission returns the original booking instead of
     // creating a duplicate job, customer and notification set.
     const duplicate = await findRecentDuplicateJob(base44, email, form.issue_description);
     if (duplicate) {
+      if (guestVerification) await base44.asServiceRole.entities.PhoneVerification.update(guestVerification.id, { booking_id: duplicate.id, booking_created_at: new Date().toISOString() });
       return Response.json({ reference: duplicate.reference, managePath: duplicate.customer_user_id ? '/portal' : null, accountPath: `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`, job_id: duplicate.id, duplicate: true });
     }
 
@@ -201,6 +229,10 @@ Deno.serve(async (req) => {
     // NOTE: the raw public access token is deliberately NOT stored on the Job.
     // Only its SHA-256 hash is persisted, on PublicJobAccess below.
     const job = await base44.asServiceRole.entities.Job.create({ reference, customer_profile_id: profile.id, customer_user_id: customerUserId, customerId: stableCustomerId, customer_id: stableCustomerId, customer_account_id: customerRecord?.id || '', claimed_by_customer: !!customerUserId, customer_name: form.customer_name, customer_email: email, customer_phone: phone, customer_phone_e164: phone, customer_phone_display: phone, asset_id: scooter?.id || '', asset_label: resolvedAssetLabel, scooter_make_model: resolvedAssetLabel, scooterDetails: resolvedAssetLabel, scooter_details: resolvedAssetLabel, issueDescription: form.issue_description, issue_description: form.issue_description, issue_summary: form.issue_description, rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable', job_status: INTAKE_STATUS, source: 'public_booking', job_type: JOB_TYPE, service_type: submittedBooking.serviceType, priority: 'medium', status: INTAKE_STATUS, scheduled_date: form.asap ? null : (form.preferred_date || null), preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window, rideable: submittedBooking.isRideable, intake: initialIntake, booking_submission: submittedBooking, business_slug: SLUG, createdAt: now, created_at: now, updatedAt: now });
+
+    if (guestVerification) {
+      await base44.asServiceRole.entities.PhoneVerification.update(guestVerification.id, { booking_id: job.id, booking_created_at: now });
+    }
 
     if (scooter?.id) await base44.asServiceRole.entities.Scooter.update(scooter.id, { job_id: addIdList(scooter.job_id, job.id), last_service_date: job.scheduled_date || scooter.last_service_date || '' }).catch((assetErr) => console.warn('[createBooking] scooter job link skipped:', assetErr.message));
     if (customerRecord?.id) await base44.asServiceRole.entities.Customer.update(customerRecord.id, { job_id: addIdList(customerRecord.job_id, job.id), last_activity_date: now }).catch((customerErr) => console.warn('[createBooking] customer job link skipped:', customerErr.message));
@@ -236,6 +268,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     // Detail stays in the logs — unauthenticated callers get a generic message.
     console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    return Response.json({ error: "Sorry — we couldn't submit your booking just now. Please try again or call us on 0415 505 908." }, { status: 500 });
+    return Response.json({ error: `Sorry — we couldn't submit your booking just now. Please try again or call us on ${businessPhone}.` }, { status: 500 });
   }
 });

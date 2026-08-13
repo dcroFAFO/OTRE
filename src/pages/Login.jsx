@@ -64,7 +64,7 @@ export default function Login() {
 
   return (
     <>
-    <SEO title="Log In | OTR Scooters" description="Log in to your OTR Scooters customer portal to track repairs, approve quotes and manage invoices." canonical="/login" noindex />
+    <SEO title="Log In | On The Run Electrics" description="Log in to your On The Run Electrics customer account to track repairs, approve quotes and manage invoices." canonical="/login" noindex />
     <AuthLayout
       icon={LogIn}
       title="Welcome back"

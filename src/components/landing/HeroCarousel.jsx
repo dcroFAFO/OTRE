@@ -89,7 +89,7 @@ export default function HeroCarousel({ children }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.45, ease: "easeInOut" }}
-              style={{ "--desktop-position": slide.desktopPosition }}
+              style={/** @type {any} */ ({ "--desktop-position": slide.desktopPosition })}
               className="absolute inset-0 h-full w-full object-cover [object-position:center_center] lg:[object-position:var(--desktop-position)]"
             />
           </AnimatePresence>
@@ -115,7 +115,7 @@ export default function HeroCarousel({ children }) {
         />
 
         {/* Foreground content */}
-        <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-col px-5 pb-8 pt-6 text-white sm:px-8 sm:pb-10 lg:min-h-[88svh] lg:justify-end lg:pb-12 lg:pt-28">
+        <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-col px-5 pb-8 pt-24 text-white sm:px-8 sm:pb-10 sm:pt-28 lg:min-h-[88svh] lg:justify-end lg:pb-12">
           <h1 className="font-heading text-3xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">
             Electric Scooter Repairs Brisbane
           </h1>
@@ -176,7 +176,7 @@ export default function HeroCarousel({ children }) {
                   onClick={() => setIndex(slideIndex)}
                   aria-label={`Show ${item.eyebrow}`}
                   aria-current={slideIndex === index ? "true" : undefined}
-                  className="grid h-11 w-8 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="grid h-11 w-11 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   <span
                     className={`h-1.5 rounded-full transition-all ${slideIndex === index ? "w-6 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`}

@@ -11,7 +11,6 @@ export function useClients(role) {
   return useQuery({
     queryKey: CLIENTS_QUERY_KEY,
     queryFn: listClients,
-    initialData: [],
     enabled: hasAtLeastRole(role, "technician"),
     staleTime: 60_000,
   });

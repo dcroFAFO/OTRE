@@ -10,17 +10,19 @@ import MobileLocationSection from "@/components/landing/MobileLocationSection";
 import MobileContactCTA from "@/components/landing/MobileContactCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
 import SEO from "@/components/SEO";
-import { localBusinessSchema } from "@/lib/structuredData";
+import { getLocalBusinessSchema } from "@/lib/structuredData";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 
 export default function Landing() {
   const heroRef = useRef(null);
+  const { data: { business, services } } = usePlatformConfig();
 
   return (
     <>
-      <SEO title="Electric Scooter Repairs Brisbane | On The Run Electrics" description="Book electric scooter repairs, diagnostics and servicing in Woolloongabba, Brisbane. Clear repair updates and online job tracking." canonical="/" ogType="website" structuredData={localBusinessSchema} />
+      <SEO title={`Electric Scooter Repairs Brisbane | ${business.name}`} description={`Book electric scooter repairs, diagnostics and servicing at ${business.name} in ${business.locality}.`} canonical="/" ogType="website" structuredData={getLocalBusinessSchema(business, services)} />
       <div className="min-h-screen overflow-hidden bg-background text-foreground">
         <LandingNav heroRef={heroRef} />
-        <main>
+        <main id="main-content">
           <div ref={heroRef}>
             <MobileLandingHero />
           </div>

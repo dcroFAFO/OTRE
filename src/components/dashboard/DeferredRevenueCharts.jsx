@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from "react";
 import RevenueChartsSection from "@/components/dashboard/RevenueChartsSection";
+import { CardSkeleton } from "@/components/shared";
 
 function ChartsPlaceholder() {
-  return (
-    <div className="rounded-3xl border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-      Loading financial charts…
-    </div>
-  );
+  return <CardSkeleton count={3} compact />;
 }
 
 export default function DeferredRevenueCharts() {

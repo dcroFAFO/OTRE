@@ -2,7 +2,6 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Package, Wrench, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 // Mobile-first, iOS-friendly card for a single invoice line item.
 // Large tap targets, stacked inputs on small screens, prominent remove button.

@@ -6,6 +6,7 @@ import JobLabourPanel from "../JobLabourPanel";
 import DiagnosisNotesCard from "../DiagnosisNotesCard";
 import { updateJobStatusFromEvent } from "@/services/jobWorkflowService";
 import { toast } from "sonner";
+import { getCanonicalJobStatus } from "@/config/jobConfig";
 
 // Status-driven repair workspace:
 // - scheduled/on_hold: "Begin Repair" button → repair_in_progress
@@ -13,7 +14,7 @@ import { toast } from "sonner";
 //   actions) + "Complete Repair" button → ready_for_pickup
 // General notes and attachments live in the dedicated Notes & Files tab.
 export default function RepairTab({ job, actor, canEdit, labourReadOnly, onChange }) {
-  const status = job.status;
+  const status = getCanonicalJobStatus(job.status);
 
   if (["scheduled", "on_hold", "requested"].includes(status)) {
     return <BeginRepairCard job={job} onChange={onChange} />;
@@ -53,7 +54,7 @@ function BeginRepairCard({ job, onChange }) {
     }
   };
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 space-y-4 text-center">
+    <div className="rounded-lg border border-border bg-card p-6 space-y-4 text-center">
       <div className="mx-auto rounded-full bg-primary/10 p-3 w-fit">
         <PlayCircle className="h-8 w-8 text-primary" />
       </div>
@@ -84,7 +85,7 @@ function CompleteRepairCard({ job, onChange }) {
     }
   };
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <CheckCircle2 className="h-5 w-5 text-emerald-600" />
         <h3 className="font-heading text-sm font-extrabold text-emerald-800">Repair complete?</h3>
@@ -100,7 +101,7 @@ function CompleteRepairCard({ job, onChange }) {
 
 function RepairSection({ title, icon: Icon, children }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm">
+    <section className="rounded-lg border border-border bg-card p-4 space-y-3 shadow-sm">
       <div className="flex items-center gap-2">
         <span className="rounded-lg bg-primary/10 p-1.5 text-primary">
           <Icon className="h-4 w-4" />

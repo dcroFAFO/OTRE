@@ -40,10 +40,13 @@
         "manual",
         "connected",
         "pending",
-        "disabled"
+        "disabled",
+        "unverified",
+        "verified",
+        "blocked"
       ],
-      "default": "manual",
-      "description": "manual = customer saved their profile details manually. connected/pending reserved for future OAuth integrations."
+      "default": "unverified",
+      "description": "Verification is based only on a public allowlisted profile containing the generated code."
     },
     "external_account_id": {
       "type": "string",
@@ -61,6 +64,16 @@
     "updated_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "verification_code": { "type": "string" },
+    "verification_checked_at": { "type": "string", "format": "date-time" },
+    "verification_attempt_count": { "type": "number", "default": 0 },
+    "last_verification_attempt_at": { "type": "string", "format": "date-time" },
+    "verification_window_started_at": { "type": "string", "format": "date-time" },
+    "verification_result": {
+      "type": "string",
+      "enum": ["not_checked", "verified", "code_not_found", "blocked", "rate_limited"],
+      "default": "not_checked"
     },
     "description": {
       "type": "string",

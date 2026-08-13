@@ -7,6 +7,7 @@ import PhoneNumberField from "@/components/booking/PhoneNumberField";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { toast } from "sonner";
 import { Loader2, UserRound } from "lucide-react";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 export default function AccountDetailsCard({ profile, onSaved }) {
   const [name, setName] = useState("");
@@ -33,7 +34,7 @@ export default function AccountDetailsCard({ profile, onSaved }) {
       toast.success("Account details saved");
       onSaved?.();
     } catch (err) {
-      toast.error(err?.response?.data?.error || err.message || "Couldn't save your details. Please try again.");
+      toast.error(getSafeErrorMessage(err, "Your details could not be saved. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -51,12 +52,12 @@ export default function AccountDetailsCard({ profile, onSaved }) {
 
       <form onSubmit={save} className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Name <span className="text-accent">*</span></Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          <Label htmlFor="account-name">Name <span className="text-accent">*</span></Label>
+          <Input id="account-name" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="space-y-1.5">
-          <Label>Email</Label>
-          <Input value={profile?.email || ""} disabled className="opacity-70" />
+          <Label htmlFor="account-email">Email</Label>
+          <Input id="account-email" name="email" type="email" value={profile?.email || ""} disabled className="opacity-70" />
           <p className="text-[11px] text-muted-foreground">Your email is linked to your login and can't be changed here.</p>
         </div>
         <PhoneNumberField label="Mobile" value={phone} onChange={(e) => setPhone(e.target.value)} error={phoneError} />

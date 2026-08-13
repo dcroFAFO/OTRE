@@ -20,7 +20,12 @@ import {
   isLabourReadOnlyForStatus,
   isInvoiceReadOnlyForStatus,
 } from "@/config/jobDetailsTabConfig";
+import { normalizeStatusKey } from "@/config/jobConfig";
 import { format } from "date-fns";
+import { ErrorState, LoadingSpinner } from "@/components/shared";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 // Tab label map (desktop modal only — mobile uses its own workspace tabs)
 const TAB_LABELS = {
@@ -53,17 +58,30 @@ function useMobileJobWorkspace() {
   return isMobile;
 }
 
+/** @param {{ jobId?: string | null, actor?: Record<string, any> | null, open: boolean, onClose: () => void, onChange?: () => void }} props */
 export default function JobDetailModal({ jobId, actor, open, onClose, onChange }) {
   const [job, setJob] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState(null);
 
   const [loadError, setLoadError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!jobId) return;
     setLoadError(false);
-    base44.entities.Job.get(jobId).then(setJob).catch(() => setLoadError(true));
+    setLoading(true);
+    try {
+      setJob(await base44.entities.Job.get(jobId));
+    } catch (error) {
+      setLoadError(true);
+      setJob((current) => {
+        if (current) toast.error(getSafeErrorMessage(error, "Latest job details could not be loaded."));
+        return current;
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [jobId]);
 
   useEffect(() => { if (open) { load(); setActiveTab(null); } }, [jobId, open, load]);
@@ -84,18 +102,18 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   if (!open) return null;
 
   if (isMobileWorkspace) {
-    if (loadError) {
+    if (loadError && !job) {
       return (
-        <div className="lg:hidden fixed inset-0 z-50 bg-background flex flex-col items-center justify-center gap-3 text-muted-foreground">
-          <p className="text-sm">Failed to load job. Please try again.</p>
-          <button onClick={load} className="text-xs underline hover:text-foreground">Retry</button>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background px-5 lg:hidden">
+          <ErrorState className="w-full max-w-lg" title="Job could not be loaded" onRetry={load} />
+          <Button type="button" variant="ghost" size="touch" onClick={onClose}>Close</Button>
         </div>
       );
     }
     if (!job) {
       return (
         <div className="lg:hidden fixed inset-0 z-50 bg-background flex items-center justify-center">
-          <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
+          <LoadingSpinner label="Loading job details" />
         </div>
       );
     }
@@ -117,17 +135,18 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 rounded-lg">
-        {loadError ? (
+        {loadError && !job ? (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
-            <p className="text-sm">Failed to load job. Please try again.</p>
-            <button onClick={load} className="text-xs underline hover:text-foreground">Retry</button>
+            <ErrorState className="w-full max-w-lg" title="Job could not be loaded" onRetry={load} />
           </div>
         ) : !job ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-7 h-7 border-4 border-border border-t-primary rounded-full animate-spin" />
+            <LoadingSpinner label="Loading job details" />
           </div>
         ) : (
           <>
+            {loading ? <span className="sr-only" role="status">Refreshing job details</span> : null}
+            {loadError ? <div className="p-4"><ErrorState title="Latest job details could not be loaded" description="Previously loaded details remain visible." onRetry={load} /></div> : null}
             <JobModalHeader job={job} />
 
             {/* Staff workflow actions — same strip the mobile workspace uses,
@@ -212,10 +231,11 @@ export default function JobDetailModal({ jobId, actor, open, onClose, onChange }
 }
 
 function JobModalHeader({ job }) {
-  const isWaiting = job.status?.startsWith("waiting_") || job.status === "on_hold";
+  const canonicalStatus = normalizeStatusKey(job.status);
+  const isWaiting = canonicalStatus === "waiting_on_parts" || canonicalStatus === "on_hold";
   const outstanding = job.payment_status === "outstanding";
   const paid = job.payment_status === "paid";
-  const waitingReason = job.status === "waiting_on_parts"
+  const waitingReason = canonicalStatus === "waiting_on_parts"
     ? "Parts"
     : job.waiting_reason
     ? (DEFAULT_WAITING_REASONS?.find((r) => r.key === job.waiting_reason)?.label || job.waiting_reason)

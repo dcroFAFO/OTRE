@@ -29,7 +29,7 @@ export default function JobFilters({ filters, setFilters }) {
   }, [localQ]);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm w-full sm:w-auto sm:flex-1">
+    <div className="rounded-lg border border-border bg-card p-3 shadow-sm w-full sm:w-auto sm:flex-1">
       <div className="flex flex-wrap gap-2">
         {/* Search */}
         <div className="relative flex-1 min-w-[180px]">

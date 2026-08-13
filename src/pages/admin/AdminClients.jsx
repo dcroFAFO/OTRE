@@ -1,20 +1,19 @@
 import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useClients } from "@/hooks/useClients";
-import DashboardShell from "@/components/dashboard/DashboardShell";
 import ClientSummaryCards from "@/components/admin/clients/ClientSummaryCards";
 import ClientFilters, { EMPTY_CLIENT_FILTERS } from "@/components/admin/clients/ClientFilters";
 import ClientTable from "@/components/admin/clients/ClientTable";
 import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
 import { bulkUpdateClients, deleteClients } from "@/services/clientService";
 import ClientBulkActionsBar from "@/components/admin/clients/ClientBulkActionsBar";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Users, AlertTriangle } from "lucide-react";
+import { Users } from "lucide-react";
 import RequireCapability from "@/components/auth/RequireCapability";
 import { hasAtLeastRole } from "@/config/roles";
 import SEO from "@/components/SEO";
+import { CardSkeleton, EmptyState, ErrorState, NoResultsState, PageLoader, TableSkeleton } from "@/components/shared";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 export default function AdminClients() {
   const { user, isLoading } = useCurrentUser();
@@ -22,7 +21,7 @@ export default function AdminClients() {
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  const { data: clients, isLoading: loadingClients, error, refetch } = useClients(user?.role);
+  const { data: clients = [], isLoading: loadingClients, error, refetch } = useClients(user?.role);
 
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
@@ -68,7 +67,7 @@ export default function AdminClients() {
         ? "No changes needed — those customers were already up to date."
         : `Updated ${result.updated} customer${result.updated === 1 ? "" : "s"}.`);
     } catch (err) {
-      toast.error(err?.response?.data?.error || err?.message || failureMessage);
+      toast.error(getSafeErrorMessage(err, failureMessage));
     }
   };
 
@@ -86,14 +85,14 @@ export default function AdminClients() {
       toast.success(`Deleted ${result.deleted} customer${result.deleted === 1 ? "" : "s"}.`);
     } catch (err) {
       await refetch();
-      toast.error(err?.response?.data?.error || err?.message || "Failed to delete customers.");
+      toast.error(getSafeErrorMessage(err, "Failed to delete customers."));
     }
   };
 
   const seo = <SEO title="Customers | On The Run Electrics" description="Private staff area for managing customer accounts, statuses, tags and service history." canonical="/admin/clients" noindex />;
 
   if (isLoading) {
-    return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;
+    return <>{seo}<PageLoader label="Loading customer management" fullScreen /></>;
   }
 
   return (
@@ -104,31 +103,33 @@ export default function AdminClients() {
       deniedTitle="Staff access only"
       deniedMessage="You don't have permission to view customer management."
     >
-    <DashboardShell user={user}>
       <div className="space-y-5">
         <div>
           <h1 className="font-heading text-2xl font-extrabold tracking-tight">Customers</h1>
           <p className="text-muted-foreground text-sm">Manage customer accounts, contact details, linked scooters and full history in one place.</p>
         </div>
 
-        <ClientSummaryCards clients={clients} />
+        {loadingClients ? <CardSkeleton count={4} compact /> : <ClientSummaryCards clients={clients} />}
         <ClientFilters filters={filters} setFilters={setFilters} />
 
-        {error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-6 text-center">
-            <AlertTriangle className="h-6 w-6 text-rose-500 mx-auto mb-2" />
-            <p className="text-sm text-rose-700">Couldn't load customers. Please refresh and try again.</p>
-          </div>
+        {error && clients.length ? (
+          <ErrorState title="Latest customer changes could not be loaded" description="Previously loaded customers remain visible." error={error} onRetry={refetch} />
+        ) : null}
+
+        {error && !clients.length ? (
+          <ErrorState title="Customers could not be loaded" error={error} onRetry={refetch} />
         ) : loadingClients ? (
-          <div className="py-16 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>
+          <TableSkeleton rows={6} columns={5} label="Loading customers" />
         ) : filtered.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
-            <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {clients.length === 0 ? "No customers yet. They appear here once created via bookings or jobs." : "No customers match your filters."}
-            </p>
-            {clients.length > 0 && <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setFilters(EMPTY_CLIENT_FILTERS)}>Clear filters</Button>}
-          </div>
+          clients.length === 0 ? (
+            <EmptyState icon={Users} title="No customers yet" description="Customers appear here after a booking or job is created." />
+          ) : (
+            <NoResultsState
+              title="No customers match these filters"
+              description={filters.q ? `No matches for “${filters.q}”.` : "Try broadening the selected status or tag."}
+              onClear={() => setFilters(EMPTY_CLIENT_FILTERS)}
+            />
+          )
         ) : (
           <>
             {canBulkEdit && selectedIds.size > 0 && (
@@ -163,7 +164,6 @@ export default function AdminClients() {
           }}
         />
       </div>
-    </DashboardShell>
     </RequireCapability>
     </>
   );

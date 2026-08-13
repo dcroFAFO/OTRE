@@ -11,6 +11,7 @@ import { getCanonicalJobStatus } from "@/config/jobConfig";
 import { TIME_WINDOWS, normalizeTimeWindow, timeWindowLabel } from "@/config/timeWindows";
 import BookingRequestCard from "../BookingRequestCard";
 import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 // Until a job is scheduled, the form starts from what the customer asked for
 // so staff can confirm the requested slot with one tap.
@@ -31,6 +32,8 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
   const [saved, setSaved] = useState(false);
   const [nearbyJobs, setNearbyJobs] = useState([]);
   const [loadingNearby, setLoadingNearby] = useState(false);
+  const [nearbyError, setNearbyError] = useState("");
+  const [nearbyRetry, setNearbyRetry] = useState(0);
 
   useEffect(() => {
     setDate(requestedDate(job));
@@ -41,15 +44,18 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
     if (!date) { setNearbyJobs([]); return; }
     let cancelled = false;
     setLoadingNearby(true);
+    setNearbyError("");
     base44.entities.Job.filter({ scheduled_date: date }, "-created_date", 50)
       .then((rows) => { if (!cancelled) setNearbyJobs(rows.filter((r) => r.id !== job.id)); })
+      .catch((error) => { if (!cancelled) setNearbyError(getSafeErrorMessage(error, "Nearby jobs could not be loaded.")); })
       .finally(() => { if (!cancelled) setLoadingNearby(false); });
     return () => { cancelled = true; };
-  }, [date, job.id]);
+  }, [date, job.id, nearbyRetry]);
 
   const sameWindowCount = nearbyJobs.filter((j) => j.preferred_time_window && j.preferred_time_window === timeWindow).length;
 
   const save = async () => {
+    if (saving) return;
     setSaving(true);
     setSaved(false);
     try {
@@ -73,7 +79,7 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
       setSaved(true);
       onChange?.();
     } catch (err) {
-      toast.error(err.message || "Failed to save schedule");
+      toast.error(getSafeErrorMessage(err, "The schedule could not be saved."));
     } finally {
       setSaving(false);
     }
@@ -98,13 +104,13 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
 
       <div className="grid grid-cols-1 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Booking date</Label>
-          <Input type="date" value={date} onChange={(e) => { setDate(e.target.value); setSaved(false); }} className="h-11" />
+          <Label htmlFor="mobile-schedule-date" className="text-xs">Booking date</Label>
+          <Input id="mobile-schedule-date" type="date" value={date} onChange={(e) => { setDate(e.target.value); setSaved(false); }} className="h-11" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Time window</Label>
+          <Label htmlFor="mobile-schedule-window" className="text-xs">Time window</Label>
           <Select value={timeWindow} onValueChange={(v) => { setTimeWindow(v); setSaved(false); }}>
-            <SelectTrigger className="h-11"><SelectValue placeholder="Select a time window" /></SelectTrigger>
+            <SelectTrigger id="mobile-schedule-window" className="h-11"><SelectValue placeholder="Select a time window" /></SelectTrigger>
             <SelectContent>
               {TIME_WINDOWS.map((w) => <SelectItem key={w.key} value={w.key}>{w.label}</SelectItem>)}
             </SelectContent>
@@ -119,16 +125,17 @@ export default function ScheduleTab({ job, canEdit, onChange }) {
         </div>
       )}
 
-      <Button className="w-full gap-2 min-h-11" disabled={saving || !date} onClick={save}>
+      <Button type="button" size="touch" className="w-full gap-2" disabled={saving || !date} onClick={save}>
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle2 className="h-4 w-4" /> : null}
         {saving ? "Saving..." : saved ? "Saved" : "Save schedule"}
       </Button>
 
       <div className="space-y-2 pt-2">
-        <Label className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {date ? `Other jobs on ${date}` : "Select a date to see other scheduled jobs"}
-        </Label>
-        {loadingNearby ? (
+        </p>
+        {nearbyError ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert"><span>{nearbyError}</span><Button type="button" variant="outline" size="touch" className="text-xs" onClick={() => setNearbyRetry((value) => value + 1)}>Try again</Button></div> : null}
+        {nearbyError && nearbyJobs.length === 0 ? null : loadingNearby ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : date && nearbyJobs.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">

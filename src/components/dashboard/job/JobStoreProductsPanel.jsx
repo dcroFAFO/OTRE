@@ -4,7 +4,6 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Store, Search, Package, X } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 function ProductSearchPicker({ products, onSelect }) {
   const [search, setSearch] = useState("");

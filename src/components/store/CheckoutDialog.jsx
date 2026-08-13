@@ -2,127 +2,111 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/CartContext";
-import { SUPPLIER_NAME } from "@/config/storeConfig";
 import { startStorePayment } from "@/services/paymentService";
+import { FieldShell } from "@/components/shared";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
+import { getSafeErrorMessage } from "@/lib/errors";
 
+/** @param {{ open: boolean, onOpenChange: (open: boolean) => void }} props */
 export default function CheckoutDialog({ open, onOpenChange }) {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, beginCheckoutAttempt, releaseCheckoutAttempt } = useCart();
+  const { data: { business } } = usePlatformConfig();
   const [form, setForm] = useState({
-    customer_name: "", customer_email: "", customer_phone: "",
-    shipping_address: "", fulfilment_method: "delivery", notes: "",
+    customer_name: "",
+    customer_email: "",
+    customer_phone: "",
+    notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (submitting) return;
-    setError(null);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (submitting || items.length === 0 || subtotal <= 0) return;
+    setError("");
     setSubmitting(true);
+    const checkoutAttemptId = beginCheckoutAttempt();
     try {
       const result = await startStorePayment({
         customer: {
-          customer_name: form.customer_name,
-          customer_email: form.customer_email,
-          customer_phone: form.customer_phone,
+          customer_name: form.customer_name.trim(),
+          customer_email: form.customer_email.trim(),
+          customer_phone: form.customer_phone.trim(),
         },
-        items: items.map((i) => ({ product_id: i.product.id, qty: i.qty })),
-        fulfilment_method: form.fulfilment_method,
-        shipping_address: form.shipping_address,
-        notes: form.notes,
+        items: items.map((item) => ({ product_id: item.product.id, qty: item.qty })),
+        notes: form.notes.trim(),
+        checkoutAttemptId,
       });
       if (result?.blocked) {
+        releaseCheckoutAttempt(checkoutAttemptId);
         setError(result.reason);
-        setSubmitting(false);
+      } else if (!result?.url) {
+        setError("Checkout could not be started. Please try again.");
       }
-      if (result?.url) clear();
-    } catch (err) {
-      const message = err?.response?.data?.error || "Could not start checkout. Please try again.";
+    } catch (caught) {
+      const message = getSafeErrorMessage(caught, "Could not start checkout. Please try again.");
       setError(message);
       toast.error(message);
+    } finally {
       setSubmitting(false);
     }
   };
 
-  const close = () => { setDone(null); setError(null); onOpenChange(false); };
-
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !submitting && onOpenChange(nextOpen)}>
       <DialogContent className="max-w-lg">
-        {done ? (
-          <div className="text-center py-6">
-            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-            <h3 className="font-heading font-bold text-lg">Order received!</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Reference <span className="font-medium">{done.reference}</span>. Your order has been logged and will be forwarded to {SUPPLIER_NAME}.
-            </p>
-            <Button className="mt-5" onClick={close}>Done</Button>
+        <DialogHeader>
+          <DialogTitle>Click and collect checkout</DialogTitle>
+        </DialogHeader>
+
+        <Alert>
+          <MapPin className="h-4 w-4" aria-hidden="true" />
+          <AlertTitle>Workshop pickup</AlertTitle>
+          <AlertDescription>
+            Collect from {business.address}. We will contact you when your order is ready.
+          </AlertDescription>
+        </Alert>
+
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FieldShell id="checkout-name" label="Full name" required>
+              <Input required autoComplete="name" value={form.customer_name} onChange={(event) => set("customer_name", event.target.value)} />
+            </FieldShell>
+            <FieldShell id="checkout-phone" label="Phone" required>
+              <Input required type="tel" autoComplete="tel" value={form.customer_phone} onChange={(event) => set("customer_phone", event.target.value)} />
+            </FieldShell>
           </div>
-        ) : (
-          <>
-            <DialogHeader><DialogTitle>Checkout</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Full name" required>
-                  <Input required value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} />
-                </Field>
-                <Field label="Phone" required>
-                  <Input required value={form.customer_phone} onChange={(e) => set("customer_phone", e.target.value)} />
-                </Field>
-              </div>
-              <Field label="Email" required>
-                <Input type="email" required value={form.customer_email} onChange={(e) => set("customer_email", e.target.value)} />
-              </Field>
-              <Field label="Fulfilment">
-                <Select value={form.fulfilment_method} onValueChange={(v) => set("fulfilment_method", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="delivery">Delivery</SelectItem>
-                    <SelectItem value="click_collect">Click & Collect (Brisbane)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              {form.fulfilment_method === "delivery" && (
-                <Field label="Shipping address" required>
-                  <Textarea required value={form.shipping_address} onChange={(e) => set("shipping_address", e.target.value)} />
-                </Field>
-              )}
-              <Field label="Notes (optional)">
-                <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} />
-              </Field>
-              {error && (
-                <p role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
-                </p>
-              )}
-              <div className="flex items-center justify-between pt-2">
-                <span className="font-heading font-semibold">Total: ${subtotal.toFixed(2)}</span>
-                <Button type="submit" disabled={submitting || items.length === 0} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Pay with Stripe
-                </Button>
-              </div>
-            </form>
-          </>
-        )}
+          <FieldShell id="checkout-email" label="Email" required>
+            <Input required type="email" autoComplete="email" value={form.customer_email} onChange={(event) => set("customer_email", event.target.value)} />
+          </FieldShell>
+          <FieldShell id="checkout-notes" label="Pickup notes" hint="Optional">
+            <Textarea value={form.notes} onChange={(event) => set("notes", event.target.value)} placeholder="Anything the workshop should know about this order" />
+          </FieldShell>
+
+          {error && (
+            <Alert variant="destructive" role="alert">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              <AlertTitle>Checkout could not start</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-heading font-semibold">Total: ${subtotal.toFixed(2)} AUD</span>
+            <Button type="submit" disabled={submitting || items.length === 0 || subtotal <= 0} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {submitting ? "Opening secure checkout…" : "Pay with Stripe"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Field({ label, required, children }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">{label}{required && <span className="text-destructive"> *</span>}</Label>
-      {children}
-    </div>
   );
 }

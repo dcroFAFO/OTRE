@@ -14,6 +14,7 @@ const TABS = [
 // slide-out navigation so no existing nav options are lost.
 export default function MobileTabBar({ onMore }) {
   const { pathname } = useLocation();
+  const moreActive = !TABS.some((tab) => tab.exact ? pathname === tab.to : pathname.startsWith(tab.to));
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur pb-safe" aria-label="Dashboard navigation">
       <div className="grid grid-cols-5">
@@ -23,6 +24,7 @@ export default function MobileTabBar({ onMore }) {
             <Link
               key={t.to}
               to={t.to}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
                 active ? "text-accent" : "text-muted-foreground"
@@ -34,8 +36,10 @@ export default function MobileTabBar({ onMore }) {
           );
         })}
         <button
+          type="button"
           onClick={onMore}
-          className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
+          aria-pressed={moreActive}
+          className={cn("flex min-h-[52px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium", moreActive ? "text-accent" : "text-muted-foreground")}
           aria-label="More navigation options"
         >
           <Menu className="h-5 w-5" />

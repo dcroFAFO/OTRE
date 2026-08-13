@@ -1,9 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { base44, clearStoredBase44Token } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -90,27 +90,49 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkUserAuth = async () => {
+    if (!appParams.token) {
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      return;
+    }
+
     try {
-      // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      const authClient = createAxiosClient({
+        baseURL: '/api',
+        headers: {
+          'X-App-Id': appParams.appId
+        },
+        token: appParams.token,
+        interceptResponses: false
+      });
+      const response = await authClient.get(`/apps/${appParams.appId}/entities/User/me`);
+      const currentUser = response.data;
+      base44.setToken(appParams.token);
       setUser(currentUser);
       setIsAuthenticated(true);
+      setAuthError(null);
       setIsLoadingAuth(false);
       setAuthChecked(true);
     } catch (error) {
-      console.error('User auth check failed:', error);
+      const status = error?.response?.status || error?.status;
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+
+      if (status === 401 || status === 403) {
+        clearStoredBase44Token();
+        setAuthError(null);
+        return;
       }
+
+      console.error('User authentication could not be checked.');
+      setAuthError({
+        type: 'unknown',
+        message: 'Your account could not be checked. Please try again.'
+      });
     }
   };
 

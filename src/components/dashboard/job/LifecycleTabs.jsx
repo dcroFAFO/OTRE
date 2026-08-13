@@ -1,17 +1,10 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { normalizeStatusKey } from "@/config/jobConfig";
+import { JOB_CATEGORIES, normalizeStatusKey } from "@/config/jobConfig";
 
 // Display-only lifecycle groupings over the existing canonical statuses.
 // These do NOT change any status values — they only filter what's shown.
-export const LIFECYCLE_GROUPS = [
-  { key: "all", label: "All", statuses: null },
-  { key: "request_review", label: "Request Review", statuses: ["requested"] },
-  { key: "scheduling", label: "Scheduling", statuses: ["scheduled"] },
-  { key: "repair", label: "Repair", statuses: ["repair_in_progress", "waiting_on_parts"] },
-  { key: "invoice", label: "Invoice", statuses: ["ready_for_pickup", "invoice_outstanding"] },
-  { key: "complete", label: "Complete", statuses: ["completed", "cancelled", "on_hold"] },
-];
+export const LIFECYCLE_GROUPS = JOB_CATEGORIES;
 
 export default function LifecycleTabs({ jobs, value, onChange }) {
   const counts = Object.fromEntries(

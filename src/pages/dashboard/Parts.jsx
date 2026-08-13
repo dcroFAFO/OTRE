@@ -1,28 +1,37 @@
-import React, { useState, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, CheckCircle2, ExternalLink, Package, RefreshCw, Search } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Package, ExternalLink, CheckCircle2, AlertCircle, Search } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
 import { cn } from "@/lib/utils";
 import { detectBrands } from "@/lib/partsFilter";
+import { getSafeErrorMessage } from "@/lib/errors";
+
+const PAGE_SIZE = 25;
+const MAX_SYNC_PAGES = 40;
 
 export default function Parts() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { search: locationSearch } = useLocation();
   const category = new URLSearchParams(locationSearch).get("category") || "";
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(null);
-  const [syncResult, setSyncResult] = useState(null);
+  const [syncProgress, setSyncProgress] = useState(/** @type {{ processed: number, total: number } | null} */ (null));
+  const [syncResult, setSyncResult] = useState(/** @type {{ success: boolean, message: string } | null} */ (null));
 
-  const { data: products = [], isLoading } = useQuery({
+  const productsQuery = useQuery({
     queryKey: ["estore-products"],
     queryFn: () => base44.entities.Product.filter({ supplier: "eScootNow" }, "name", 500),
   });
+  const products = /** @type {Array<Record<string, any>>} */ (productsQuery.data || []);
 
   const handleSync = async () => {
+    if (syncing) return;
     setSyncing(true);
     setSyncResult(null);
     setSyncProgress(null);
@@ -30,25 +39,28 @@ export default function Parts() {
     let offset = 0;
     let totalCreated = 0;
     let totalUpdated = 0;
-    const PAGE_SIZE = 25;
 
     try {
-      while (true) {
-        const res = await base44.functions.invoke("syncEcwidProducts", { offset, page_size: PAGE_SIZE });
-        const data = res.data;
-        totalCreated += data.created;
-        totalUpdated += data.updated;
-        setSyncProgress({ processed: offset + data.processed, total: data.total });
+      for (let page = 0; page < MAX_SYNC_PAGES; page += 1) {
+        const response = await base44.functions.invoke("syncEcwidProducts", { offset, page_size: PAGE_SIZE });
+        const data = response?.data;
+        if (!data || !Number.isFinite(Number(data.processed)) || !Number.isFinite(Number(data.total))) {
+          throw new Error("Invalid catalogue response");
+        }
+        totalCreated += Number(data.created || 0);
+        totalUpdated += Number(data.updated || 0);
+        setSyncProgress({ processed: Math.min(offset + Number(data.processed), Number(data.total)), total: Number(data.total) });
 
         if (!data.has_more) break;
-        offset = data.next_offset;
-        await new Promise((r) => setTimeout(r, 500));
+        if (page === MAX_SYNC_PAGES - 1 || Number(data.next_offset) <= offset) throw new Error("Catalogue sync did not finish");
+        offset = Number(data.next_offset);
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      qc.invalidateQueries(["estore-products"]);
-      setSyncResult({ success: true, message: `Sync complete: ${totalCreated} new, ${totalUpdated} updated.` });
-    } catch (err) {
-      setSyncResult({ success: false, message: err.message || "Sync failed." });
+      await queryClient.invalidateQueries({ queryKey: ["estore-products"] });
+      setSyncResult({ success: true, message: `Catalogue updated: ${totalCreated} added and ${totalUpdated} refreshed.` });
+    } catch (error) {
+      setSyncResult({ success: false, message: getSafeErrorMessage(error, "The catalogue could not be refreshed. Please try again.") });
     } finally {
       setSyncing(false);
       setSyncProgress(null);
@@ -56,153 +68,165 @@ export default function Parts() {
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return products.filter((p) => {
-      if (category && p.category_label !== category) return false;
-      if (q) {
-        return (
-          p.name?.toLowerCase().includes(q) ||
-          p.sku?.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q) ||
-          p.category_label?.toLowerCase().includes(q)
-        );
-      }
-      return true;
+    const query = search.trim().toLowerCase();
+    return products.filter((product) => {
+      if (category && product.category_label !== category) return false;
+      return !query || [product.name, product.sku, product.description, product.category_label]
+        .some((value) => String(value || "").toLowerCase().includes(query));
     });
-  }, [products, search, category]);
+  }, [category, products, search]);
+
+  const clearFilters = () => {
+    setSearch("");
+    if (category) navigate("/dashboard/parts");
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-foreground">
-            {category || "Parts"}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            eScootNow parts catalogue — synced from Ecwid.
-          </p>
+          <h1 className="font-heading text-2xl font-extrabold text-foreground">{category || "Parts"}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Search and refresh the workshop parts catalogue.</p>
         </div>
-        <Button onClick={handleSync} disabled={syncing} className="gap-2 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm shadow-accent/20">
-          <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
-          {syncing
-            ? syncProgress
-              ? `Syncing… ${syncProgress.processed}/${syncProgress.total}`
-              : "Starting…"
-            : "Sync from Ecwid"}
+        <Button type="button" size="touch" onClick={handleSync} disabled={syncing} aria-describedby={syncing ? "parts-sync-status" : undefined}>
+          <RefreshCw className={cn(syncing && "animate-spin")} aria-hidden="true" />
+          {syncing ? "Refreshing catalogue..." : "Refresh catalogue"}
         </Button>
-      </div>
+      </header>
 
-      {/* Sync result banner */}
-      {syncResult && (
-        <div className={cn(
-          "flex items-start gap-3 rounded-xl border px-4 py-3 text-sm",
-          syncResult.success
-            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-            : "border-rose-200 bg-rose-50 text-rose-800"
-        )}>
-          {syncResult.success
-            ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-            : <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />}
-          <span>{syncResult.message}</span>
-        </div>
-      )}
+      {syncing ? (
+        <p id="parts-sync-status" className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          {syncProgress ? `Processed ${syncProgress.processed} of ${syncProgress.total} products.` : "Connecting to the catalogue..."}
+        </p>
+      ) : null}
 
-      {/* Search */}
-      {products.length > 0 && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search name, SKU, description…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 rounded-xl"
-          />
-        </div>
-      )}
+      {syncResult ? (
+        <Alert variant={syncResult.success ? "default" : "destructive"} role={syncResult.success ? "status" : "alert"}>
+          {syncResult.success ? <CheckCircle2 aria-hidden="true" /> : <AlertCircle aria-hidden="true" />}
+          <AlertTitle>{syncResult.success ? "Catalogue refreshed" : "Refresh failed"}</AlertTitle>
+          <AlertDescription>{syncResult.message}</AlertDescription>
+        </Alert>
+      ) : null}
 
-      {/* Product table */}
-      {isLoading ? (
-        <div className="py-16 flex justify-center">
-          <div className="h-7 w-7 border-4 border-border border-t-accent rounded-full animate-spin" />
-        </div>
-      ) : products.length === 0 ? (
-        <div className="py-20 text-center text-muted-foreground">
-          <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="font-semibold">No parts yet</p>
-          <p className="text-sm mt-1">Click "Sync from Ecwid" to import your eScootNow catalogue.</p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-20 text-center text-muted-foreground">
-          <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="font-semibold">No parts match your search</p>
-          <p className="text-sm mt-1">Try a different search or category.</p>
-        </div>
+      {products.length ? (
+        <label className="relative block max-w-md">
+          <span className="sr-only">Search parts by name, SKU, description, or category</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input placeholder="Search parts" value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" />
+        </label>
+      ) : null}
+
+      {productsQuery.error && products.length ? (
+        <ErrorState title="Latest catalogue changes could not be loaded" description="Previously loaded parts remain visible." error={productsQuery.error} onRetry={productsQuery.refetch} />
+      ) : null}
+
+      {productsQuery.isLoading ? (
+        <TableSkeleton rows={8} columns={6} label="Loading parts catalogue" />
+      ) : productsQuery.error && !products.length ? (
+        <ErrorState title="Parts catalogue could not be loaded" error={productsQuery.error} onRetry={productsQuery.refetch} />
+      ) : !products.length ? (
+        <EmptyState
+          icon={Package}
+          title="No parts have been imported"
+          description="Refresh the catalogue to import products for workshop jobs."
+          action={<Button type="button" onClick={handleSync} disabled={syncing}><RefreshCw /> Refresh catalogue</Button>}
+        />
+      ) : !filtered.length ? (
+        <NoResultsState title="No parts match these filters" description="Clear the search or category to see all catalogue products." onClear={clearFilters} />
       ) : (
-        <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                <th className="px-4 py-3 text-left">Part</th>
-                <th className="px-4 py-3 text-left hidden md:table-cell">Category</th>
-                <th className="px-4 py-3 text-left hidden lg:table-cell">Brand</th>
-                <th className="px-4 py-3 text-right">Price</th>
-                <th className="px-4 py-3 text-center hidden sm:table-cell">Stock</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((p) => {
-                const brand = detectBrands(p)[0];
-                return (
-                  <tr key={p.id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {p.image_url ? (
-                          <img src={p.image_url} alt={p.name} className="h-9 w-9 rounded-lg object-cover shrink-0 bg-secondary" />
-                        ) : (
-                          <div className="h-9 w-9 rounded-lg bg-secondary shrink-0 flex items-center justify-center">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-foreground line-clamp-1">{p.name}</p>
-                          {p.sku && <p className="text-[11px] text-muted-foreground font-mono">{p.sku}</p>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-xs text-muted-foreground">{p.category_label || "—"}</span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-xs text-muted-foreground">{brand || "—"}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      ${(p.price ?? 0).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-center hidden sm:table-cell">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[11px] font-semibold",
-                        p.in_stock ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                      )}>
-                        {p.in_stock ? "In stock" : "Out of stock"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {p.supplier_url && (
-                        <a href={p.supplier_url} target="_blank" rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors inline-flex">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <PartsResults products={filtered} />
       )}
     </div>
   );
+}
+
+/** @param {{ products: Array<Record<string, any>> }} props */
+function PartsResults({ products }) {
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+        {products.map((product) => <PartCard key={product.id} product={product} />)}
+      </div>
+      <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm md:block">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Workshop parts catalogue</caption>
+          <thead>
+            <tr className="border-b border-border bg-secondary/40 text-xs font-semibold uppercase text-muted-foreground">
+              <th className="px-4 py-3 text-left">Part</th>
+              <th className="px-4 py-3 text-left">Category</th>
+              <th className="hidden px-4 py-3 text-left lg:table-cell">Brand</th>
+              <th className="px-4 py-3 text-right">Price</th>
+              <th className="px-4 py-3 text-center">Stock</th>
+              <th className="w-16 px-4 py-3"><span className="sr-only">Supplier link</span></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {products.map((product) => {
+              const brand = detectBrands(product)[0];
+              return (
+                <tr key={product.id} className="transition-colors hover:bg-secondary/30">
+                  <td className="px-4 py-3"><PartIdentity product={product} /></td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{product.category_label || "Not set"}</td>
+                  <td className="hidden px-4 py-3 text-xs text-muted-foreground lg:table-cell">{brand || "Not set"}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">{formatPrice(product.price)}</td>
+                  <td className="px-4 py-3 text-center"><StockBadge inStock={product.in_stock} /></td>
+                  <td className="px-2 py-2 text-right">
+                    {product.supplier_url ? (
+                      <Button asChild variant="ghost" size="iconTouch">
+                        <a href={product.supplier_url} target="_blank" rel="noopener noreferrer" aria-label={`Open supplier page for ${product.name}`}><ExternalLink aria-hidden="true" /></a>
+                      </Button>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/** @param {{ product: Record<string, any> }} props */
+function PartCard({ product }) {
+  const brand = detectBrands(product)[0];
+  return (
+    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <PartIdentity product={product} />
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div><dt className="text-xs text-muted-foreground">Category</dt><dd className="mt-0.5 line-clamp-2">{product.category_label || "Not set"}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Brand</dt><dd className="mt-0.5 truncate">{brand || "Not set"}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Price</dt><dd className="mt-0.5 font-heading font-bold">{formatPrice(product.price)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Availability</dt><dd className="mt-0.5"><StockBadge inStock={product.in_stock} /></dd></div>
+      </dl>
+      {product.supplier_url ? <Button asChild variant="outline" size="touch" className="mt-4 w-full"><a href={product.supplier_url} target="_blank" rel="noopener noreferrer">Open supplier page <ExternalLink aria-hidden="true" /></a></Button> : null}
+    </article>
+  );
+}
+
+/** @param {{ product: Record<string, any> }} props */
+function PartIdentity({ product }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      {product.image_url ? (
+        <img src={product.image_url} alt="" className="h-11 w-11 shrink-0 rounded-md bg-secondary object-cover" />
+      ) : (
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-secondary"><Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" /></span>
+      )}
+      <div className="min-w-0">
+        <p className="line-clamp-2 font-semibold text-foreground">{product.name}</p>
+        {product.sku ? <p className="truncate font-mono text-[11px] text-muted-foreground">{product.sku}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+/** @param {{ inStock?: boolean }} props */
+function StockBadge({ inStock }) {
+  return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold", inStock ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800")}>{inStock ? "In stock" : "Out of stock"}</span>;
+}
+
+/** @param {any} value */
+function formatPrice(value) {
+  return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value || 0));
 }

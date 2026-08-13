@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import ScooterFormDialog from "@/components/portal/settings/ScooterFormDialog";
 import { toast } from "sonner";
 import { Bike, Plus, Pencil, Trash2, Loader2, Lock } from "lucide-react";
+import { EmptyState } from "@/components/shared";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 export default function ScootersCard({ scooters, onChanged }) {
   const [editing, setEditing] = useState(null); // null | {} (new) | scooter
@@ -17,7 +19,7 @@ export default function ScootersCard({ scooters, onChanged }) {
       toast.success("Scooter removed");
       onChanged?.();
     } catch (err) {
-      toast.error(err?.response?.data?.error || err.message || "Couldn't remove this scooter.");
+      toast.error(getSafeErrorMessage(err, "This scooter could not be removed. Please try again."));
     } finally {
       setDeletingId(null);
     }
@@ -37,9 +39,9 @@ export default function ScootersCard({ scooters, onChanged }) {
       </div>
 
       <div className="mt-4 space-y-2">
-        {scooters.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">No scooters saved yet.</p>
-        )}
+        {scooters.length === 0 ? (
+          <EmptyState compact className="rounded-lg border border-dashed border-border" icon={Bike} title="No scooters saved yet" description="Add a scooter to make future bookings faster." />
+        ) : null}
         {scooters.map((s) => (
           <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3">
             <div className="min-w-0">

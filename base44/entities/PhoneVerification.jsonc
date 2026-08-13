@@ -27,6 +27,20 @@
       "type": "number",
       "default": 0
     },
+    "delivery_channel": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "email"
+      ]
+    },
+    "booking_id": {
+      "type": "string"
+    },
+    "booking_created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "description": {
       "type": "string",
       "maxLength": 1000

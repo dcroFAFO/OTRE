@@ -3,16 +3,24 @@ export const DEFAULT_BUSINESS = {
   legalName: "On The Run Electrics",
   tagline: "Don’t Stop. Get Back On The Run.",
   subheading: "Fast, reliable electric scooter repairs, servicing, and diagnostics to keep your ride safe, road-ready, and moving.",
-  email: "hello@ontherunelectrics.com.au",
+  websiteUrl: "https://ontherunelectrics.com.au",
+  email: "info@ontherunelectrics.com.au",
   phone: "0415 505 908",
-  address: "11 Lucinda Street, Wooloongabba QLD 4102",
+  phoneE164: "+61415505908",
+  address: "11 Lucinda Street, Woolloongabba QLD 4102",
+  addressLine1: "11 Lucinda Street",
+  locality: "Woolloongabba",
+  region: "QLD",
+  postcode: "4102",
+  country: "AU",
+  abn: "",
   currency: "AUD",
-  timezone: "Australia/Melbourne",
+  timezone: "Australia/Brisbane",
   locations: [
-    { name: "Main Workshop", address: "11 Lucinda Street, Wooloongabba QLD 4102", phone: "0415 505 908", email: "hello@ontherunelectrics.com.au", is_default: true },
+    { name: "Main Workshop", address: "11 Lucinda Street, Woolloongabba QLD 4102", phone: "0415 505 908", email: "info@ontherunelectrics.com.au", is_default: true },
   ],
   openingHours: [
-    { day: "Monday – Sunday", hours: "11:00 AM – 7:30 PM" },
+    { day: "Monday – Sunday", hours: "11:00 AM – Midnight", opens: "11:00", closes: "23:59" },
   ],
   primaryCta: { label: "Book a Repair", target: "/book" },
   secondaryCta: { label: "View Services", target: "#services" },
@@ -220,3 +228,18 @@ export const DEFAULT_DEMO_PREVIEW_JOB = {
   reference: "OTR-1042",
   assetLabel: "Segway Ninebot Max G30",
 };
+
+export function businessContactLinks(business = DEFAULT_BUSINESS) {
+  const phone = String(business.phoneE164 || business.phone || DEFAULT_BUSINESS.phoneE164).replace(/[^+\d]/g, "");
+  const address = business.address || DEFAULT_BUSINESS.address;
+  return {
+    email: `mailto:${business.email || DEFAULT_BUSINESS.email}`,
+    phone: `tel:${phone}`,
+    maps: business.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+  };
+}
+
+export function businessHoursSummary(business = DEFAULT_BUSINESS) {
+  const rows = business.openingHours || DEFAULT_BUSINESS.openingHours;
+  return rows.map((row) => `${row.day}: ${row.hours}`).join("; ");
+}

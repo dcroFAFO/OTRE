@@ -29,6 +29,9 @@ export async function sendInvoiceToCustomer(job, invoice) {
 }
 
 export async function setPaymentStatus(invoice, job, status) {
+  if (!["outstanding", "paid"].includes(status)) {
+    throw new Error("Only outstanding or paid can be recorded manually.");
+  }
   return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
 }
 
@@ -62,27 +65,46 @@ export async function emailInvoicePdf(job, invoiceDraft, notes = "", regenerateC
 export const PREVIEW_CHECKOUT_MESSAGE =
   "Online checkout only works from the published site, not inside the preview.";
 
-export async function startInvoicePayment(invoice) {
+function checkoutAttemptId() {
+  return globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function currentReturnPath(fallback) {
+  if (typeof window === "undefined") return fallback;
+  const url = new URL(window.location.href);
+  ["payment", "checkout_result", "session_id", "order", "invoice", "attempt"].forEach((key) => url.searchParams.delete(key));
+  return `${url.pathname}${url.search}` || fallback;
+}
+
+export async function startInvoicePayment(invoice, options = {}) {
   if (window.self !== window.top) {
     return { blocked: true, reason: PREVIEW_CHECKOUT_MESSAGE };
   }
-  const res = await base44.functions.invoke("createInvoiceCheckout", { invoiceId: invoice.id });
+  const res = await base44.functions.invoke("createInvoiceCheckout", {
+    invoiceId: invoice.id,
+    checkoutAttemptId: options.checkoutAttemptId || checkoutAttemptId(),
+    returnPath: options.returnPath || currentReturnPath("/portal"),
+  });
   if (res.data?.url) window.location.href = res.data.url;
   return res.data;
 }
 
-export async function startStorePayment({ customer, items, fulfilment_method, shipping_address, notes }) {
+export async function startStorePayment({ customer, items, notes, checkoutAttemptId: attemptId }) {
   if (window.self !== window.top) {
     return { blocked: true, reason: PREVIEW_CHECKOUT_MESSAGE };
   }
   const res = await base44.functions.invoke("createStoreCheckout", {
     customer,
     items,
-    fulfilment_method,
-    shipping_address,
     notes,
+    checkoutAttemptId: attemptId,
   });
   if (res.data?.url) window.location.href = res.data.url;
+  return res.data;
+}
+
+export async function verifyCheckoutStatus(payload) {
+  const res = await base44.functions.invoke("checkoutStatus", payload);
   return res.data;
 }
 

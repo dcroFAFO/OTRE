@@ -25,6 +25,8 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
+        touch: "h-11 px-4 py-2",
+        iconTouch: "h-11 w-11",
       },
     },
     defaultVariants: {
@@ -34,6 +36,14 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * @typedef {React.ButtonHTMLAttributes<HTMLButtonElement> & {
+ *   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link",
+ *   size?: "default" | "sm" | "lg" | "icon" | "touch" | "iconTouch",
+ *   asChild?: boolean
+ * }} ButtonProps
+ */
+/** @type {React.ForwardRefExoticComponent<ButtonProps & React.RefAttributes<HTMLButtonElement>>} */
 const Button = React.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : "button"
   return (

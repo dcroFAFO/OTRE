@@ -21,12 +21,12 @@ export const HERO_SLIDES = [
   },
   {
     id: "woolloongabba",
-    image: "https://media.base44.com/images/public/6a2069bac12b203bbb93b0b3/780429b28_Untitled2560x1440px2.svg",
-    alt: "On The Run Electrics workshop exterior in Woolloongabba",
+    image: "/workshop-hero.jpg",
+    alt: "Technician inspecting an electric scooter in a repair workshop",
     eyebrow: "11 Lucinda Street, Woolloongabba",
     title: "Local workshop. Clear updates.",
     body:
       "Book online, bring your scooter in, and follow its progress from assessment to pickup through your customer portal.",
-    desktopPosition: "center 68%",
+    desktopPosition: "65% center",
   },
 ];

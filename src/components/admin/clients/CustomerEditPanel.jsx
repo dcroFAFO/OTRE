@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, X, Check, Loader2, Plus, Trash2, Bike, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, X, Check, Loader2, Plus, Trash2, Bike, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { CLIENT_STATUSES } from "@/config/clientConfig";
@@ -12,6 +12,7 @@ import ClientTagEditor from "./ClientTagEditor";
 import AssetIntakeForm from "./AssetIntakeForm";
 import { toast } from "sonner";
 import { logError } from "@/lib/logger";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 const STAFF_ROLES = new Set(["admin", "employee", "technician", "staff"]);
 
@@ -43,6 +44,7 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const save = async () => {
+    if (saving) return;
     if (!form.model.trim()) { toast.error("Model is required"); return; }
     setSaving(true);
     try {
@@ -62,6 +64,7 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
   };
 
   const remove = async () => {
+    if (deleting) return;
     if (!scooter.id) { onDeleted(); return; }
     setDeleting(true);
     try {
@@ -77,7 +80,7 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
   if (!editing) {
     return (
       <div className="space-y-1.5">
-        <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 group">
+        <div className="group flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5">
           <Bike className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -88,68 +91,68 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
             <p className="text-xs text-muted-foreground">{Number(scooter.related_job_count || 0)} related jobs{scooter.last_service_date ? ` · Last service ${scooter.last_service_date}` : ""}</p>
             {scooter.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{scooter.notes}</p>}
           </div>
-          <button type="button" onClick={() => setEditing(true)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary transition-opacity">
-            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-          <button type="button" onClick={remove} disabled={deleting} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 transition-opacity">
-            {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
-          </button>
+          <Button type="button" variant="ghost" size="iconTouch" onClick={() => setEditing(true)} className="sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={`Edit ${[scooter.make, scooter.model].filter(Boolean).join(" ") || "scooter"}`}>
+            <Pencil aria-hidden="true" />
+          </Button>
+          <Button type="button" variant="ghost" size="iconTouch" onClick={remove} disabled={deleting} className="text-destructive hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={`Remove ${[scooter.make, scooter.model].filter(Boolean).join(" ") || "scooter"}`}>
+            {deleting ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+          </Button>
         </div>
         {scooter.id && (
-          <AssetIntakeForm scooter={scooter} customerName={customerName} actor={actor} onUpdated={onUpdated} />
+          <AssetIntakeForm scooter={scooter} customerName={customerName} actor={actor} onSaved={onUpdated} />
         )}
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label className="text-xs">Make</Label>
+          <Label htmlFor={`customer-scooter-make-${scooter.id || "new"}`} className="text-xs">Make</Label>
           <Select value={form.make || ""} onValueChange={(v) => setForm((f) => ({ ...f, make: v, model: "" }))}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select make" /></SelectTrigger>
+            <SelectTrigger id={`customer-scooter-make-${scooter.id || "new"}`}><SelectValue placeholder="Select make" /></SelectTrigger>
             <SelectContent className="max-h-64">
               {BRAND_NAMES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Model <span className="text-destructive">*</span></Label>
+          <Label htmlFor={`customer-scooter-model-${scooter.id || "new"}`} className="text-xs">Model <span className="text-destructive">*</span></Label>
           {models.length > 0 ? (
             <Select value={form.model || ""} onValueChange={(v) => set("model", v)}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select model" /></SelectTrigger>
+              <SelectTrigger id={`customer-scooter-model-${scooter.id || "new"}`}><SelectValue placeholder="Select model" /></SelectTrigger>
               <SelectContent className="max-h-64">
                 {models.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
-            <Input value={form.model} onChange={(e) => set("model", e.target.value)} placeholder="Model" className="h-8 text-xs" />
+            <Input id={`customer-scooter-model-${scooter.id || "new"}`} value={form.model} onChange={(e) => set("model", e.target.value)} placeholder="Model" />
           )}
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Year</Label>
-          <Input value={form.year} onChange={(e) => set("year", e.target.value)} placeholder="e.g. 2023" className="h-8 text-xs" />
+          <Label htmlFor={`customer-scooter-year-${scooter.id || "new"}`} className="text-xs">Year</Label>
+          <Input id={`customer-scooter-year-${scooter.id || "new"}`} inputMode="numeric" value={form.year} onChange={(e) => set("year", e.target.value)} placeholder="e.g. 2023" />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Serial / frame no.</Label>
-          <Input value={form.serial_number} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" className="h-8 text-xs" />
+          <Label htmlFor={`customer-scooter-serial-${scooter.id || "new"}`} className="text-xs">Serial / frame no.</Label>
+          <Input id={`customer-scooter-serial-${scooter.id || "new"}`} value={form.serial_number} onChange={(e) => set("serial_number", e.target.value)} placeholder="SN-12345" />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Colour</Label>
-          <Input value={form.colour} onChange={(e) => set("colour", e.target.value)} placeholder="Black" className="h-8 text-xs" />
+          <Label htmlFor={`customer-scooter-colour-${scooter.id || "new"}`} className="text-xs">Colour</Label>
+          <Input id={`customer-scooter-colour-${scooter.id || "new"}`} value={form.colour} onChange={(e) => set("colour", e.target.value)} placeholder="Black" />
         </div>
-        <div className="col-span-2 space-y-1">
-          <Label className="text-xs">Notes</Label>
-          <Input value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Any relevant notes..." className="h-8 text-xs" />
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor={`customer-scooter-notes-${scooter.id || "new"}`} className="text-xs">Notes</Label>
+          <Input id={`customer-scooter-notes-${scooter.id || "new"}`} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Any relevant notes..." />
         </div>
       </div>
       <div className="flex gap-2">
-        <Button size="sm" className="h-7 gap-1 text-xs" disabled={saving} onClick={save}>
+        <Button type="button" size="touch" className="gap-1 text-xs" disabled={saving} onClick={save}>
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
           {scooter.id ? "Save" : "Add"}
         </Button>
-        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => scooter.id ? setEditing(false) : onDeleted()}>
+        <Button type="button" size="touch" variant="ghost" className="text-xs" onClick={() => scooter.id ? setEditing(false) : onDeleted()} disabled={saving}>
           <X className="h-3 w-3" /> Cancel
         </Button>
       </div>
@@ -164,9 +167,10 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldErrors, setFieldErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [scooters, setScooters] = useState([]);
   const [loadingScooters, setLoadingScooters] = useState(false);
+  const [scooterError, setScooterError] = useState("");
   const [pendingNewScooter, setPendingNewScooter] = useState(null);
 
   useEffect(() => {
@@ -182,12 +186,16 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
     const customerKey = customer?.id;
     if (!customerKey) return;
     setLoadingScooters(true);
+    setScooterError("");
     try { setScooters(await listCustomerScooters(customerKey)); }
-    catch (e) { logError("Load scooters failed", e); }
+    catch (e) { logError("Load scooters failed", e); setScooterError(getSafeErrorMessage(e, "Scooters could not be loaded.")); }
     finally { setLoadingScooters(false); }
   };
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setFieldErrors((current) => ({ ...current, [k]: "" }));
+  };
 
   const cancelEdit = () => {
     setForm({ full_name: customer.full_name || "", email: customer.email || "", phone: customer.phone_display || customer.phone || "", status: customer.status || "active", tags: customer.tags || [] });
@@ -197,30 +205,37 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
   };
 
   const save = async () => {
-    const errors = {};
+    if (saving) return;
+    const errors = /** @type {Record<string, string>} */ ({});
     if (!form.full_name.trim()) errors.full_name = "Name is required";
     if (form.email && !isValidEmail(form.email)) errors.email = "Invalid email format";
     const e164 = form.phone ? normalizePhone(form.phone) : "";
     if (form.phone && !e164) errors.phone = "Invalid Australian mobile number (04xx xxx xxx)";
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
-
-    // Duplicate contact check
-    const { emailConflict, phoneConflict } = await checkDuplicateContact(
-      form.email !== customer.email ? form.email : null,
-      e164 && e164 !== customer.phone_e164 ? e164 : null,
-      customer.id
-    );
-    if (emailConflict) {
-      setFieldErrors((prev) => ({ ...prev, email: `This email already belongs to: ${emailConflict.full_name}` }));
-      return;
-    }
-    if (phoneConflict) {
-      setFieldErrors((prev) => ({ ...prev, phone: `This phone already belongs to: ${phoneConflict.full_name}` }));
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstField = Object.keys(errors)[0] === "full_name" ? "full-name" : Object.keys(errors)[0];
+      document.getElementById(`customer-edit-${firstField}`)?.focus();
       return;
     }
 
     setSaving(true);
     try {
+      const { emailConflict, phoneConflict } = await checkDuplicateContact(
+        form.email !== customer.email ? form.email : null,
+        e164 && e164 !== customer.phone_e164 ? e164 : null,
+        customer.id
+      );
+      if (emailConflict) {
+        setFieldErrors((prev) => ({ ...prev, email: `This email already belongs to: ${emailConflict.full_name}` }));
+        document.getElementById("customer-edit-email")?.focus();
+        return;
+      }
+      if (phoneConflict) {
+        setFieldErrors((prev) => ({ ...prev, phone: `This phone already belongs to: ${phoneConflict.full_name}` }));
+        document.getElementById("customer-edit-phone")?.focus();
+        return;
+      }
+
       const updated = await updateClient(customer, {
         full_name: form.full_name.trim(),
         email: form.email?.trim().toLowerCase() || customer.email,
@@ -272,16 +287,16 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-foreground">Account details</p>
         {canEdit && !editing && (
-          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => setEditing(true)}>
+          <Button type="button" size="touch" variant="outline" className="gap-1.5 text-xs sm:h-9" onClick={() => setEditing(true)}>
             <Pencil className="h-3 w-3" /> Edit Customer
           </Button>
         )}
         {canEdit && editing && (
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={cancelEdit} disabled={saving}>
+            <Button type="button" size="touch" variant="ghost" className="text-xs sm:h-9" onClick={cancelEdit} disabled={saving}>
               <X className="h-3 w-3 mr-1" /> Cancel
             </Button>
-            <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={save} disabled={saving}>
+            <Button type="button" size="touch" className="gap-1.5 text-xs sm:h-9" onClick={save} disabled={saving}>
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Save
             </Button>
@@ -292,11 +307,11 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
       {/* Profile fields */}
       <div className="space-y-3">
         <div className="space-y-1">
-          <Label className="text-xs">Full name {editing && <span className="text-destructive">*</span>}</Label>
+          <Label htmlFor="customer-edit-full-name" className="text-xs">Full name {editing && <span className="text-destructive">*</span>}</Label>
           {editing ? (
             <>
-              <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} className={cn(fieldErrors.full_name && "border-destructive")} />
-              {fieldErrors.full_name && <FieldError msg={fieldErrors.full_name} />}
+              <Input id="customer-edit-full-name" value={form.full_name} onChange={(e) => set("full_name", e.target.value)} aria-invalid={Boolean(fieldErrors.full_name)} aria-describedby={fieldErrors.full_name ? "customer-edit-full-name-error" : undefined} className={cn(fieldErrors.full_name && "border-destructive")} />
+              {fieldErrors.full_name && <FieldError id="customer-edit-full-name-error" msg={fieldErrors.full_name} />}
             </>
           ) : (
             <ReadValue>{form.full_name || "—"}</ReadValue>
@@ -304,24 +319,24 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
         </div>
 
         <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact details</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label className="text-xs">Email</Label>
+            <Label htmlFor="customer-edit-email" className="text-xs">Email</Label>
             {editing ? (
               <>
-                <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={cn(fieldErrors.email && "border-destructive")} />
-                {fieldErrors.email && <FieldError msg={fieldErrors.email} />}
+                <Input id="customer-edit-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? "customer-edit-email-error" : undefined} className={cn(fieldErrors.email && "border-destructive")} />
+                {fieldErrors.email && <FieldError id="customer-edit-email-error" msg={fieldErrors.email} />}
               </>
             ) : (
               <ReadValue>{form.email ? <a href={`mailto:${form.email}`} className="text-primary hover:underline">{form.email}</a> : "—"}</ReadValue>
             )}
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Phone</Label>
+            <Label htmlFor="customer-edit-phone" className="text-xs">Phone</Label>
             {editing ? (
               <>
-                <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="04xx xxx xxx" className={cn(fieldErrors.phone && "border-destructive")} />
-                {fieldErrors.phone && <FieldError msg={fieldErrors.phone} />}
+                <Input id="customer-edit-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="04xx xxx xxx" aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? "customer-edit-phone-error" : undefined} className={cn(fieldErrors.phone && "border-destructive")} />
+                {fieldErrors.phone && <FieldError id="customer-edit-phone-error" msg={fieldErrors.phone} />}
               </>
             ) : (
               <ReadValue>{form.phone ? <a href={`tel:${form.phone}`} className="hover:underline">{form.phone}</a> : "—"}</ReadValue>
@@ -331,9 +346,9 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
 
         {editing && (
           <div className="space-y-1">
-            <Label className="text-xs">Status</Label>
+            <Label htmlFor="customer-edit-status" className="text-xs">Status</Label>
             <Select value={form.status} onValueChange={(v) => set("status", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="customer-edit-status" className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>{CLIENT_STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -341,8 +356,8 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
 
         {editing && (
           <div className="space-y-1">
-            <Label className="text-xs">Tags / segments</Label>
-            <ClientTagEditor value={form.tags} onChange={(v) => set("tags", v)} />
+            <p id="customer-edit-tags-label" className="text-xs font-medium">Tags / segments</p>
+            <ClientTagEditor value={form.tags} onChange={(v) => set("tags", v)} labelledBy="customer-edit-tags-label" />
           </div>
         )}
       </div>
@@ -354,11 +369,18 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
             <Bike className="h-3.5 w-3.5" /> Scooters / Assets
           </p>
           {canEdit && !pendingNewScooter && (
-            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={() => setPendingNewScooter(blankScooter())}>
+            <Button type="button" size="touch" variant="ghost" className="gap-1 text-xs sm:h-9" onClick={() => setPendingNewScooter(blankScooter())}>
               <Plus className="h-3.5 w-3.5" /> Add
             </Button>
           )}
         </div>
+
+        {scooterError ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">
+            <span>{scooterError}</span>
+            <Button type="button" variant="outline" size="touch" className="text-xs sm:h-9" onClick={loadScooters}>Try again</Button>
+          </div>
+        ) : null}
 
         {loadingScooters ? (
           <div className="flex justify-center py-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
@@ -379,7 +401,7 @@ export default function CustomerEditPanel({ customer, actor, onChange, linkedAss
                 />
               );
             })}
-            {scooters.length === 0 && !pendingNewScooter && (
+            {scooters.length === 0 && !pendingNewScooter && !scooterError && (
               <p className="text-xs text-muted-foreground py-1">No scooters linked to this customer yet.</p>
             )}
             {pendingNewScooter && (
@@ -402,9 +424,9 @@ function ReadValue({ children }) {
   return <p className="text-sm text-foreground py-1 px-0.5">{children}</p>;
 }
 
-function FieldError({ msg }) {
+function FieldError({ id, msg }) {
   return (
-    <p className="text-xs text-destructive flex items-center gap-1 mt-0.5">
+    <p id={id} className="mt-0.5 flex items-center gap-1 text-xs text-destructive" role="alert">
       <AlertCircle className="h-3 w-3 shrink-0" /> {msg}
     </p>
   );

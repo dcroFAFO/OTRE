@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
 import { getJobInvoice, createInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems, sendPaymentReminder } from "@/services/paymentService";
@@ -11,10 +14,12 @@ import PartPickerModal from "./PartPickerModal";
 import LabourConsumablePickerModal from "./LabourConsumablePickerModal";
 import InvoiceLineItemCard from "./InvoiceLineItemCard";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { AlertCircle, Bell, CheckCircle2, Clock, CreditCard, FileText, Loader2, Lock, Package, Plus, Save, Send, Wrench } from "lucide-react";
+import { AlertCircle, Bell, CheckCircle2, Clock, CreditCard, FileText, Loader2, Lock, MoreHorizontal, Package, Plus, Save, Send, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { PARTS_MARKUP_PERCENT, getUsageCustomerUnitPrice, roundMoney } from "@/lib/partsPricing";
 import { addInventoryParts, generateAndSendInvoice } from "@/services/jobService";
+import { ErrorState, LoadingSpinner } from "@/components/shared";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 function normalizeDraftItem(item = {}) {
   const qty = Number(item.qty) || 1;
@@ -56,7 +61,7 @@ const ASYNC_STATES = {
 
 function staffErrorMessage(error, fallback) {
   console.error("[FinaliseInvoice]", fallback, error);
-  return error?.response?.data?.error || error?.message || fallback;
+  return getSafeErrorMessage(error, fallback);
 }
 
 function validateInvoiceDraft(job, items) {
@@ -114,25 +119,34 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   const [addingParts, setAddingParts] = useState(false);
   const [addingLabour, setAddingLabour] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [pendingPaymentStatus, setPendingPaymentStatus] = useState(null);
+  const [paymentStatusPending, setPaymentStatusPending] = useState(false);
 
   const loadInvoiceData = async () => {
-    setLoading(true);
-    const [inv, usage] = await Promise.all([
-      getJobInvoice(job.id),
-      base44.entities.InventoryUsage.filter({ job_id: job.id }),
-    ]);
-    const usageById = new Map((usage || []).map((item) => [item.id, item]));
-    setInvoice(inv);
-    setUsageRecords(usage || []);
-    setDraftItems((inv?.line_items || []).map((item) => {
-      const usage = usageById.get(item.source_usage_id);
-      if (!usage || item.kind !== "part") return normalizeDraftItem(item);
-      return normalizeDraftItem({ ...item, internal_cost_price: usage.unit_cost, markup_percentage: usage.markup_percentage, is_custom_misc_part: usage.is_custom_misc_part, staff_notes: usage.note });
-    }));
-    setInternalNotes(inv?.internalCostingNotes || "");
-    setCustomerNotes(inv?.customer_notes ?? (job.diagnosis_notes || job.issue_description || ""));
-    setFinaliseStatus(inv?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
-    setLoading(false);
+    if (!invoice && usageRecords.length === 0) setLoading(true);
+    setLoadError(null);
+    try {
+      const [inv, usage] = await Promise.all([
+        getJobInvoice(job.id),
+        base44.entities.InventoryUsage.filter({ job_id: job.id }),
+      ]);
+      const usageById = new Map((usage || []).map((item) => [item.id, item]));
+      setInvoice(inv);
+      setUsageRecords(usage || []);
+      setDraftItems((inv?.line_items || []).map((item) => {
+        const usageItem = usageById.get(item.source_usage_id);
+        if (!usageItem || item.kind !== "part") return normalizeDraftItem(item);
+        return normalizeDraftItem({ ...item, internal_cost_price: usageItem.unit_cost, markup_percentage: usageItem.markup_percentage, is_custom_misc_part: usageItem.is_custom_misc_part, staff_notes: usageItem.note });
+      }));
+      setInternalNotes(inv?.internalCostingNotes || "");
+      setCustomerNotes(inv?.customer_notes ?? (job.diagnosis_notes || job.issue_description || ""));
+      setFinaliseStatus(inv?.invoiceSentAt ? ASYNC_STATES.SENT : ASYNC_STATES.IDLE);
+    } catch (error) {
+      setLoadError(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadInvoiceData(); }, [job.id]);
@@ -190,7 +204,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       toast.success("Invoice line items saved.");
       onChange?.();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to save invoice line items.");
+      toast.error(getSafeErrorMessage(err, "Failed to save invoice line items."));
     } finally {
       setSavingLines(false);
     }
@@ -276,10 +290,20 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     setPreviewOpen(false);
   };
 
-  const setStatus = async (status) => {
-    const inv = await setPaymentStatus(invoice, job, status, actor);
-    setInvoice(inv);
-    onChange?.();
+  const confirmPaymentStatus = async () => {
+    if (!invoice || !pendingPaymentStatus || paymentStatusPending) return;
+    setPaymentStatusPending(true);
+    try {
+      const inv = await setPaymentStatus(invoice, job, pendingPaymentStatus);
+      setInvoice(inv);
+      toast.success(pendingPaymentStatus === "paid" ? "Payment recorded and job completed." : "Invoice marked outstanding.");
+      onChange?.();
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error, "Payment status could not be updated."));
+    } finally {
+      setPaymentStatusPending(false);
+      setPendingPaymentStatus(null);
+    }
   };
 
   const payOnline = async () => {
@@ -289,7 +313,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       const result = await startInvoicePayment(invoice);
       if (result?.blocked) setPaying(false);
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to start checkout.");
+      toast.error(getSafeErrorMessage(err, "Failed to start checkout."));
       setPaying(false);
     }
   };
@@ -302,7 +326,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       onChange?.();
       toast.success("Parts added to invoice.");
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to add parts.");
+      toast.error(getSafeErrorMessage(err, "Failed to add parts."));
     } finally {
       setAddingParts(false);
     }
@@ -317,7 +341,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       toast.success("Payment reminder emailed to the customer.");
       onChange?.();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to send reminder.");
+      toast.error(getSafeErrorMessage(err, "Failed to send reminder."));
     } finally {
       setSendingReminder(false);
     }
@@ -334,7 +358,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       onChange?.();
       toast.success("Labour / consumable added to invoice.");
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to add labour / consumable.");
+      toast.error(getSafeErrorMessage(err, "Failed to add labour / consumable."));
     } finally {
       setAddingLabour(false);
     }
@@ -343,7 +367,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   if (loading) {
     return buttonOnly
       ? <Button size="sm" disabled className="gap-1.5"><Loader2 className="h-4 w-4 animate-spin" /> Finalise Invoice</Button>
-      : <div className="flex items-center justify-center h-24"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+      : <div className="flex items-center justify-center h-24"><LoadingSpinner label="Loading invoice" /></div>;
   }
 
   if (buttonOnly) {
@@ -381,6 +405,8 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
           {invoice && <StatusPill kind="payment" value={invoice.status} />}
         </div>
       </div>
+
+      {loadError && <ErrorState title="Invoice details could not be loaded" error={loadError} onRetry={loadInvoiceData} />}
 
       {activeItems.length > 0 && (
         <div className="rounded-xl border border-border overflow-hidden">
@@ -422,11 +448,12 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       {(canEdit || customerNotes) && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Invoice notes</Label>
+            {canEdit ? <Label htmlFor={`invoice-notes-${job.id}`} className="text-xs font-semibold uppercase text-muted-foreground">Invoice notes</Label> : <p className="text-xs font-semibold uppercase text-muted-foreground">Invoice notes</p>}
             <span className="text-[11px] text-muted-foreground/60">Included on the invoice</span>
           </div>
           {canEdit ? (
             <Textarea
+              id={`invoice-notes-${job.id}`}
               value={customerNotes}
               onChange={(e) => setCustomerNotes(e.target.value)}
               placeholder="Add notes for the customer — e.g. repair summary, warranty info, payment terms"
@@ -440,7 +467,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
       )}
 
       {invoice ? (
-        <div className="rounded-xl border border-border p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border border-border p-4">
           <div className="flex justify-between items-start gap-3 text-sm">
             <div className="space-y-1">
               <span className="text-muted-foreground font-mono">{invoice.number}</span>
@@ -449,10 +476,18 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
             <span className="font-heading text-xl font-extrabold">{currency} {(invoice.amount || lineTotal || 0).toFixed(2)}</span>
           </div>
 
+          {invoice.status === "refunded" && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              <AlertTitle>Historical refunded invoice</AlertTitle>
+              <AlertDescription>This status is retained for reporting. Refunds cannot be initiated or recorded from this panel.</AlertDescription>
+            </Alert>
+          )}
+
           {canEdit && (
             <div className="space-y-1">
-              <Label>Internal costing notes</Label>
-              <Input value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal notes only — never shown to customers" />
+              <Label htmlFor={`invoice-internal-notes-${job.id}`}>Internal costing notes</Label>
+              <Input id={`invoice-internal-notes-${job.id}`} value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal notes only — never shown to customers" />
             </div>
           )}
 
@@ -470,9 +505,26 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
                   {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />} Send reminder
                 </Button>
               )}
-              <Button size="sm" variant="outline" onClick={() => setStatus("outstanding")}>Mark outstanding</Button>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setStatus("paid")}>Mark paid</Button>
-              <Button size="sm" variant="ghost" onClick={() => setStatus("refunded")}>Refund</Button>
+              {invoice.status !== "refunded" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={paymentStatusPending} className="gap-1.5">
+                      {paymentStatusPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                      Payment status
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Manual payment record</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled={invoice.status === "paid"} onSelect={() => setPendingPaymentStatus("paid")}>
+                      Mark paid
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={invoice.status === "outstanding"} onSelect={() => setPendingPaymentStatus("outstanding")}>
+                      Mark outstanding
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <Button size="sm" className="gap-1.5 border-primary ml-auto" onClick={finaliseInvoice} disabled={creating || sending}>
                 {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send Invoice
               </Button>
@@ -519,6 +571,39 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
         onPrint={printPdf}
         onConfirmSend={confirmSend}
       />
+
+      <AlertDialog
+        open={!!pendingPaymentStatus}
+        onOpenChange={(open) => {
+          if (!open && !paymentStatusPending) setPendingPaymentStatus(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingPaymentStatus === "paid" ? "Record this invoice as paid?" : "Mark this invoice outstanding?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingPaymentStatus === "paid"
+                ? "Only continue after verifying payment outside Stripe. This completes the job and creates an audit record."
+                : "This reopens billing, clears the paid date, and moves the job to Invoice Outstanding. An audit record will be created."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={paymentStatusPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={paymentStatusPending}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmPaymentStatus();
+              }}
+            >
+              {paymentStatusPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {pendingPaymentStatus === "paid" ? "Record paid" : "Mark outstanding"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {canEdit && (
         <>

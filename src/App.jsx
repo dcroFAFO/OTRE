@@ -1,4 +1,3 @@
-import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
@@ -36,6 +35,7 @@ import AdminClients from '@/pages/admin/AdminClients';
 import AdminActivityLog from '@/pages/admin/AdminActivityLog';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
 import SystemSettings from '@/pages/settings/SystemSettings';
+import ServicePricingAdmin from '@/pages/settings/ServicePricingAdmin';
 import AssetManagement from '@/pages/AssetManagement';
 import ServicePricing from '@/pages/ServicePricing';
 import BlogIndex from '@/pages/blog/BlogIndex';
@@ -49,17 +49,17 @@ import BlogGenerator from '@/pages/blog-admin/BlogGenerator';
 import BlogTaxonomy from '@/pages/blog-admin/BlogTaxonomy';
 import BlogSettings from '@/pages/blog-admin/BlogSettings';
 import BlogLogs from '@/pages/blog-admin/BlogLogs';
+import ProtectedRoute, { LoginRedirect } from '@/components/ProtectedRoute';
+import RequireCapability from '@/components/auth/RequireCapability';
+import PageLoader from '@/components/shared/PageLoader';
+import ErrorState from '@/components/shared/ErrorState';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, checkAppState } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <PageLoader label="Loading On The Run Electrics" />;
   }
 
   // Handle authentication errors
@@ -67,10 +67,13 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      return <LoginRedirect />;
     }
+    return (
+      <main className="grid min-h-screen place-items-center px-5">
+        <ErrorState className="max-w-lg" onRetry={checkAppState} />
+      </main>
+    );
   }
 
   // Render the main app
@@ -82,10 +85,6 @@ const AuthenticatedApp = () => {
       <Route path="/contact" element={<Contact />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/book/guest" element={<GuestBooking />} />
-      <Route path="/profile-setup" element={<ProfileSetup />} />
-      <Route path="/portal" element={<PortalAccount />} />
-      <Route path="/portal/settings" element={<PortalSettings />} />
-      <Route path="/portal/account" element={<Navigate to="/portal" replace />} />
       <Route path="/store" element={<Store />} />
       <Route path="/service-pricing" element={<ServicePricing />} />
       <Route path="/blog" element={<BlogIndex />} />
@@ -99,30 +98,38 @@ const AuthenticatedApp = () => {
       <Route path="/oauth/consent" element={<OAuthConsent />} />
       <Route path="/feedback" element={<FeedbackRating />} />
       <Route path="/track/:jobId" element={<PublicTrack />} />
-      <Route path="/dashboard" element={<DashboardLayout />}>
-        <Route index element={<Overview />} />
-        <Route path="jobs" element={<Jobs />} />
-        <Route path="calendar" element={<Calendar />} />
-        <Route path="invoices" element={<Invoices />} />
-        <Route path="parts" element={<Parts />} />
-        <Route path="blog" element={<BlogDashboard />} />
-        <Route path="blog/posts" element={<BlogPosts />} />
-        <Route path="blog/posts/:id" element={<BlogEditor />} />
-        <Route path="blog/generate" element={<BlogGenerator />} />
-        <Route path="blog/taxonomy" element={<BlogTaxonomy />} />
-        <Route path="blog/settings" element={<BlogSettings />} />
-        <Route path="blog/logs" element={<BlogLogs />} />
+      <Route element={<ProtectedRoute unauthenticatedElement={<LoginRedirect />} />}>
+        <Route path="/profile-setup" element={<ProfileSetup />} />
+        <Route path="/portal" element={<PortalAccount />} />
+        <Route path="/portal/settings" element={<PortalSettings />} />
+        <Route path="/portal/account" element={<Navigate to="/portal" replace />} />
+
+        <Route element={<DashboardLayout />}>
+          <Route path="/dashboard">
+            <Route index element={<Overview />} />
+            <Route path="jobs" element={<Jobs />} />
+            <Route path="calendar" element={<Calendar />} />
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="parts" element={<RequireCapability minRole="admin"><Parts /></RequireCapability>} />
+            <Route path="blog" element={<RequireCapability minRole="admin"><BlogDashboard /></RequireCapability>} />
+            <Route path="blog/posts" element={<RequireCapability minRole="admin"><BlogPosts /></RequireCapability>} />
+            <Route path="blog/posts/:id" element={<RequireCapability minRole="admin"><BlogEditor /></RequireCapability>} />
+            <Route path="blog/generate" element={<RequireCapability minRole="admin"><BlogGenerator /></RequireCapability>} />
+            <Route path="blog/taxonomy" element={<RequireCapability minRole="admin"><BlogTaxonomy /></RequireCapability>} />
+            <Route path="blog/settings" element={<RequireCapability minRole="admin"><BlogSettings /></RequireCapability>} />
+            <Route path="blog/logs" element={<RequireCapability minRole="admin"><BlogLogs /></RequireCapability>} />
+          </Route>
+          <Route path="/settings" element={<RequireCapability minRole="admin"><SystemSettings /></RequireCapability>} />
+          <Route path="/settings/service-pricing" element={<RequireCapability minRole="admin"><ServicePricingAdmin /></RequireCapability>} />
+          <Route path="/asset-management" element={<RequireCapability minRole="technician"><AssetManagement /></RequireCapability>} />
+          <Route path="/admin/feedback" element={<AdminFeedback />} />
+          <Route path="/admin/clients" element={<AdminClients />} />
+          <Route path="/admin/activity" element={<AdminActivityLog />} />
+          <Route path="/customers" element={<Navigate to="/admin/clients" replace />} />
+          <Route path="/job-board" element={<Navigate to="/dashboard/jobs" replace />} />
+          <Route path="/parts-catalogue" element={<Navigate to="/dashboard/parts" replace />} />
+        </Route>
       </Route>
-      <Route element={<DashboardLayout />}>
-        <Route path="/settings" element={<SystemSettings />} />
-        <Route path="/asset-management" element={<AssetManagement />} />
-      </Route>
-      <Route path="/customers" element={<Navigate to="/admin/clients" replace />} />
-      <Route path="/job-board" element={<Navigate to="/dashboard/jobs" replace />} />
-      <Route path="/parts-catalogue" element={<Navigate to="/dashboard/parts" replace />} />
-      <Route path="/admin/feedback" element={<AdminFeedback />} />
-      <Route path="/admin/clients" element={<AdminClients />} />
-      <Route path="/admin/activity" element={<AdminActivityLog />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -140,7 +147,6 @@ function App() {
           <AuthenticatedApp />
           <FeedbackButton />
         </Router>
-        <Toaster />
         <SonnerToaster />
         </QueryClientProvider>
       </AuthProvider>

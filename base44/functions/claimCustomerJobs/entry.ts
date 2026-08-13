@@ -113,6 +113,6 @@ Deno.serve(async (req) => {
     return Response.json({ linked, customer_profile_id: profile.id, customer_account_id: customer.id });
   } catch (error) {
     console.error('[claimCustomerJobs] Error:', error.message, error.stack);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: 'Your customer account could not be linked. Please try again.' }, { status: 500 });
   }
 });

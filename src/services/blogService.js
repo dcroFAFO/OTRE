@@ -24,7 +24,7 @@ export function emptyPost(user, settings) {
     target_keyword: "",
     category_id: "",
     tag_ids: [],
-    author_name: settings?.default_author_name || user?.full_name || "OTR Scooters",
+    author_name: settings?.default_author_name || user?.full_name || "On The Run Electrics",
     author_bio: settings?.default_author_bio || "",
     author_avatar_url: settings?.default_author_avatar_url || "",
     featured_image_url: "",
@@ -36,7 +36,11 @@ export function emptyPost(user, settings) {
   };
 }
 
-const invoke = async (name, payload = {}) => (await base44.functions.invoke(name, payload)).data;
+const invoke = async (name, payload = {}) => {
+  const response = await base44.functions.invoke(name, payload);
+  if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
+  return response.data;
+};
 
 export const listBlogAdminData = (action = "dashboard") => invoke("blogAdminData", { action });
 export const listPublicBlog = (payload = {}) => invoke("publicBlog", payload);

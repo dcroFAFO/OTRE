@@ -4,10 +4,11 @@ import { ArrowLeft, ScrollText } from "lucide-react";
 import SEO from "@/components/SEO";
 import LandingFooter from "@/components/landing/LandingFooter";
 import LegalSection from "@/components/legal/LegalSection";
-import { CONTACT_DETAILS, CONTACT_LINKS } from "@/config/contactDetails";
-import { termsPageSchema } from "@/lib/structuredData";
+import { businessContactLinks } from "@/config/platformConfig";
+import { getTermsPageSchema } from "@/lib/structuredData";
+import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 
-const LAST_UPDATED = "26 July 2026";
+const LAST_UPDATED = "13 August 2026";
 
 const SECTIONS = [
   ["privacy", "Privacy Policy"],
@@ -15,6 +16,7 @@ const SECTIONS = [
   ["cookies", "Cookies, analytics & advertising"],
   ["google", "Google services & limited use"],
   ["payments", "Payments & Stripe"],
+  ["rewards", "Referral & loyalty rewards"],
   ["communications", "Email & SMS communications"],
   ["rights", "Your data rights, retention & security"],
   ["service", "Terms of Service (repairs & bookings)"],
@@ -26,13 +28,15 @@ const SECTIONS = [
 ];
 
 export default function Terms() {
+  const { data: { business } } = usePlatformConfig();
+  const links = businessContactLinks(business);
   return (
     <div className="min-h-screen bg-background">
       <SEO
         title="Terms & Conditions, Privacy Policy | On The Run Electrics"
         description="Privacy policy, terms of service, terms of use, cookie and data handling statements for On The Run Electrics electric scooter repairs."
         canonical="/terms"
-        structuredData={termsPageSchema}
+        structuredData={getTermsPageSchema(business)}
       />
 
       <header className="border-b border-border bg-card">
@@ -43,7 +47,7 @@ export default function Terms() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-8 sm:py-14">
+      <main id="main-content" className="mx-auto max-w-4xl px-4 py-10 sm:px-8 sm:py-14">
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent/15">
             <ScrollText className="h-5 w-5 text-accent" />
@@ -51,7 +55,7 @@ export default function Terms() {
           <div>
             <h1 className="font-heading text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">T&apos;s &amp; C&apos;s</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Privacy, terms of service, terms of use and data handling for {CONTACT_DETAILS.businessName}. Last updated {LAST_UPDATED}.
+              Privacy, terms of service, terms of use and data handling for {business.name}. Last updated {LAST_UPDATED}.
             </p>
           </div>
         </div>
@@ -72,7 +76,7 @@ export default function Terms() {
         <div className="mt-10 space-y-8">
           <LegalSection id="privacy" title="1. Privacy Policy">
             <p>
-              {CONTACT_DETAILS.businessName} (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) operates this website and customer portal for electric scooter
+              {business.name} (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) operates this website and customer portal for electric scooter
               repairs, servicing and parts. We handle personal information in accordance with the Australian Privacy Act 1988 (Cth) and the
               Australian Privacy Principles (APPs), and — where it applies to visitors in the EU/UK — the GDPR.
             </p>
@@ -139,7 +143,18 @@ export default function Terms() {
             </p>
           </LegalSection>
 
-          <LegalSection id="communications" title="6. Email & SMS communications">
+          <LegalSection id="rewards" title="6. Referral & loyalty rewards">
+            <ul className="list-disc space-y-1 pl-5">
+              <li>A new customer may claim one valid referral code during account registration and before making their first booking.</li>
+              <li>The referred customer receives $10 off their first eligible invoice for 90 days. After that invoice is paid, the referrer receives 10% off one later invoice, capped at $50 and valid for 90 days.</li>
+              <li>Every five distinct repairs paid after the loyalty program launch earns 10% off labour on one invoice, capped at $50 and valid for 180 days.</li>
+              <li>Only one reward may be applied to an invoice. A reward can be removed until Stripe checkout begins and is redeemed only when the invoice settles.</li>
+              <li>Rewards are account-specific, have no cash value, cannot be transferred, and may be cancelled where issued through error, abuse, fraud or an invalid transaction.</li>
+            </ul>
+            <p>Public reviews are optional and are never required to receive a reward.</p>
+          </LegalSection>
+
+          <LegalSection id="communications" title="7. Email & SMS communications">
             <p>
               When you book a repair or create an account, you agree to receive service-related emails and SMS messages — booking confirmations,
               status updates, quotes, invoices, collection notices and reminders. These are necessary to deliver the service you requested.
@@ -150,7 +165,7 @@ export default function Terms() {
             </p>
           </LegalSection>
 
-          <LegalSection id="rights" title="7. Your data rights, retention & security">
+          <LegalSection id="rights" title="8. Your data rights, retention & security">
             <ul className="list-disc space-y-1 pl-5">
               <li>You may request access to, or correction of, the personal information we hold about you.</li>
               <li>You may request deletion of your account and personal information, subject to records we must keep for tax, warranty or legal reasons.</li>
@@ -163,12 +178,12 @@ export default function Terms() {
               providers to protect your data, but no online system can be guaranteed completely secure.
             </p>
             <p>
-              To exercise any of these rights, email <a className="font-medium text-accent underline" href={CONTACT_LINKS.email}>{CONTACT_DETAILS.email}</a>. If
+              To exercise any of these rights, email <a className="font-medium text-accent underline" href={links.email}>{business.email}</a>. If
               you are unhappy with our response, you may complain to the Office of the Australian Information Commissioner (oaic.gov.au).
             </p>
           </LegalSection>
 
-          <LegalSection id="service" title="8. Terms of Service (repairs & bookings)">
+          <LegalSection id="service" title="9. Terms of Service (repairs & bookings)">
             <ul className="list-disc space-y-1 pl-5">
               <li>Bookings are requests only and are confirmed once we contact you. Times are estimates and may change based on workload and parts availability.</li>
               <li>Quotes are estimates based on the reported fault. If additional faults are found, we will contact you for approval before extra work is carried out.</li>
@@ -181,7 +196,7 @@ export default function Terms() {
             </ul>
           </LegalSection>
 
-          <LegalSection id="use" title="9. Terms of Use (website & portal)">
+          <LegalSection id="use" title="10. Terms of Use (website & portal)">
             <ul className="list-disc space-y-1 pl-5">
               <li>You must provide accurate information and keep your account credentials secure. You are responsible for activity under your account.</li>
               <li>You must be at least 16 years old, or have a parent or guardian&apos;s consent, to create an account.</li>
@@ -192,15 +207,15 @@ export default function Terms() {
             </ul>
           </LegalSection>
 
-          <LegalSection id="ip" title="10. Intellectual property">
+          <LegalSection id="ip" title="11. Intellectual property">
             <p>
-              All content on this site — text, branding, layout, graphics, articles and code — is owned by {CONTACT_DETAILS.businessName} or its
+              All content on this site — text, branding, layout, graphics, articles and code — is owned by {business.name} or its
               licensors and is protected by copyright and trade mark law. You may view and print pages for your own personal use, but may not
               reproduce, republish or commercially exploit our content without written permission.
             </p>
           </LegalSection>
 
-          <LegalSection id="liability" title="11. Disclaimers & limitation of liability">
+          <LegalSection id="liability" title="12. Disclaimers & limitation of liability">
             <p>
               Information on this site, including pricing guides and blog articles, is general in nature and provided without warranty of accuracy or
               completeness. The site is provided on an &quot;as is&quot; and &quot;as available&quot; basis; we do not warrant uninterrupted or error-free operation.
@@ -213,7 +228,7 @@ export default function Terms() {
             </p>
           </LegalSection>
 
-          <LegalSection id="law" title="12. Governing law & changes to these terms">
+          <LegalSection id="law" title="13. Governing law & changes to these terms">
             <p>
               These terms are governed by the laws of Queensland, Australia, and you submit to the non-exclusive jurisdiction of its courts. We may
               update these terms from time to time; the current version is always published on this page with its last-updated date. Continued use of
@@ -221,15 +236,15 @@ export default function Terms() {
             </p>
           </LegalSection>
 
-          <LegalSection id="contact" title="13. How to contact us">
+          <LegalSection id="contact" title="14. How to contact us">
             <p>
               For any privacy request, complaint or question about these terms:
             </p>
             <ul className="list-disc space-y-1 pl-5">
-              <li><strong>{CONTACT_DETAILS.businessName}</strong></li>
-              <li>Email: <a className="font-medium text-accent underline" href={CONTACT_LINKS.email}>{CONTACT_DETAILS.email}</a></li>
-              <li>Phone: <a className="font-medium text-accent underline" href={CONTACT_LINKS.phone}>{CONTACT_DETAILS.phone}</a></li>
-              <li>Address: {CONTACT_DETAILS.address}</li>
+              <li><strong>{business.name}</strong></li>
+              <li>Email: <a className="font-medium text-accent underline" href={links.email}>{business.email}</a></li>
+              <li>Phone: <a className="font-medium text-accent underline" href={links.phone}>{business.phone}</a></li>
+              <li>Address: {business.address}</li>
             </ul>
           </LegalSection>
         </div>

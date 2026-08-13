@@ -19,7 +19,7 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
   const submit = async () => {
     if (!body.trim() || posting) return;
     setPosting(true);
-    await addNote(job, { body, visibility }, actor);
+    await addNote(job, { body, visibility });
     setBody("");
     await load();
     setPosting(false);
@@ -41,7 +41,7 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
       </div>
 
       {/* Composer */}
-      <div className="rounded-2xl border border-border bg-card p-3 space-y-2.5 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-3 space-y-2.5 shadow-sm">
         <Textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -70,7 +70,7 @@ export default function NotesPanel({ job, actor, canCustomer, onChange }) {
       <div className="space-y-4 lg:max-h-80 lg:overflow-auto lg:pr-1">
         {notes.map((n) => <NoteBubble key={n.id} note={n} />)}
         {notes.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border/60 py-10 text-center">
+          <div className="rounded-lg border border-dashed border-border/60 py-10 text-center">
             <MessageSquare className="h-7 w-7 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No notes yet. Start the thread above.</p>
           </div>

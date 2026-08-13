@@ -8,6 +8,7 @@ import { Loader2, Paperclip, ExternalLink } from "lucide-react";
 import { StatusBadge, PriorityBadge } from "./FeedbackBadges";
 import { STATUSES } from "./FeedbackFilters";
 import { format } from "date-fns";
+import { FieldShell } from "@/components/shared";
 
 export default function FeedbackDetailDrawer({ item, open, onClose, onSave, saving }) {
   const [status, setStatus] = useState("New");
@@ -23,7 +24,7 @@ export default function FeedbackDetailDrawer({ item, open, onClose, onSave, savi
   if (!item) return null;
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={open} onOpenChange={(o) => !o && !saving && onClose()}>
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="font-heading pr-6">{item.subject}</SheetTitle>
@@ -62,19 +63,18 @@ export default function FeedbackDetailDrawer({ item, open, onClose, onSave, savi
           {/* Admin controls */}
           <div className="space-y-4 rounded-xl border border-border p-4">
             <div className="space-y-1.5">
-              <Label>Status</Label>
+              <Label htmlFor="feedback-detail-status">Status</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="feedback-detail-status" className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Admin notes</Label>
+            <FieldShell id="feedback-detail-notes" label="Admin notes" hint="Visible to administrators only.">
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes (not visible to the user)" className="h-24" />
-            </div>
-            <Button className="w-full gap-2" disabled={saving} onClick={() => onSave(item, { status, admin_notes: notes })}>
+            </FieldShell>
+            <Button type="button" size="touch" className="w-full gap-2" disabled={saving} onClick={() => onSave(item, { status, admin_notes: notes })}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? "Saving..." : "Save changes"}
             </Button>
@@ -85,7 +85,8 @@ export default function FeedbackDetailDrawer({ item, open, onClose, onSave, savi
   );
 }
 
-function ContextRow({ label, value, mono }) {
+/** @param {{ label: string, value: React.ReactNode, mono?: boolean }} props */
+function ContextRow({ label, value, mono = false }) {
   return (
     <div className="px-3 py-2 flex gap-3">
       <span className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">{label}</span>

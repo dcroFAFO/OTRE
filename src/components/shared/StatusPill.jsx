@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 const resolvers = { job: getStatus, payment: getPaymentStatus, quote: getQuoteStatus };
 
+/** @param {{ value?: string, kind?: "job" | "payment" | "quote", className?: string, label?: string }} props */
 export default function StatusPill({ value, kind = "job", className, label }) {
   const status = resolvers[kind](value);
   const classes = STATUS_PILL_CLASSES[status.color] || STATUS_PILL_CLASSES.slate;

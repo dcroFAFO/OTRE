@@ -23,7 +23,7 @@ export default function ClientSummaryCards({ clients }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {cards.map((c) => (
-        <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
+        <div key={c.label} className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground font-medium">{c.label}</p>
             <c.icon className={cn("h-4 w-4", TONES[c.tone])} />

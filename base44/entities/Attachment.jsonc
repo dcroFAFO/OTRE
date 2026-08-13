@@ -12,7 +12,16 @@
       "type": "string"
     },
     "file_name": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 180
+    },
+    "mime_type": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "file_size": {
+      "type": "number",
+      "minimum": 0
     },
     "kind": {
       "type": "string",
@@ -32,6 +41,38 @@
     "description": {
       "type": "string",
       "maxLength": 1000
+    },
+    "signature_key": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "signature_idempotency_key": {
+      "type": "string",
+      "maxLength": 260,
+      "unique": true
+    },
+    "signature_method": {
+      "type": "string",
+      "enum": [
+        "draw",
+        "typed"
+      ]
+    },
+    "signed_name": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "consent_text": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "consent_version": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "signed_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [

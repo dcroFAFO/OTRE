@@ -130,6 +130,38 @@
     "payment_intent_ref": {
       "type": "string"
     },
+    "checkout_attempt_id": {
+      "type": "string",
+      "description": "Client-generated idempotency key for the current Stripe checkout attempt."
+    },
+    "stripe_checkout_session_id": {
+      "type": "string"
+    },
+    "checkout_started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_payment_error_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pre_reward_amount": {
+      "type": "number",
+      "description": "Authoritative invoice amount before the currently applied reward."
+    },
+    "reward_id": {
+      "type": "string",
+      "description": "One CustomerReward selected for this invoice."
+    },
+    "reward_kind": { "type": "string" },
+    "reward_discount_amount": { "type": "number", "default": 0 },
+    "reward_applied_at": { "type": "string", "format": "date-time" },
+    "reward_locked_at": { "type": "string", "format": "date-time" },
+    "reward_snapshot": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Immutable customer-facing explanation of the applied reward."
+    },
     "payment_method": {
       "type": "string"
     },

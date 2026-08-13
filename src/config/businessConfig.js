@@ -1,5 +1,5 @@
 // Backward-compatible business config entry point.
-// OTR Scooters is default seed/demo data; reusable platform defaults live in platformConfig.
+// Legacy compatibility exports; authoritative public defaults live in platformConfig.
 export {
   DEFAULT_BUSINESS,
   DEFAULT_SERVICES,

@@ -1,0 +1,76 @@
+{
+  "name": "CustomerReward",
+  "type": "object",
+  "properties": {
+    "customer_account_id": {
+      "type": "string",
+      "description": "Customer entity record that owns this reward."
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Stable customer/profile identifier used by invoices and jobs."
+    },
+    "auth_user_id": {
+      "type": "string",
+      "description": "Authenticated customer user who can read and apply this reward."
+    },
+    "source_customer_account_id": {
+      "type": "string",
+      "description": "Customer account that caused this reward to be issued."
+    },
+    "source_job_id": { "type": "string" },
+    "source_invoice_id": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "referred_first_invoice_credit",
+        "referrer_discount",
+        "loyalty_labour_discount"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["available", "applied", "locked", "redeemed", "expired", "released", "cancelled"],
+      "default": "available"
+    },
+    "code": { "type": "string" },
+    "description": { "type": "string", "maxLength": 500 },
+    "discount_type": {
+      "type": "string",
+      "enum": ["fixed", "percentage"]
+    },
+    "value": { "type": "number", "default": 0 },
+    "max_discount": { "type": "number", "default": 0 },
+    "applies_to": {
+      "type": "string",
+      "enum": ["first_invoice", "all", "labour"],
+      "default": "all"
+    },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "applied_invoice_id": { "type": "string" },
+    "applied_at": { "type": "string", "format": "date-time" },
+    "locked_at": { "type": "string", "format": "date-time" },
+    "redeemed_at": { "type": "string", "format": "date-time" },
+    "released_at": { "type": "string", "format": "date-time" },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deterministic issuance key used to prevent duplicate rewards."
+    },
+    "metadata": { "type": "object", "additionalProperties": true }
+  },
+  "required": ["customer_account_id", "kind", "status", "discount_type", "value", "issued_at", "expires_at", "idempotency_key"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": {
+      "$or": [
+        { "user_condition": { "role": "admin" } },
+        { "user_condition": { "role": "employee" } },
+        { "user_condition": { "role": "technician" } },
+        { "data.auth_user_id": "{{user.id}}" }
+      ]
+    },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

@@ -19,7 +19,7 @@ export default function BlogComments({ postId, postSlug }) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (text) =>
+    mutationFn: (/** @type {string} */ text) =>
       createBlogComment({
         post_id: postId,
         post_slug: postSlug,
@@ -35,7 +35,7 @@ export default function BlogComments({ postId, postSlug }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (commentId) => deleteBlogComment(commentId),
+    mutationFn: (/** @type {string} */ commentId) => deleteBlogComment(commentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blogComments", postId] });
     },

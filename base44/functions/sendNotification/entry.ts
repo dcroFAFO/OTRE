@@ -9,7 +9,7 @@ const TWILIO_FROM_NUMBER = Deno.env.get("TWILIO_FROM_NUMBER");
 
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 const BUSINESS_NAME = "On The Run Electrics";
-const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
+const FROM_EMAIL = "On The Run Electrics <info@ontherunelectrics.com.au>";
 const BUSINESS_PHONE = "0415 505 908";
 
 // Origins used in outbound emails/SMS must be allowlisted — a spoofed value here
@@ -42,7 +42,7 @@ function emailTemplate(content) {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
 <div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">${BUSINESS_NAME}</h1></div>
 <div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
-<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>hello@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
+<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>info@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
 </body></html>`;
 }
 
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
         const key = `notif:invoice_paid:${invoice.id}:email`;
         if (!await alreadySent(base44, key)) {
           const subject = `Payment confirmed — ${ref}`;
-          const body = `<p>Hi ${customerName},</p><p>We've received your payment of <strong>${amount}</strong> for invoice ${invoice.number || ''}. Thank you!</p><p>We'd love to hear your feedback. How did we do?</p><p style="margin-top:24px;"><a href="${feedbackUrl(origin, job?.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Leave Feedback</a></p><div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:16px;margin-top:20px;"><p style="margin:0 0 8px;font-weight:600;color:#92400e;">⭐ Leave a Google Review & Get 5% Off Your Next Repair!</p><p style="margin:0 0 12px;color:#78350f;font-size:14px;">Share your experience on Google and we'll send you a 5% discount code for your next repair. It only takes a minute!</p><a href="https://g.page/r/CYIYxtmlUJakEBI/review" style="background:#4285f4;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-size:14px;">Review Us on Google</a></div>`;
+          const body = `<p>Hi ${customerName},</p><p>We've received your payment of <strong>${amount}</strong> for invoice ${invoice.number || ''}. Thank you!</p><p>We'd love to hear your feedback. How did we do?</p><p style="margin-top:24px;"><a href="${feedbackUrl(origin, job?.id)}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Leave Feedback</a></p><p style="margin-top:20px;font-size:14px;color:#64748b;">You can also share an honest public review on Google. Reviews are optional and are not linked to discounts or rewards.</p><p><a href="https://g.page/r/CYIYxtmlUJakEBI/review" style="color:#1d4ed8;text-decoration:underline;">Review us on Google</a></p>`;
           const sent = await sendEmail(customerEmail, subject, emailTemplate(body));
           if (sent) { await markSent(base44, key, `Payment confirmation email sent to ${customerEmail}`); results.push({ channel: 'email', to: customerEmail, sent: true }); }
         }

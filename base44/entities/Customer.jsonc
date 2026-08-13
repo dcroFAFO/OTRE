@@ -107,6 +107,32 @@
     "referral_notes": {
       "type": "string",
       "description": "Staff-only referral notes. Never shown to customers."
+    },
+    "referral_claimed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this customer claimed a referral code during registration."
+    },
+    "referral_source_code": {
+      "type": "string",
+      "description": "Referral code captured for this customer at registration."
+    },
+    "first_paid_invoice_id": {
+      "type": "string",
+      "description": "First settled invoice used for one-time referral issuance."
+    },
+    "first_paid_invoice_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "loyalty_paid_repair_count": {
+      "type": "number",
+      "default": 0
+    },
+    "loyalty_reward_milestone": {
+      "type": "number",
+      "default": 0,
+      "description": "Highest five-repair milestone already issued."
     }
   },
   "required": [

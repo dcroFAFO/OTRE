@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,11 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import AppleIcon from "@/components/AppleIcon";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import SEO from "@/components/SEO";
 import { isStaff } from "@/config/permissions";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
 
@@ -26,11 +27,21 @@ function authParams() {
     phone: params.get("phone") || "",
     next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
     customerFlow: params.get("customerFlow") === "1",
+    referralCode: String(params.get("ref") || "").trim().toUpperCase().slice(0, 32),
+    oauthComplete: params.get("oauthComplete") === "1",
   };
 }
 
+async function finishCustomerAccount(referralCode) {
+  const claim = await base44.functions.invoke("claimCustomerJobs", {});
+  if (claim.data?.error) throw Object.assign(new Error(claim.data.error), { status: claim.status || 400, response: claim });
+  if (!referralCode) return;
+  const reward = await base44.functions.invoke("customerRewards", { action: "claimReferral", code: referralCode });
+  if (reward.data?.error) throw Object.assign(new Error(reward.data.error), { status: reward.status || 400, response: reward });
+}
+
 export default function Register() {
-  const { email: initialEmail, phone: initialPhone, next, customerFlow } = authParams();
+  const { email: initialEmail, phone: initialPhone, next, customerFlow, referralCode, oauthComplete } = authParams();
   const [email, setEmail] = useState(initialEmail);
   const [phone, setPhone] = useState(initialPhone);
   const [password, setPassword] = useState("");
@@ -44,6 +55,11 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [verified, setVerified] = useState(false);
+  const [accountReady, setAccountReady] = useState(false);
+  const [oauthSetupFailed, setOauthSetupFailed] = useState(false);
+  const [resendingPhone, setResendingPhone] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const setupStarted = useRef(false);
 
   // Already signed in? Customer booking links should not reuse a staff session.
   useEffect(() => {
@@ -56,10 +72,53 @@ export default function Register() {
           await base44.auth.logout(window.location.href);
           return;
         }
-        window.location.href = next;
+        if (!oauthComplete) {
+          window.location.href = next;
+          return;
+        }
+        if (setupStarted.current) return;
+        setupStarted.current = true;
+        setLoading(true);
+        try {
+          await base44.auth.updateMe({ is_customer: true });
+          await finishCustomerAccount(referralCode);
+          window.location.href = next;
+        } catch (setupError) {
+          setVerified(true);
+          setOauthSetupFailed(true);
+          setError(getSafeErrorMessage(setupError, "Your account was created, but setup could not be completed. Please retry."));
+          setLoading(false);
+        }
       })
-      .catch(() => {});
-  }, [next, customerFlow]);
+      .catch(() => setLoading(false));
+  }, [next, customerFlow, oauthComplete, referralCode]);
+
+  const completeSetup = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await finishCustomerAccount(referralCode);
+      setAccountReady(true);
+      setOauthSetupFailed(false);
+      window.setTimeout(() => { window.location.href = next; }, 600);
+    } catch (setupError) {
+      setError(getSafeErrorMessage(setupError, "Your account was verified, but setup could not be completed. Please retry."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const continueWithoutReferral = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await finishCustomerAccount("");
+      window.location.href = next;
+    } catch (setupError) {
+      setError(getSafeErrorMessage(setupError, "Your account setup could not be completed. Please retry."));
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,10 +134,11 @@ export default function Register() {
     setLoading(true);
     try {
       const response = await base44.functions.invoke("sendSignupPhoneOtp", { phone, email });
+      if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
       setMaskedPhone(response.data?.masked_phone || phone);
       setShowPhoneOtp(true);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Could not send SMS verification code");
+      setError(getSafeErrorMessage(err, "Could not send the SMS verification code. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -89,32 +149,39 @@ export default function Register() {
     setLoading(true);
     try {
       const response = await base44.functions.invoke("verifySignupPhoneOtp", { phone, code: phoneOtpCode });
+      if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
       setVerifiedPhoneE164(response.data?.phone_e164 || "");
       await base44.auth.register({ email, password });
       setShowPhoneOtp(false);
       setShowOtp(true);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Could not verify mobile code");
+      setError(getSafeErrorMessage(err, "Could not verify the mobile code. Please try again."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendPhone = async () => {
+    if (resendingPhone || loading) return;
     setError("");
+    setResendingPhone(true);
     try {
       const response = await base44.functions.invoke("sendSignupPhoneOtp", { phone, email });
+      if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
       setMaskedPhone(response.data?.masked_phone || phone);
-      toast({
-        title: "Code sent",
-        description: "Check your mobile for the new code.",
-      });
+      toast.success("Code sent", { description: "Check your mobile for the new code." });
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Failed to resend SMS code");
+      setError(getSafeErrorMessage(err, "Could not resend the SMS code. Please try again."));
+    } finally {
+      setResendingPhone(false);
     }
   };
 
   const handleVerify = async () => {
+    if (verified) {
+      await completeSetup();
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -128,42 +195,65 @@ export default function Register() {
           phone_verified: true,
           is_customer: true,
         });
-        await base44.functions.invoke("claimCustomerJobs", {});
+        await finishCustomerAccount(referralCode);
+        setAccountReady(true);
       }
       setTimeout(() => {
         window.location.href = next;
       }, 900);
     } catch (err) {
-      setError(err.message || "Invalid verification code");
+      setError(getSafeErrorMessage(err, "The code or account setup could not be verified. Please try again."));
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
+    if (resendingEmail || loading) return;
     setError("");
+    setResendingEmail(true);
     try {
       await base44.auth.resendOtp(email);
-      toast({
-        title: "Code sent",
-        description: "Check your email for the new code.",
-      });
+      toast.success("Code sent", { description: "Check your email for the new code." });
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      setError(getSafeErrorMessage(err, "Could not resend the email code. Please try again."));
+    } finally {
+      setResendingEmail(false);
     }
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", next);
+    const params = new URLSearchParams({ oauthComplete: "1", next });
+    if (referralCode) params.set("ref", referralCode);
+    if (customerFlow) params.set("customerFlow", "1");
+    base44.auth.loginWithProvider("google", `/register?${params.toString()}`);
   };
 
   const handleApple = () => {
-    base44.auth.loginWithProvider("apple", next);
+    const params = new URLSearchParams({ oauthComplete: "1", next });
+    if (referralCode) params.set("ref", referralCode);
+    if (customerFlow) params.set("customerFlow", "1");
+    base44.auth.loginWithProvider("apple", `/register?${params.toString()}`);
   };
+
+  if (oauthComplete && (verified || oauthSetupFailed)) {
+    return (
+      <>
+        <SEO title="Finish Account Setup | On The Run Electrics" description="Finish setting up your customer account." canonical="/register" noindex />
+        <AuthLayout icon={UserPlus} title="Finish account setup" subtitle={accountReady ? "Your account is ready." : "Link your customer profile and referral reward."}>
+          {error ? <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</div> : null}
+          <Button className="h-12 w-full" onClick={completeSetup} disabled={loading || accountReady}>
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Finishing setup...</> : accountReady ? "Redirecting..." : "Retry account setup"}
+          </Button>
+          {referralCode && error ? <Button variant="ghost" className="mt-2 h-11 w-full" onClick={continueWithoutReferral} disabled={loading}>Continue without referral reward</Button> : null}
+        </AuthLayout>
+      </>
+    );
+  }
 
   if (showPhoneOtp) {
     return (
       <>
-      <SEO title="Verify Mobile | OTR Scooters" description="Verify your mobile number to finish creating your OTR Scooters customer portal account." canonical="/register" noindex />
+      <SEO title="Verify Mobile | On The Run Electrics" description="Verify your mobile number to finish creating your On The Run Electrics customer account." canonical="/register" noindex />
       <AuthLayout
         icon={Phone}
         title="Verify your mobile"
@@ -208,10 +298,11 @@ export default function Register() {
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-4">
           Didn't receive the code?{" "}
-          <button onClick={handleResendPhone} className="text-primary font-medium hover:underline">
-            Resend
+          <button type="button" onClick={handleResendPhone} disabled={resendingPhone || loading} className="font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60">
+            {resendingPhone ? "Resending..." : "Resend"}
           </button>
         </p>
+        <p className="sr-only" aria-live="polite">{resendingPhone ? "Sending a new mobile code" : ""}</p>
       </AuthLayout>
       </>
     );
@@ -220,7 +311,7 @@ export default function Register() {
   if (showOtp) {
     return (
       <>
-      <SEO title="Verify Email | OTR Scooters" description="Verify your email address to finish setting up your OTR Scooters customer portal account." canonical="/register" noindex />
+      <SEO title="Verify Email | On The Run Electrics" description="Verify your email address to finish setting up your On The Run Electrics customer account." canonical="/register" noindex />
       <AuthLayout
         icon={Mail}
         title="Verify your email"
@@ -265,15 +356,17 @@ export default function Register() {
               Verifying...
             </>
           ) : (
-            "Verify"
+            verified ? "Retry account setup" : "Verify"
           )}
         </Button>
+        {verified && referralCode && error ? <Button variant="ghost" className="mt-2 w-full" onClick={continueWithoutReferral} disabled={loading}>Continue without referral reward</Button> : null}
         <p className="text-center text-sm text-muted-foreground mt-4">
           Didn't receive the code?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">
-            Resend
+          <button type="button" onClick={handleResend} disabled={resendingEmail || loading} className="font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-60">
+            {resendingEmail ? "Resending..." : "Resend"}
           </button>
         </p>
+        <p className="sr-only" aria-live="polite">{resendingEmail ? "Sending a new email code" : ""}</p>
       </AuthLayout>
       </>
     );
@@ -281,7 +374,7 @@ export default function Register() {
 
   return (
     <>
-    <SEO title="Create Account | OTR Scooters" description="Create an OTR Scooters customer account to book repairs, approve quotes, track jobs and manage invoices online." canonical="/register" noindex />
+    <SEO title="Create Account | On The Run Electrics" description="Create an On The Run Electrics customer account to book repairs, approve quotes, track jobs and manage invoices online." canonical="/register" noindex />
     <AuthLayout
       icon={UserPlus}
       title="Create your account"
@@ -295,27 +388,25 @@ export default function Register() {
         </>
       }
     >
-      <div className="mb-7 mx-auto flex w-full max-w-[440px] flex-col items-center gap-[13px]">
+      <div className="mx-auto mb-6 grid w-full max-w-[440px] gap-3 sm:grid-cols-2">
         <Button
           variant="outline"
-          className="group h-16 w-full overflow-hidden rounded-[10px] border-[#2F7FE4] bg-[#2F7FE4] p-0 text-[25px] font-semibold text-white shadow-[0_2px_7px_rgba(47,127,228,0.25)] hover:bg-[#2B77D7] hover:text-white"
+          className="h-12 w-full gap-2 rounded-md"
           onClick={handleGoogle}
+          disabled={loading}
         >
-          <span className="grid h-full w-16 shrink-0 place-items-center bg-white">
-            <GoogleIcon className="h-8 w-8" />
-          </span>
-          <span className="flex-1 pr-16 text-center">Continue with Google</span>
+          <GoogleIcon className="h-5 w-5" />
+          Google
         </Button>
 
         <Button
           variant="outline"
-          className="group h-16 w-full overflow-hidden rounded-[10px] border-black bg-black p-0 text-[25px] font-semibold text-white shadow-[0_2px_7px_rgba(0,0,0,0.25)] hover:bg-[#1a1a1a] hover:text-white"
+          className="h-12 w-full gap-2 rounded-md border-black bg-black text-white hover:bg-black/90 hover:text-white"
           onClick={handleApple}
+          disabled={loading}
         >
-          <span className="grid h-full w-16 shrink-0 place-items-center bg-white">
-            <AppleIcon className="h-8 w-8 text-black" />
-          </span>
-          <span className="flex-1 pr-16 text-center">Continue with Apple</span>
+          <AppleIcon className="h-5 w-5 text-white" />
+          Apple
         </Button>
       </div>
 
@@ -323,8 +414,8 @@ export default function Register() {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-[#6F7F8C]" />
         </div>
-        <div className="relative flex justify-center text-[24px] font-medium">
-          <span className="bg-card px-4 text-[#22313F]">or</span>
+        <div className="relative flex justify-center text-sm font-medium">
+          <span className="bg-card px-4 text-muted-foreground">or use email</span>
         </div>
       </div>
 
@@ -334,7 +425,16 @@ export default function Register() {
         </div>
       )}
 
+      {referralCode && (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          Referral code <strong>{referralCode}</strong> will be validated after your email and mobile are verified.
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          We will verify your mobile by SMS first, then verify your email before creating the account.
+        </p>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <div className="relative">

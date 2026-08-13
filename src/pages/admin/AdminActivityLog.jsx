@@ -1,25 +1,23 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import DashboardShell from "@/components/dashboard/DashboardShell";
 import RequireCapability from "@/components/auth/RequireCapability";
 import ActivityLogFilters, { EMPTY_ACTIVITY_FILTERS } from "@/components/admin/activity/ActivityLogFilters";
 import ActivityLogTable from "@/components/admin/activity/ActivityLogTable";
 import { listAllAudit } from "@/services/auditService";
 import { CAPABILITIES } from "@/config/roles";
-import { Button } from "@/components/ui/button";
-import { Activity, AlertTriangle } from "lucide-react";
+import { Activity } from "lucide-react";
 import { subDays, startOfDay, isAfter } from "date-fns";
 import SEO from "@/components/SEO";
+import { EmptyState, ErrorState, NoResultsState, PageLoader, TableSkeleton } from "@/components/shared";
 
 export default function AdminActivityLog() {
   const { user, isLoading } = useCurrentUser();
   const [filters, setFilters] = useState(EMPTY_ACTIVITY_FILTERS);
 
-  const { data: events, isLoading: loadingEvents, error } = useQuery({
+  const { data: events = [], isLoading: loadingEvents, error, refetch } = useQuery({
     queryKey: ["adminActivityLog"],
     queryFn: () => listAllAudit(1000),
-    initialData: [],
   });
 
   const actors = useMemo(
@@ -49,10 +47,10 @@ export default function AdminActivityLog() {
     });
   }, [events, filters]);
 
-  const seo = <SEO title="Activity Log | OTR Scooters" description="Private admin activity log for reviewing operational actions across the OTR Scooters platform." canonical="/admin/activity" noindex />;
+  const seo = <SEO title="Activity Log | On The Run Electrics" description="Private admin activity log for reviewing operational actions across the On The Run Electrics platform." canonical="/admin/activity" noindex />;
 
   if (isLoading) {
-    return <>{seo}<div className="fixed inset-0 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div></>;
+    return <>{seo}<PageLoader label="Loading activity log" fullScreen /></>;
   }
 
   return (
@@ -63,7 +61,6 @@ export default function AdminActivityLog() {
       deniedTitle="Activity log restricted"
       deniedMessage="You don't have permission to view the activity log."
     >
-      <DashboardShell user={user}>
         <div className="space-y-5">
           <div>
             <h1 className="font-heading text-2xl font-extrabold tracking-tight">Activity Log</h1>
@@ -72,23 +69,22 @@ export default function AdminActivityLog() {
 
           <ActivityLogFilters filters={filters} setFilters={setFilters} actors={actors} types={types} />
 
-          {error ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-6 text-center">
-              <AlertTriangle className="h-6 w-6 text-rose-500 mx-auto mb-2" />
-              <p className="text-sm text-rose-700">Couldn't load activity. Please refresh and try again.</p>
-            </div>
+          {error && events.length ? <ErrorState title="Latest activity could not be loaded" description="Previously loaded activity remains visible." error={error} onRetry={refetch} /> : null}
+
+          {error && !events.length ? (
+            <ErrorState title="Activity could not be loaded" error={error} onRetry={refetch} />
           ) : loadingEvents ? (
-            <div className="py-16 grid place-items-center"><div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" /></div>
+            <TableSkeleton rows={8} columns={5} label="Loading activity" />
           ) : filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/60 py-16 text-center">
-              <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {events.length === 0 ? "No activity recorded yet." : "No activity matches your filters."}
-              </p>
-              {events.length > 0 && (
-                <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setFilters(EMPTY_ACTIVITY_FILTERS)}>Clear filters</Button>
-              )}
-            </div>
+            events.length === 0 ? (
+              <EmptyState icon={Activity} title="No activity recorded" description="Tracked staff and system actions will appear here." />
+            ) : (
+              <NoResultsState
+                title="No activity matches these filters"
+                description={filters.q ? `No matches for “${filters.q}”.` : "Try a broader user, action, or date range."}
+                onClear={() => setFilters(EMPTY_ACTIVITY_FILTERS)}
+              />
+            )
           ) : (
             <>
               <p className="text-xs text-muted-foreground">{filtered.length} {filtered.length === 1 ? "event" : "events"}</p>
@@ -96,7 +92,6 @@ export default function AdminActivityLog() {
             </>
           )}
         </div>
-      </DashboardShell>
     </RequireCapability>
     </>
   );

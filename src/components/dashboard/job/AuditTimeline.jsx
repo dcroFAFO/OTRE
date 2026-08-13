@@ -49,7 +49,7 @@ export default function AuditTimeline({ job, refreshKey }) {
       visibility: "system",
       channel: n.channel,
     })),
-  ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
   return (
     <div className="space-y-4">
@@ -68,7 +68,7 @@ export default function AuditTimeline({ job, refreshKey }) {
               <span className="absolute -left-3 grid h-6 w-6 place-items-center rounded-full border border-border bg-card shadow-sm">
                 <Icon className="h-3.5 w-3.5 text-accent" />
               </span>
-              <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-semibold text-foreground">{item.title}</p>
                   <div className="flex items-center gap-1.5 shrink-0">

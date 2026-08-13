@@ -1,30 +1,38 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  PackageCheck, XCircle, RotateCcw, UserCheck,
-  Calendar, CheckCircle2, AlertCircle, Loader2
+  PackageCheck, XCircle, RotateCcw,
+  Calendar, CheckCircle2, Loader2
 } from "lucide-react";
-import { JOB_STATUSES } from "@/config/jobConfig";
+import { getCanonicalJobStatus, JOB_STATUSES } from "@/config/jobConfig";
 import { CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY, DEFAULT_APP_SETTINGS, DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import { changeStatus, assignTechnician, rescheduleJob, markReadyForPickup, cancelJob, reopenJob } from "@/services/jobService";
 import { useStaff } from "@/hooks/useJobs";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { getSafeErrorMessage } from "@/lib/errors";
 
 export default function JobActions({ job, actor, onChange }) {
-  const { data: staff } = useStaff();
+  const { data: staff = [], isLoading: staffLoading } = useStaff();
   const [busy, setBusy] = useState(null);
 
   const run = (key, fn) => async (...a) => {
+    if (busy) return;
     setBusy(key);
-    await fn(...a);
-    setBusy(null);
-    onChange?.();
+    try {
+      await fn(...a);
+      onChange?.();
+    } catch (error) {
+      toast.error(getSafeErrorMessage(error, "The job could not be updated."));
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const isTerminal = [CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY].includes(job.status);
+  const canonicalStatus = getCanonicalJobStatus(job.status);
+  const isTerminal = [CANCELLED_STATUS_KEY, COMPLETE_STATUS_KEY].includes(canonicalStatus);
 
   const checklist = job.checklist || [];
   const pendingChecks = checklist.filter((c) => !c.done).length;
@@ -36,9 +44,9 @@ export default function JobActions({ job, actor, onChange }) {
       {/* Status + Assign row */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</Label>
-          <Select value={job.status} onValueChange={run("status", (v) => changeStatus(job, v, actor))}>
-            <SelectTrigger>
+          <Label htmlFor="job-action-status" className="text-xs font-semibold uppercase text-muted-foreground">Status</Label>
+          <Select value={canonicalStatus} onValueChange={run("status", (v) => changeStatus(job, v, actor))} disabled={Boolean(busy)}>
+            <SelectTrigger id="job-action-status" className="h-11">
               {busy === "status" ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue />}
             </SelectTrigger>
             <SelectContent>
@@ -47,14 +55,15 @@ export default function JobActions({ job, actor, onChange }) {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Label htmlFor="job-action-technician" className="text-xs font-semibold uppercase text-muted-foreground">
             {DEFAULT_APP_SETTINGS.terminology.staffAssignmentLabel}
           </Label>
           <Select
             value={job.assigned_technician_id || "none"}
             onValueChange={run("tech", (v) => assignTechnician(job, v === "none" ? null : staff.find((s) => s.id === v), actor))}
+            disabled={Boolean(busy) || staffLoading}
           >
-            <SelectTrigger>
+            <SelectTrigger id="job-action-technician" className="h-11">
               {busy === "tech" ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Unassigned" />}
             </SelectTrigger>
             <SelectContent>
@@ -72,16 +81,18 @@ export default function JobActions({ job, actor, onChange }) {
 
       {/* Reschedule */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <Label htmlFor="job-action-date" className="text-xs font-semibold uppercase text-muted-foreground">
           <Calendar className="inline h-3.5 w-3.5 mr-1 align-text-bottom" />
           Scheduled date
         </Label>
         <div className="flex items-center gap-2">
           <Input
+            id="job-action-date"
             type="date"
             defaultValue={job.scheduled_date || ""}
             onChange={run("date", (e) => rescheduleJob(job, e.target.value, actor))}
-            className="max-w-[180px]"
+            className="h-11 max-w-[180px]"
+            disabled={Boolean(busy)}
           />
           {busy === "date" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
@@ -89,7 +100,7 @@ export default function JobActions({ job, actor, onChange }) {
 
       {/* Waiting reason */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Waiting reason (optional)</Label>
+        <Label htmlFor="job-action-waiting" className="text-xs font-semibold uppercase text-muted-foreground">Waiting reason (optional)</Label>
         <Select
           value={job.waiting_reason || "none"}
           onValueChange={run("waiting", async (v) => {
@@ -98,8 +109,9 @@ export default function JobActions({ job, actor, onChange }) {
               "on_hold";
             await changeStatus({ ...job, status: v === "none" ? "repair_in_progress" : job.status }, newStatus, actor);
           })}
+          disabled={Boolean(busy)}
         >
-          <SelectTrigger className="max-w-[220px]">
+          <SelectTrigger id="job-action-waiting" className="h-11 max-w-[220px]">
             <SelectValue placeholder="None" />
           </SelectTrigger>
           <SelectContent>
@@ -120,6 +132,7 @@ export default function JobActions({ job, actor, onChange }) {
                 icon={PackageCheck}
                 onClick={run("pickup", () => markReadyForPickup(job, actor))}
                 busy={busy === "pickup"}
+                disabled={Boolean(busy)}
                 variant="emerald"
               />
               <ActionButton
@@ -127,7 +140,7 @@ export default function JobActions({ job, actor, onChange }) {
                 icon={CheckCircle2}
                 onClick={run("complete", () => changeStatus(job, COMPLETE_STATUS_KEY, actor))}
                 busy={busy === "complete"}
-                disabled={checklistBlocked}
+                disabled={Boolean(busy) || checklistBlocked}
                 variant="emerald"
               />
               <ActionButton
@@ -135,6 +148,7 @@ export default function JobActions({ job, actor, onChange }) {
                 icon={XCircle}
                 onClick={run("cancel", () => cancelJob(job, actor))}
                 busy={busy === "cancel"}
+                disabled={Boolean(busy)}
                 variant="rose"
               />
             </>
@@ -145,6 +159,7 @@ export default function JobActions({ job, actor, onChange }) {
               icon={RotateCcw}
               onClick={run("reopen", () => reopenJob(job, actor))}
               busy={busy === "reopen"}
+              disabled={Boolean(busy)}
             />
           )}
 
@@ -163,10 +178,11 @@ function ActionButton({ label, icon: Icon, onClick, busy, disabled, variant = "d
   };
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={busy || disabled}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50",
+        "flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors disabled:opacity-50",
         styles[variant]
       )}
     >

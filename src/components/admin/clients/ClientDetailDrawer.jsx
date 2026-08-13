@@ -9,13 +9,11 @@ import ClientHistoryTimeline from "./ClientHistoryTimeline";
 import CustomerEditPanel from "./CustomerEditPanel";
 import CustomerRelatedRecords from "./CustomerRelatedRecords";
 import { listClientNotes, addClientNote, fetchClientHistory } from "@/services/clientService";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { logError } from "@/lib/logger";
 
 export default function ClientDetailDrawer({ client, open, onClose, actor, onChange }) {
-  const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState([]);
   const [noteBody, setNoteBody] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -51,7 +49,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
       onChange?.();
     } catch (e) {
       logError("Add client note failed", e, { recordId: client.id });
-      toast({ title: "Couldn't add note", variant: "destructive" });
+      toast.error("Couldn't add note");
     } finally { setAddingNote(false); }
   };
 

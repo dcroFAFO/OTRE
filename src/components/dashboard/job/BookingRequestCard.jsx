@@ -7,7 +7,7 @@ import { timeWindowLabel } from "@/config/timeWindows";
 function formatRequestedDate(value) {
   if (!value) return null;
   const parsed = new Date(`${value}T12:00:00`);
-  return isNaN(parsed) ? value : format(parsed, "EEEE d MMM yyyy");
+  return Number.isNaN(parsed.getTime()) ? value : format(parsed, "EEEE d MMM yyyy");
 }
 
 /**
@@ -27,7 +27,7 @@ export default function BookingRequestCard({ job }) {
   const isCustomerBooking = job.source === "public_booking";
 
   return (
-    <section className="rounded-2xl border border-border bg-secondary/30 p-4 space-y-3">
+    <section className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-heading text-sm font-extrabold">
           <CalendarClock className="h-4 w-4 text-accent" />

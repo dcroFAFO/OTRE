@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import CustomerEditPanel from "@/components/admin/clients/CustomerEditPanel";
 import { resolveCustomerForJob, fetchClientHistory } from "@/services/clientService";
 import { format } from "date-fns";
+import { ErrorState, LoadingSpinner } from "@/components/shared";
 
 const fmt = (d) => {
   if (!d) return "—";
@@ -24,7 +25,7 @@ export default function CustomerHistoryPanel({ job, actor }) {
   const email = job.customer_email;
   const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["customerProfile", job.id, job.customer_id, job.customer_account_id, job.customer_user_id, job.asset_id, job.updated_date || job.updatedAt || email],
     enabled: !!job?.id,
     staleTime: 60 * 1000,
@@ -40,8 +41,10 @@ export default function CustomerHistoryPanel({ job, actor }) {
   });
 
   if (isLoading) {
-    return <div className="flex justify-center py-10"><div className="w-6 h-6 border-4 border-border border-t-primary rounded-full animate-spin" /></div>;
+    return <LoadingSpinner label="Loading customer history" className="flex py-10" />;
   }
+
+  if (error && !data) return <ErrorState title="Customer history could not be loaded" error={error} onRetry={refetch} />;
 
   const customer = data?.customer;
   const jobs = data?.jobs || [];
@@ -55,8 +58,10 @@ export default function CustomerHistoryPanel({ job, actor }) {
   return (
     <div className="space-y-6">
 
+      {error ? <ErrorState title="Latest customer history could not be loaded" description="Previously loaded history remains visible." error={error} onRetry={refetch} /> : null}
+
       {/* ── Profile card ── */}
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+      <div className="space-y-3 rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
             <User className="h-5 w-5 text-muted-foreground" />
@@ -121,7 +126,7 @@ export default function CustomerHistoryPanel({ job, actor }) {
               return (
                 <li
                   key={j.id}
-                  className={`rounded-xl border p-3 ${isCurrent ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
+                  className={`rounded-lg border p-3 ${isCurrent ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1 space-y-1">
@@ -162,7 +167,7 @@ export default function CustomerHistoryPanel({ job, actor }) {
                       {!isCurrent && (
                         <Link
                           to={`/dashboard/jobs?id=${j.id}`}
-                          className="text-[11px] text-primary flex items-center gap-0.5 hover:underline"
+                          className="flex min-h-11 items-center gap-1 text-xs text-primary hover:underline"
                         >
                           Open <ExternalLink className="h-3 w-3" />
                         </Link>

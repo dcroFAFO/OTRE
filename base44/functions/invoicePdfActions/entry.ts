@@ -4,10 +4,10 @@ import { jsPDF } from 'npm:jspdf@4.2.1';
 const DEFAULT_BUSINESS = {
   name: "On The Run Electrics",
   legalName: "On The Run Electrics",
-  email: "hello@otrscooters.com",
-  phone: "(03) 9000 1234",
-  address: "12 Workshop Lane, Melbourne VIC",
-  abn: "00 000 000 000",
+  email: "info@ontherunelectrics.com.au",
+  phone: "0415 505 908",
+  address: "11 Lucinda Street, Woolloongabba QLD 4102",
+  abn: "",
 };
 
 const money = (currency, value) => `${currency} ${(Number(value) || 0).toFixed(2)}`;
@@ -332,7 +332,7 @@ async function persistInvoice(base44, job, invoice, invoiceDraft, lineItems) {
 }
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
+const FROM_EMAIL = "On The Run Electrics <info@ontherunelectrics.com.au>";
 
 function getRequestOrigin(req) {
   const origin = req.headers.get("origin");
@@ -347,7 +347,7 @@ function invoiceEmailTemplate(content) {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
 <div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">On The Run Electrics</h1></div>
 <div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
-<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">On The Run Electrics · Woolloongabba, Brisbane<br>hello@ontherunelectrics.com.au · 0415 505 908</p>
+<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">On The Run Electrics · Woolloongabba, Brisbane<br>info@ontherunelectrics.com.au · 0415 505 908</p>
 </body></html>`;
 }
 

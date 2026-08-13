@@ -80,15 +80,14 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
     </div>
 
     {/* Desktop / tablet: full table with category sections */}
-    <div className="hidden sm:block rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+    <div className="hidden sm:block rounded-lg border border-border bg-card overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary/40 text-muted-foreground text-xs uppercase tracking-wide">
               <th className="px-4 py-2.5 w-10">
                 <Checkbox
-                  checked={allSelected}
-                  ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
                   onCheckedChange={toggleAll}
                   aria-label="Select all"
                 />
@@ -139,7 +138,7 @@ function MobileCard({ j, onOpen, isSelected, toggleOne }) {
       onKeyDown={openOnKey(() => onOpen(j.id))}
       aria-label={`Open job for ${j.customer_name || "customer"}`}
       className={cn(
-        "rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer min-h-[88px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "rounded-lg border border-border bg-card p-4 shadow-sm cursor-pointer min-h-[88px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         j.payment_status === "outstanding" && "border-l-2 border-l-rose-400",
         isSelected && "bg-accent/10 border-accent/40"
       )}
@@ -167,8 +166,8 @@ function MobileCard({ j, onOpen, isSelected, toggleOne }) {
         <ServiceTypeBadge job={j} />
         <span>Requested {fmtDateTime(j.created_date)}</span>
         {j.scheduled_date && (
-          <span className={j.status === "requested" ? "font-semibold text-accent" : "font-semibold text-indigo-700"}>
-            {j.status === "requested" ? "Prefers" : "Scheduled"} {fmtSchedule(j)}
+          <span className={normalizeStatusKey(j.status) === "requested" ? "font-semibold text-accent" : "font-semibold text-indigo-700"}>
+            {normalizeStatusKey(j.status) === "requested" ? "Prefers" : "Scheduled"} {fmtSchedule(j)}
           </span>
         )}
         {j.preferred_time_window === "ASAP" && (
@@ -221,6 +220,7 @@ function DesktopRow({ j, onOpen, isSelected, toggleOne }) {
 function Th({ children }) {
   return <th className="px-4 py-2.5 text-left font-medium">{children}</th>;
 }
+/** @param {{ children: React.ReactNode, className?: string, onClick?: React.MouseEventHandler<HTMLTableCellElement> }} props */
 function Td({ children, className, onClick }) {
   return <td onClick={onClick} className={cn("px-4 py-3 align-middle", className)}>{children}</td>;
 }

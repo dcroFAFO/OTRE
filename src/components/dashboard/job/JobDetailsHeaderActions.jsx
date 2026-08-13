@@ -13,7 +13,6 @@ import { normalizeStatusKey } from "@/config/jobConfig";
 
 import { DEFAULT_WAITING_REASONS } from "@/config/platformConfig";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 
 // ---------------------------------------------------------------------------
 // Workflow events — rendered as buttons in the action strip.
@@ -222,7 +221,7 @@ export default function JobDetailsHeaderActions({ job, actor, onChange, context 
       </AlertDialog>
 
       {/* Waiting reason prompt */}
-      <Dialog open={waitingPrompt} onOpenChange={(o) => !o && setWaitingPrompt(false)}>
+      <Dialog open={waitingPrompt} onOpenChange={(o) => !o && busy !== "waiting_on_parts" && setWaitingPrompt(false)}>
         <DialogContent className="max-w-sm">
           <div className="space-y-4 p-1">
             <div>
@@ -230,9 +229,9 @@ export default function JobDetailsHeaderActions({ job, actor, onChange, context 
               <p className="text-sm text-muted-foreground mt-1">Select what the job is waiting on to proceed.</p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Waiting reason</Label>
+              <Label htmlFor="job-waiting-reason" className="text-xs">Waiting reason</Label>
               <Select value={waitingReason} onValueChange={setWaitingReason}>
-                <SelectTrigger>
+                <SelectTrigger id="job-waiting-reason" className="h-11">
                   <SelectValue placeholder="Select reason…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -243,8 +242,8 @@ export default function JobDetailsHeaderActions({ job, actor, onChange, context 
               </Select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setWaitingPrompt(false)}>Cancel</Button>
-              <Button size="sm" disabled={!waitingReason || busy === "waiting_on_parts"} onClick={confirmWaitingReason}>
+              <Button type="button" variant="outline" size="touch" onClick={() => setWaitingPrompt(false)} disabled={busy === "waiting_on_parts"}>Cancel</Button>
+              <Button type="button" size="touch" disabled={!waitingReason || busy === "waiting_on_parts"} onClick={confirmWaitingReason}>
                 {busy === "waiting_on_parts" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm"}
               </Button>
             </div>
@@ -277,7 +276,8 @@ function ReschedulePicker({ job, busy, onReschedule }) {
   );
 }
 
-function WorkflowButton({ label, icon: Icon, onClick, busy, variant = "default" }) {
+/** @param {{ label: string, icon?: React.ElementType, onClick: () => void, busy?: boolean, variant?: string }} props */
+function WorkflowButton({ label, icon: Icon, onClick, busy = false, variant = "default" }) {
   const styles = {
     default: "border-border text-foreground hover:bg-secondary",
     emerald: "border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950",

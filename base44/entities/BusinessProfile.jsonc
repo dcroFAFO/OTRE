@@ -5,6 +5,10 @@
     "name": {
       "type": "string"
     },
+    "is_default": {
+      "type": "boolean",
+      "default": true
+    },
     "legal_name": {
       "type": "string"
     },
@@ -21,11 +25,26 @@
     "email": {
       "type": "string"
     },
+    "invoice_sender_email": {
+      "type": "string",
+      "description": "Verified sender address used for invoice and reward email."
+    },
     "phone": {
       "type": "string"
     },
+    "phone_e164": { "type": "string" },
     "address": {
       "type": "string"
+    },
+    "address_line_1": { "type": "string" },
+    "locality": { "type": "string" },
+    "region": { "type": "string" },
+    "postcode": { "type": "string" },
+    "country": { "type": "string", "default": "AU" },
+    "maps_url": { "type": "string" },
+    "abn": {
+      "type": "string",
+      "description": "Australian Business Number displayed on legal and invoice surfaces after confirmation."
     },
     "locations": {
       "type": "array",
@@ -59,6 +78,12 @@
             "type": "string"
           },
           "hours": {
+            "type": "string"
+          },
+          "opens": {
+            "type": "string"
+          },
+          "closes": {
             "type": "string"
           }
         }

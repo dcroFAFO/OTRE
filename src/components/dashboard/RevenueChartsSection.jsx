@@ -4,6 +4,8 @@ import { base44 } from "@/api/base44Client";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import { CreditCard, Package, Wallet } from "lucide-react";
 import FinancialChartCard from "./FinancialChartCard";
+import FinancialDataTable from "./FinancialDataTable";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/shared";
 
 const MONTH_COUNT = 6;
 
@@ -39,17 +41,21 @@ const buildMonths = () => {
 const tooltipFormatter = (value) => currency(value);
 
 export default function RevenueChartsSection() {
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
+  const invoicesQuery = useQuery({
     queryKey: ["overviewFinancialInvoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: usages = [], isLoading: usagesLoading } = useQuery({
+  const usagesQuery = useQuery({
     queryKey: ["overviewFinancialPartsSpend"],
     queryFn: () => base44.entities.InventoryUsage.list("-created_date", 500),
     staleTime: 5 * 60 * 1000,
   });
+  const invoices = invoicesQuery.data || [];
+  const usages = usagesQuery.data || [];
+  const hasInvoiceSnapshot = invoicesQuery.data !== undefined;
+  const hasUsageSnapshot = usagesQuery.data !== undefined;
 
   const { chartData, totals } = useMemo(() => {
     const months = buildMonths();
@@ -87,12 +93,22 @@ export default function RevenueChartsSection() {
     };
   }, [invoices, usages]);
 
-  if (invoicesLoading || usagesLoading) {
+  if ((invoicesQuery.isLoading && !hasInvoiceSnapshot) || (usagesQuery.isLoading && !hasUsageSnapshot)) {
+    return <CardSkeleton count={3} compact />;
+  }
+
+  if (invoicesQuery.error && !hasInvoiceSnapshot && usagesQuery.error && !hasUsageSnapshot) {
     return (
-      <div className="rounded-3xl border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-        Loading financial charts…
-      </div>
+      <ErrorState
+        title="Financial charts could not be loaded"
+        error={invoicesQuery.error || usagesQuery.error}
+        onRetry={() => Promise.all([invoicesQuery.refetch(), usagesQuery.refetch()])}
+      />
     );
+  }
+
+  if (hasInvoiceSnapshot && hasUsageSnapshot && invoices.length === 0 && usages.length === 0 && !invoicesQuery.error && !usagesQuery.error) {
+    return <EmptyState title="No financial data yet" description="Revenue and parts-spend charts appear after invoices and inventory usage are recorded." />;
   }
 
   return (
@@ -101,8 +117,10 @@ export default function RevenueChartsSection() {
         <h2 className="font-heading font-bold">Financial overview</h2>
         <p className="text-sm text-muted-foreground">Monthly revenue, parts spend, and take-home revenue across the last 6 months.</p>
       </div>
+      {invoicesQuery.error ? <ErrorState title="Invoice totals could not be refreshed" description={hasInvoiceSnapshot ? "Previously loaded invoice values remain visible." : "Parts-spend information remains available."} error={invoicesQuery.error} onRetry={invoicesQuery.refetch} /> : null}
+      {usagesQuery.error ? <ErrorState title="Parts-spend totals could not be refreshed" description={hasUsageSnapshot ? "Previously loaded parts values remain visible." : "Invoice revenue remains available."} error={usagesQuery.error} onRetry={usagesQuery.refetch} /> : null}
       <div className="grid gap-4 xl:grid-cols-3">
-        <FinancialChartCard
+        {hasInvoiceSnapshot ? <FinancialChartCard
           title="Monthly revenue"
           subtitle="Issued vs paid invoices"
           value={`${currency(totals.issuedRevenue)} issued · ${currency(totals.paidRevenue)} paid`}
@@ -116,9 +134,9 @@ export default function RevenueChartsSection() {
             <Bar dataKey="issuedRevenue" name="Issued" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
             <Bar dataKey="paidRevenue" name="Paid" fill="#10b981" radius={[6, 6, 0, 0]} />
           </BarChart>
-        </FinancialChartCard>
+        </FinancialChartCard> : null}
 
-        <FinancialChartCard
+        {hasUsageSnapshot ? <FinancialChartCard
           title="Parts spend"
           subtitle="Inventory cost used on jobs"
           value={currency(totals.partsSpend)}
@@ -132,9 +150,9 @@ export default function RevenueChartsSection() {
             <Tooltip formatter={tooltipFormatter} cursor={{ fill: "hsl(var(--secondary))" }} />
             <Bar dataKey="partsSpend" name="Parts spend" fill="#e11d48" radius={[6, 6, 0, 0]} />
           </BarChart>
-        </FinancialChartCard>
+        </FinancialChartCard> : null}
 
-        <FinancialChartCard
+        {hasInvoiceSnapshot && hasUsageSnapshot ? <FinancialChartCard
           title="Take-home revenue"
           subtitle="Paid revenue minus parts spend"
           value={currency(totals.takeHome)}
@@ -148,8 +166,9 @@ export default function RevenueChartsSection() {
             <Tooltip formatter={tooltipFormatter} />
             <Line type="monotone" dataKey="takeHome" name="Take-home" stroke="#059669" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
           </LineChart>
-        </FinancialChartCard>
+        </FinancialChartCard> : null}
       </div>
+      <FinancialDataTable rows={chartData} showRevenue={hasInvoiceSnapshot} showParts={hasUsageSnapshot} formatCurrency={currency} />
     </section>
   );
 }

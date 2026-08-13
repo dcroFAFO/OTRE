@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BatteryWarning, CircleDot, Disc, Gauge, PlugZap, Power, TriangleAlert, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/** @type {Array<[React.ElementType, string]>} */
 const ISSUES = [
   [Power, "Won’t turn on"], [PlugZap, "Won’t charge"], [BatteryWarning, "Cuts out while riding"],
   [Disc, "Weak or noisy brakes"], [CircleDot, "Flat or damaged tyre"], [Gauge, "Reduced battery range"],

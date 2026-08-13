@@ -7,7 +7,7 @@ const TWILIO_FROM_NUMBER = Deno.env.get("TWILIO_FROM_NUMBER");
 
 const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
 const BUSINESS_NAME = "On The Run Electrics";
-const FROM_EMAIL = "On The Run Electrics <hello@ontherunelectrics.com.au>";
+const FROM_EMAIL = "On The Run Electrics <info@ontherunelectrics.com.au>";
 const BUSINESS_PHONE = "0415 505 908";
 const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
 const OVERDUE_HOURS = 24;
@@ -21,7 +21,7 @@ function emailTemplate(content) {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
 <div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">${BUSINESS_NAME}</h1></div>
 <div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
-<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>hello@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
+<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>info@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
 </body></html>`;
 }
 

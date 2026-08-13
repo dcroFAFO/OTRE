@@ -31,7 +31,8 @@ function maskDate(value) {
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
 }
 
-export default function PreferredDateField({ value, onChange, disabled, className, onValidityChange }) {
+/** @param {{ id?: string, value?: string, onChange: (value: string) => void, disabled?: boolean, className?: string, onValidityChange?: (valid: boolean) => void, describedBy?: string }} props */
+export default function PreferredDateField({ id, value = "", onChange, disabled = false, className, onValidityChange, describedBy }) {
   const [open, setOpen] = useState(false);
   const [displayValue, setDisplayValue] = useState("");
   const selected = parseIsoDate(value);
@@ -68,6 +69,8 @@ export default function PreferredDateField({ value, onChange, disabled, classNam
   return (
     <div className="flex gap-2">
       <Input
+        id={id}
+        aria-describedby={describedBy}
         value={displayValue}
         onChange={(e) => updateDisplay(e.target.value)}
         placeholder="DD-MM-YY"

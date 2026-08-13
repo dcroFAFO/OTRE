@@ -85,13 +85,14 @@ export function redact(value, depth = 0) {
 export function normalizeError(err) {
   if (!err) return { message: "Unknown error" };
   if (err instanceof Error) {
+    const networkError = /** @type {Error & { response?: { status?: number, data?: unknown } }} */ (err);
     return {
       name: err.name,
       message: err.message,
       stack: err.stack,
       // Axios-style details from failed backend/network calls, when present
-      status: err.response?.status,
-      responseBody: err.response?.data ? redact(err.response.data) : undefined,
+      status: networkError.response?.status,
+      responseBody: networkError.response?.data ? redact(networkError.response.data) : undefined,
     };
   }
   if (typeof err === "string") return { message: err };
