@@ -45,6 +45,17 @@
       "type": "string",
       "format": "date"
     },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "archived_by_user_id": {
+      "type": "string"
+    },
+    "archive_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
     "intake": {
       "type": "object",
       "additionalProperties": true,
@@ -89,78 +100,9 @@
     "model"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
-          "data.customer_account_id": "{{user.id}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
-          "data.customer_account_id": "{{user.id}}"
-        }
-      ]
-    },
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
     "delete": {
       "user_condition": {
         "role": "admin"

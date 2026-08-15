@@ -10,7 +10,8 @@
     },
     "mode": {
       "type": "string",
-      "default": "not_configured"
+      "enum": ["manual_only", "disabled", "legacy_read_only"],
+      "default": "manual_only"
     },
     "settings": {
       "type": "object",
@@ -30,48 +31,9 @@
     "display_name"
   ],
   "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
     "delete": {
       "user_condition": {
         "role": "admin"

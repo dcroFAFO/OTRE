@@ -1,0 +1,22 @@
+{
+  "name": "IdentityOperation",
+  "type": "object",
+  "properties": {
+    "operation_key": {"type": "string", "unique": true},
+    "operation_type": {"type": "string", "enum": ["account_bootstrap", "guest_booking", "guest_claim", "admin_migration"]},
+    "actor_user_id": {"type": "string"},
+    "status": {"type": "string", "enum": ["started", "completed", "failed"]},
+    "subject_type": {"type": "string"},
+    "subject_id": {"type": "string"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "error_code": {"type": "string"}
+  },
+  "required": ["operation_key", "operation_type", "status", "started_at"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

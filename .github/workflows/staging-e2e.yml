@@ -1,0 +1,44 @@
+name: Staging browser verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 16 * * 1-5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-browser-verification
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      VITE_BASE44_APP_ID: ${{ secrets.STAGING_BASE44_APP_ID }}
+      VITE_BASE44_APP_BASE_URL: ${{ secrets.STAGING_BASE44_APP_BASE_URL }}
+      PLAYWRIGHT_BASE_URL: ${{ secrets.STAGING_SITE_URL }}
+      VITE_PUBLIC_SITE_URL: https://ontherunelectrics.com.au
+      VITE_RELEASE_ID: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:staging-env
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run build
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-playwright-${{ github.run_id }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14

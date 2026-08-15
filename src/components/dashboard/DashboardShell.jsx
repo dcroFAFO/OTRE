@@ -113,7 +113,7 @@ export default function DashboardShell({ user, children }) {
   const { data: { business, app } } = usePlatformConfig();
 
   const isAdmin = hasAtLeastRole(user?.role, "admin");
-  const canManageCustomers = hasAtLeastRole(user?.role, "technician");
+  const canManageCustomers = isAdmin;
   const canViewLog = hasCapability(user?.role, CAPABILITIES.LOG_VIEW);
   const closeNavigation = () => setOpen(false);
 
@@ -209,10 +209,11 @@ export default function DashboardShell({ user, children }) {
           <SidebarGroup
             label="Settings"
             icon={Settings}
-            active={pathname === "/settings" || isPathActive(pathname, "/settings/service-pricing")}
+            active={pathname === "/settings" || isPathActive(pathname, "/settings/service-pricing") || isPathActive(pathname, "/settings/system-health")}
           >
             <SidebarLink to="/settings" label="General settings" icon={Settings} active={pathname === "/settings"} onNavigate={closeNavigation} nested />
             <SidebarLink to="/settings/service-pricing" label="Service pricing" icon={BadgeDollarSign} active={isPathActive(pathname, "/settings/service-pricing")} onNavigate={closeNavigation} nested />
+            <SidebarLink to="/settings/system-health" label="System health" icon={Activity} active={isPathActive(pathname, "/settings/system-health")} onNavigate={closeNavigation} nested />
           </SidebarGroup>
         )}
 

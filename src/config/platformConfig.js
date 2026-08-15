@@ -26,6 +26,53 @@ export const DEFAULT_BUSINESS = {
   secondaryCta: { label: "View Services", target: "#services" },
 };
 
+const PUBLIC_ORIGIN = new URL(DEFAULT_BUSINESS.websiteUrl).origin;
+const UNSAFE_URL_CHARACTERS = /[\\\u0000-\u0020\u007f]/;
+
+export function safeHttpsUrl(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw || UNSAFE_URL_CHARACTERS.test(raw)) return "";
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" && !url.username && !url.password ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+export function safeNavigationHref(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw || UNSAFE_URL_CHARACTERS.test(raw)) return "";
+  if (raw.startsWith("#")) {
+    return /^#[A-Za-z][A-Za-z0-9:._-]{0,79}$/.test(raw) ? raw : "";
+  }
+  if (raw.startsWith("/") && !raw.startsWith("//")) {
+    try {
+      const url = new URL(raw, PUBLIC_ORIGIN);
+      return url.origin === PUBLIC_ORIGIN && !url.username && !url.password
+        ? `${url.pathname}${url.search}${url.hash}`
+        : "";
+    } catch {
+      return "";
+    }
+  }
+  return safeHttpsUrl(raw);
+}
+
+function safeEmail(value) {
+  const email = typeof value === "string" ? value.trim() : "";
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !/[?&#]/.test(email)
+    ? email
+    : DEFAULT_BUSINESS.email;
+}
+
+function safePhone(value) {
+  const phone = String(value || "").replace(/[^+\d]/g, "");
+  return /^\+?\d{8,15}$/.test(phone)
+    ? phone
+    : DEFAULT_BUSINESS.phoneE164;
+}
+
 export const DEFAULT_APP_SETTINGS = {
   terminology: {
     platformLabel: "Job Platform",
@@ -80,8 +127,8 @@ export const DEFAULT_APP_SETTINGS = {
 export const CUSTOMER_JOURNEY = [
   { key: "request", label: "Request", icon: "CalendarCheck" },
   { key: "repair", label: "Repair", icon: "Wrench" },
-  { key: "pickup", label: "Pickup", icon: "PackageCheck" },
-  { key: "pay", label: "Pay", icon: "CreditCard" },
+  { key: "invoice", label: "Invoice", icon: "ReceiptText" },
+  { key: "pickup", label: "Collect", icon: "PackageCheck" },
 ];
 
 export const DEFAULT_SERVICE_CATEGORIES = [
@@ -149,7 +196,7 @@ export const DEFAULT_QUOTE_STATUSES = [
   { key: "rejected", label: "Rejected", color: "rose" },
 ];
 
-export const STAFF_ROLE_KEYS = ["admin", "technician"];
+export const STAFF_ROLE_KEYS = ["admin"];
 
 export const DEFAULT_BOOKING_FIELDS = [
   { key: "customer_name", label: "Your name", placeholder: "Liam Carter", field_type: "text", required: true, maps_to: "customer_name", order: 0 },
@@ -205,14 +252,6 @@ export const DEFAULT_INVOICE_SETTINGS = {
   tax_rate: 0,
 };
 
-export const DEFAULT_PAYMENT_PROVIDER_CONFIG = {
-  provider_key: "manual",
-  display_name: "Manual payments",
-  mode: "not_configured",
-  active: false,
-  settings: {},
-};
-
 export const DEFAULT_NOTIFICATION_TEMPLATES = [
   { key: "booking_received", channel: "email", subject: "We received your booking", body: "Hi {customer_name}, your request {reference} has been received." },
   { key: "estimate_sent", channel: "email", subject: "Your estimate is ready", body: "Hi {customer_name}, your estimate for {reference} is ready to review." },
@@ -230,12 +269,13 @@ export const DEFAULT_DEMO_PREVIEW_JOB = {
 };
 
 export function businessContactLinks(business = DEFAULT_BUSINESS) {
-  const phone = String(business.phoneE164 || business.phone || DEFAULT_BUSINESS.phoneE164).replace(/[^+\d]/g, "");
+  const email = safeEmail(business.email || DEFAULT_BUSINESS.email);
+  const phone = safePhone(business.phoneE164 || business.phone || DEFAULT_BUSINESS.phoneE164);
   const address = business.address || DEFAULT_BUSINESS.address;
   return {
-    email: `mailto:${business.email || DEFAULT_BUSINESS.email}`,
+    email: `mailto:${email}`,
     phone: `tel:${phone}`,
-    maps: business.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+    maps: safeHttpsUrl(business.mapsUrl) || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
   };
 }
 

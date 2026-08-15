@@ -1,0 +1,56 @@
+name: Quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [main, "codex/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      VITE_BASE44_APP_ID: ci-static-build
+      VITE_BASE44_APP_BASE_URL: https://example.invalid
+      VITE_PUBLIC_SITE_URL: https://ontherunelectrics.com.au
+      VITE_RELEASE_ID: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:config
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:bundle
+      - run: npm run release:manifest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: |
+            dist/.vite/manifest.json
+            dist/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.6.3
+      - run: npm run validate:backend

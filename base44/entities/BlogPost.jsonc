@@ -162,12 +162,12 @@
         },
         {
           "user_condition": {
-            "role": "employee"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "technician"
+            "role": "admin"
           }
         }
       ]
@@ -181,12 +181,12 @@
         },
         {
           "user_condition": {
-            "role": "employee"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "technician"
+            "role": "admin"
           }
         }
       ]
@@ -200,12 +200,12 @@
         },
         {
           "user_condition": {
-            "role": "employee"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "technician"
+            "role": "admin"
           }
         }
       ]

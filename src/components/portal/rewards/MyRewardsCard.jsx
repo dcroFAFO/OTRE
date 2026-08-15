@@ -40,7 +40,7 @@ export default function MyRewardsCard({ userId }) {
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-800"><Gift className="h-4.5 w-4.5" aria-hidden="true" /></span>
         <div className="min-w-0">
           <h2 id="my-rewards-title" className="font-heading text-lg font-extrabold">My Rewards</h2>
-          <p className="text-xs text-muted-foreground">Choose one eligible reward before paying an invoice.</p>
+          <p className="text-xs text-muted-foreground">Choose one eligible reward before the workshop records an invoice as paid.</p>
         </div>
       </div>
 

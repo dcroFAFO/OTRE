@@ -10,6 +10,7 @@ import AssetBrandPicker from "@/components/landing/AssetBrandPicker";
 import { FieldShell, PageLoader } from "@/components/shared";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { getSafeErrorMessage } from "@/lib/errors";
+import { sanitizeReturnTarget } from "@/lib/authReturnTo";
 import { AlertCircle, CheckCircle2, Loader2, UserRound } from "lucide-react";
 
 function oauthProviderName(user) {
@@ -25,8 +26,9 @@ function scooterComplete(form) {
 
 function nextPath() {
   const params = new URLSearchParams(window.location.search);
-  const next = params.get("next") || "/portal?book=1";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/portal?book=1";
+  const raw = params.get("next") || "/portal?book=1";
+  const target = sanitizeReturnTarget(raw);
+  return target === "/" && raw !== "/" ? "/portal?book=1" : target;
 }
 
 export default function ProfileSetup() {
@@ -44,7 +46,11 @@ export default function ProfileSetup() {
       setUser(me);
       const oauthPhone = String(me.phone || me.phone_e164 || "").replace(/^\+61/, "0");
       setForm((current) => ({ ...current, display_name: me.full_name || "", full_name: me.full_name || "", phone: oauthPhone }));
-    }).catch(() => base44.auth.redirectToLogin(window.location.href)).finally(() => setLoading(false));
+      setLoading(false);
+    }).catch(() => {
+      // Keep the protected form hidden while the hard redirect is initiated.
+      base44.auth.redirectToLogin(window.location.href);
+    });
   }, []);
 
   const submit = async (event) => {

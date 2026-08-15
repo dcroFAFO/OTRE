@@ -12,7 +12,8 @@
     },
     "tokenHash": {
       "type": "string",
-      "description": "SHA-256 hash of the raw public access token. Raw tokens are never stored."
+      "description": "Canonical SHA-256 hash of the raw public access token. Raw tokens are never stored.",
+      "unique": true
     },
     "token_hash": {
       "type": "string",
@@ -25,7 +26,8 @@
     },
     "expires_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "Compatibility mirror of expiresAt. New grants enforce the earlier of this value and 30 days after Job.completed_at."
     },
     "revokedAt": {
       "type": "string",
@@ -36,10 +38,42 @@
       "type": "string",
       "format": "date-time"
     },
+    "revocation_reason": {
+      "type": "string",
+      "enum": [
+        "staff_revoked",
+        "job_claimed",
+        "rotated",
+        "security_response"
+      ]
+    },
+    "issued_by_user_id": {
+      "type": "string",
+      "description": "Authenticated admin User.id for staff-created grants. Empty for guest booking grants."
+    },
+    "last_used_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_after_completion_days": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 30,
+      "default": 30,
+      "description": "Tracking access is invalid 30 days after the job is completed even if expiresAt is later."
+    },
     "permissions": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "view_status",
+          "view_booking",
+          "view_invoice",
+          "view_files",
+          "add_note",
+          "upload_file"
+        ]
       },
       "default": [
         "view_status",

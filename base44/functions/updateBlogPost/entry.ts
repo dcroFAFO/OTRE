@@ -1,15 +1,15 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 
 const slugify = (value) => String(value || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90);
 const wordCount = (text) => String(text || "").trim().split(/\s+/).filter(Boolean).length;
 const readingTime = (text) => Math.max(1, Math.ceil(wordCount(text) / 220));
-const isStaff = (user) => ["admin", "employee", "technician"].includes(user?.role) || user?.data?.is_customer === false;
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || !isStaff(user)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
     const { postId, data = {} } = await req.json();
     if (!postId) return Response.json({ error: "postId is required" }, { status: 400 });
     const current = await base44.asServiceRole.entities.BlogPost.get(postId);

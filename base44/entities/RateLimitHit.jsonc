@@ -1,0 +1,37 @@
+{
+  "name": "RateLimitHit",
+  "type": "object",
+  "properties": {
+    "hit_key": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique bucket plus sequence; the atomic throttle reservation."
+    },
+    "bucket_key": {
+      "type": "string"
+    },
+    "rate_limit_id": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number",
+      "minimum": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "hit_key",
+    "bucket_key",
+    "sequence",
+    "occurred_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

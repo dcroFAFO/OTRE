@@ -35,11 +35,11 @@ describe("DashboardShell", () => {
     expect(screen.getByRole("link", { name: "Service pricing" })).toHaveAttribute("href", "/settings/service-pricing");
   });
 
-  it("does not expose admin navigation to technicians", () => {
+  it("does not expose privileged navigation to a legacy technician role", () => {
     renderShell("/dashboard", { role: "technician", full_name: "Tech User" }, <h1>Dashboard</h1>);
 
     expect(screen.queryByRole("button", { name: "Settings" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "News and events" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Customers" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Customers" })).not.toBeInTheDocument();
   });
 });

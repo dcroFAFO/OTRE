@@ -62,14 +62,7 @@
   "required": ["customer_account_id", "kind", "status", "discount_type", "value", "issued_at", "expires_at", "idempotency_key"],
   "rls": {
     "create": { "user_condition": { "role": "admin" } },
-    "read": {
-      "$or": [
-        { "user_condition": { "role": "admin" } },
-        { "user_condition": { "role": "employee" } },
-        { "user_condition": { "role": "technician" } },
-        { "data.auth_user_id": "{{user.id}}" }
-      ]
-    },
+    "read": { "user_condition": { "role": "admin" } },
     "update": { "user_condition": { "role": "admin" } },
     "delete": { "user_condition": { "role": "admin" } }
   }

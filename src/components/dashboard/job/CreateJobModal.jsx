@@ -11,6 +11,7 @@ import { Loader2, ClipboardList, User, Search, X, CheckCircle2, AlertCircle } fr
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { DEFAULT_SERVICE_TYPE, SERVICE_TYPES, classifyServiceType } from "@/config/serviceTypes";
 import { toast } from "sonner";
+import { searchClients } from "@/services/clientService";
 
 const BATTERY_CONDITIONS = [
   { key: "good", label: "Good" },
@@ -108,14 +109,7 @@ export default function CreateJobModal({ open, onClose, onCreated }) {
     if (q.length < 2 || linkedCustomer) { setSuggestions([]); return; }
     setSearchLoading(true);
     try {
-      const [byName, byEmail, byPhone] = await Promise.all([
-        field === "name" ? base44.entities.Customer.filter({ full_name: q }, "full_name", 8) : Promise.resolve([]),
-        field === "email" ? base44.entities.Customer.filter({ email: q }, "email", 8) : Promise.resolve([]),
-        field === "phone" ? base44.entities.Customer.filter({ phone: q }, "phone", 8) : Promise.resolve([]),
-      ]);
-      const all = [...byName, ...byEmail, ...byPhone];
-      const seen = new Set();
-      setSuggestions(all.filter((c) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; }));
+      setSuggestions(await searchClients(field, q));
     } catch {
       setSuggestions([]);
     } finally {

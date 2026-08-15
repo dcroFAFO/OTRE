@@ -1,7 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { mintJobReference } from '../../shared/jobReference.ts';
-
-const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
+import { isAdmin } from '../../shared/identityPolicy.ts';
 
 function normalizeEmail(email) { return String(email || '').trim().toLowerCase(); }
 function cleanText(value) { return String(value || '').trim().toLowerCase(); }
@@ -35,14 +34,6 @@ async function resolveCustomer(entities, { linkedCustomerId, name, email, phone 
       customer = matches[0] || null;
     }
   }
-  if (!customer && email) {
-    const matches = await entities.Customer.filter({ email }, '-updated_date', 1).catch(() => []);
-    customer = matches[0] || null;
-  }
-  if (!customer && phone) {
-    const matches = await entities.Customer.filter({ phone_e164: phone }, '-updated_date', 1).catch(() => []);
-    customer = matches[0] || null;
-  }
   if (customer) return { customer, isNewCustomer: false };
   const now = new Date().toISOString();
   customer = await entities.Customer.create({
@@ -55,6 +46,7 @@ async function resolveCustomer(entities, { linkedCustomerId, name, email, phone 
     phone_display: phone || undefined,
     status: 'active',
     tags: ['customer'],
+    identity_version: 2,
     createdAt: now,
     last_activity_date: now,
   });
@@ -80,7 +72,7 @@ async function resolveScooter(entities, customer, intake) {
   ]);
   const existing = [...new Map([...byStable, ...byAccount].map((s) => [s.id, s])).values()].find((s) => scooterMatches(s, data));
   if (existing) {
-    const updates = { customer_id: stableId, customer_account_id: customer.id };
+    const updates: any = { customer_id: stableId, customer_account_id: customer.id };
     for (const key of ['make', 'model', 'serial_number', 'colour', 'color', 'battery_voltage', 'notes']) if (data[key] && !existing[key]) updates[key] = data[key];
     if (data.odometer_km && !existing.odometer_km) updates.odometer_km = data.odometer_km;
     return await entities.Scooter.update(existing.id, updates);
@@ -93,7 +85,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!STAFF_ROLES.has(String(user.role || '').toLowerCase())) return Response.json({ error: 'Forbidden — staff only' }, { status: 403 });
+    if (!isAdmin(user)) return Response.json({ error: 'Forbidden — admin only' }, { status: 403 });
 
     const { intake, linked_customer_id, template } = await req.json();
     if (!intake?.customerName?.trim()) return Response.json({ error: 'Customer name is required' }, { status: 400 });
@@ -143,7 +135,7 @@ Deno.serve(async (req) => {
       scooter_details: assetLabel,
       issue_description: intakeRecord.initial_issue_notes,
       service_type: intakeRecord.service_type,
-      status: 'booked',
+      status: intake.date ? 'scheduled' : 'requested',
       source: 'staff_created',
       priority: intake.priority || 'medium',
       scheduled_date: intake.date || undefined,
@@ -151,6 +143,9 @@ Deno.serve(async (req) => {
       customer_id: stableCustomerId,
       customer_account_id: customer.id,
       customer_user_id: customer.user_id || '',
+      claimed_by_customer: !!customer.user_id,
+      claim_status: customer.user_id ? 'claimed' : 'unclaimed',
+      claimed_at: customer.user_id ? now : undefined,
       reference,
       intake: intakeRecord,
       checklist: (template?.checklist || []).map((c) => ({ ...c, done: false })),

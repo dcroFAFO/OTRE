@@ -1,7 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 import { Zap, ArrowRight, Wrench } from "lucide-react";
 import SEO from "@/components/SEO";
 import LandingNav from "@/components/landing/LandingNav";
@@ -14,24 +12,15 @@ import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/shared";
 
 export default function ServicePricing() {
-  const { data: { business } } = usePlatformConfig();
-  const servicesQuery = useQuery({
-    queryKey: ["pricingServices"],
-    queryFn: () => base44.entities.ServiceItem.filter({ active: true }, "order", 200),
-  });
-  const categoriesQuery = useQuery({
-    queryKey: ["pricingCategories"],
-    queryFn: () => base44.entities.ServiceCategory.filter({ active: true }, "order", 100),
-  });
-  const services = servicesQuery.data || [];
-  const categories = categoriesQuery.data || [];
-  const isLoading = servicesQuery.isLoading || categoriesQuery.isLoading;
+  const platformQuery = usePlatformConfig();
+  const { business, services = [], categories = [] } = platformQuery.data;
+  const isLoading = platformQuery.isLoading;
 
   const grouped = categories
     .map((c) => ({ category: c, items: services.filter((s) => s.category_key === c.key) }))
     .filter((g) => g.items.length > 0);
   const uncategorised = services.filter((s) => !categories.some((c) => c.key === s.category_key));
-  const isEmpty = !isLoading && !servicesQuery.isError && services.length === 0;
+  const isEmpty = !isLoading && !platformQuery.isError && services.length === 0;
 
   return (
     <>
@@ -59,8 +48,8 @@ export default function ServicePricing() {
 
             {isLoading ? (
               <CardSkeleton count={3} className="mt-10 xl:grid-cols-1" />
-            ) : servicesQuery.isError && services.length === 0 ? (
-              <ErrorState className="mt-10" error={servicesQuery.error} title="Service pricing could not be loaded" onRetry={() => servicesQuery.refetch()} />
+            ) : platformQuery.isError && services.length === 0 ? (
+              <ErrorState className="mt-10" error={platformQuery.error} title="Service pricing could not be loaded" onRetry={() => platformQuery.refetch()} />
             ) : isEmpty ? (
               <EmptyState
                 className="mt-10 border-y border-border"
@@ -71,8 +60,7 @@ export default function ServicePricing() {
               />
             ) : (
               <div className="mt-10 space-y-6">
-                {servicesQuery.isError ? <ErrorState error={servicesQuery.error} title="Latest service prices could not be refreshed" description="Previously loaded prices remain visible below." onRetry={() => servicesQuery.refetch()} /> : null}
-                {categoriesQuery.isError ? <ErrorState error={categoriesQuery.error} title="Service categories could not be loaded" description="Prices are shown below without their usual categories." onRetry={() => categoriesQuery.refetch()} /> : null}
+                {platformQuery.isError ? <ErrorState error={platformQuery.error} title="Latest service prices could not be refreshed" description="Fallback service information remains visible below." onRetry={() => platformQuery.refetch()} /> : null}
                 {grouped.map(({ category, items }) => (
                   <PricingCategoryCard key={category.key} category={category} items={items} />
                 ))}

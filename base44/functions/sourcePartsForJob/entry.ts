@@ -1,10 +1,13 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
+
+type SuggestedPart = { name?: string; typical_price?: number; retailer?: string; note?: string };
+type PartsResult = { parts?: SuggestedPart[] };
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const user = await base44.auth.me();
+    const user = await base44.auth.me().catch(() => null);
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -14,7 +17,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'jobId is required' }, { status: 400 });
     }
 
-    const job = await base44.entities.Job.get(jobId);
+    if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+    const job = await base44.asServiceRole.entities.Job.get(jobId).catch(() => null);
     if (!job) {
       return Response.json({ error: 'Job not found' }, { status: 404 });
     }
@@ -94,7 +99,7 @@ Only include parts genuinely relevant to this scooter and service. Return betwee
         },
         required: ['parts'],
       },
-    });
+    }) as PartsResult;
 
     // Order online retailers by the workshop's preferred priority.
     const retailerRank = { escootnow: 0, alibaba: 1, ebay: 2, amazon: 3 };
@@ -103,7 +108,7 @@ Only include parts genuinely relevant to this scooter and service. Return betwee
       return retailerRank[key] ?? 99;
     };
 
-    const onlineParts = (result?.parts || [])
+    const onlineParts = (Array.isArray(result?.parts) ? result.parts : [])
       .map((p) => ({
         name: p.name || 'Part',
         typical_price: Number(p.typical_price) || 0,

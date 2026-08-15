@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export default function BookingConfirmation({ result, summary, onManage, onBack }) {
   return (
     <div className="py-4 text-center">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/15 text-accent"><CheckCircle2 className="h-8 w-8" /></span>
+      <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/15 text-accent"><CheckCircle2 className="h-8 w-8" aria-hidden="true" /></span>
       <h3 className="mt-4 font-heading text-xl font-extrabold">Booking request received</h3>
       <p className="mt-1 text-sm text-muted-foreground">Our team will contact you to confirm drop-off details.</p>
       <div className="mx-auto mt-5 max-w-sm divide-y divide-border rounded-xl border border-border text-left text-sm">
@@ -14,8 +14,8 @@ export default function BookingConfirmation({ result, summary, onManage, onBack 
         <Row label="Service requested" value={summary?.service || "—"} />
       </div>
       <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-        <Button onClick={onManage} className="bg-accent text-accent-foreground hover:bg-accent/90">Manage This Job</Button>
-        <Button variant="outline" onClick={onBack}>Back to jobs</Button>
+        <Button size="touch" onClick={onManage} className="bg-accent text-accent-foreground hover:bg-accent/90">Manage this job</Button>
+        <Button size="touch" variant="outline" onClick={onBack}>Back to jobs</Button>
       </div>
     </div>
   );

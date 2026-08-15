@@ -18,7 +18,7 @@ export default function RewardPicker({ invoice, userId, onChanged }) {
   const [selected, setSelected] = useState("");
   const [pending, setPending] = useState("");
   const available = useMemo(() => (data?.rewards || []).filter((reward) => reward.status === "available"), [data]);
-  const canChange = !invoice.checkout_started_at && !["paid", "refunded", "cancelled", "void"].includes(invoice.status);
+  const canChange = !["paid", "refunded", "cancelled", "void"].includes(invoice.status);
 
   const updateReward = async (action, rewardId = "") => {
     setPending(action);
@@ -28,16 +28,21 @@ export default function RewardPicker({ invoice, userId, onChanged }) {
         invoice_id: invoice.id,
         ...(rewardId ? { reward_id: rewardId } : {}),
       });
-      if (response.data?.error) throw Object.assign(new Error(response.data.error), { response });
+      if (response.data?.error || response.data?.ok === false) {
+        const detail = response.data.error;
+        const message = typeof detail === "string" ? detail : detail?.message;
+        throw Object.assign(new Error(message || "The reward change was not accepted."), { status: response.status || 400, response: { ...response, data: { ...response.data, error: message } } });
+      }
+      const result = response.data?.data ?? response.data;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["customerRewards", userId] }),
-        queryClient.invalidateQueries({ queryKey: ["portalAccountInvoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["portalInvoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["customerPortalOverview"] }),
+        queryClient.invalidateQueries({ queryKey: ["customerPortalJob"] }),
       ]);
-      onChanged?.(response.data.invoice);
+      onChanged?.(result.invoice);
       setSelected("");
       toast.success(action === "apply" ? "Reward applied" : "Reward removed", {
-        description: "Your revised invoice has been emailed to you.",
+        description: "Your invoice total has been updated in My Account.",
       });
     } catch (err) {
       toast.error(getSafeErrorMessage(err, action === "apply" ? "This reward could not be applied." : "This reward could not be removed."));
@@ -50,16 +55,16 @@ export default function RewardPicker({ invoice, userId, onChanged }) {
   if (invoice.reward_id) {
     return (
       <Alert className="mt-3 border-emerald-200 bg-emerald-50/70">
-        <Gift className="h-4 w-4 text-emerald-800" />
+        <Gift className="h-4 w-4 text-emerald-800" aria-hidden="true" />
         <AlertTitle>Reward applied</AlertTitle>
         <AlertDescription className="mt-1">
           <p>{invoice.reward_snapshot?.description || "Your selected reward"} saved AUD ${Number(invoice.reward_discount_amount || 0).toFixed(2)}.</p>
           {canChange ? (
-            <Button type="button" variant="outline" size="sm" className="mt-3 gap-1.5" disabled={!!pending} onClick={() => updateReward("remove")}>
-              {pending === "remove" ? <LoadingSpinner decorative iconClassName="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            <Button type="button" variant="outline" size="sm" className="mt-3 min-h-11 gap-1.5" disabled={!!pending} onClick={() => updateReward("remove")}>
+              {pending === "remove" ? <LoadingSpinner decorative iconClassName="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />}
               Remove reward
             </Button>
-          ) : <p className="mt-2 text-xs">This reward is locked because checkout has started.</p>}
+          ) : <p className="mt-2 text-xs">This reward cannot be changed because the invoice is finalised.</p>}
         </AlertDescription>
       </Alert>
     );
@@ -80,8 +85,8 @@ export default function RewardPicker({ invoice, userId, onChanged }) {
           </SelectContent>
         </Select>
       </FieldShell>
-      <Button type="button" size="sm" className="mt-3 gap-1.5" disabled={!selected || !!pending} onClick={() => updateReward("apply", selected)}>
-        {pending === "apply" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gift className="h-3.5 w-3.5" />}
+      <Button type="button" size="sm" className="mt-3 min-h-11 gap-1.5" disabled={!selected || !!pending} onClick={() => updateReward("apply", selected)}>
+        {pending === "apply" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Gift className="h-3.5 w-3.5" aria-hidden="true" />}
         Apply reward
       </Button>
     </div>

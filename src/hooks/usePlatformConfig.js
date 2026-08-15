@@ -4,7 +4,13 @@ import {
   DEFAULT_APP_SETTINGS,
   DEFAULT_BUSINESS,
   DEFAULT_SERVICES,
+  safeHttpsUrl,
+  safeNavigationHref,
 } from "@/config/platformConfig";
+
+function objectValue(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
 
 export function toBusiness(profile) {
   if (!profile) return DEFAULT_BUSINESS;
@@ -13,7 +19,7 @@ export function toBusiness(profile) {
     ...profile,
     name: profile.name || profile.business_name || DEFAULT_BUSINESS.name,
     legalName: profile.legal_name || profile.legalName || DEFAULT_BUSINESS.legalName,
-    websiteUrl: profile.website_url || profile.websiteUrl || DEFAULT_BUSINESS.websiteUrl,
+    websiteUrl: safeHttpsUrl(profile.website_url || profile.websiteUrl) || DEFAULT_BUSINESS.websiteUrl,
     email: profile.email || profile.contact_email || DEFAULT_BUSINESS.email,
     phone: profile.phone || profile.contact_phone || DEFAULT_BUSINESS.phone,
     address: profile.address || profile.business_address || DEFAULT_BUSINESS.address,
@@ -24,7 +30,7 @@ export function toBusiness(profile) {
     postcode: profile.postcode || DEFAULT_BUSINESS.postcode,
     country: profile.country || DEFAULT_BUSINESS.country,
     abn: profile.abn || DEFAULT_BUSINESS.abn,
-    mapsUrl: profile.maps_url || profile.mapsUrl || "",
+    mapsUrl: safeHttpsUrl(profile.maps_url || profile.mapsUrl),
     openingHours: profile.opening_hours || profile.openingHours || DEFAULT_BUSINESS.openingHours,
     primaryCta: DEFAULT_BUSINESS.primaryCta,
     secondaryCta: DEFAULT_BUSINESS.secondaryCta,
@@ -32,18 +38,40 @@ export function toBusiness(profile) {
 }
 
 export function toAppSettings(settings) {
-  const configured = settings?.app || {};
-  const configuredLanding = configured.landing || {};
-  const configuredLinks = Array.isArray(configuredLanding.navLinks) ? configuredLanding.navLinks : [];
+  const configured = objectValue(settings?.app);
+  const configuredLanding = objectValue(configured.landing);
+  const configuredLinks = Array.isArray(configuredLanding.navLinks)
+    ? configuredLanding.navLinks.flatMap((entry) => {
+      const link = objectValue(entry);
+      const label = typeof link.label === "string" ? link.label.trim().slice(0, 120) : "";
+      const href = safeNavigationHref(link.href);
+      return label && href ? [{ label, href }] : [];
+    }).slice(0, 20)
+    : [];
   const requiredRoutes = ["/about", "/service-pricing", "/blog", "/contact", "/book"];
   const hasPersistentNavigation = requiredRoutes.every((route) => configuredLinks.some((link) => link?.href === route));
   return {
     ...DEFAULT_APP_SETTINGS,
-    ...configured,
+    terminology: {
+      ...DEFAULT_APP_SETTINGS.terminology,
+      ...objectValue(configured.terminology),
+    },
     landing: {
       ...DEFAULT_APP_SETTINGS.landing,
       ...configuredLanding,
       navLinks: hasPersistentNavigation ? configuredLinks : DEFAULT_APP_SETTINGS.landing.navLinks,
+    },
+    dashboard: {
+      ...DEFAULT_APP_SETTINGS.dashboard,
+      ...objectValue(configured.dashboard),
+      nav: {
+        ...DEFAULT_APP_SETTINGS.dashboard.nav,
+        ...objectValue(objectValue(configured.dashboard).nav),
+      },
+      metrics: {
+        ...DEFAULT_APP_SETTINGS.dashboard.metrics,
+        ...objectValue(objectValue(configured.dashboard).metrics),
+      },
     },
   };
 }
@@ -52,13 +80,12 @@ export function usePlatformConfig() {
   return useQuery({
     queryKey: ["platformConfig"],
     queryFn: async () => {
-      const [profiles, services, appSettings] = await Promise.all([
-        base44.entities.BusinessProfile.filter({ is_default: true }, "", 1),
-        base44.entities.ServiceItem.filter({ active: true }, "order", 100),
-        base44.entities.AppSetting.filter({ active: true }, "", 100),
-      ]);
-
-      const settings = appSettings.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+      const response = await base44.functions.invoke("publicSiteConfig", {});
+      if (!response.data?.ok) throw new Error(response.data?.error?.message || "Public business details could not be loaded.");
+      const payload = response.data.data || {};
+      const profiles = payload.business ? [payload.business] : [];
+      const services = payload.services || [];
+      const settings = payload.settings || {};
       const configuredServices = services.length
         ? services.map((service) => ({
             ...DEFAULT_SERVICES.find((item) => item.name === service.name),
@@ -69,12 +96,14 @@ export function usePlatformConfig() {
       return {
         business: toBusiness(profiles[0]),
         services: configuredServices,
+        categories: payload.categories || [],
         app: toAppSettings(settings),
       };
     },
     initialData: {
       business: DEFAULT_BUSINESS,
       services: DEFAULT_SERVICES,
+      categories: [],
       app: DEFAULT_APP_SETTINGS,
     },
     initialDataUpdatedAt: 0,

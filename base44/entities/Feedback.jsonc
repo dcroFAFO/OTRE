@@ -2,6 +2,11 @@
   "name": "Feedback",
   "type": "object",
   "properties": {
+    "submission_key": {
+      "type": "string",
+      "unique": true,
+      "description": "Per-user idempotency key for a feedback submission."
+    },
     "subject": {
       "type": "string",
       "description": "Short summary of the feedback"
@@ -83,9 +88,13 @@
       "type": "string",
       "description": "Browser user agent"
     },
-    "attachment": {
+    "attachment_id": {
       "type": "string",
-      "description": "Optional screenshot/file URL"
+      "description": "Optional private Attachment record ID."
+    },
+    "invitation_use_id": {
+      "type": "string",
+      "description": "One-time feedback invitation use that authorized a customer rating."
     },
     "is_archived": {
       "type": "boolean",
@@ -115,48 +124,9 @@
     "message"
   ],
   "rls": {
-    "create": null,
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    }
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
   }
 }

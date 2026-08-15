@@ -1,0 +1,46 @@
+{
+  "name": "ContactVerificationAttempt",
+  "type": "object",
+  "properties": {
+    "attempt_key": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique challenge plus attempt sequence; the atomic attempt reservation."
+    },
+    "challenge_id": {
+      "type": "string"
+    },
+    "challenge_entity_id": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "request_ip_hash": {
+      "type": "string"
+    },
+    "attempted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "matched": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "attempt_key",
+    "challenge_id",
+    "challenge_entity_id",
+    "sequence",
+    "attempted_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

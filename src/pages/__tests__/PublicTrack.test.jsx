@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@/api/base44Client", () => ({
   base44: {
     functions: { invoke: mocks.invoke },
-    integrations: { Core: { UploadFile: vi.fn() } },
+    integrations: { Core: { UploadPrivateFile: vi.fn() } },
   },
 }));
 
@@ -80,14 +80,4 @@ describe("PublicTrack", () => {
     expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
     expect(screen.queryByText("private stack trace")).not.toBeInTheDocument();
   });
-
-  it("preserves a legacy tracking token when dismissing a payment return", async () => {
-    mocks.invoke.mockResolvedValue({ data: trackingData });
-    const user = userEvent.setup();
-    renderRoute("/track/public-token?token=legacy-secret&payment=cancelled");
-
-    await user.click(await screen.findByRole("button", { name: "Dismiss" }));
-    await waitFor(() => expect(window.location.search).toBe("?token=legacy-secret"));
-  });
 });
-

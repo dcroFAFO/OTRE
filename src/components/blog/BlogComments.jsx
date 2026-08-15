@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { MessageCircle, Send, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ErrorState } from "@/components/shared";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { listBlogComments, createBlogComment, deleteBlogComment } from "@/services/blogService";
 
@@ -12,7 +14,7 @@ export default function BlogComments({ postId, postSlug }) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
 
-  const { data: comments = [], isLoading } = useQuery({
+  const { data: comments = [], isLoading, error, refetch } = useQuery({
     queryKey: ["blogComments", postId],
     queryFn: () => listBlogComments(postId),
     enabled: !!postId,
@@ -22,11 +24,7 @@ export default function BlogComments({ postId, postSlug }) {
     mutationFn: (/** @type {string} */ text) =>
       createBlogComment({
         post_id: postId,
-        post_slug: postSlug,
-        author_name: user?.full_name || user?.email || "Anonymous",
-        author_user_id: user?.id,
         content: text.trim(),
-        status: "visible",
       }),
     onSuccess: () => {
       setContent("");
@@ -50,7 +48,7 @@ export default function BlogComments({ postId, postSlug }) {
   return (
     <section className="mt-12">
       <div className="flex items-center gap-2">
-        <MessageCircle className="h-5 w-5 text-accent" />
+        <MessageCircle className="h-5 w-5 text-accent" aria-hidden="true" />
         <h2 className="font-heading text-2xl font-bold">
           Comments {comments.length > 0 && <span className="text-muted-foreground">({comments.length})</span>}
         </h2>
@@ -59,7 +57,9 @@ export default function BlogComments({ postId, postSlug }) {
       {/* Comment form */}
       {user ? (
         <form onSubmit={handleSubmit} className="mt-5">
+          <Label htmlFor={`blog-comment-${postId}`}>Add a comment</Label>
           <Textarea
+            id={`blog-comment-${postId}`}
             placeholder="Share your thoughts…"
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -73,18 +73,18 @@ export default function BlogComments({ postId, postSlug }) {
               type="submit"
               size="sm"
               disabled={!content.trim() || createMutation.isPending}
-              className="gap-2"
+              className="min-h-11 gap-2"
             >
               {createMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4" aria-hidden="true" />
               )}
               Post comment
             </Button>
           </div>
           {createMutation.isError && (
-            <p className="mt-2 text-sm text-destructive">
+            <p className="mt-2 text-sm text-destructive" role="alert">
               Couldn't post your comment. Please try again.
             </p>
           )}
@@ -93,7 +93,7 @@ export default function BlogComments({ postId, postSlug }) {
         <div className="mt-5 rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Want to join the conversation?{" "}
-            <Link to="/login" className="font-semibold text-accent hover:underline">
+            <Link to={`/login?next=${encodeURIComponent(`/blog/${postSlug}`)}`} className="font-semibold text-accent hover:underline">
               Log in
             </Link>{" "}
             to leave a comment.
@@ -102,9 +102,11 @@ export default function BlogComments({ postId, postSlug }) {
       )}
 
       {/* Comment list */}
-      {isLoading ? (
-        <div className="mt-6 grid place-items-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      {error ? (
+        <ErrorState className="mt-6" title="Comments could not be loaded" error={error} onRetry={refetch} />
+      ) : isLoading ? (
+        <div className="mt-6 grid place-items-center py-8" role="status" aria-label="Loading comments">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
         </div>
       ) : comments.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-border/60 py-8 text-center text-sm text-muted-foreground">
@@ -135,14 +137,15 @@ export default function BlogComments({ postId, postSlug }) {
                     </p>
                   </div>
                 </div>
-                {user?.id === comment.author_user_id && (
+                {comment.can_delete === true && (
                   <button
-                    onClick={() => deleteMutation.mutate(comment.id)}
+                    type="button"
+                    onClick={() => { if (window.confirm("Delete your comment? This cannot be undone.")) deleteMutation.mutate(comment.id); }}
                     disabled={deleteMutation.isPending}
                     aria-label="Delete your comment"
-                    className="text-muted-foreground/50 hover:text-destructive transition-colors"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-destructive transition-colors disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -153,6 +156,7 @@ export default function BlogComments({ postId, postSlug }) {
           ))}
         </div>
       )}
+      {deleteMutation.isError && <p className="mt-3 text-sm text-destructive" role="alert">Your comment could not be deleted. Please try again.</p>}
     </section>
   );
 }

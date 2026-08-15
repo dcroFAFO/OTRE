@@ -49,6 +49,23 @@
       "type": "string",
       "format": "date-time"
     },
+    "sending_owner_id": {
+      "type": "string"
+    },
+    "sending_lease_id": {
+      "type": "string"
+    },
+    "sending_lease_sequence": {
+      "type": "number"
+    },
+    "sending_started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lease_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "delivery_status": {
       "type": "string",
       "enum": [
@@ -58,7 +75,9 @@
         "delivered",
         "failed",
         "suppressed",
-        "duplicate_prevented"
+        "duplicate_prevented",
+        "ambiguous",
+        "dead_letter"
       ],
       "default": "queued"
     },
@@ -71,6 +90,18 @@
     "failure_reason": {
       "type": "string",
       "maxLength": 1000
+    },
+    "last_error_code": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "next_attempt_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dead_lettered_at": {
+      "type": "string",
+      "format": "date-time"
     },
     "retry_count": {
       "type": "number",
@@ -114,28 +145,7 @@
         "role": "admin"
       }
     },
-    "read": {
-      "$or": [
-        {
-          "data.recipient_user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
+    "read": { "user_condition": { "role": "admin" } },
     "update": {
       "user_condition": {
         "role": "admin"

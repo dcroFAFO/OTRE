@@ -1,0 +1,43 @@
+{
+  "name": "BookingClaim",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "unique": true
+    },
+    "customer_account_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "verification_use_id": {
+      "type": "string"
+    },
+    "verified_channel": {
+      "type": "string",
+      "enum": ["email", "sms"]
+    },
+    "claimed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "guest_grants_revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "reversed"],
+      "default": "completed"
+    }
+  },
+  "required": ["job_id", "customer_account_id", "user_id", "verification_use_id", "claimed_at", "status"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

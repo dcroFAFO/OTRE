@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -9,6 +8,7 @@ import { Gift, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/shared";
 import { getSafeErrorMessage } from "@/lib/errors";
+import { getClient, updateClientReferral } from "@/services/clientService";
 
 const STATUSES = ["none", "pending", "completed"];
 
@@ -28,19 +28,13 @@ export default function ReferralCard({ customerId }) {
     setNotFound(false);
     setLoadError(false);
     setCustomer(null);
-    // customerId may be the Customer entity record id (customer_account_id)
-    // or the stable customer_id identifier. Try get() first, then filter fallback.
-    base44.entities.Customer.get(customerId)
-      .then((c) => { if (!cancelled) setCustomer(c); })
-      .catch(() =>
-        base44.entities.Customer.filter({ customer_id: customerId })
-          .then((rows) => {
-            if (cancelled) return;
-            if (rows.length) setCustomer(rows[0]);
-            else setNotFound(true);
-          })
-          .catch(() => { if (!cancelled) setLoadError(true); })
-      );
+    getClient(customerId)
+      .then((record) => {
+        if (cancelled) return;
+        if (record) setCustomer(record);
+        else setNotFound(true);
+      })
+      .catch(() => { if (!cancelled) setLoadError(true); });
     return () => { cancelled = true; };
   }, [customerId, reloadKey]);
 
@@ -71,13 +65,14 @@ export default function ReferralCard({ customerId }) {
     if (saving) return;
     setSaving(true);
     try {
-      await base44.entities.Customer.update(customer.id, {
+      const updated = await updateClientReferral(customer.id, {
         referral_code: customer.referral_code || "",
         referred_by_customer_id: customer.referred_by_customer_id || "",
         referral_status: customer.referral_status || "none",
         referral_eligible: !!customer.referral_eligible,
         referral_notes: customer.referral_notes || "",
       });
+      setCustomer((current) => ({ ...current, ...updated }));
       toast.success("Referral details saved");
     } catch (err) {
       toast.error(getSafeErrorMessage(err, "Referral details could not be saved."));

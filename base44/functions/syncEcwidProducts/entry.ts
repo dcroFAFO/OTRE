@@ -1,8 +1,9 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 
 const STORE_ID = Deno.env.get("ECWID_STORE_ID");
 const TOKEN = Deno.env.get("ECWID_SECRET_TOKEN");
 const ECWID_HEADERS = { "Authorization": `Bearer ${TOKEN}` };
+const EXISTING_PRODUCT_QUERY_LIMIT = 500;
 
 // Map Ecwid category names to our internal category/group keys
 function mapCategory(categoryName = "") {
@@ -73,11 +74,23 @@ Deno.serve(async (req) => {
     // Fetch categories (small request, cheap)
     const categoryMap = await fetchEcwidCategories();
 
-    // Load existing products for upsert matching
-    const existing = await base44.asServiceRole.entities.Product.filter({ supplier: "eScootNow" });
+    // Match only the SKUs in this bounded Ecwid page. Loading all supplier
+    // products without a limit silently returns the SDK's first page and starts
+    // creating duplicates once the local catalogue grows past that page.
+    const skuKeys = [...new Set(ecwidProducts.map((product) => String(product.sku || product.id)))];
+    const existing = skuKeys.length
+      ? await base44.asServiceRole.entities.Product.filter(
+        { supplier: "eScootNow", sku: { $in: skuKeys } },
+        "-updated_date",
+        EXISTING_PRODUCT_QUERY_LIMIT,
+      )
+      : [];
+    if (existing.length === EXISTING_PRODUCT_QUERY_LIMIT) {
+      throw new Error("Existing product reconciliation reached its safety limit.");
+    }
     const existingBySku = {};
     for (const p of existing) {
-      if (p.sku) existingBySku[p.sku] = p;
+      if (p.sku && !existingBySku[p.sku]) existingBySku[p.sku] = p;
     }
 
     let created = 0;
@@ -113,7 +126,7 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.Product.update(existingBySku[skuKey].id, payload);
         updated++;
       } else {
-        await base44.asServiceRole.entities.Product.create(payload);
+        existingBySku[skuKey] = await base44.asServiceRole.entities.Product.create(payload);
         created++;
       }
 

@@ -2,235 +2,80 @@
   "name": "Invoice",
   "type": "object",
   "properties": {
-    "invoice_id": {
-      "type": "string",
-      "description": "Stable invoice identifier used to link jobs and customers."
-    },
-    "quote_id": {
-      "type": "string",
-      "description": "Linked Quote entity ID for this invoice."
-    },
-    "job_id": {
-      "type": "string"
-    },
-    "customer_id": {
-      "type": "string"
-    },
-    "number": {
-      "type": "string"
-    },
-    "amount": {
-      "type": "number",
-      "default": 0
-    },
-    "currency": {
-      "type": "string",
-      "default": "AUD"
-    },
+    "invoice_id": { "type": "string", "description": "Stable human or integration identifier." },
+    "quote_id": { "type": "string" },
+    "job_id": { "type": "string" },
+    "customer_account_id": { "type": "string", "description": "Canonical Customer entity owner." },
+    "customer_id": { "type": "string", "description": "Legacy customer identifier retained during migration." },
+    "number": { "type": "string" },
+    "amount": { "type": "number", "default": 0 },
+    "amount_minor": { "type": "integer", "minimum": 0, "default": 0 },
+    "currency": { "type": "string", "enum": ["AUD"], "default": "AUD" },
     "status": {
       "type": "string",
-      "default": "outstanding",
-      "description": "Configurable invoice/payment status key"
+      "enum": ["draft", "issued", "paid", "void", "refunded", "outstanding"],
+      "default": "draft",
+      "description": "outstanding is a temporary legacy alias for issued."
     },
-    "invoiceVisibility": {
-      "type": "string",
-      "enum": [
-        "internal",
-        "customer_visible"
-      ],
-      "default": "internal",
-      "description": "Controls whether this invoice is visible to customers"
-    },
-    "invoiceSentAt": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "invoiceVisibleAt": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "invoiceCustomerNotificationSentAt": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "internalCostingNotes": {
-      "type": "string",
-      "description": "Internal staff-only costing notes. Never shown to customers."
-    },
-    "customer_notes": {
-      "type": "string",
-      "description": "Customer-facing notes included on the invoice PDF. Staff-editable."
-    },
+    "invoiceVisibility": { "type": "string", "enum": ["internal", "customer_visible"], "default": "internal" },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "due_date": { "type": "string", "format": "date" },
+    "paid_at": { "type": "string", "format": "date-time" },
+    "voided_at": { "type": "string", "format": "date-time" },
+    "refunded_at": { "type": "string", "format": "date-time" },
+    "invoiceSentAt": { "type": "string", "format": "date-time", "description": "Legacy alias for issued_at." },
+    "invoiceVisibleAt": { "type": "string", "format": "date-time" },
+    "invoiceCustomerNotificationSentAt": { "type": "string", "format": "date-time" },
+    "internalCostingNotes": { "type": "string", "maxLength": 5000 },
+    "customer_notes": { "type": "string", "maxLength": 5000 },
     "line_items": {
       "type": "array",
-      "description": "Invoice line items copied from the approved quote or generated from job parts/labour.",
       "items": {
         "type": "object",
         "properties": {
-          "description": {
-            "type": "string"
-          },
-          "qty": {
-            "type": "number"
-          },
-          "unit_price": {
-            "type": "number",
-            "description": "Customer-facing unit price shown on invoices."
-          },
-          "internal_cost_price": {
-            "type": "number",
-            "description": "Internal staff-only cost price."
-          },
-          "markup_percentage": {
-            "type": "number",
-            "default": 20
-          },
-          "customer_unit_price": {
-            "type": "number"
-          },
-          "customer_line_total": {
-            "type": "number"
-          },
-          "is_custom_misc_part": {
-            "type": "boolean",
-            "default": false
-          },
-          "staff_notes": {
-            "type": "string"
-          },
-          "tax_rate": {
-            "type": "number",
-            "default": 0
-          },
-          "discount_amount": {
-            "type": "number",
-            "default": 0
-          },
-          "kind": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "sku": {
-            "type": "string",
-            "description": "SKU or product code shown on tax invoices."
-          },
-          "source_usage_id": {
-            "type": "string",
-            "description": "Linked InventoryUsage record used to prevent duplicate invoice line items."
-          }
+          "description": { "type": "string", "maxLength": 500 },
+          "qty": { "type": "number", "minimum": 0 },
+          "unit_price": { "type": "number", "minimum": 0 },
+          "internal_cost_price": { "type": "number", "minimum": 0 },
+          "markup_percentage": { "type": "number", "default": 20 },
+          "customer_unit_price": { "type": "number", "minimum": 0 },
+          "customer_line_total": { "type": "number", "minimum": 0 },
+          "is_custom_misc_part": { "type": "boolean", "default": false },
+          "staff_notes": { "type": "string", "maxLength": 1000 },
+          "tax_rate": { "type": "number", "default": 0 },
+          "discount_amount": { "type": "number", "default": 0 },
+          "kind": { "type": "string" },
+          "category": { "type": "string" },
+          "sku": { "type": "string" },
+          "source_usage_id": { "type": "string" }
         }
       }
     },
-    "payment_provider": {
-      "type": "string",
-      "description": "Provider-agnostic placeholder"
-    },
-    "payment_intent_ref": {
-      "type": "string"
-    },
-    "checkout_attempt_id": {
-      "type": "string",
-      "description": "Client-generated idempotency key for the current Stripe checkout attempt."
-    },
-    "stripe_checkout_session_id": {
-      "type": "string"
-    },
-    "checkout_started_at": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "last_payment_error_at": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "pre_reward_amount": {
-      "type": "number",
-      "description": "Authoritative invoice amount before the currently applied reward."
-    },
-    "reward_id": {
-      "type": "string",
-      "description": "One CustomerReward selected for this invoice."
-    },
+    "payment_provider": { "type": "string", "enum": ["manual", "stripe_legacy", "none"], "default": "none" },
+    "payment_method": { "type": "string", "enum": ["cash", "eftpos", "bank_transfer", "other", "card_legacy"] },
+    "payment_reference": { "type": "string", "maxLength": 200 },
+    "last_payment_event_id": { "type": "string" },
+    "paid_date": { "type": "string", "format": "date-time", "description": "Legacy alias for paid_at." },
+    "payment_intent_ref": { "type": "string", "description": "Read-only legacy provider reference." },
+    "stripe_checkout_session_id": { "type": "string", "description": "Read-only legacy provider reference." },
+    "checkout_attempt_id": { "type": "string", "description": "Read-only legacy idempotency reference." },
+    "checkout_started_at": { "type": "string", "format": "date-time" },
+    "pre_reward_amount": { "type": "number" },
+    "reward_id": { "type": "string" },
     "reward_kind": { "type": "string" },
     "reward_discount_amount": { "type": "number", "default": 0 },
     "reward_applied_at": { "type": "string", "format": "date-time" },
     "reward_locked_at": { "type": "string", "format": "date-time" },
-    "reward_snapshot": {
-      "type": "object",
-      "additionalProperties": true,
-      "description": "Immutable customer-facing explanation of the applied reward."
-    },
-    "payment_method": {
-      "type": "string"
-    },
-    "paid_date": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "last_payment_reminder_sent_date": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Last time an unpaid invoice reminder email was sent."
-    },
-    "payment_reminder_count": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of unpaid invoice reminder emails sent."
-    },
-    "description": {
-      "type": "string",
-      "maxLength": 1000
-    }
+    "reward_snapshot": { "type": "object", "additionalProperties": true },
+    "last_payment_reminder_sent_date": { "type": "string", "format": "date-time" },
+    "payment_reminder_count": { "type": "integer", "minimum": 0, "default": 0 },
+    "description": { "type": "string", "maxLength": 1000 }
   },
-  "required": [
-    "job_id"
-  ],
+  "required": ["job_id"],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "$and": [
-            {
-              "data.customer_id": "{{user.data.customer_id}}"
-            },
-            {
-              "data.invoiceVisibility": "customer_visible"
-            }
-          ]
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
   }
 }

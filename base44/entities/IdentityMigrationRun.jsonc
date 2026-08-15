@@ -1,0 +1,23 @@
+{
+  "name": "IdentityMigrationRun",
+  "type": "object",
+  "properties": {
+    "run_id": {"type": "string", "unique": true},
+    "mode": {"type": "string", "enum": ["dry_run", "apply"]},
+    "status": {"type": "string", "enum": ["running", "blocked", "completed", "failed"]},
+    "started_by_user_id": {"type": "string"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "cursor": {"type": "string"},
+    "counts": {"type": "object", "additionalProperties": true},
+    "preflight_hash": {"type": "string"},
+    "failure_message": {"type": "string", "maxLength": 1000}
+  },
+  "required": ["run_id", "mode", "status", "started_by_user_id", "started_at"],
+  "rls": {
+    "create": false,
+    "read": {"user_condition": {"role": "admin"}},
+    "update": false,
+    "delete": false
+  }
+}

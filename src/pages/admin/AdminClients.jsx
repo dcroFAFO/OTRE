@@ -8,12 +8,13 @@ import ClientDetailDrawer from "@/components/admin/clients/ClientDetailDrawer";
 import { bulkUpdateClients, deleteClients } from "@/services/clientService";
 import ClientBulkActionsBar from "@/components/admin/clients/ClientBulkActionsBar";
 import { toast } from "sonner";
-import { Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import RequireCapability from "@/components/auth/RequireCapability";
 import { hasAtLeastRole } from "@/config/roles";
 import SEO from "@/components/SEO";
 import { CardSkeleton, EmptyState, ErrorState, NoResultsState, PageLoader, TableSkeleton } from "@/components/shared";
 import { getSafeErrorMessage } from "@/lib/errors";
+import { Button } from "@/components/ui/button";
 
 export default function AdminClients() {
   const { user, isLoading } = useCurrentUser();
@@ -21,7 +22,16 @@ export default function AdminClients() {
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  const { data: clients = [], isLoading: loadingClients, error, refetch } = useClients(user?.role);
+  const {
+    data: clients = [],
+    isLoading: loadingClients,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    relatedDataPartial,
+  } = useClients(user?.role);
 
   const filtered = useMemo(() => {
     const q = filters.q.toLowerCase();
@@ -40,8 +50,8 @@ export default function AdminClients() {
     return [...list].sort(sorters[filters.sort] || sorters.newest);
   }, [clients, filters]);
 
-  const canBulkEdit = hasAtLeastRole(user?.role, "employee");
-  const canDelete = user?.role === "admin";
+  const canBulkEdit = hasAtLeastRole(user?.role, "admin");
+  const canDelete = hasAtLeastRole(user?.role, "admin");
 
   const toggleSelect = (id) => setSelectedIds((prev) => {
     const next = new Set(prev);
@@ -99,7 +109,7 @@ export default function AdminClients() {
     <>
     {seo}
     <RequireCapability
-      minRole="technician"
+      minRole="admin"
       deniedTitle="Staff access only"
       deniedMessage="You don't have permission to view customer management."
     >
@@ -109,8 +119,14 @@ export default function AdminClients() {
           <p className="text-muted-foreground text-sm">Manage customer accounts, contact details, linked scooters and full history in one place.</p>
         </div>
 
-        {loadingClients ? <CardSkeleton count={4} compact /> : <ClientSummaryCards clients={clients} />}
+        {loadingClients ? <CardSkeleton count={4} compact /> : <ClientSummaryCards clients={clients} loadedOnly={hasNextPage} />}
         <ClientFilters filters={filters} setFilters={setFilters} />
+
+        {relatedDataPartial ? (
+          <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+            Some job or scooter counts may be incomplete. Customer account records remain available below.
+          </p>
+        ) : null}
 
         {error && clients.length ? (
           <ErrorState title="Latest customer changes could not be loaded" description="Previously loaded customers remain visible." error={error} onRetry={refetch} />
@@ -152,6 +168,16 @@ export default function AdminClients() {
             />
           </>
         )}
+
+        {hasNextPage ? (
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-4 text-center">
+            <p className="text-sm text-muted-foreground">Showing {clients.length} loaded customers. Load more to extend the current filters and selection list.</p>
+            <Button type="button" variant="outline" size="touch" disabled={isFetchingNextPage} aria-busy={isFetchingNextPage} onClick={() => fetchNextPage()}>
+              {isFetchingNextPage ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+              {isFetchingNextPage ? "Loading customers" : "Load more customers"}
+            </Button>
+          </div>
+        ) : null}
 
         <ClientDetailDrawer
           client={selected}

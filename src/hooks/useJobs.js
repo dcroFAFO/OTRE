@@ -1,24 +1,25 @@
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useEntityPages } from "@/hooks/useEntityPages";
 
-export function useJobs(filter = {}) {
-  return useQuery({
+export const JOB_PAGE_SIZE = 100;
+
+export function useJobs(filter = {}, options = {}) {
+  const hasFilter = Object.keys(filter).length > 0;
+  const query = useEntityPages({
     queryKey: ["jobs", filter],
-    queryFn: () => {
-      const hasFilter = Object.keys(filter).length > 0;
-      return hasFilter
-        ? base44.entities.Job.filter(filter, "-created_date", 200)
-        : base44.entities.Job.list("-created_date", 200);
-    },
-    // Jobs stay fresh for a short window so switching filters, opening a job or
-    // returning to the list renders from cache instead of refetching every
-    // time. Any mutation still calls useInvalidateJobs() for immediate refresh.
+    fetchPage: ({ limit, skip }) => hasFilter
+      ? base44.entities.Job.filter(filter, "-created_date", limit, skip)
+      : base44.entities.Job.list("-created_date", limit, skip),
+    pageSize: options.pageSize || JOB_PAGE_SIZE,
     staleTime: 30_000,
-    // Preserve real, previously fetched rows while a filter-specific query is
-    // refreshing. The first load remains undefined, so callers can show a
-    // genuine skeleton instead of a false empty state.
-    placeholderData: keepPreviousData,
+    preservePreviousData: options.preservePreviousData !== false,
   });
+
+  return {
+    ...query,
+    data: query.data.filter((job) => !job.archived_at),
+  };
 }
 
 export function useStaff() {

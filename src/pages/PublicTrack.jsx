@@ -6,7 +6,6 @@ import SEO from "@/components/SEO";
 import CustomerInvoiceCard from "@/components/portal/CustomerInvoiceCard";
 import { CardSkeleton, EmptyState } from "@/components/shared";
 import StatusPill from "@/components/shared/StatusPill";
-import PaymentResultAlert from "@/components/store/PaymentResultAlert";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,8 +20,6 @@ const ALLOWED_UPLOAD_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
-  "image/heic",
-  "image/heif",
   "application/pdf",
 ]);
 const INVALID_LINK_MESSAGE = "This tracking link is not valid. Please check the link or contact On The Run Electrics for help.";
@@ -49,16 +46,10 @@ export default function PublicTrack() {
   const [actionError, setActionError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(null);
-  const [paymentResult, setPaymentResult] = useState(/** @type {"" | "verifying" | "success" | "cancelled" | "pending" | "error"} */ (""));
-  const params = new URLSearchParams(window.location.search);
-  const returnedPayment = params.get("payment") || "";
-  const returnedSessionId = params.get("session_id") || "";
-  const returnedInvoiceId = params.get("invoice") || "";
-  const returnedAttemptId = params.get("attempt") || "";
 
   const invoke = useCallback(async (payload) => {
     const response = await base44.functions.invoke("publicJobAccessActions", { trackingToken, token, ...payload });
-    return response.data;
+    return response.data?.ok ? response.data.data : response.data;
   }, [trackingToken, token]);
 
   const load = useCallback(async () => {
@@ -66,31 +57,11 @@ export default function PublicTrack() {
     setActionError("");
     setBusy("load");
     try {
-      if (returnedPayment === "success" && returnedSessionId && returnedInvoiceId && returnedAttemptId) {
-        setPaymentResult("verifying");
-        const result = await invoke({ action: "verify_payment", sessionId: returnedSessionId, invoiceId: returnedInvoiceId, checkoutAttemptId: returnedAttemptId });
-        setPaymentResult(result.payment_result?.status === "paid" ? "success" : "pending");
-        dataRef.current = result;
-        setData(result);
-      } else {
-        const result = await invoke({ action: "get" });
-        dataRef.current = result;
-        setData(result);
-        if (returnedPayment === "cancelled") setPaymentResult("cancelled");
-        if (returnedPayment === "success") setPaymentResult("error");
-      }
+      const result = await invoke({ action: "get" });
+      dataRef.current = result;
+      setData(result);
     } catch (caught) {
-      if (returnedPayment === "success") {
-        setPaymentResult("error");
-        try {
-          const result = await invoke({ action: "get" });
-          dataRef.current = result;
-          setData(result);
-          setActionError("The payment result could not be verified. No paid status has been applied.");
-        } catch (loadError) {
-          setError({ status: getErrorStatus(loadError), message: INVALID_LINK_MESSAGE });
-        }
-      } else if (dataRef.current) {
+      if (dataRef.current) {
         setActionError(getSafeErrorMessage(caught, "The latest tracking information could not be loaded. Try again."));
       } else {
         setError({ status: getErrorStatus(caught), message: INVALID_LINK_MESSAGE });
@@ -98,7 +69,7 @@ export default function PublicTrack() {
     } finally {
       setBusy(null);
     }
-  }, [invoke, returnedAttemptId, returnedInvoiceId, returnedPayment, returnedSessionId]);
+  }, [invoke]);
 
   useEffect(() => {
     void load();
@@ -132,19 +103,20 @@ export default function PublicTrack() {
       input.value = "";
       return;
     }
-    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
-      setActionError("Choose a file smaller than 10 MB.");
+    const maximum = file.type === "application/pdf" ? 20 * 1024 * 1024 : MAX_UPLOAD_BYTES;
+    if (file.size <= 0 || file.size > maximum) {
+      setActionError(`Choose a file smaller than ${maximum / 1024 / 1024} MB.`);
       input.value = "";
       return;
     }
 
     setBusy("file");
     try {
-      const upload = await base44.integrations.Core.UploadFile({ file });
-      if (!upload?.file_url) throw new Error("Upload did not return a file.");
+      const upload = await base44.integrations.Core.UploadPrivateFile({ file });
+      if (!upload?.file_uri) throw new Error("Upload did not return a private file.");
       const result = await invoke({
         action: "upload_file",
-        file_url: upload.file_url,
+        file_uri: upload.file_uri,
         file_name: file.name,
         file_size: file.size,
         mime_type: file.type,
@@ -160,33 +132,19 @@ export default function PublicTrack() {
     }
   };
 
-  const payInvoice = async () => {
-    if (!data?.invoice?.id || busy) return;
-    if (window.self !== window.top) {
-      setPaymentResult("error");
-      return;
-    }
-    setBusy("pay");
+  const downloadFile = async (attachment) => {
+    if (busy || !attachment.downloadable) return;
+    setBusy(`file:${attachment.id}`);
     setActionError("");
     try {
-      const checkoutAttemptId = globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-      const result = await invoke({ action: "start_payment", invoiceId: data.invoice.id, checkoutAttemptId });
-      if (result?.url) window.location.href = result.url;
-      else setActionError("Secure checkout could not be started. Please try again.");
+      const result = await invoke({ action: "download_file", attachment_id: attachment.id });
+      if (!result?.signed_url) throw new Error("Download link was not returned.");
+      window.location.assign(result.signed_url);
     } catch (caught) {
-      setPaymentResult("error");
-      setActionError(getSafeErrorMessage(caught, "Secure checkout could not be started. Please try again."));
+      setActionError(getSafeErrorMessage(caught, "That file could not be opened. Please try again."));
     } finally {
       setBusy(null);
     }
-  };
-
-  const dismissPaymentResult = () => {
-    const nextParams = new URLSearchParams(window.location.search);
-    ["payment", "session_id", "invoice", "attempt"].forEach((key) => nextParams.delete(key));
-    const nextSearch = nextParams.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
-    setPaymentResult("");
   };
 
   return (
@@ -195,22 +153,6 @@ export default function PublicTrack() {
       <main className="min-h-screen bg-background text-foreground">
         <section className="mx-auto max-w-4xl px-5 py-10 sm:py-16">
           <Link to="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-muted-foreground hover:text-foreground">Back to home</Link>
-
-          {paymentResult ? (
-            <div className="mt-6">
-              <PaymentResultAlert
-                status={paymentResult}
-                description={{
-                  success: "Invoice payment has been confirmed and the repair job is now complete.",
-                  cancelled: "Checkout was cancelled. The invoice remains outstanding.",
-                  pending: "Stripe has not confirmed this invoice payment yet. Check again in a moment.",
-                  error: "The invoice payment could not be verified. No paid status has been applied.",
-                }[paymentResult]}
-                onRetry={["pending", "error"].includes(paymentResult) && returnedSessionId ? load : undefined}
-                onDismiss={paymentResult !== "verifying" ? dismissPaymentResult : undefined}
-              />
-            </div>
-          ) : null}
 
           {busy === "load" && !data ? <CardSkeleton count={3} className="mt-8" label="Loading secure tracking information" /> : null}
 
@@ -229,7 +171,7 @@ export default function PublicTrack() {
 
           {data ? (
             <div className="mt-8 space-y-5">
-              <section className="rounded-lg border border-border bg-card p-6 shadow-sm" aria-labelledby="tracking-job-title">
+              {(can("view_status") || can("view_booking")) ? <section className="rounded-lg border border-border bg-card p-6 shadow-sm" aria-labelledby="tracking-job-title">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Repair job {data.job.reference || data.job.id}</p>
@@ -239,19 +181,19 @@ export default function PublicTrack() {
                   <StatusPill value={data.job.status} />
                 </div>
                 {busy === "load" ? <p className="mt-4 text-sm text-muted-foreground" role="status">Refreshing tracking information...</p> : null}
-              </section>
+              </section> : null}
 
               {actionError ? <Alert variant="destructive"><AlertDescription>{actionError}</AlertDescription></Alert> : null}
 
-              {data.invoice ? (
-                <CustomerInvoiceCard invoice={data.invoice} onPay={can("pay_invoice") ? payInvoice : undefined} paymentPending={busy === "pay"} showRewards={false} />
-              ) : (
+              {can("view_invoice") && data.invoice ? (
+                <CustomerInvoiceCard invoice={data.invoice} showRewards={false} />
+              ) : can("view_invoice") ? (
                 <section className="rounded-lg border border-border bg-card shadow-sm">
                   <EmptyState compact icon={FileText} title="No invoice available" description="An invoice will appear here when the workshop issues one for this repair." />
                 </section>
-              )}
+              ) : null}
 
-              <PortalSection title="Messages" icon={MessageSquare}>
+              {can("view_booking") || can("add_note") ? <PortalSection title="Messages" icon={MessageSquare}>
                 <div className="space-y-3">
                   {data.notes?.length ? data.notes.map((item) => (
                     <div key={item.id} className="rounded-lg border border-border bg-secondary/30 p-3 text-sm">
@@ -270,14 +212,22 @@ export default function PublicTrack() {
                     </div>
                   ) : null}
                 </div>
-              </PortalSection>
+              </PortalSection> : null}
 
-              <PortalSection title="Files" icon={Upload}>
+              {can("view_files") || can("upload_file") ? <PortalSection title="Files" icon={Upload}>
                 <div className="space-y-3">
                   {data.attachments?.length ? data.attachments.map((attachment) => (
-                    <a key={attachment.id} href={attachment.file_url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-sm font-medium hover:border-accent">
+                    <Button
+                      key={attachment.id}
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 w-full justify-start"
+                      disabled={!!busy || !attachment.downloadable}
+                      onClick={() => void downloadFile(attachment)}
+                    >
+                      {busy === `file:${attachment.id}` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileText className="h-4 w-4" aria-hidden="true" />}
                       {attachment.file_name || "File"}
-                    </a>
+                    </Button>
                   )) : <EmptyState compact icon={Upload} title="No files yet" description="Photos and documents shared for this repair will appear here." />}
                   {can("upload_file") ? (
                     <div className="border-t border-border pt-4">
@@ -287,16 +237,16 @@ export default function PublicTrack() {
                         <input
                           type="file"
                           className="sr-only"
-                          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
                           onChange={uploadFile}
                           disabled={!!busy}
                         />
                       </label>
-                      <p className="mt-2 text-xs text-muted-foreground">JPG, PNG, WebP, HEIC, or PDF. Maximum 10 MB.</p>
+                      <p className="mt-2 text-xs text-muted-foreground">JPG, PNG, or WebP up to 10 MB; PDF up to 20 MB.</p>
                     </div>
                   ) : null}
                 </div>
-              </PortalSection>
+              </PortalSection> : null}
             </div>
           ) : null}
         </section>

@@ -2,142 +2,36 @@
   "name": "Attachment",
   "type": "object",
   "properties": {
-    "job_id": {
-      "type": "string"
-    },
-    "customer_id": {
-      "type": "string"
-    },
-    "file_url": {
-      "type": "string"
-    },
-    "file_name": {
-      "type": "string",
-      "maxLength": 180
-    },
-    "mime_type": {
-      "type": "string",
-      "maxLength": 120
-    },
-    "file_size": {
-      "type": "number",
-      "minimum": 0
-    },
-    "kind": {
-      "type": "string",
-      "description": "photo / document"
-    },
-    "visibility": {
-      "type": "string",
-      "enum": [
-        "internal",
-        "customer"
-      ],
-      "default": "internal"
-    },
-    "uploaded_by_name": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string",
-      "maxLength": 1000
-    },
-    "signature_key": {
-      "type": "string",
-      "maxLength": 120
-    },
-    "signature_idempotency_key": {
-      "type": "string",
-      "maxLength": 260,
-      "unique": true
-    },
-    "signature_method": {
-      "type": "string",
-      "enum": [
-        "draw",
-        "typed"
-      ]
-    },
-    "signed_name": {
-      "type": "string",
-      "maxLength": 160
-    },
-    "consent_text": {
-      "type": "string",
-      "maxLength": 1000
-    },
-    "consent_version": {
-      "type": "string",
-      "maxLength": 80
-    },
-    "signed_at": {
-      "type": "string",
-      "format": "date-time"
-    }
+    "job_id": { "type": "string" },
+    "customer_account_id": { "type": "string", "description": "Canonical Customer entity owner." },
+    "customer_id": { "type": "string", "description": "Legacy customer identifier." },
+    "file_uri": { "type": "string", "description": "Private Base44 object URI. Never return directly to clients." },
+    "file_url": { "type": "string", "description": "Legacy public URL retained only until private migration completes." },
+    "storage": { "type": "string", "enum": ["private", "public_legacy"], "default": "private" },
+    "file_name": { "type": "string", "maxLength": 180 },
+    "mime_type": { "type": "string", "maxLength": 120 },
+    "file_size": { "type": "integer", "minimum": 0 },
+    "content_sha256": { "type": "string", "maxLength": 64 },
+    "kind": { "type": "string", "enum": ["photo", "document", "signature", "feedback_evidence"] },
+    "visibility": { "type": "string", "enum": ["internal", "customer"], "default": "internal" },
+    "uploaded_by_user_id": { "type": "string" },
+    "uploaded_by_name": { "type": "string", "maxLength": 160 },
+    "description": { "type": "string", "maxLength": 1000 },
+    "signature_key": { "type": "string", "maxLength": 120 },
+    "signature_idempotency_key": { "type": "string", "maxLength": 260, "unique": true },
+    "signature_method": { "type": "string", "enum": ["draw", "typed"] },
+    "signed_name": { "type": "string", "maxLength": 160 },
+    "consent_text": { "type": "string", "maxLength": 1000 },
+    "consent_version": { "type": "string", "maxLength": 80 },
+    "signed_at": { "type": "string", "format": "date-time" },
+    "archived_at": { "type": "string", "format": "date-time" },
+    "archive_reason": { "type": "string", "maxLength": 500 }
   },
-  "required": [
-    "job_id",
-    "file_url"
-  ],
+  "required": ["job_id", "file_name", "mime_type", "file_size", "kind"],
   "rls": {
-    "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "$and": [
-            {
-              "data.visibility": "customer"
-            },
-            {
-              "data.customer_id": "{{user.data.customer_id}}"
-            }
-          ]
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
   }
 }

@@ -1,13 +1,14 @@
 import React, { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import { CreditCard, Package, Wallet } from "lucide-react";
 import FinancialChartCard from "./FinancialChartCard";
 import FinancialDataTable from "./FinancialDataTable";
-import { CardSkeleton, EmptyState, ErrorState } from "@/components/shared";
+import { BoundedDataNotice, CardSkeleton, EmptyState, ErrorState } from "@/components/shared";
+import { useEntityPages } from "@/hooks/useEntityPages";
 
 const MONTH_COUNT = 6;
+const FINANCIAL_PAGE_SIZE = 100;
 
 const currency = (value, compact = false) => {
   const amount = Number(value) || 0;
@@ -38,18 +39,32 @@ const buildMonths = () => {
   });
 };
 
+export const financialRangeStart = (referenceDate = new Date()) =>
+  new Date(referenceDate.getFullYear(), referenceDate.getMonth() - (MONTH_COUNT - 1), 1).toISOString();
+
 const tooltipFormatter = (value) => currency(value);
 
 export default function RevenueChartsSection() {
-  const invoicesQuery = useQuery({
-    queryKey: ["overviewFinancialInvoices"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 500),
+  const rangeStart = useMemo(() => financialRangeStart(), []);
+  const invoicesQuery = useEntityPages({
+    queryKey: ["overviewFinancialInvoices", rangeStart],
+    fetchPage: ({ limit, skip }) => base44.entities.Invoice.filter({
+      invoiceVisibility: "customer_visible",
+      $or: [
+        { invoiceSentAt: { $gte: rangeStart } },
+        { paid_date: { $gte: rangeStart } },
+      ],
+    }, "-created_date", limit, skip),
+    pageSize: FINANCIAL_PAGE_SIZE,
     staleTime: 5 * 60 * 1000,
   });
 
-  const usagesQuery = useQuery({
-    queryKey: ["overviewFinancialPartsSpend"],
-    queryFn: () => base44.entities.InventoryUsage.list("-created_date", 500),
+  const usagesQuery = useEntityPages({
+    queryKey: ["overviewFinancialPartsSpend", rangeStart],
+    fetchPage: ({ limit, skip }) => base44.entities.InventoryUsage.filter({
+      created_date: { $gte: rangeStart },
+    }, "-created_date", limit, skip),
+    pageSize: FINANCIAL_PAGE_SIZE,
     staleTime: 5 * 60 * 1000,
   });
   const invoices = invoicesQuery.data || [];
@@ -61,9 +76,9 @@ export default function RevenueChartsSection() {
     const months = buildMonths();
     const byKey = new Map(months.map((month) => [month.key, month]));
 
-    invoices.forEach((invoice) => {
+    invoices.filter((invoice) => invoice.invoiceVisibility === "customer_visible" && invoice.invoiceSentAt).forEach((invoice) => {
       const amount = Number(invoice.amount) || 0;
-      const issuedKey = monthKey(invoice.created_date);
+      const issuedKey = monthKey(invoice.invoiceSentAt);
       if (byKey.has(issuedKey)) byKey.get(issuedKey).issuedRevenue += amount;
 
       if (invoice.status === "paid") {
@@ -115,10 +130,26 @@ export default function RevenueChartsSection() {
     <section className="space-y-3">
       <div>
         <h2 className="font-heading font-bold">Financial overview</h2>
-        <p className="text-sm text-muted-foreground">Monthly revenue, parts spend, and take-home revenue across the last 6 months.</p>
+         <p className="text-sm text-muted-foreground">Monthly issued and paid invoice value, plus recorded parts spend, across the last 6 months.</p>
       </div>
       {invoicesQuery.error ? <ErrorState title="Invoice totals could not be refreshed" description={hasInvoiceSnapshot ? "Previously loaded invoice values remain visible." : "Parts-spend information remains available."} error={invoicesQuery.error} onRetry={invoicesQuery.refetch} /> : null}
       {usagesQuery.error ? <ErrorState title="Parts-spend totals could not be refreshed" description={hasUsageSnapshot ? "Previously loaded parts values remain visible." : "Invoice revenue remains available."} error={usagesQuery.error} onRetry={usagesQuery.refetch} /> : null}
+      <BoundedDataNotice
+        noun="financial invoices"
+        loadedCount={invoices.length}
+        hasMore={invoicesQuery.hasNextPage}
+        isLoadingMore={invoicesQuery.isFetchingNextPage}
+        onLoadMore={invoicesQuery.fetchNextPage}
+        description={`Revenue charts currently include ${invoices.length} loaded invoices in the six-month reporting window. Load more before treating revenue totals as complete.`}
+      />
+      <BoundedDataNotice
+        noun="parts usage records"
+        loadedCount={usages.length}
+        hasMore={usagesQuery.hasNextPage}
+        isLoadingMore={usagesQuery.isFetchingNextPage}
+        onLoadMore={usagesQuery.fetchNextPage}
+        description={`Parts-spend charts currently include ${usages.length} loaded usage records in the six-month reporting window. Load more before treating cost or take-home figures as complete.`}
+      />
       <div className="grid gap-4 xl:grid-cols-3">
         {hasInvoiceSnapshot ? <FinancialChartCard
           title="Monthly revenue"
@@ -153,8 +184,8 @@ export default function RevenueChartsSection() {
         </FinancialChartCard> : null}
 
         {hasInvoiceSnapshot && hasUsageSnapshot ? <FinancialChartCard
-          title="Take-home revenue"
-          subtitle="Paid revenue minus parts spend"
+          title="Paid less recorded parts"
+          subtitle="Excludes labour, overhead, tax adjustments, and other costs"
           value={currency(totals.takeHome)}
           icon={Wallet}
           tone="emerald"
@@ -164,7 +195,7 @@ export default function RevenueChartsSection() {
             <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
             <YAxis tickFormatter={(value) => currency(value, true)} tickLine={false} axisLine={false} fontSize={12} />
             <Tooltip formatter={tooltipFormatter} />
-            <Line type="monotone" dataKey="takeHome" name="Take-home" stroke="#059669" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+             <Line type="monotone" dataKey="takeHome" name="Paid less recorded parts" stroke="#059669" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
           </LineChart>
         </FinancialChartCard> : null}
       </div>

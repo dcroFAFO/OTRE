@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Mail, Phone, CalendarDays, Loader2, User, Receipt, Wrench, MessageSquare } from "lucide-react";
 import { ClientStatusBadge } from "./ClientStatusBadge";
 import ClientHistoryTimeline from "./ClientHistoryTimeline";
 import CustomerEditPanel from "./CustomerEditPanel";
 import CustomerRelatedRecords from "./CustomerRelatedRecords";
+import HistoryPagingState from "./HistoryPagingState";
 import { listClientNotes, addClientNote, fetchClientHistory } from "@/services/clientService";
+import { mergeClientHistoryPages } from "@/services/clientHistoryMerge";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { logError } from "@/lib/logger";
@@ -19,6 +22,8 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
   const [addingNote, setAddingNote] = useState(false);
   const [history, setHistory] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
 
   useEffect(() => {
     if (client && open) {
@@ -31,11 +36,22 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
     try { setNotes(await listClientNotes(client.id)); } catch (e) { logError("Load client notes failed", e); }
   };
 
-  const loadHistory = async () => {
-    setLoadingHistory(true);
-    try { const d = await fetchClientHistory(client.id); setHistory(d); }
-    catch (e) { logError("Load client history failed", e); setHistory(null); }
-    finally { setLoadingHistory(false); }
+  const loadHistory = async ({ append = false } = {}) => {
+    if (append) setLoadingMoreHistory(true);
+    else setLoadingHistory(true);
+    setHistoryError(null);
+    try {
+      const page = append ? (history?.pagination?.next_page || 1) : 1;
+      const next = await fetchClientHistory(client.id, { page });
+      setHistory((current) => mergeClientHistoryPages(append && current ? [current, next] : [next]));
+    } catch (e) {
+      logError("Load client history failed", e);
+      setHistoryError(e);
+      if (!append) setHistory(null);
+    } finally {
+      setLoadingHistory(false);
+      setLoadingMoreHistory(false);
+    }
   };
 
   const submitNote = async () => {
@@ -63,9 +79,10 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
           <div className="bg-primary text-primary-foreground p-5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h2 className="font-heading text-xl font-extrabold flex items-center gap-2">
+                <SheetTitle className="font-heading text-xl font-extrabold text-primary-foreground flex items-center gap-2">
                   <User className="h-5 w-5 text-primary-foreground/70" /> {client.full_name || client.name || "Customer"}
-                </h2>
+                </SheetTitle>
+                <SheetDescription className="sr-only">Customer account, related work, internal notes, and activity history.</SheetDescription>
               </div>
               <ClientStatusBadge value={client.status || "active"} />
             </div>
@@ -102,12 +119,14 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
 
             <TabsContent value="related" className="mt-4">
               {loadingHistory ? <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : <CustomerRelatedRecords history={history} />}
+              <HistoryPagingState history={history} error={historyError} loading={loadingMoreHistory} onLoadMore={() => loadHistory({ append: true })} onRetry={() => loadHistory({ append: Boolean(history) })} />
             </TabsContent>
 
             {/* Internal notes */}
             <TabsContent value="notes" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Textarea value={noteBody} onChange={(e) => setNoteBody(e.target.value)} placeholder="Add an internal note (admin only)..." className="h-20" />
+                <Label htmlFor="customer-internal-note">Internal note (admin only)</Label>
+                <Textarea id="customer-internal-note" value={noteBody} onChange={(e) => setNoteBody(e.target.value)} placeholder="Add context for other administrators" className="h-20" />
                 <Button size="sm" disabled={addingNote || !noteBody.trim()} onClick={submitNote} className="gap-2">
                   {addingNote && <Loader2 className="h-4 w-4 animate-spin" />} Add note
                 </Button>
@@ -126,6 +145,7 @@ export default function ClientDetailDrawer({ client, open, onClose, actor, onCha
             {/* Unified history */}
             <TabsContent value="history" className="mt-4">
               <ClientHistoryTimeline timeline={history?.timeline} loading={loadingHistory} />
+              <HistoryPagingState history={history} error={historyError} loading={loadingMoreHistory} onLoadMore={() => loadHistory({ append: true })} onRetry={() => loadHistory({ append: Boolean(history) })} />
             </TabsContent>
           </Tabs>
         </div>

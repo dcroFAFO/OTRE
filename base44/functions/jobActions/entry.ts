@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import {
   READY_STATUS,
   CANCELLED_STATUS,
@@ -8,6 +8,8 @@ import {
   isCanonicalStatus,
   statusLabel,
 } from '../../shared/jobLifecycle.ts';
+import { findCanonicalCustomer } from '../../shared/identityAuth.ts';
+import { authenticatedRole, isAdmin, ownsCanonicalJob } from '../../shared/identityPolicy.ts';
 
 // All job mutations (status, scheduling, checklist, notes) run
 // server-side here, with audit events written in the same request.
@@ -18,6 +20,31 @@ const PARTS_MARKUP_MULTIPLIER = 1.2;
 
 const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const customerPriceFromCost = (cost) => roundMoney((Number(cost) || 0) * PARTS_MARKUP_MULTIPLIER);
+
+const enqueueJobNotification = async (base44, job, eventType) => {
+  const version = String(job.updated_date || job.updatedAt || new Date().toISOString());
+  const eventKey = `${eventType}:${job.id}:${version}`;
+  const existing = await base44.asServiceRole.entities.NotificationEvent.filter({ event_key: eventKey }, "-created_date", 1).catch(() => []);
+  if (existing[0]) return existing[0];
+  try {
+    return await base44.asServiceRole.entities.NotificationEvent.create({
+      event_key: eventKey,
+      related_entity_type: "Job",
+      related_entity_id: job.id,
+      job_id: job.id,
+      customer_id: job.customer_id || "",
+      customer_account_id: job.customer_account_id || "",
+      event_version: version,
+      event_data: { job_id: job.id },
+      source: "manual",
+      status: "pending",
+      occurred_at: new Date().toISOString(),
+    });
+  } catch {
+    const raced = await base44.asServiceRole.entities.NotificationEvent.filter({ event_key: eventKey }, "-created_date", 1).catch(() => []);
+    return raced[0] || null;
+  }
+};
 
 const findJobInvoice = async (base44, job) => {
   if (job.invoice_id) {
@@ -90,7 +117,7 @@ const addUninvoicedPartsToInvoice = async (base44, job) => {
 Deno.serve(async (req) => {
   // requestMeta is filled in as parsing progresses so the catch block can log
   // a useful summary (who, which action, which record) when something fails.
-  const requestMeta = { fn: "jobActions" };
+  const requestMeta: any = { fn: "jobActions" };
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -115,16 +142,15 @@ Deno.serve(async (req) => {
     }
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role);
-    const ownsJob = job.customer_user_id === user.id
-      || job.customer_account_id === user.id
-      || (!!user.customer_id && job.customer_id === user.customer_id)
-      || (!!user.data?.customer_id && job.customer_id === user.data.customer_id);
+    const isStaff = isAdmin(user);
+    const customer = isStaff ? null : await findCanonicalCustomer(base44.asServiceRole.entities, user.id);
+    const ownsJob = ownsCanonicalJob(customer, job);
+    if (!isStaff && !ownsJob) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const STAFF_ONLY_ACTIONS = [
       "change_status", "reschedule", "mark_ready", "cancel", "reopen", "toggle_checklist",
       "save_private_notes", "add_inventory_parts", "remove_inventory_part", "remove_inventory_parts",
-      "generate_and_send_invoice",
+      "generate_and_send_invoice", "archive",
     ];
     if (STAFF_ONLY_ACTIONS.includes(action) && !isStaff) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -135,9 +161,11 @@ Deno.serve(async (req) => {
         event_type: eventType,
         job_id: job.id,
         customer_id: job.customer_id,
+        customer_account_id: job.customer_account_id || '',
         actor_id: user.id,
         actor_name: user.full_name || "System",
-        actor_role: user.role || "system",
+        actor_role: authenticatedRole(user),
+        outcome: "succeeded",
         previous_value: previousValue != null ? String(previousValue) : null,
         new_value: newValue != null ? String(newValue) : null,
         summary,
@@ -155,7 +183,10 @@ Deno.serve(async (req) => {
           return Response.json({ error: `Invalid job status: ${params.newStatus}` }, { status: 400 });
         }
         if (currentStatus === nextStatus && job.status === nextStatus) { result = job; break; }
-        result = await base44.entities.Job.update(job.id, { status: nextStatus });
+        result = await base44.asServiceRole.entities.Job.update(job.id, {
+          status: nextStatus,
+          ...(nextStatus === "completed" ? { completed_at: new Date().toISOString() } : {}),
+        });
         await logAudit({
           eventType: "status_changed",
           previousValue: statusLabel(currentStatus),
@@ -163,6 +194,17 @@ Deno.serve(async (req) => {
           summary: `Status changed to "${statusLabel(nextStatus)}"`,
           visibility: "customer",
         });
+        const notificationType = nextStatus === "scheduled" || nextStatus === "booked"
+          ? "job_scheduled"
+          : nextStatus === "repair_in_progress"
+          ? "repair_started"
+          : nextStatus === "ready_for_pickup"
+          ? "repair_completed"
+          : "";
+        if (notificationType) {
+          await enqueueJobNotification(base44, result, notificationType).catch(() => null);
+          await base44.functions.invoke("processNotificationOutbox", {}).catch(() => null);
+        }
         break;
       }
       // Explicit technician step: pull any uninvoiced parts onto the invoice,
@@ -195,7 +237,7 @@ Deno.serve(async (req) => {
       }
       case "reschedule": {
         if (!params.newDate || job.scheduled_date === params.newDate) { result = job; break; }
-        result = await base44.entities.Job.update(job.id, { scheduled_date: params.newDate });
+        result = await base44.asServiceRole.entities.Job.update(job.id, { scheduled_date: params.newDate });
         await logAudit({
           eventType: job.scheduled_date ? "job_rescheduled" : "job_scheduled",
           previousValue: job.scheduled_date,
@@ -203,29 +245,50 @@ Deno.serve(async (req) => {
           summary: `${job.scheduled_date ? "Rescheduled" : "Scheduled"} to ${params.newDate}`,
           visibility: "customer",
         });
+        if (normalizeStatus(result.status) === "scheduled") {
+          await enqueueJobNotification(base44, result, "job_scheduled").catch(() => null);
+          await base44.functions.invoke("processNotificationOutbox", {}).catch(() => null);
+        }
         break;
       }
       case "mark_ready": {
         if (normalizeStatus(job.status) === READY_STATUS && job.ready_for_pickup) { result = job; break; }
-        result = await base44.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
+        result = await base44.asServiceRole.entities.Job.update(job.id, { ready_for_pickup: true, status: READY_STATUS });
         await logAudit({ eventType: "ready_for_pickup", summary: "Marked ready for pickup", visibility: "customer" });
+        await enqueueJobNotification(base44, result, "repair_completed").catch(() => null);
+        await base44.functions.invoke("processNotificationOutbox", {}).catch(() => null);
         break;
       }
       case "cancel": {
         if (normalizeStatus(job.status) === CANCELLED_STATUS) { result = job; break; }
-        result = await base44.entities.Job.update(job.id, { status: CANCELLED_STATUS });
+        result = await base44.asServiceRole.entities.Job.update(job.id, { status: CANCELLED_STATUS });
         await logAudit({ eventType: "job_cancelled", summary: "Job cancelled", visibility: "customer" });
         break;
       }
       case "reopen": {
-        result = await base44.entities.Job.update(job.id, { status: REOPEN_STATUS });
+        result = await base44.asServiceRole.entities.Job.update(job.id, { status: REOPEN_STATUS });
         await logAudit({ eventType: "job_reopened", summary: "Job reopened" });
+        break;
+      }
+      case "archive": {
+        if (job.archived_at) { result = job; break; }
+        const now = new Date().toISOString();
+        result = await base44.asServiceRole.entities.Job.update(job.id, {
+          archived_at: now,
+          archived_by_user_id: user.id,
+          archive_reason: String(params.reason || "Archived from job management").trim().slice(0, 500),
+        });
+        await logAudit({
+          eventType: "job_archived",
+          summary: "Job archived; linked records and customer history retained",
+          visibility: "internal",
+        });
         break;
       }
       case "toggle_checklist": {
         const index = Number(params.index);
         const checklist = (job.checklist || []).map((c, i) => (i === index ? { ...c, done: !c.done } : c));
-        result = await base44.entities.Job.update(job.id, { checklist });
+        result = await base44.asServiceRole.entities.Job.update(job.id, { checklist });
         const item = checklist[index];
         await logAudit({
           eventType: "checklist_updated",
@@ -242,15 +305,16 @@ Deno.serve(async (req) => {
       }
       case "add_note": {
         if (!isStaff && !ownsJob) return Response.json({ error: "Forbidden" }, { status: 403 });
-        const { body } = params;
-        const visibility = isStaff ? params.visibility : "customer";
+        const body = String(params.body || "").trim().slice(0, 5000);
+        if (!body) return Response.json({ error: "Note text is required" }, { status: 400 });
+        const visibility = isStaff && params.visibility === "internal" ? "internal" : "customer";
         result = await base44.asServiceRole.entities.JobNote.create({
           job_id: job.id,
           body,
           visibility,
           author_id: user.id,
           author_name: user.full_name,
-          author_role: user.role,
+          author_role: authenticatedRole(user),
         });
         await logAudit({
           eventType: visibility === "customer" ? "customer_note_added" : "note_added",
@@ -342,6 +406,7 @@ Deno.serve(async (req) => {
 
         const auditList = await base44.asServiceRole.entities.AuditEvent.filter({ job_id: job.id }, "-created_date", 200);
         const audits = auditList
+          .filter((event) => isStaff || event.visibility === "customer")
           .filter((event) => !["note_added", "customer_note_added"].includes(event.event_type));
         const notes = await base44.asServiceRole.entities.JobNote.filter({ job_id: job.id }, "-created_date", 200);
 
@@ -355,7 +420,7 @@ Deno.serve(async (req) => {
             visibility: event.visibility,
             date: event.created_date,
           })),
-          ...notes.map((note) => ({
+          ...notes.filter((note) => isStaff || note.visibility === "customer").map((note) => ({
             id: `note-${note.id}`,
             type: "note",
             title: note.visibility === "customer" ? "Customer-visible note" : "Internal note",
@@ -364,7 +429,7 @@ Deno.serve(async (req) => {
             visibility: note.visibility,
             date: note.created_date,
           })),
-        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         break;
       }
       default:

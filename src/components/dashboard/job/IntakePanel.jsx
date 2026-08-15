@@ -78,6 +78,18 @@ function isBookingOrIntakeFile(file) {
   return name.startsWith("intake_") || name.startsWith("booking_upload_") || name === "Customer upload";
 }
 
+async function listPrivateAttachments(jobId) {
+  const response = await base44.functions.invoke("attachmentActions", { action: "list", job_id: jobId });
+  return response.data?.data?.items || [];
+}
+
+async function openPrivateAttachment(attachmentId) {
+  const response = await base44.functions.invoke("attachmentActions", { action: "download", attachment_id: attachmentId });
+  const signedUrl = response.data?.data?.signed_url;
+  if (!signedUrl) throw new Error("File download link was not returned.");
+  window.location.assign(signedUrl);
+}
+
 export default function IntakePanel({ job, actor, canEdit, onChange }) {
 
   const [form, setForm] = useState(() => initialIntakeForm(job));
@@ -100,7 +112,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
     setFilesLoading(true);
     setFilesError("");
     try {
-      const rows = await base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50);
+      const rows = await listPrivateAttachments(job.id);
       setPhotos(rows.filter(isBookingOrIntakeFile));
     } catch (error) {
       setFilesError(getSafeErrorMessage(error, "Intake files could not be loaded."));
@@ -113,24 +125,27 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
 
   const uploadPhoto = async (e) => {
     if (uploading) return;
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []).slice(0, 5);
     if (!files.length) return;
     setUploading(true);
     try {
       for (const file of files) {
-        if (!String(file.type || "").startsWith("image/") || file.size > 10 * 1024 * 1024) {
-          toast.error(`${file.name} must be an image smaller than 10 MB.`);
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size <= 0 || file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} must be a JPG, PNG, or WebP image smaller than 10 MB.`);
           continue;
         }
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        const record = await base44.entities.Attachment.create({
+        const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+        const response = await base44.functions.invoke("attachmentActions", {
+          action: "finalize",
           job_id: job.id,
-          file_url,
+          file_uri,
           file_name: `intake_${file.name}`,
+          file_size: file.size,
+          mime_type: file.type,
           kind: "photo",
           visibility: "internal",
-          uploaded_by_name: actor?.full_name || "Technician",
         });
+        const record = response.data?.data?.attachment;
         setPhotos((prev) => [record, ...prev]);
       }
     } catch (error) {
@@ -145,7 +160,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
     if (removingPhotoId) return;
     setRemovingPhotoId(photo.id);
     try {
-      await base44.entities.Attachment.delete(photo.id);
+      await base44.functions.invoke("attachmentActions", { action: "archive", attachment_id: photo.id, reason: "Removed from intake" });
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
     } catch (error) {
       toast.error(getSafeErrorMessage(error, "The intake photo could not be removed."));
@@ -357,7 +372,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
           <label className="flex min-h-11 cursor-pointer items-center gap-1.5 text-xs font-medium text-accent hover:opacity-80">
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
             {uploading ? "Uploading..." : "Add photos"}
-            <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
           </label>
         </div>
         {filesError ? (
@@ -372,16 +387,10 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
               <div key={p.id} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-secondary">
-                <a href={p.file_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                  {p.kind === "photo" ? (
-                    <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="flex h-full flex-col items-center justify-center gap-2 p-3 text-xs text-muted-foreground text-center">
-                      <FileText className="h-6 w-6" />
-                      {p.file_name || "Booking file"}
-                    </span>
-                  )}
-                </a>
+                <button type="button" onClick={() => void openPrivateAttachment(p.id)} className="flex h-full w-full flex-col items-center justify-center gap-2 p-3 text-center text-xs text-muted-foreground">
+                  {p.kind === "photo" ? <ImageIcon className="h-6 w-6" aria-hidden="true" /> : <FileText className="h-6 w-6" aria-hidden="true" />}
+                  <span className="line-clamp-3">{p.file_name || "Booking file"}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => removePhoto(p)}
@@ -398,7 +407,7 @@ export default function IntakePanel({ job, actor, canEdit, onChange }) {
           <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-6 transition-colors hover:border-accent/50">
             <ImageIcon className="h-6 w-6 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Upload intake photos</span>
-            <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={uploadPhoto} disabled={uploading} />
           </label>
         )}
       </div>
@@ -436,7 +445,7 @@ function IntakeReadOnly({ intake, jobId }) {
   const [photos, setPhotos] = useState([]);
   useEffect(() => {
     if (!jobId) return;
-    base44.entities.Attachment.filter({ job_id: jobId }, "-created_date", 50)
+    listPrivateAttachments(jobId)
       .then((rows) => setPhotos(rows.filter(isBookingOrIntakeFile)));
   }, [jobId]);
 
@@ -477,17 +486,11 @@ function IntakeReadOnly({ intake, jobId }) {
           <p className="text-xs text-muted-foreground flex items-center gap-1"><Camera className="h-3 w-3" /> Booking & intake files</p>
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
-              <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer"
-                className="rounded-lg overflow-hidden border border-border aspect-square bg-secondary block">
-                {p.kind === "photo" ? (
-                  <img src={p.file_url} alt={p.file_name} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
-                ) : (
-                  <span className="flex h-full flex-col items-center justify-center gap-2 p-3 text-xs text-muted-foreground text-center">
-                    <FileText className="h-6 w-6" />
-                    {p.file_name || "Booking file"}
-                  </span>
-                )}
-              </a>
+              <button key={p.id} type="button" onClick={() => void openPrivateAttachment(p.id)}
+                className="flex aspect-square flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border border-border bg-secondary p-3 text-center text-xs text-muted-foreground">
+                {p.kind === "photo" ? <ImageIcon className="h-6 w-6" aria-hidden="true" /> : <FileText className="h-6 w-6" aria-hidden="true" />}
+                <span className="line-clamp-3">{p.file_name || "Booking file"}</span>
+              </button>
             ))}
           </div>
         </div>

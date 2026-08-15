@@ -1,6 +1,6 @@
 {
   "name": "Notify on Invoice Update",
-  "description": "Sends notifications when invoice is issued to customer, paid, or payment fails.",
+  "description": "Queues transactional notifications when a manual invoice is issued or marked paid.",
   "trigger": {
     "condition": "${ ((.trigger.changed_fields | index(\"status\") != null) or (.trigger.changed_fields | index(\"invoiceVisibility\") != null)) }",
     "config": {

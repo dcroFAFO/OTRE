@@ -2,15 +2,42 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 
 const SITE_NAME = "On The Run Electrics";
+const DEFAULT_SITE_ORIGIN = "https://ontherunelectrics.com.au";
+const SITE_ORIGIN = siteOrigin(import.meta.env.VITE_PUBLIC_SITE_URL);
 const DEFAULT_TITLE = "On The Run Electrics | Electric Scooter Repairs";
 const DEFAULT_DESCRIPTION = "Book expert electric scooter repairs, servicing and diagnostics with On The Run Electrics, including transparent quotes and online job tracking.";
 const DEFAULT_IMAGE = undefined;
 
+function siteOrigin(value) {
+  try {
+    const url = new URL(value || DEFAULT_SITE_ORIGIN);
+    return url.protocol === "https:" ? url.origin : DEFAULT_SITE_ORIGIN;
+  } catch {
+    return DEFAULT_SITE_ORIGIN;
+  }
+}
+
 function absoluteUrl(value) {
   if (!value) return undefined;
-  if (/^https?:\/\//i.test(value)) return value;
-  if (typeof window === "undefined") return value;
-  return new URL(value, window.location.origin).toString();
+  try {
+    const url = new URL(value, SITE_ORIGIN);
+    if (url.protocol !== "https:") return undefined;
+    url.username = "";
+    url.password = "";
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function canonicalUrl(value) {
+  const resolved = absoluteUrl(value);
+  if (!resolved) return undefined;
+  return new URL(resolved).origin === SITE_ORIGIN ? resolved : undefined;
+}
+
+function safeJson(value) {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
 /**
@@ -45,7 +72,7 @@ export default function SEO({
 }) {
   const pageTitle = title;
   const pageDescription = description;
-  const canonicalUrl = absoluteUrl(canonical || (typeof window !== "undefined" ? window.location.pathname : "/"));
+  const pageCanonicalUrl = canonicalUrl(canonical || (typeof window !== "undefined" ? window.location.pathname : "/"));
   const shareImage = absoluteUrl(twitterImage || ogImage);
   const pageOgTitle = ogTitle || pageTitle;
   const pageOgDescription = ogDescription || pageDescription;
@@ -57,15 +84,15 @@ export default function SEO({
     <Helmet prioritizeSeoTags>
       <title>{pageTitle}</title>
       {pageDescription && <meta name="description" content={pageDescription} />}
-      <meta name="robots" content={noindex ? "noindex,nofollow" : "index,follow"} />
-      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+      <meta name="robots" content={noindex ? "noindex,nofollow,noarchive" : "index,follow"} />
+      {pageCanonicalUrl && <link rel="canonical" href={pageCanonicalUrl} />}
 
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_AU" />
       <meta property="og:type" content={ogType} />
       <meta property="og:title" content={pageOgTitle} />
       {pageOgDescription && <meta property="og:description" content={pageOgDescription} />}
-      {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+      {pageCanonicalUrl && <meta property="og:url" content={pageCanonicalUrl} />}
       {shareImage && <meta property="og:image" content={shareImage} />}
 
       <meta name="twitter:card" content={shareImage ? "summary_large_image" : "summary"} />
@@ -75,7 +102,7 @@ export default function SEO({
 
       {schemas.map((schema, index) => (
         <script key={index} type="application/ld+json">
-          {JSON.stringify(schema)}
+          {safeJson(schema)}
         </script>
       ))}
     </Helmet>

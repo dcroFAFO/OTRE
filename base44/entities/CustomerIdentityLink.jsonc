@@ -1,0 +1,43 @@
+{
+  "name": "CustomerIdentityLink",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Canonical authenticated User.id. Unique to enforce one User to one Customer."
+    },
+    "customer_account_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Canonical Customer.id. Unique to enforce one Customer to one User."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "active", "revoked"],
+      "default": "pending"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["authenticated_signup", "verified_guest_claim", "admin_migration"]
+    },
+    "linked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "migration_run_id": {
+      "type": "string"
+    }
+  },
+  "required": ["user_id", "customer_account_id", "status", "source", "linked_at"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

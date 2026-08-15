@@ -16,8 +16,8 @@ export default function MobileResourceSection() {
         setCategories(data?.categories || []);
       })
       .catch(() => {
-        // Backend degrades to local posts on Contentful failure; if it still
-        // errors, keep the section hidden rather than surfacing an unhandled error.
+        // Keep this optional landing section hidden when the public article
+        // service is unavailable rather than surfacing an unhandled error.
       })
       .finally(() => setLoading(false));
   }, []);

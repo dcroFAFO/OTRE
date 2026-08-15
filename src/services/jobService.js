@@ -28,6 +28,10 @@ export async function reopenJob(job) {
   return invoke({ action: "reopen", jobId: job.id });
 }
 
+export async function archiveJob(job, reason = "Archived from job management") {
+  return invoke({ action: "archive", jobId: job.id, reason });
+}
+
 // Explicit technician step — pulls uninvoiced parts onto the invoice, makes it
 // customer-visible and moves the job to Invoice Outstanding.
 export async function generateAndSendInvoice(job) {

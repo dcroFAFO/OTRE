@@ -1,307 +1,558 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import Stripe from 'npm:stripe@17.5.0';
-import { resolveTrustedOrigin, isTrustedFileUrl } from '../../shared/origin.ts';
-import { lockAppliedReward, settleInvoiceRewards } from '../../shared/rewardLifecycle.ts';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.41";
 
-const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file'];
-const STAFF_ROLES = new Set(['admin', 'employee', 'technician']);
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ALLOWED_UPLOAD_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']);
+const DEFAULT_PERMISSIONS = [
+  "view_status",
+  "view_booking",
+  "view_invoice",
+  "view_files",
+  "add_note",
+  "upload_file",
+];
+const ALLOWED_PERMISSIONS = new Set(DEFAULT_PERMISSIONS);
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const DOCUMENT_TYPES = new Set([...IMAGE_TYPES, "application/pdf"]);
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
+const COMPLETION_ACCESS_DAYS = 30;
+const SIGNED_URL_SECONDS = 120;
+const INVALID_LINK =
+  "This tracking link is not valid. Please check the link or contact On The Run Electrics for help.";
 const encoder = new TextEncoder();
 
+function requestId(req) {
+  return req.headers.get("x-request-id") || crypto.randomUUID();
+}
+
+function ok(data, id, status = 200) {
+  return Response.json({ ok: true, data, request_id: id }, { status });
+}
+
+function fail(code, message, id, status) {
+  return Response.json(
+    { ok: false, error: { code, message }, request_id: id },
+    { status },
+  );
+}
+
+function clean(value, maxLength = 1000) {
+  return String(value || "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(
+    0,
+    maxLength,
+  );
+}
+
 async function sha256(value) {
-  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(value));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
+  return Array.from(new Uint8Array(digest)).map((byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
 }
 
 function makeToken() {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function hasPermission(access, permission) {
-  return (access.permissions || []).includes(permission);
+  return Array.isArray(access.permissions) &&
+    access.permissions.includes(permission);
 }
 
-const INVALID_LINK = 'This tracking link is not valid. Please check the link or contact On The Run Electrics for help.';
+function effectiveExpiry(access, job) {
+  const expiries = [];
+  const explicit = access.expires_at || access.expiresAt;
+  if (explicit) {
+    const explicitTime = new Date(explicit).getTime();
+    if (!Number.isFinite(explicitTime)) return 0;
+    expiries.push(explicitTime);
+  }
+  const completedAt = job.completed_at;
+  if (completedAt) {
+    const completedTime = new Date(completedAt).getTime();
+    if (!Number.isFinite(completedTime)) return 0;
+    const configuredDays = Number(access.expires_after_completion_days);
+    const days = Number.isFinite(configuredDays) && configuredDays > 0
+      ? Math.min(configuredDays, COMPLETION_ACCESS_DAYS)
+      : COMPLETION_ACCESS_DAYS;
+    expiries.push(completedTime + days * 24 * 60 * 60 * 1000);
+  }
+  if (!completedAt && job.status === "completed") return 0;
+  return expiries.filter(Number.isFinite).sort((a, b) => a - b)[0] || null;
+}
 
-// Resolves a raw public token to its job using ONLY the stored SHA-256 hash. The
-// raw token is never persisted, so it cannot be recovered by reading any record.
-async function getValidAccess(base44, jobIdentifier, rawToken) {
-  const trackingToken = rawToken || jobIdentifier;
-  if (!trackingToken) return { error: 'Tracking link is missing required information.', status: 400 };
-
-  const tokenHash = await sha256(trackingToken);
-  const records = await base44.asServiceRole.entities.PublicJobAccess.filter({ tokenHash }, '-created_date', 1);
+async function validAccess(base44, rawToken) {
+  if (!rawToken || rawToken.length < 32 || rawToken.length > 256) return null;
+  const tokenHash = await sha256(rawToken);
+  const records = await base44.asServiceRole.entities.PublicJobAccess.filter(
+    { tokenHash },
+    "-created_date",
+    1,
+  ).catch(() => []);
   const access = records[0] || null;
-  if (!access) return { error: INVALID_LINK, status: 403 };
-
-  const job = await base44.asServiceRole.entities.Job.get(access.jobId || access.job_id).catch(() => null);
-  if (!job) return { error: INVALID_LINK, status: 403 };
-  if (access.revokedAt || access.revoked_at) return { error: 'This tracking link has been revoked.', status: 403 };
-  const expires = access.expiresAt || access.expires_at;
-  if (expires && new Date(expires).getTime() < Date.now()) return { error: 'This tracking link has expired.', status: 403 };
-  return { access, job, trackingToken };
+  if (!access || access.revoked_at || access.revokedAt) return null;
+  const job = await base44.asServiceRole.entities.Job.get(
+    access.job_id || access.jobId,
+  ).catch(() => null);
+  if (!job) return null;
+  const expiry = effectiveExpiry(access, job);
+  if (expiry !== null && expiry <= Date.now()) return null;
+  await base44.asServiceRole.entities.PublicJobAccess.update(access.id, {
+    last_used_at: new Date().toISOString(),
+  }).catch(() => null);
+  return { access, job };
 }
 
-function publicJob(job) {
+function publicBooking(job) {
   return {
     id: job.id,
-    reference: job.reference,
-    status: job.status,
-    source: job.source || 'staff_created',
-    customer_name: job.customer_name,
-    asset_label: job.asset_label,
-    scooterDetails: job.scooterDetails || job.scooter_details || job.asset_label || '',
-    issueDescription: job.issueDescription || job.issue_description || '',
-    issue_description: job.issue_description || '',
+    reference: job.reference || "",
+    source: job.source || "staff_created",
+    asset_label: job.asset_label || job.scooter_details || "",
+    issue_description: job.issue_description || job.issueDescription || "",
     scheduled_date: job.scheduled_date || null,
     preferred_time_window: job.preferred_time_window || null,
-    createdAt: job.createdAt || job.created_date,
-    updatedAt: job.updatedAt || job.updated_date,
+    created_date: job.created_date,
   };
 }
 
 function publicInvoice(invoice) {
-  if (!invoice || invoice.invoiceVisibility !== 'customer_visible') return null;
+  if (
+    !invoice || invoice.invoiceVisibility !== "customer_visible" ||
+    !["issued", "outstanding", "paid", "refunded"].includes(invoice.status)
+  ) return null;
   return {
     id: invoice.id,
-    number: invoice.number,
-    amount: invoice.amount,
-    currency: invoice.currency || 'AUD',
-    status: invoice.status,
+    number: invoice.number || "",
+    amount: Number(invoice.amount) || 0,
+    amount_minor: Number(invoice.amount_minor) ||
+      Math.round((Number(invoice.amount) || 0) * 100),
+    currency: invoice.currency || "AUD",
+    status: invoice.status === "outstanding" ? "issued" : invoice.status,
+    issued_at: invoice.issued_at || invoice.invoiceSentAt || null,
+    due_date: invoice.due_date || null,
+    paid_at: invoice.paid_at || invoice.paid_date || null,
+    refunded_at: invoice.refunded_at || null,
+    customer_notes: invoice.customer_notes || "",
     line_items: (invoice.line_items || []).map((item) => ({
-      description: item.description || 'Line item',
-      qty: Number(item.qty) || 1,
+      description: item.description || "Line item",
+      qty: Number(item.qty) || 0,
       unit_price: Number(item.unit_price) || 0,
       tax_rate: Number(item.tax_rate) || 0,
       discount_amount: Number(item.discount_amount) || 0,
-      kind: item.kind || 'item',
+      kind: item.kind || "item",
+      sku: item.sku || "",
     })),
-    paid_date: invoice.paid_date || null,
-    payment_status: invoice.status,
   };
 }
 
-async function buildPayload(base44, job, access) {
-  const [invoices, notes, attachments] = await Promise.all([
-    base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, '-created_date', 1),
-    base44.asServiceRole.entities.JobNote.filter({ job_id: job.id, visibility: 'customer' }, '-created_date', 100),
-    base44.asServiceRole.entities.Attachment.filter({ job_id: job.id, visibility: 'customer' }, '-created_date', 50),
-  ]);
-
+function attachmentDto(record) {
   return {
-    job: publicJob(job),
-    invoice: hasPermission(access, 'view_invoice') || hasPermission(access, 'invoice') ? publicInvoice(invoices[0]) : null,
-    notes: notes.map((n) => ({ id: n.id, body: n.body, author_name: n.author_name, created_date: n.created_date })),
-    attachments: attachments.map((a) => ({ id: a.id, file_url: a.file_url, file_name: a.file_name, file_size: a.file_size, mime_type: a.mime_type, kind: a.kind, created_date: a.created_date })),
-    permissions: access.permissions || [],
+    id: record.id,
+    file_name: record.file_name || "File",
+    file_size: record.file_size || 0,
+    mime_type: record.mime_type || "application/octet-stream",
+    kind: record.kind || "document",
+    created_date: record.created_date,
+    downloadable: record.storage === "private" && Boolean(record.file_uri),
   };
 }
 
-async function requireStaff(base44) {
-  const user = await base44.auth.me();
-  if (!user || !STAFF_ROLES.has(user.role)) return { error: 'Forbidden', status: 403 };
+async function listVisibleAttachments(base44, job, limit = 101) {
+  return await base44.asServiceRole.entities.Attachment.filter(
+    { job_id: job.id, visibility: "customer" },
+    "-created_date",
+    limit,
+  ).catch(() => []);
+}
+
+async function payload(base44, job, access) {
+  const canViewStatus = hasPermission(access, "view_status");
+  const canViewBooking = hasPermission(access, "view_booking");
+  const canViewFiles = hasPermission(access, "view_files");
+  const [invoices, notes, attachments] = await Promise.all([
+    hasPermission(access, "view_invoice")
+      ? base44.asServiceRole.entities.Invoice.filter(
+        { job_id: job.id },
+        "-created_date",
+        11,
+      ).catch(() => [])
+      : [],
+    canViewBooking
+      ? base44.asServiceRole.entities.JobNote.filter(
+        { job_id: job.id, visibility: "customer" },
+        "-created_date",
+        101,
+      ).catch(() => [])
+      : [],
+    canViewFiles ? listVisibleAttachments(base44, job) : [],
+  ]);
+  const visibleInvoice = invoices.find((invoice) => publicInvoice(invoice)) ||
+    null;
+  return {
+    job: {
+      ...(canViewStatus
+        ? {
+          id: job.id,
+          reference: job.reference || "",
+          status: job.status,
+          completed_at: job.completed_at || null,
+          updated_date: job.updated_date,
+        }
+        : {}),
+      ...(canViewBooking ? publicBooking(job) : {}),
+    },
+    invoice: hasPermission(access, "view_invoice")
+      ? publicInvoice(visibleInvoice)
+      : null,
+    notes: notes.slice(0, 100).map((note) => ({
+      id: note.id,
+      body: note.body,
+      author_name: note.author_name,
+      created_date: note.created_date,
+    })),
+    attachments: attachments.slice(0, 100).filter((item) => !item.archived_at)
+      .map(attachmentDto),
+    permissions: (access.permissions || []).filter((permission) =>
+      ALLOWED_PERMISSIONS.has(permission)
+    ),
+    limits: { invoices: 10, notes: 100, attachments: 100 },
+    truncation: {
+      invoices: invoices.length > 10,
+      notes: notes.length > 100,
+      attachments: attachments.length > 100,
+    },
+  };
+}
+
+async function requireAdmin(base44) {
+  const user = await base44.auth.me().catch(() => null);
+  if (!user) return { error: "unauthorized", status: 401 };
+  if (user.role !== "admin") return { error: "forbidden", status: 403 };
   return { user };
 }
 
-Deno.serve(async (req) => {
-  const meta = { fn: 'publicJobAccessActions' };
+function validPrivateUri(value) {
+  const uri = clean(value, 2000);
+  return /^private\/[A-Za-z0-9._~!$&'()+,;=:@%/-]{1,1900}$/.test(uri) &&
+    !uri.includes("..") && !uri.includes("\\") && !uri.includes("//");
+}
+
+function safeSignedUrl(value) {
   try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" && !url.username && !url.password
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+Deno.serve(async (req) => {
+  const id = requestId(req);
+  try {
+    if (req.method !== "POST") {
+      return fail("method_not_allowed", "Use POST for this action.", id, 405);
+    }
     const base44 = createClientFromRequest(req);
-    const { action, jobId, trackingToken, token, permissions, note, file_url, file_name, file_size, mime_type, kind, invoiceId, checkoutAttemptId, sessionId } = await req.json().catch(() => ({}));
-    meta.action = action;
-    meta.jobId = jobId;
+    const body = await req.json().catch(() => ({}));
+    const action = clean(body.action, 60);
 
-    if (!action) return Response.json({ error: 'action is required' }, { status: 400 });
-
-    if (action === 'staff_generate') {
-      const staff = await requireStaff(base44);
-      if (staff.error) return Response.json({ error: staff.error }, { status: staff.status });
-      const job = await base44.asServiceRole.entities.Job.get(jobId).catch(() => null);
-      if (!job) return Response.json({ error: 'Job not found' }, { status: 404 });
-
+    if (action === "staff_generate") {
+      const auth = await requireAdmin(base44);
+      if (auth.error) {
+        return fail(
+          auth.error,
+          auth.error === "unauthorized"
+            ? "Sign in to continue."
+            : "Administrator access is required.",
+          id,
+          auth.status,
+        );
+      }
+      const job = await base44.asServiceRole.entities.Job.get(
+        clean(body.jobId, 120),
+      ).catch(() => null);
+      if (!job) return fail("not_found", "Job not found.", id, 404);
       const now = new Date().toISOString();
-      const existing = await base44.asServiceRole.entities.PublicJobAccess.filter({ jobId });
-      await Promise.all(existing.filter((a) => !a.revokedAt && !a.revoked_at).map((a) => base44.asServiceRole.entities.PublicJobAccess.update(a.id, { revokedAt: now, revoked_at: now })));
-
+      const existing = await base44.asServiceRole.entities.PublicJobAccess
+        .filter({ jobId: job.id }, "-created_date", 100).catch(() => []);
+      await Promise.all(
+        existing.filter((grant) => !grant.revoked_at && !grant.revokedAt).map((
+          grant,
+        ) =>
+          base44.asServiceRole.entities.PublicJobAccess.update(grant.id, {
+            revoked_at: now,
+            revokedAt: now,
+            revocation_reason: "rotated",
+          })
+        ),
+      );
       const rawToken = makeToken();
       const tokenHash = await sha256(rawToken);
-      const accessPermissions = permissions?.length ? permissions : [...DEFAULT_PERMISSIONS, 'view_invoice', 'pay_invoice'];
-      // Only the hash is persisted; the raw token is returned once, below.
+      const requested = Array.isArray(body.permissions)
+        ? body.permissions
+        : DEFAULT_PERMISSIONS;
+      const permissions = [
+        ...new Set(
+          requested.filter((permission) => ALLOWED_PERMISSIONS.has(permission)),
+        ),
+      ];
       await base44.asServiceRole.entities.PublicJobAccess.create({
-        jobId,
-        job_id: jobId,
+        jobId: job.id,
+        job_id: job.id,
         tokenHash,
         token_hash: tokenHash,
-        permissions: accessPermissions,
+        permissions,
+        expires_after_completion_days: COMPLETION_ACCESS_DAYS,
+        issued_by_user_id: auth.user.id,
         createdAt: now,
       });
-      const trackingLink = `${await resolveTrustedOrigin(req, base44)}/track/${encodeURIComponent(rawToken)}`;
-      return Response.json({ trackingLink, permissions: accessPermissions });
-    }
-
-    if (action === 'staff_revoke') {
-      const staff = await requireStaff(base44);
-      if (staff.error) return Response.json({ error: staff.error }, { status: staff.status });
-      const now = new Date().toISOString();
-      const existing = await base44.asServiceRole.entities.PublicJobAccess.filter({ jobId });
-      await Promise.all(existing.filter((a) => !a.revokedAt && !a.revoked_at).map((a) => base44.asServiceRole.entities.PublicJobAccess.update(a.id, { revokedAt: now, revoked_at: now })));
-      return Response.json({ revoked: existing.length });
-    }
-
-    const accessResult = await getValidAccess(base44, trackingToken || jobId, token);
-    if (accessResult.error) return Response.json({ error: accessResult.error }, { status: accessResult.status });
-    const access = accessResult.access;
-    const job = accessResult.job;
-
-    if (action === 'get') {
-      return Response.json(await buildPayload(base44, job, access));
-    }
-
-    if (action === 'verify_payment') {
-      if (!hasPermission(access, 'pay_invoice')) return Response.json({ error: 'This link cannot verify invoice payments.' }, { status: 403 });
-      const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-      if (!stripeKey) return Response.json({ error: 'Payment verification is temporarily unavailable.' }, { status: 503 });
-      if (!sessionId || !invoiceId) return Response.json({ error: 'Payment session details are required.' }, { status: 400 });
-      const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
-      const session = await stripe.checkout.sessions.retrieve(sessionId).catch(() => null);
-      const metadata = session?.metadata || {};
-      if (!session || metadata.invoice_id !== invoiceId || metadata.job_id !== job.id || metadata.checkout_attempt_id !== checkoutAttemptId) {
-        return Response.json({ error: 'Payment session does not match this tracking link.' }, { status: 403 });
+      const configured = clean(Deno.env.get("PUBLIC_APP_ORIGIN"), 500);
+      let origin = "https://ontherunelectrics.com.au";
+      try {
+        const candidate = new URL(configured || origin);
+        if (
+          candidate.protocol === "https:" && !candidate.username &&
+          !candidate.password
+        ) origin = candidate.origin;
+      } catch {
+        // The canonical production origin remains the safe fallback.
       }
-      const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
-      if (!invoice || invoice.job_id !== job.id || invoice.invoiceVisibility !== 'customer_visible') {
-        return Response.json({ error: 'Invoice not found.' }, { status: 404 });
-      }
-      if (session.payment_status === 'paid' && invoice.status !== 'paid') {
-        const paidDate = new Date().toISOString();
-        await base44.asServiceRole.entities.Invoice.update(invoice.id, {
-          status: 'paid',
-          paid_date: paidDate,
-          payment_provider: 'stripe',
-          stripe_checkout_session_id: session.id,
-          payment_intent_ref: String(session.payment_intent || session.id),
-          payment_method: 'card',
-        });
-        await base44.asServiceRole.entities.Job.update(job.id, { payment_status: 'paid', status: 'completed' });
-        await base44.asServiceRole.entities.AuditEvent.create({
-          event_type: 'payment_received',
-          job_id: job.id,
-          customer_id: invoice.customer_id || job.customer_id || '',
-          actor_id: 'stripe',
-          actor_name: 'Stripe',
-          actor_role: 'system',
-          previous_value: invoice.status || '',
-          new_value: 'paid',
-          summary: `Stripe payment verified for ${invoice.currency || 'AUD'} ${Number(invoice.amount || 0).toFixed(2)}`,
-          visibility: 'customer',
-        });
-      }
-      if (session.payment_status === 'paid') {
-        const paidAt = invoice.paid_date || new Date().toISOString();
-        await settleInvoiceRewards(base44.asServiceRole.entities, { ...invoice, status: 'paid', paid_date: paidAt }, job, paidAt);
-      }
-      const payload = await buildPayload(base44, job, access);
-      return Response.json({
-        ...payload,
-        payment_result: {
-          status: session.payment_status === 'paid' ? 'paid' : (session.status === 'expired' ? 'expired' : 'pending'),
-          reference: invoice.number || '',
+      const policyExpiry = job.completed_at
+        ? new Date(
+          new Date(job.completed_at).getTime() +
+            COMPLETION_ACCESS_DAYS * 24 * 60 * 60 * 1000,
+        ).toISOString()
+        : null;
+      return ok(
+        {
+          tracking_link: `${origin}/track/${encodeURIComponent(rawToken)}`,
+          permissions,
+          expires_at: policyExpiry,
+          expires_after_completion_days: COMPLETION_ACCESS_DAYS,
         },
-      });
+        id,
+        201,
+      );
     }
 
-    if (action === 'add_note') {
-      if (!hasPermission(access, 'add_note')) return Response.json({ error: 'This link cannot add notes.' }, { status: 403 });
-      if (!note?.trim()) return Response.json({ error: 'Note is required.' }, { status: 400 });
-      if (note.trim().length > 2000) return Response.json({ error: 'Messages must be 2000 characters or fewer.' }, { status: 400 });
+    if (action === "staff_revoke") {
+      const auth = await requireAdmin(base44);
+      if (auth.error) {
+        return fail(
+          auth.error,
+          auth.error === "unauthorized"
+            ? "Sign in to continue."
+            : "Administrator access is required.",
+          id,
+          auth.status,
+        );
+      }
+      const jobId = clean(body.jobId, 120);
+      const grants = await base44.asServiceRole.entities.PublicJobAccess.filter(
+        { jobId },
+        "-created_date",
+        100,
+      ).catch(() => []);
+      const now = new Date().toISOString();
+      await Promise.all(
+        grants.filter((grant) => !grant.revoked_at && !grant.revokedAt).map((
+          grant,
+        ) =>
+          base44.asServiceRole.entities.PublicJobAccess.update(grant.id, {
+            revoked_at: now,
+            revokedAt: now,
+            revocation_reason: "staff_revoked",
+          })
+        ),
+      );
+      return ok({ revoked: grants.length }, id);
+    }
+
+    const rawToken = clean(body.trackingToken || body.token || body.jobId, 256);
+    const resolved = await validAccess(base44, rawToken);
+    if (!resolved) return fail("invalid_grant", INVALID_LINK, id, 403);
+    const { access, job } = resolved;
+
+    if (action === "get") {
+      if (
+        !hasPermission(access, "view_status") &&
+        !hasPermission(access, "view_booking") &&
+        !hasPermission(access, "view_invoice") &&
+        !hasPermission(access, "view_files")
+      ) {
+        return fail(
+          "forbidden",
+          "This link has no viewing permissions.",
+          id,
+          403,
+        );
+      }
+      return ok(await payload(base44, job, access), id);
+    }
+
+    if (action === "list_files") {
+      if (!hasPermission(access, "view_files")) {
+        return fail("forbidden", "This link cannot view files.", id, 403);
+      }
+      const attachments = await listVisibleAttachments(base44, job);
+      return ok({
+        attachments: attachments.slice(0, 100).filter((item) =>
+          !item.archived_at
+        ).map(attachmentDto),
+        limit: 100,
+        potentially_truncated: attachments.length > 100,
+      }, id);
+    }
+
+    if (action === "add_note") {
+      if (!hasPermission(access, "add_note")) {
+        return fail("forbidden", "This link cannot add notes.", id, 403);
+      }
+      const note = clean(body.note, 2000);
+      if (!note) {
+        return fail("validation_error", "A message is required.", id, 400);
+      }
       await base44.asServiceRole.entities.JobNote.create({
         job_id: job.id,
-        customer_id: job.customer_id || null,
-        body: note.trim(),
-        visibility: 'customer',
-        author_name: job.customer_name || 'Customer',
-        author_role: 'customer',
+        customer_id: job.customer_id || "",
+        body: note,
+        visibility: "customer",
+        author_name: clean(job.customer_name, 160) || "Customer",
+        author_role: "customer",
       });
-      return Response.json(await buildPayload(base44, job, access));
+      return ok(await payload(base44, job, access), id);
     }
 
-    if (action === 'upload_file') {
-      if (!hasPermission(access, 'upload_file')) return Response.json({ error: 'This link cannot upload files.' }, { status: 403 });
-      if (!file_url) return Response.json({ error: 'file_url is required.' }, { status: 400 });
-      if (!ALLOWED_UPLOAD_TYPES.has(String(mime_type || '').toLowerCase())) return Response.json({ error: 'Choose a JPG, PNG, WebP, HEIC, or PDF file.' }, { status: 400 });
-      if (!Number.isFinite(Number(file_size)) || Number(file_size) <= 0 || Number(file_size) > MAX_UPLOAD_BYTES) return Response.json({ error: 'Choose a file smaller than 10 MB.' }, { status: 400 });
-      if (!isTrustedFileUrl(file_url)) {
-        console.warn('[publicJobAccessActions] rejected untrusted file url');
-        return Response.json({ error: 'That file could not be accepted. Please upload the file again.' }, { status: 400 });
+    if (action === "upload_file") {
+      if (!hasPermission(access, "upload_file")) {
+        return fail("forbidden", "This link cannot upload files.", id, 403);
+      }
+      if (Deno.env.get("PRIVATE_UPLOADS_ENABLED") !== "true") {
+        return fail(
+          "uploads_unavailable",
+          "Secure uploads are temporarily unavailable.",
+          id,
+          503,
+        );
+      }
+      const mimeType = clean(body.mime_type, 120).toLowerCase();
+      const kind = body.kind === "photo" ? "photo" : "document";
+      const size = Number(body.file_size);
+      const allowed = kind === "photo" ? IMAGE_TYPES : DOCUMENT_TYPES;
+      const limit = kind === "photo" ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
+      if (!validPrivateUri(body.file_uri)) {
+        return fail(
+          "invalid_file",
+          "A private uploaded file is required.",
+          id,
+          400,
+        );
+      }
+      if (!allowed.has(mimeType)) {
+        return fail(
+          "invalid_type",
+          "Choose a JPG, PNG, WebP, or PDF file.",
+          id,
+          400,
+        );
+      }
+      if (!Number.isInteger(size) || size <= 0 || size > limit) {
+        return fail(
+          "invalid_size",
+          `Choose a file smaller than ${limit / 1024 / 1024} MB.`,
+          id,
+          400,
+        );
       }
       await base44.asServiceRole.entities.Attachment.create({
         job_id: job.id,
-        customer_id: job.customer_id || null,
-        file_url,
-        file_name: String(file_name || 'Customer upload').replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 180),
-        file_size: Number(file_size),
-        mime_type: String(mime_type).toLowerCase(),
-        kind: kind || 'document',
-        visibility: 'customer',
-        uploaded_by_name: job.customer_name || 'Customer',
+        customer_account_id: job.customer_account_id || "",
+        customer_id: job.customer_id || "",
+        file_uri: clean(body.file_uri, 2000),
+        storage: "private",
+        file_name: clean(body.file_name, 180) || "Customer upload",
+        file_size: size,
+        mime_type: mimeType,
+        kind,
+        visibility: "customer",
+        uploaded_by_name: clean(job.customer_name, 160) || "Customer",
       });
-      return Response.json(await buildPayload(base44, job, access));
+      return ok(await payload(base44, job, access), id, 201);
     }
 
-    if (action === 'start_payment') {
-      if (!hasPermission(access, 'pay_invoice')) return Response.json({ error: 'This link cannot pay invoices.' }, { status: 403 });
-      const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-      if (!stripeKey) return Response.json({ error: 'Payment is temporarily unavailable.' }, { status: 503 });
-      let invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId).catch(() => null);
-      if (!invoice || invoice.job_id !== job.id || invoice.invoiceVisibility !== 'customer_visible') return Response.json({ error: 'Invoice not found.' }, { status: 404 });
-      if (['paid', 'refunded', 'cancelled', 'void'].includes(invoice.status)) return Response.json({ error: 'This invoice cannot be paid online.' }, { status: 400 });
-      if (typeof checkoutAttemptId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(checkoutAttemptId)) {
-        return Response.json({ error: 'A valid checkout attempt is required.' }, { status: 400 });
+    if (action === "download_file") {
+      if (!hasPermission(access, "view_files")) {
+        return fail("forbidden", "This link cannot view files.", id, 403);
       }
-      try {
-        invoice = await lockAppliedReward(base44.asServiceRole.entities, invoice);
-      } catch (error) {
-        return Response.json({ error: error.message || 'The selected reward is no longer available.' }, { status: 409 });
+      const attachment = await base44.asServiceRole.entities.Attachment.get(
+        clean(body.attachment_id, 120),
+      ).catch(() => null);
+      if (
+        !attachment || attachment.job_id !== job.id ||
+        attachment.visibility !== "customer" || attachment.archived_at
+      ) return fail("not_found", "File not found.", id, 404);
+      if (attachment.storage !== "private" || !attachment.file_uri) {
+        return fail(
+          "migration_required",
+          "This historical file is pending private-storage migration.",
+          id,
+          409,
+        );
       }
-      const amount = Math.round((Number(invoice.amount) || 0) * 100);
-      if (amount <= 0) return Response.json({ error: 'Invoice amount must be greater than zero.' }, { status: 400 });
-      const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
-      // Must be an allowlisted origin — a spoofed Origin header here would redirect
-      // the paying customer off-site with the tracking token in the URL.
-      const origin = await resolveTrustedOrigin(req, base44);
-      const metadata = { base44_app_id: Deno.env.get('BASE44_APP_ID') || '', payment_flow: 'invoice_payment', invoice_id: invoice.id, job_id: job.id, customer_id: job.customer_id || '', checkout_attempt_id: checkoutAttemptId };
-      const returnUrl = `${origin}/track/${encodeURIComponent(accessResult.trackingToken)}`;
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        customer_email: job.customer_email || undefined,
-        line_items: [{
-          quantity: 1,
-          price_data: {
-            currency: String(invoice.currency || 'AUD').toLowerCase(),
-            unit_amount: amount,
-            product_data: { name: invoice.number ? `Invoice ${invoice.number}` : 'Invoice payment', description: job.reference ? `Job ${job.reference}` : 'Repair invoice payment' },
-          },
-        }],
-        success_url: `${returnUrl}?payment=success&session_id={CHECKOUT_SESSION_ID}&invoice=${encodeURIComponent(invoice.id)}&attempt=${encodeURIComponent(checkoutAttemptId)}`,
-        cancel_url: `${returnUrl}?payment=cancelled&invoice=${encodeURIComponent(invoice.id)}&attempt=${encodeURIComponent(checkoutAttemptId)}`,
-        metadata,
-        payment_intent_data: { metadata },
-      }, { idempotencyKey: `public-invoice:${Deno.env.get('BASE44_APP_ID') || 'app'}:${invoice.id}:${checkoutAttemptId}` });
-      await base44.asServiceRole.entities.Invoice.update(invoice.id, {
-        payment_provider: 'stripe',
-        checkout_attempt_id: checkoutAttemptId,
-        stripe_checkout_session_id: session.id,
-        checkout_started_at: new Date().toISOString(),
-      });
-      return Response.json({ url: session.url, checkoutAttemptId });
+      const signed = await base44.asServiceRole.integrations.Core
+        .CreateFileSignedUrl({
+          file_uri: attachment.file_uri,
+          expires_in: SIGNED_URL_SECONDS,
+        });
+      const signedUrl = safeSignedUrl(signed.signed_url);
+      if (!signedUrl) {
+        return fail(
+          "signing_failed",
+          "A secure download link could not be created.",
+          id,
+          502,
+        );
+      }
+      return ok({
+        signed_url: signedUrl,
+        expires_in: SIGNED_URL_SECONDS,
+        file_name: attachment.file_name,
+      }, id);
     }
 
-    return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    if (action === "start_payment" || action === "verify_payment") {
+      return fail(
+        "payments_retired",
+        "Online payments are not available. Please contact the workshop to arrange payment.",
+        id,
+        410,
+      );
+    }
+
+    return fail(
+      "unknown_action",
+      "That tracking action is not supported.",
+      id,
+      400,
+    );
   } catch (error) {
-    console.error('[publicJobAccessActions] failed', JSON.stringify({ ...meta, message: error.message, stack: error.stack }));
-    return Response.json({ error: 'This tracking request could not be completed. Please try again.' }, { status: 500 });
+    console.error(
+      "[publicJobAccessActions]",
+      JSON.stringify({
+        request_id: id,
+        code: "tracking_action_failed",
+        message: clean(error?.message || error, 500),
+      }),
+    );
+    return fail(
+      "internal_error",
+      "This tracking request could not be completed.",
+      id,
+      500,
+    );
   }
 });

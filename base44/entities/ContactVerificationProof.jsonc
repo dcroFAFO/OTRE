@@ -1,0 +1,43 @@
+{
+  "name": "ContactVerificationProof",
+  "type": "object",
+  "properties": {
+    "challenge_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique successful result reservation for one contact challenge."
+    },
+    "challenge_entity_id": {
+      "type": "string"
+    },
+    "attempt_id": {
+      "type": "string",
+      "unique": true
+    },
+    "proof_hash": {
+      "type": "string"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proof_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "challenge_id",
+    "challenge_entity_id",
+    "attempt_id",
+    "proof_hash",
+    "verified_at",
+    "proof_expires_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

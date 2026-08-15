@@ -1,21 +1,20 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
+import { authenticatedRole, isAdmin } from './identityPolicy.ts';
 
 // Shared customer-domain primitives used by customerRead, customerWrite and
 // scooterActions. Keep this module free of action/routing logic — it holds only
 // role checks, field normalization and the audit helper.
 
-export const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
-// Customer edits are limited to the roles that can already write a Customer
-// record directly (see Customer RLS) — technicians are read-only.
-export const MANAGER_ROLES = new Set(['admin', 'employee']);
+export const STAFF_ROLES = new Set(['admin']);
+export const MANAGER_ROLES = new Set(['admin']);
 export const CUSTOMER_STATUSES = ['active', 'pending', 'in_review', 'onboarding', 'needs_follow_up', 'inactive', 'suspended', 'closed'];
 
 export function isStaff(user) {
-  return STAFF_ROLES.has(String(user?.role || user?.data?.role || '').toLowerCase());
+  return isAdmin(user);
 }
 
 export function isManager(user) {
-  return MANAGER_ROLES.has(String(user?.role || user?.data?.role || '').toLowerCase());
+  return isAdmin(user);
 }
 
 export function userField(user, key) {
@@ -23,13 +22,7 @@ export function userField(user, key) {
 }
 
 export function isCustomerUserRecord(user) {
-  if (!user?.id || isStaff(user) || user?.is_service) return false;
-  // Users explicitly flagged as non-customers (e.g. their customer record was
-  // deleted by an admin) must never be rebuilt into a customer row.
-  if (userField(user, 'is_customer') === false) return false;
-  const explicitCustomer = userField(user, 'is_customer') === true;
-  const hasCustomerLink = !!(userField(user, 'customer_id') || userField(user, 'job_id'));
-  return explicitCustomer || hasCustomerLink;
+  return !!user?.id && !user?.is_service && authenticatedRole(user) === 'customer';
 }
 
 export function cleanEmail(value) {

@@ -11,6 +11,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import AppleIcon from "@/components/AppleIcon";
 import { CheckCircle2, ChevronDown, LogIn, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createAuthCallbackTarget } from "@/lib/authCallbackState";
 
 const BOOK_NEXT = "/portal?book=1";
 const SETUP_NEXT = `/profile-setup?next=${encodeURIComponent(BOOK_NEXT)}`;
@@ -30,7 +31,10 @@ export default function BookAccount() {
   const oauth = (provider) => {
     const callbackParams = new URLSearchParams({ oauthComplete: "1", next: SETUP_NEXT, customerFlow: "1" });
     if (referral) callbackParams.set("ref", referral);
-    base44.auth.loginWithProvider(provider, `/register?${callbackParams.toString()}`);
+    base44.auth.loginWithProvider(
+      provider,
+      createAuthCallbackTarget(`/register?${callbackParams.toString()}`),
+    );
   };
 
   return (

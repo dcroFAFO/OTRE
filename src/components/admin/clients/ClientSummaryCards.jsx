@@ -10,14 +10,15 @@ const TONES = {
   rose: "text-rose-600",
 };
 
-export default function ClientSummaryCards({ clients }) {
+export default function ClientSummaryCards({ clients, loadedOnly = false }) {
+  const label = (value) => loadedOnly ? `Loaded ${value.toLowerCase()}` : value;
   const cards = [
-    { label: "Total", value: clients.length, icon: Users, tone: "default" },
-    { label: "Active", value: clients.filter((c) => c.status === "active").length, icon: CheckCircle2, tone: "emerald" },
-    { label: "Pending", value: clients.filter((c) => c.status === "pending").length, icon: Clock, tone: "amber" },
-    { label: "Onboarding", value: clients.filter((c) => c.status === "onboarding").length, icon: UserPlus, tone: "accent" },
-    { label: "Needs Follow Up", value: clients.filter((c) => c.status === "needs_follow_up").length, icon: AlertTriangle, tone: "amber" },
-    { label: "Suspended", value: clients.filter((c) => c.status === "suspended").length, icon: AlertTriangle, tone: "rose" },
+    { label: label("Total"), value: clients.length, icon: Users, tone: "default" },
+    { label: label("Active"), value: clients.filter((c) => c.status === "active").length, icon: CheckCircle2, tone: "emerald" },
+    { label: label("Pending"), value: clients.filter((c) => c.status === "pending").length, icon: Clock, tone: "amber" },
+    { label: label("Onboarding"), value: clients.filter((c) => c.status === "onboarding").length, icon: UserPlus, tone: "accent" },
+    { label: label("Needs Follow Up"), value: clients.filter((c) => c.status === "needs_follow_up").length, icon: AlertTriangle, tone: "amber" },
+    { label: label("Suspended"), value: clients.filter((c) => c.status === "suspended").length, icon: AlertTriangle, tone: "rose" },
   ];
 
   return (

@@ -18,12 +18,10 @@ const fmt = (d) => {
   try { return format(new Date(d), "d MMM yyyy"); } catch { return "—"; }
 };
 
-const STAFF_ROLES = new Set(["admin", "employee", "technician", "staff"]);
-
 export default function CustomerHistoryPanel({ job, actor }) {
   const customerId = job.customer_id;
   const email = job.customer_email;
-  const isStaff = STAFF_ROLES.has(String(actor?.role || "").toLowerCase());
+  const isStaff = String(actor?.role || "").toLowerCase() === "admin";
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["customerProfile", job.id, job.customer_id, job.customer_account_id, job.customer_user_id, job.asset_id, job.updated_date || job.updatedAt || email],
@@ -114,6 +112,12 @@ export default function CustomerHistoryPanel({ job, actor }) {
       {/* ── Job history ── */}
       <section className="space-y-2">
         <SectionHeading icon={<History className="h-3.5 w-3.5" />} title="Job history" count={jobs.length} />
+
+        {data?.history?.potentially_truncated ? (
+          <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
+            This panel shows the first {jobs.length} loaded jobs. Open the customer record from Customers to load older history before relying on totals.
+          </p>
+        ) : null}
 
         {jobs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No jobs found for this customer yet.</p>

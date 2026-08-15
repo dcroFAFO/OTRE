@@ -1,0 +1,29 @@
+{
+  "name": "PaymentEvent",
+  "type": "object",
+  "properties": {
+    "event_key": { "type": "string", "unique": true, "maxLength": 200 },
+    "invoice_id": { "type": "string" },
+    "job_id": { "type": "string" },
+    "customer_account_id": { "type": "string" },
+    "kind": { "type": "string", "enum": ["manual_payment", "manual_refund"] },
+    "amount_minor": { "type": "integer" },
+    "currency": { "type": "string", "enum": ["AUD"], "default": "AUD" },
+    "method": { "type": "string", "enum": ["cash", "eftpos", "bank_transfer", "other"] },
+    "reference": { "type": "string", "maxLength": 200 },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "recorded_by_user_id": { "type": "string" },
+    "recorded_by_name": { "type": "string", "maxLength": 160 },
+    "status": { "type": "string", "enum": ["pending", "processing", "complete", "failed", "needs_reconciliation"], "default": "pending" },
+    "request_id": { "type": "string", "maxLength": 100 },
+    "failure_code": { "type": "string", "maxLength": 100 },
+    "failure_message": { "type": "string", "maxLength": 1000 }
+  },
+  "required": ["event_key", "invoice_id", "job_id", "kind", "amount_minor", "currency", "occurred_at", "recorded_by_user_id"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

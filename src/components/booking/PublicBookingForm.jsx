@@ -52,6 +52,7 @@ const ERROR_FOCUS = {
   asset_label: "booking-asset-make",
   issue_type: "booking-issue-type",
   issue_description: "booking-issue-description",
+  preferred_date: "booking-preferred-date",
   consent: "booking-consent",
   verification_channel: "booking-channel-sms",
   verification_code: "booking-verification-code",
@@ -99,6 +100,7 @@ export default function PublicBookingForm({ guestOnly = false }) {
   const [done, setDone] = useState(/** @type {any} */ (null));
   const [submitError, setSubmitError] = useState("");
   const [errors, setErrors] = useState(/** @type {Record<string, string | null>} */ ({}));
+  const [preferredDateValid, setPreferredDateValid] = useState(true);
 
   const busy = sendingCode || submitting;
   const modelMatchesBrand = isModelValidForBrand(form.asset_make, form.asset_model);
@@ -139,6 +141,7 @@ export default function PublicBookingForm({ guestOnly = false }) {
     if (form.asset_make && form.asset_make !== "Other" && form.asset_model && !modelMatchesBrand) nextErrors.asset_label = `The selected model doesn't belong to ${form.asset_make}.`;
     if (!form.issue_type) nextErrors.issue_type = "Please select the repair type.";
     if (isOther && !form.issue_description.trim()) nextErrors.issue_description = "Please describe the issue.";
+    if (!preferredDateValid) nextErrors.preferred_date = "Enter a valid future date in DD-MM-YY format, or leave it blank.";
     if (!form.consent) nextErrors.consent = "Please confirm we can contact you about this booking.";
     return reportErrors(nextErrors);
   };
@@ -220,9 +223,11 @@ export default function PublicBookingForm({ guestOnly = false }) {
         {done.reference ? <div className="mt-5 rounded-lg border-2 border-accent/40 bg-accent/10 p-4"><p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Job reference</p><p className="mt-1 font-heading text-3xl font-extrabold">{done.reference}</p></div> : null}
         {guestOnly ? (
           <div className="mt-6 border-t border-border pt-5 text-left">
-            <h3 className="font-heading text-lg font-bold">Manage this repair online</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Create a free account to track updates and manage invoices.</p>
-            <Button asChild variant="outline" className="mt-4 w-full"><Link to={accountPath}>Create a customer account</Link></Button>
+            <h3 className="font-heading text-lg font-bold">Track or manage this repair</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Use the secure tracking link for this booking, or create an account to manage all future repairs.</p>
+            {done.trackingPath ? <Button asChild className="mt-4 w-full"><Link to={done.trackingPath}>Track this repair securely</Link></Button> : null}
+            <Button asChild variant="outline" className="mt-3 w-full"><Link to={accountPath}>Create a customer account</Link></Button>
+            <p className="mt-3 text-xs text-muted-foreground">Keep the tracking link private. Anyone with the link can use the permissions granted to this booking.</p>
           </div>
         ) : <Button asChild size="lg" className="mt-6 w-full"><Link to={viewPath}>View My Job</Link></Button>}
       </section>
@@ -286,7 +291,7 @@ export default function PublicBookingForm({ guestOnly = false }) {
             </div>
 
             {isOther ? <FieldShell id="booking-issue-description" label="Describe the issue" required error={errors.issue_description || undefined}><Textarea rows={4} value={form.issue_description} onChange={(event) => set("issue_description", event.target.value)} placeholder={field("issue_description").placeholder} /></FieldShell> : null}
-            <FieldShell id="booking-preferred-date" label="Preferred completion date" hint="This is a preference, not a confirmed booking time."><PreferredDateField value={form.preferred_date} onChange={(value) => set("preferred_date", value)} /></FieldShell>
+            <FieldShell id="booking-preferred-date" label="Preferred completion date" hint="This is a preference, not a confirmed booking time." error={errors.preferred_date || undefined}><PreferredDateField value={form.preferred_date} onChange={(value) => set("preferred_date", value)} onValidityChange={(valid) => { setPreferredDateValid(valid); if (valid) setErrors((current) => ({ ...current, preferred_date: null })); }} /></FieldShell>
 
             <div>
               <div className="flex items-start gap-2">

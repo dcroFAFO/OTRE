@@ -1,7 +1,7 @@
 {
-  "name": "untitled",
+  "name": "On The Run Electrics",
   "site": {
-    "installCommand": "npm install",
+    "installCommand": "npm ci",
     "buildCommand": "npm run build",
     "serveCommand": "npm run dev",
     "outputDirectory": "./dist"

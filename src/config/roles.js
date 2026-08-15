@@ -1,28 +1,26 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ROLE SOURCE OF TRUTH
 // ─────────────────────────────────────────────────────────────────────────────
-// Simple hierarchy: admin > technician > customer.
+// The customer-facing application exposes two roles only. Legacy staff role
+// values are deliberately treated as customers until they are migrated by the
+// backend; this prevents an unknown value from gaining staff UI access.
 
 export const ROLES = {
   ADMIN: "admin",
-  TECHNICIAN: "technician",
-  EMPLOYEE: "employee",
   CUSTOMER: "customer",
 };
 
 export const ROLE_RANK = {
   admin: 100,
-  technician: 50,
-  employee: 50,
   customer: 10,
 };
 
 export const ROLE_META = {
   admin: { key: "admin", label: "Admin", badgeClass: "bg-blue-100 text-blue-700", staff: true },
-  technician: { key: "technician", label: "Technician", badgeClass: "bg-amber-100 text-amber-700", staff: true },
-  employee: { key: "employee", label: "Employee", badgeClass: "bg-emerald-100 text-emerald-700", staff: true },
   customer: { key: "customer", label: "Customer", badgeClass: "bg-slate-100 text-slate-600", staff: false },
 };
+
+const LEGACY_STAFF_REQUIREMENTS = new Set(["technician", "employee", "staff"]);
 
 export const CAPABILITIES = {
   LOG_VIEW: "log.view",
@@ -39,7 +37,11 @@ export function roleRank(role) {
 }
 
 export function hasAtLeastRole(role, minRole) {
-  return roleRank(role) >= (ROLE_RANK[normalizeRole(minRole)] ?? Infinity);
+  const required = String(minRole || "").toLowerCase();
+  const requiredRank = LEGACY_STAFF_REQUIREMENTS.has(required)
+    ? ROLE_RANK.admin
+    : ROLE_RANK[required];
+  return roleRank(role) >= (requiredRank ?? Infinity);
 }
 
 export function isStaffRole(role) {

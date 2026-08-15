@@ -3,7 +3,8 @@
   "type": "object",
   "properties": {
     "event_key": {
-      "type": "string"
+      "type": "string",
+      "unique": true
     },
     "related_entity_type": {
       "type": "string"
@@ -15,6 +16,9 @@
       "type": "string"
     },
     "customer_id": {
+      "type": "string"
+    },
+    "customer_account_id": {
       "type": "string"
     },
     "recipient_user_id": {
@@ -42,7 +46,9 @@
         "pending",
         "processing",
         "processed",
-        "failed"
+        "failed",
+        "partially_processed",
+        "dead_letter"
       ],
       "default": "pending"
     },
@@ -51,6 +57,31 @@
       "format": "date-time"
     },
     "processed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "processing_owner_id": {
+      "type": "string"
+    },
+    "processing_lease_id": {
+      "type": "string"
+    },
+    "processing_lease_sequence": {
+      "type": "number"
+    },
+    "processing_started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lease_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "processing_attempt_count": {
+      "type": "number",
+      "default": 0
+    },
+    "last_recovered_at": {
       "type": "string",
       "format": "date-time"
     },

@@ -1,0 +1,49 @@
+{
+  "name": "VerificationUse",
+  "type": "object",
+  "properties": {
+    "challenge_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique reservation that makes a verified proof one-time across concurrent requests."
+    },
+    "operation_id": {
+      "type": "string",
+      "unique": true
+    },
+    "purpose": {
+      "type": "string",
+      "enum": ["guest_booking", "guest_claim", "feedback_submission"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["reserved", "completed", "failed"],
+      "default": "reserved"
+    },
+    "subject_type": {
+      "type": "string",
+      "enum": ["Job", "BookingClaim", "Feedback"]
+    },
+    "subject_id": {
+      "type": "string"
+    },
+    "reserved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "failure_code": {
+      "type": "string"
+    }
+  },
+  "required": ["challenge_id", "operation_id", "purpose", "status", "reserved_at"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

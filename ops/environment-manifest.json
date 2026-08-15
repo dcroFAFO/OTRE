@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "sourceOfTruth": "current-git-branch",
+  "environments": {
+    "staging": {
+      "database": "isolated",
+      "appId": "6a7dd641cf8b4ebde9fbe70b",
+      "siteUrl": "https://otre-remediation-staging-e9fbe70b.base44.app",
+      "indexing": "disabled",
+      "testDataOnly": true,
+      "providers": {
+        "stripe": "disabled-manual-payments-only",
+        "twilio": "test-credentials-or-allowlist",
+        "resend": "sandbox-or-email-sink",
+        "googleCalendar": "removed-from-source-pending-remote-disable-verification",
+        "contentful": "removed",
+        "ecwid": "test-store-or-disabled"
+      }
+    },
+    "production": {
+      "database": "production-only",
+      "appId": "6a2069bac12b203bbb93b0b3",
+      "indexing": "public-routes-only",
+      "providers": {
+        "googleCalendar": "removed-from-source-pending-remote-disable-verification",
+        "contentful": "removed"
+      }
+    }
+  },
+  "requiredBackendSecrets": [
+    "BASE44_APP_ID",
+    "PUBLIC_APP_ORIGIN",
+    "BOOKING_VERIFICATION_PEPPER",
+    "OTP_RATE_LIMIT_SECRET",
+    "TRUST_PROXY_HEADERS",
+    "FEEDBACK_TOKEN_SECRET",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_FROM_NUMBER",
+    "RESEND_API_KEY",
+    "INVOICE_FROM_EMAIL",
+    "GOOGLE_MAPS_API_KEY",
+    "ECWID_STORE_ID",
+    "ECWID_SECRET_TOKEN"
+  ]
+}

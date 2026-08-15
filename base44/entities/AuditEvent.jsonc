@@ -11,6 +11,23 @@
     "customer_id": {
       "type": "string"
     },
+    "customer_account_id": {
+      "type": "string",
+      "description": "Canonical Customer.id when the event relates to a customer account."
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Request or operation correlation id."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "allowed",
+        "denied",
+        "succeeded",
+        "failed"
+      ]
+    },
     "actor_id": {
       "type": "string"
     },
@@ -50,45 +67,14 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "update": {
       "user_condition": {

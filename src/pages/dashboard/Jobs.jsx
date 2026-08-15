@@ -14,7 +14,7 @@ import { Plus, LayoutGrid, List } from "lucide-react";
 import CreateJobModal from "@/components/dashboard/job/CreateJobModal";
 import { Button } from "@/components/ui/button";
 import { isStaffRole } from "@/config/roles";
-import { CardSkeleton, EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
+import { BoundedDataNotice, CardSkeleton, EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
 
 const FILTER_PARAM_KEYS = ["status", "service_type", "priority", "payment", "type", "waiting", "q"];
 
@@ -73,7 +73,10 @@ export default function Jobs() {
     ...(filters.type !== "all" ? { job_type: filters.type } : {}),
     ...(filters.waiting !== "all" ? { waiting_reason: filters.waiting } : {}),
   }), [filters.payment, filters.type, filters.waiting]);
-  const { data: jobs = [], isLoading, isFetching, error, refetch } = useJobs(queryFilter);
+  const {
+    data: jobs = [], isLoading, isFetching, error, refetch,
+    fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useJobs(queryFilter);
   const invalidate = useInvalidateJobs();
   const [createModal, setCreateModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -132,7 +135,7 @@ export default function Jobs() {
             {DEFAULT_APP_SETTINGS.dashboard.nav.jobs}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isLoading ? "Loading jobs" : `${filtered.length} ${DEFAULT_APP_SETTINGS.terminology.jobPlural}`}
+            {isLoading ? "Loading jobs" : `${filtered.length} loaded ${DEFAULT_APP_SETTINGS.terminology.jobPlural}`}
             {isFetching && !isLoading ? <span className="ml-2" role="status">Refreshing…</span> : null}
           </p>
         </div>
@@ -158,10 +161,20 @@ export default function Jobs() {
 
       <JobCategoryFilters filters={filters} setFilters={setFilters} counts={categoryCounts} />
 
+      <BoundedDataNotice
+        noun="jobs"
+        loadedCount={jobs.length}
+        hasMore={hasNextPage}
+        isLoadingMore={isFetchingNextPage}
+        onLoadMore={fetchNextPage}
+        description={`Showing ${jobs.length} active jobs from the loaded records. Category counts, search, and filters are partial until all jobs are loaded.`}
+      />
+
       {selectedIds.length > 0 && (
         <BulkActionsBar
           selectedIds={selectedIds}
           allJobs={jobs}
+          actorRole={user.role}
           onClear={() => setSelectedIds([])}
           onDone={() => { setSelectedIds([]); invalidate(); }}
         />
@@ -172,11 +185,17 @@ export default function Jobs() {
       ) : isLoading ? (
         view === "board" ? <CardSkeleton count={4} /> : <TableSkeleton rows={7} columns={6} label="Loading jobs" />
       ) : filtered.length === 0 ? (
-        jobs.length === 0 && !hasActiveFilters ? (
+        jobs.length === 0 && !hasActiveFilters && !hasNextPage ? (
           <EmptyState
             title="No jobs have been created"
             description="Create the first job to start scheduling and tracking repair work."
             action={isStaffRole(user.role) ? <Button onClick={() => setCreateModal(true)}><Plus className="h-4 w-4" /> New Job</Button> : null}
+          />
+        ) : jobs.length === 0 && !hasActiveFilters ? (
+          <EmptyState
+            title="No active jobs in the loaded records"
+            description="Older active jobs may still exist. Load the next page to continue checking."
+            action={<Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>{isFetchingNextPage ? "Loading jobs…" : "Load more jobs"}</Button>}
           />
         ) : (
           <NoResultsState

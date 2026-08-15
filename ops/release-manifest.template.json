@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "commit": "generated-by-npm-run-release-manifest",
+  "workingTreeDirty": false,
+  "releaseId": "immutable-release-id",
+  "appId": "target-app-id",
+  "sourceBindingAppId": "checked-in-base44-app-id",
+  "frontendArtifactSha256": "generated-artifact-digest",
+  "environment": "staging-or-production",
+  "checks": {
+    "config": "required",
+    "backend": "required",
+    "lint": "required",
+    "typecheck": "required",
+    "unit": "required",
+    "build": "required",
+    "bundle": "required",
+    "e2e": "required-for-production"
+  },
+  "deployment": {
+    "schemaParity": "needs-verification",
+    "workflowParity": "needs-verification",
+    "connectorParity": "needs-verification",
+    "secretPresence": "needs-verification",
+    "checkpointId": "needs-verification"
+  }
+}

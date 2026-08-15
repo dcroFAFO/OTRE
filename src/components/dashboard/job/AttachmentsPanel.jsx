@@ -1,98 +1,133 @@
-import React, { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { FileText, Globe, ImageIcon, Loader2, Lock, Upload } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { Loader2, Upload, FileText, ImageIcon, Lock, Globe } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export default function AttachmentsPanel({ job, actor, canUpload }) {
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const DOCUMENT_TYPES = new Set([...IMAGE_TYPES, "application/pdf"]);
+
+export default function AttachmentsPanel({ job, canUpload }) {
   const [items, setItems] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
   const [visibility, setVisibility] = useState("internal");
 
-  const load = () => base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50).then(setItems);
-  useEffect(() => { load(); }, [job.id]);
+  const invoke = useCallback(async (payload) => {
+    const response = await base44.functions.invoke("attachmentActions", payload);
+    return response.data?.data || response.data;
+  }, []);
 
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    await base44.entities.Attachment.create({
-      job_id: job.id, customer_id: job.customer_id || "", file_url, file_name: file.name,
-      kind: file.type.startsWith("image") ? "photo" : "document",
-      visibility,
-      uploaded_by_name: actor?.full_name || actor?.short_name,
-    });
-    setUploading(false);
-    e.target.value = "";
-    load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await invoke({ action: "list", job_id: job.id });
+      setItems(result?.items || []);
+    } catch {
+      setError("Files could not be loaded. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [invoke, job.id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const handleFile = async (event) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file || busy) return;
+    const kind = file.type.startsWith("image/") ? "photo" : "document";
+    const allowed = kind === "photo" ? IMAGE_TYPES : DOCUMENT_TYPES;
+    const maximum = kind === "photo" ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (!allowed.has(file.type) || file.size <= 0 || file.size > maximum) {
+      setError(kind === "photo" ? "Choose a JPG, PNG, or WebP image under 10 MB." : "Choose a PDF under 20 MB.");
+      input.value = "";
+      return;
+    }
+    setBusy("upload");
+    setError("");
+    try {
+      const upload = await base44.integrations.Core.UploadPrivateFile({ file });
+      if (!upload?.file_uri) throw new Error("Private upload failed.");
+      await invoke({
+        action: "finalize",
+        job_id: job.id,
+        file_uri: upload.file_uri,
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+        kind,
+        visibility,
+      });
+      await load();
+    } catch {
+      setError("The file could not be uploaded. Try again.");
+    } finally {
+      input.value = "";
+      setBusy("");
+    }
+  };
+
+  const openFile = async (attachment) => {
+    if (busy) return;
+    setBusy(attachment.id);
+    setError("");
+    try {
+      const result = await invoke({ action: "download", attachment_id: attachment.id });
+      if (!result?.signed_url) throw new Error("Signed link unavailable.");
+      window.location.assign(result.signed_url);
+    } catch {
+      setError("That file could not be opened. Try again.");
+    } finally {
+      setBusy("");
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="font-heading font-bold">Files & Documents</h3>
+    <section className="space-y-4" aria-labelledby="job-files-title">
+      <h3 id="job-files-title" className="font-heading font-bold">Files &amp; Documents</h3>
+      {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
 
-      {canUpload && (
+      {canUpload ? (
         <div className="space-y-2">
-          {/* Visibility toggle */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">Upload as:</span>
-            <button
-              onClick={() => setVisibility("internal")}
-              className={cn(
-                "flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
-                visibility === "internal"
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-transparent text-muted-foreground border-border hover:border-primary/50"
-              )}
-            >
-              <Lock className="h-3 w-3" /> Private
-            </button>
-            <button
-              onClick={() => setVisibility("customer")}
-              className={cn(
-                "flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
-                visibility === "customer"
-                  ? "bg-accent text-accent-foreground border-accent"
-                  : "bg-transparent text-muted-foreground border-border hover:border-accent/50"
-              )}
-            >
-              <Globe className="h-3 w-3" /> Visible to customer
-            </button>
-          </div>
-
-          {/* Upload dropzone */}
-          <label className="flex min-h-12 items-center gap-2 cursor-pointer rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground hover:border-accent transition-colors">
-            {uploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Upload className="h-4 w-4 shrink-0" />}
-            <span className="min-w-0">
-              {uploading ? "Uploading…" : `Upload file (${visibility === "customer" ? "visible to customer" : "private / internal"})`}
-            </span>
-            <input type="file" className="hidden" onChange={handleFile} disabled={uploading} />
+          <fieldset className="flex flex-wrap items-center gap-2">
+            <legend className="sr-only">File visibility</legend>
+            <span className="text-xs font-medium text-muted-foreground" aria-hidden="true">Upload as:</span>
+            <Button type="button" size="touch" variant={visibility === "internal" ? "default" : "outline"} aria-pressed={visibility === "internal"} onClick={() => setVisibility("internal")}>
+              <Lock className="h-4 w-4" aria-hidden="true" /> Private
+            </Button>
+            <Button type="button" size="touch" variant={visibility === "customer" ? "default" : "outline"} aria-pressed={visibility === "customer"} onClick={() => setVisibility("customer")}>
+              <Globe className="h-4 w-4" aria-hidden="true" /> Customer
+            </Button>
+          </fieldset>
+          <label className={cn(buttonVariants({ variant: "outline", size: "touch" }), "w-full cursor-pointer justify-start border-dashed")}>
+            {busy === "upload" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
+            {busy === "upload" ? "Uploading…" : `Upload ${visibility === "customer" ? "customer-visible" : "private"} file`}
+            <input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleFile} disabled={!!busy} />
           </label>
+          <p className="text-xs text-muted-foreground">Images up to 10 MB; PDFs up to 20 MB. Downloads use short-lived private links.</p>
         </div>
-      )}
+      ) : null}
 
-      {/* File list */}
-      <div className="grid grid-cols-1 gap-2">
-        {items.map((a) => (
-          <a key={a.id} href={a.file_url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-sm hover:border-accent transition-colors">
-            {a.kind === "photo"
-              ? <ImageIcon className="h-4 w-4 text-accent shrink-0" />
-              : <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
-            <span className="truncate flex-1 text-sm">{a.file_name || "File"}</span>
-            <span className={cn(
-              "flex items-center gap-1 text-[10px] font-medium rounded-full px-2 py-0.5 shrink-0",
-              a.visibility === "customer"
-                ? "bg-accent/10 text-accent border border-accent/20"
-                : "bg-slate-100 text-slate-500 border border-slate-200"
-            )}>
-              {a.visibility === "customer" ? <Globe className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
-              {a.visibility === "customer" ? "Customer" : "Private"}
-            </span>
-          </a>
-        ))}
-        {items.length === 0 && <p className="text-sm text-muted-foreground">No files uploaded yet.</p>}
-      </div>
-    </div>
+      {loading ? <p role="status" className="text-sm text-muted-foreground">Loading files…</p> : null}
+      {!loading ? (
+        <div className="grid grid-cols-1 gap-2">
+          {items.map((attachment) => (
+            <Button key={attachment.id} type="button" variant="outline" className="min-h-11 w-full justify-start" disabled={!!busy || !attachment.downloadable} onClick={() => void openFile(attachment)}>
+              {busy === attachment.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : attachment.kind === "photo" ? <ImageIcon className="h-4 w-4 text-accent" aria-hidden="true" /> : <FileText className="h-4 w-4" aria-hidden="true" />}
+              <span className="min-w-0 flex-1 truncate text-left">{attachment.file_name || "File"}</span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                {attachment.visibility === "customer" ? <Globe className="h-3 w-3" aria-hidden="true" /> : <Lock className="h-3 w-3" aria-hidden="true" />}
+                {attachment.visibility === "customer" ? "Customer" : "Private"}
+              </span>
+            </Button>
+          ))}
+          {!items.length ? <p className="text-sm text-muted-foreground">No files uploaded yet.</p> : null}
+        </div>
+      ) : null}
+    </section>
   );
 }

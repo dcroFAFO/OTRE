@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { createBookingRequest } from "@/services/bookingService";
 import { normalizePhoneToE164 } from "@/lib/phone";
@@ -7,7 +7,7 @@ import BookingWizard from "@/components/portal/booking/BookingWizard";
 import BookingConfirmation from "@/components/portal/booking/BookingConfirmation";
 import { ErrorState } from "@/components/shared";
 
-export default function CustomerBookingModal({ open, onClose, user, profile, profileLoading = false, profileError, onRetryProfile, onSuccess, onManage }) {
+export default function CustomerBookingModal({ open, onClose, user, profile, profileLoading = false, profileError, onRetryProfile, scooters = [], scootersLoading = false, scootersError, onRetryScooters, onSuccess, onManage }) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -15,6 +15,7 @@ export default function CustomerBookingModal({ open, onClose, user, profile, pro
   const [wizardKey, setWizardKey] = useState(0);
 
   const handleSubmit = async (data, scooterLabel) => {
+    if (submitting) return;
     setError(null);
     const isOther = data.service === "Other";
     const service = isOther ? data.customIssue.trim() : data.service;
@@ -48,14 +49,14 @@ export default function CustomerBookingModal({ open, onClose, user, profile, pro
       setDone(res);
       onSuccess?.();
     } catch (err) {
-      console.error("Booking failed:", err);
-      setError("Sorry — we couldn't submit your booking. Please try again.");
+      setError("Sorry — we couldn't submit your booking. Your details are still here, so please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
+    if (submitting) return;
     setDone(null);
     setSummary(null);
     setError(null);
@@ -64,15 +65,16 @@ export default function CustomerBookingModal({ open, onClose, user, profile, pro
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) handleClose(); }}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl font-extrabold">{done ? "Request received" : "Book a repair"}</DialogTitle>
+          <DialogDescription>{done ? "Your repair request has been saved." : "Choose a scooter, service, preferred details, and review before submitting."}</DialogDescription>
         </DialogHeader>
 
         {profileLoading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading your profile…
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground" role="status">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading your profile…
           </div>
         ) : profileError ? (
           <ErrorState title="Your booking details could not be loaded" error={profileError} onRetry={onRetryProfile} />
@@ -85,8 +87,18 @@ export default function CustomerBookingModal({ open, onClose, user, profile, pro
           />
         ) : (
           <>
-            <BookingWizard key={wizardKey} user={user} profile={profile} submitting={submitting} onSubmit={handleSubmit} />
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            <BookingWizard
+              key={wizardKey}
+              user={user}
+              profile={profile}
+              scooters={scooters}
+              scootersLoading={scootersLoading}
+              scootersError={scootersError}
+              onRetryScooters={onRetryScooters}
+              submitting={submitting}
+              onSubmit={handleSubmit}
+            />
+             {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           </>
         )}
       </DialogContent>

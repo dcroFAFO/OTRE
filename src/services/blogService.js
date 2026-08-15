@@ -38,7 +38,11 @@ export function emptyPost(user, settings) {
 
 const invoke = async (name, payload = {}) => {
   const response = await base44.functions.invoke(name, payload);
-  if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
+  if (response.data?.error) {
+    const detail = response.data.error;
+    const message = typeof detail === "object" ? detail?.message : detail;
+    throw Object.assign(new Error(message || "The request could not be completed."), { status: response.status || 400, response });
+  }
   return response.data;
 };
 
@@ -54,13 +58,18 @@ export const cancelScheduledBlogPost = (postId) => invoke("cancelScheduledBlogPo
 export const archiveBlogPost = (postId) => invoke("archiveBlogPost", { postId });
 export const generateBlogPost = (payload) => invoke("generateBlogPost", payload);
 
-// Blog comments — entity SDK is used directly: read is public (RLS read: null),
-// create requires a logged-in user (RLS create: true).
-export const listBlogComments = (postId) =>
-  base44.entities.BlogComment.filter({ post_id: postId, status: "visible" }, "created_date", 500);
+// Public comment data is returned through a safe DTO. Creation and deletion
+// are authorised server-side; the browser never reads or writes BlogComment
+// entities directly.
+export const listBlogComments = async (postId) => {
+  const result = await invoke("publicBlog", { action: "comments", post_id: postId });
+  return result.comments || [];
+};
 
-export const createBlogComment = (data) =>
-  base44.entities.BlogComment.create(data);
+export const createBlogComment = async ({ post_id, content }) => {
+  const result = await invoke("publicBlog", { action: "comment_create", post_id, content });
+  return result.comment;
+};
 
 export const deleteBlogComment = (commentId) =>
-  base44.entities.BlogComment.delete(commentId);
+  invoke("publicBlog", { action: "comment_delete", comment_id: commentId });

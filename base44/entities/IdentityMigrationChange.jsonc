@@ -1,0 +1,21 @@
+{
+  "name": "IdentityMigrationChange",
+  "type": "object",
+  "properties": {
+    "change_key": {"type": "string", "unique": true},
+    "run_id": {"type": "string"},
+    "entity_name": {"type": "string"},
+    "entity_id": {"type": "string"},
+    "before": {"type": "object", "additionalProperties": true},
+    "after": {"type": "object", "additionalProperties": true},
+    "applied_at": {"type": "string", "format": "date-time"},
+    "reverted_at": {"type": "string", "format": "date-time"}
+  },
+  "required": ["change_key", "run_id", "entity_name", "entity_id", "before", "after", "applied_at"],
+  "rls": {
+    "create": false,
+    "read": {"user_condition": {"role": "admin"}},
+    "update": false,
+    "delete": false
+  }
+}

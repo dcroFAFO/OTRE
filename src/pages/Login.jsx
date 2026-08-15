@@ -8,19 +8,51 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import SEO from "@/components/SEO";
-import { safeReturnTo } from "@/lib/authReturnTo";
+import { sanitizeReturnTarget } from "@/lib/authReturnTo";
+import { getSafeErrorMessage } from "@/lib/errors";
+import { createAuthCallbackTarget } from "@/lib/authCallbackState";
 
 const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
+
+function oauthOnboardingTarget(next) {
+  const params = new URLSearchParams({ oauthComplete: "1", next });
+  return `/register?${params.toString()}`;
+}
+
+function isOauthOnboardingTarget(target) {
+  const parsed = new URL(target, window.location.origin);
+  return parsed.pathname === "/register" && parsed.searchParams.get("oauthComplete") === "1";
+}
+
+async function authenticatedDestination(next) {
+  if (isOauthOnboardingTarget(next)) return next;
+  const currentUser = await base44.auth.me();
+  if (currentUser?.role !== "customer") return next;
+  const claim = await base44.functions.invoke("claimCustomerJobs", {});
+  if (claim.data?.code === "PHONE_VERIFICATION_REQUIRED") {
+    return oauthOnboardingTarget(next);
+  }
+  if (claim.data?.error) {
+    throw Object.assign(new Error(claim.data.error), {
+      code: claim.data.code,
+      status: claim.status || 400,
+      response: claim,
+    });
+  }
+  return next;
+}
 
 function authParams() {
   const params = new URLSearchParams(window.location.search);
   // ?returnTo= is used by flows that must resume after sign-in (e.g. the MCP
   // OAuth consent page). It wins over ?next= and is validated centrally.
-  const returnTo = safeReturnTo();
-  const next = returnTo !== "/" ? returnTo : (params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH);
+  const rawTarget = params.has("returnTo")
+    ? params.get("returnTo")
+    : (params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH);
+  const next = sanitizeReturnTarget(rawTarget);
   return {
     email: params.get("email") || "",
-    next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
+    next: next === "/" && rawTarget !== "/" ? DEFAULT_REDIRECT_AFTER_AUTH : next,
   };
 }
 
@@ -30,15 +62,28 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const loginWithProvider = (provider) => {
+    base44.auth.loginWithProvider(
+      provider,
+      createAuthCallbackTarget(oauthOnboardingTarget(next)),
+    );
+  };
 
   // Already signed in? Skip the form.
   useEffect(() => {
     base44.auth
       .isAuthenticated()
-      .then((authed) => {
-        if (authed) window.location.href = next;
+      .then(async (authed) => {
+        if (!authed) return;
+        setLoading(true);
+        try {
+          window.location.href = await authenticatedDestination(next);
+        } catch (authError) {
+          setError(getSafeErrorMessage(authError, "Your account could not be prepared. Please try again."));
+          setLoading(false);
+        }
       })
-      .catch(() => {});
+      .catch(() => setLoading(false));
   }, [next]);
 
   const handleSubmit = async (e) => {
@@ -47,24 +92,16 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      await base44.functions.invoke("claimCustomerJobs", {}).catch(() => null);
-      window.location.href = next;
+      window.location.href = await authenticatedDestination(next);
     } catch (err) {
-      setError(err.message || "Invalid email or password");
+      setError(getSafeErrorMessage(err, "Invalid email or password."));
       setLoading(false);
     }
   };
 
-  const PROVIDERS = [
-    { key: "google", label: "Continue with Google" },
-    { key: "microsoft", label: "Continue with Microsoft" },
-    { key: "facebook", label: "Continue with Facebook" },
-    { key: "apple", label: "Continue with Apple" },
-  ];
-
   return (
     <>
-    <SEO title="Log In | On The Run Electrics" description="Log in to your On The Run Electrics customer account to track repairs, approve quotes and manage invoices." canonical="/login" noindex />
+    <SEO title="Log In | On The Run Electrics" description="Log in to your On The Run Electrics customer account to track repairs, view invoices and manage bookings." canonical="/login" noindex />
     <AuthLayout
       icon={LogIn}
       title="Welcome back"
@@ -82,8 +119,8 @@ export default function Login() {
       <div className="mb-5 flex flex-col gap-2.5">
         <button
           type="button"
-          onClick={() => base44.auth.loginWithProvider("google", next)}
-          className="flex h-10 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
+          onClick={() => loginWithProvider("google")}
+          className="flex h-11 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
         >
           <GoogleIcon className="h-4 w-4 shrink-0" />
           <span className="flex-1 text-center">Continue with Google</span>
@@ -91,8 +128,8 @@ export default function Login() {
 
         <button
           type="button"
-          onClick={() => base44.auth.loginWithProvider("microsoft", next)}
-          className="flex h-10 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
+          onClick={() => loginWithProvider("microsoft")}
+          className="flex h-11 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
         >
           <span className="grid h-4 w-4 shrink-0 grid-cols-2 gap-[2px]">
             <span className="bg-[#F25022]" />
@@ -105,8 +142,8 @@ export default function Login() {
 
         <button
           type="button"
-          onClick={() => base44.auth.loginWithProvider("facebook", next)}
-          className="flex h-10 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
+          onClick={() => loginWithProvider("facebook")}
+          className="flex h-11 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
         >
           <span className="grid h-4 w-4 shrink-0 place-items-center rounded-sm bg-[#1877F2] text-[11px] font-bold leading-none text-white">f</span>
           <span className="flex-1 text-center">Continue with Facebook</span>
@@ -114,8 +151,8 @@ export default function Login() {
 
         <button
           type="button"
-          onClick={() => base44.auth.loginWithProvider("apple", next)}
-          className="flex h-10 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
+          onClick={() => loginWithProvider("apple")}
+          className="flex h-11 w-full items-center gap-3 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
         >
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16.8 12.45c-.03-3.04 2.48-4.5 2.59-4.57-1.41-2.06-3.61-2.35-4.39-2.38-1.87-.19-3.65 1.1-4.6 1.1-.94 0-2.4-1.07-3.95-1.04-2.03.03-3.9 1.18-4.95 3-2.11 3.66-.54 9.08 1.52 12.05 1 1.45 2.2 3.08 3.77 3.02 1.51-.06 2.08-.98 3.91-.98 1.82 0 2.34.98 3.94.95 1.63-.03 2.66-1.48 3.65-2.94 1.15-1.68 1.62-3.31 1.65-3.39-.04-.02-3.16-1.21-3.19-4.82ZM13.78 3.53c.83-1 1.39-2.39 1.24-3.78-1.2.05-2.65.8-3.51 1.8-.77.89-1.45 2.31-1.27 3.67 1.34.1 2.71-.68 3.54-1.69Z" />
@@ -134,7 +171,7 @@ export default function Login() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm" role="alert">
           {error}
         </div>
       )}

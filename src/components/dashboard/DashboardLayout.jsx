@@ -7,7 +7,6 @@ import { setUserContext } from "@/lib/logger";
 import SEO from "@/components/SEO";
 import PageLoader from "@/components/shared/PageLoader";
 import UnauthorizedState from "@/components/shared/UnauthorizedState";
-import InvoicePaymentReturnAlert from "@/components/shared/InvoicePaymentReturnAlert";
 
 export default function DashboardLayout() {
   const { user, isLoading } = useCurrentUser();
@@ -39,7 +38,6 @@ export default function DashboardLayout() {
     <>
     {dashboardSeo}
     <DashboardShell user={user}>
-      <InvoicePaymentReturnAlert />
       <Outlet context={{ user }} />
     </DashboardShell>
     </>

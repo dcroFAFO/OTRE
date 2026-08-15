@@ -4,18 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import LandingLogo from "@/components/landing/LandingLogo";
+import { safeNavigationHref } from "@/config/platformConfig";
 
 /** @param {{ heroRef?: React.RefObject<HTMLElement> }} _props */
 export default function LandingNav(_props) {
   const location = useLocation();
   const { data: { app, business }, isFetching } = usePlatformConfig();
-  const links = app.landing.navLinks
-    .filter((link) => typeof link?.href === "string" && typeof link?.label === "string" && link.href !== "/book")
-    .map((link) => ({
-      ...link,
-      label: link.href === "/blog" ? "News and Events" : link.label,
-      href: link.href.startsWith("#") && location.pathname !== "/" ? `/${link.href}` : link.href,
-    }));
+  const links = (Array.isArray(app?.landing?.navLinks) ? app.landing.navLinks : [])
+    .flatMap((link) => {
+      const href = safeNavigationHref(link?.href);
+      const label = typeof link?.label === "string" ? link.label.trim().slice(0, 120) : "";
+      if (!href || !label || href === "/book") return [];
+      const routedHref = href.startsWith("#") && location.pathname !== "/" ? `/${href}` : href;
+      const safeHref = safeNavigationHref(routedHref);
+      return safeHref ? [{ label: safeHref === "/blog" ? "News and Events" : label, href: safeHref }] : [];
+    });
 
   const isCurrent = (href) => href.startsWith("/") && !href.includes("#") && (location.pathname === href || (href !== "/" && location.pathname.startsWith(`${href}/`)));
 
@@ -35,7 +38,7 @@ export default function LandingNav(_props) {
               {link.label}
             </Link>
           ) : (
-            <a key={link.href} href={link.href} className="flex min-h-11 items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">{link.label}</a>
+            <a key={link.href} href={link.href} rel="noopener noreferrer" className="flex min-h-11 items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">{link.label}</a>
           ))}
         </nav>
 
@@ -62,7 +65,7 @@ export default function LandingNav(_props) {
                   {link.href.startsWith("/") ? (
                     <Link to={link.href} aria-current={isCurrent(link.href) ? "page" : undefined} className="flex min-h-12 items-center rounded-lg px-3 text-base font-semibold text-foreground hover:bg-secondary aria-[current=page]:bg-secondary">{link.label}</Link>
                   ) : (
-                    <a href={link.href} className="flex min-h-12 items-center rounded-lg px-3 text-base font-semibold text-foreground hover:bg-secondary">{link.label}</a>
+                    <a href={link.href} rel="noopener noreferrer" className="flex min-h-12 items-center rounded-lg px-3 text-base font-semibold text-foreground hover:bg-secondary">{link.label}</a>
                   )}
                 </SheetClose>
               ))}

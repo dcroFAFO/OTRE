@@ -1,0 +1,89 @@
+{
+  "name": "ContactVerificationChallenge",
+  "type": "object",
+  "properties": {
+    "challenge_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Opaque public challenge identifier."
+    },
+    "purpose": {
+      "type": "string",
+      "enum": ["guest_booking", "guest_claim"]
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["email", "sms"]
+    },
+    "destination_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the verified channel destination."
+    },
+    "contact_hash": {
+      "type": "string",
+      "description": "SHA-256 binding of normalized email and phone supplied with the challenge."
+    },
+    "code_hash": {
+      "type": "string",
+      "description": "Peppered SHA-256 hash of the one-time code."
+    },
+    "proof_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the proof returned once after verification."
+    },
+    "proof_reservation_id": {
+      "type": "string",
+      "description": "Successful unique ContactVerificationProof reservation."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "verified", "consumed", "expired", "locked"],
+      "default": "pending"
+    },
+    "attempt_count": {
+      "type": "number",
+      "default": 0
+    },
+    "last_attempt_id": {
+      "type": "string",
+      "description": "Observability pointer only; unique ContactVerificationAttempt records enforce the limit."
+    },
+    "max_attempts": {
+      "type": "number",
+      "default": 5
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proof_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "consumed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "consumed_by_operation_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "request_ip_hash": {
+      "type": "string",
+      "description": "Pseudonymous abuse-audit value. Challenge, attempt, and proof rows require a platform retention policy and scheduled purge after expiry/operational investigation windows."
+    }
+  },
+  "required": ["challenge_id", "purpose", "channel", "destination_hash", "contact_hash", "code_hash", "status", "expires_at"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

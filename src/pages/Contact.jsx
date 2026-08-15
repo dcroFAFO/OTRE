@@ -13,6 +13,7 @@ export default function Contact() {
   const { data: { business }, isFetching, isError, error, refetch } = usePlatformConfig();
   const links = businessContactLinks(business);
   const hours = businessHoursSummary(business);
+  const productId = new URLSearchParams(window.location.search).get("product");
   return (
     <>
       <SEO
@@ -38,6 +39,12 @@ export default function Contact() {
               Have a question about a repair, want to get a quote, or just need some advice about your electric scooter?
               We'd love to hear from you. Reach out via any of the options below or drop in during opening hours.
             </p>
+            {productId ? (
+              <div className="mt-5 rounded-lg border border-primary/25 bg-primary/10 p-4" role="status">
+                <p className="font-semibold">Product enquiry</p>
+                <p className="mt-1 text-sm text-muted-foreground">Mention product reference <code className="font-mono text-foreground">{productId}</code> when you call or email so the workshop can help quickly.</p>
+              </div>
+            ) : null}
             {isFetching ? <p className="mt-3 text-xs text-muted-foreground" role="status">Refreshing contact details...</p> : null}
             {isError ? <ErrorState className="mt-5" error={error} title="Current business details could not be refreshed" description="The fallback contact details are shown below. You can retry the refresh." onRetry={refetch} /> : null}
 

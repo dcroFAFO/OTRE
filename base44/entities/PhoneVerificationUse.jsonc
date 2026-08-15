@@ -1,0 +1,62 @@
+{
+  "name": "PhoneVerificationUse",
+  "type": "object",
+  "properties": {
+    "phone_verification_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique one-time reservation for a successful signup phone challenge."
+    },
+    "attempt_id": {
+      "type": "string",
+      "unique": true
+    },
+    "proof_id": {
+      "type": "string",
+      "unique": true
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone_e164": {
+      "type": "string"
+    },
+    "phone_hash": {
+      "type": "string"
+    },
+    "consumed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["reserved", "completed", "failed"],
+      "default": "reserved"
+    },
+    "reserved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "failure_code": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "phone_verification_id",
+    "attempt_id",
+    "phone_hash"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

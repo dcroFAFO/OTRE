@@ -1,39 +1,42 @@
 import React, { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bike, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Bike, Pencil, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
+import { BoundedDataNotice, EmptyState, ErrorState, NoResultsState, TableSkeleton } from "@/components/shared";
 import AssetEditDialog from "@/components/assets/AssetEditDialog";
-import { createScooter, deleteScooter, updateScooter } from "@/services/clientService";
+import { createScooter, updateScooter } from "@/services/clientService";
 import { getSafeErrorMessage } from "@/lib/errors";
+import { useEntityPages } from "@/hooks/useEntityPages";
+import { useClients } from "@/hooks/useClients";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const ASSET_FIELDS = ["make", "model", "year", "serial_number", "colour", "battery_voltage", "odometer_km", "last_service_date", "notes"];
+const ASSET_PAGE_SIZE = 100;
 
 export default function AssetManagement() {
   const queryClient = useQueryClient();
+  const { role } = useCurrentUser();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(/** @type {Record<string, any> | null} */ (null));
-  const [deletingId, setDeletingId] = useState(/** @type {string | null} */ (null));
 
-  const assetsQuery = useQuery({
+  const assetsQuery = useEntityPages({
     queryKey: ["assets"],
-    queryFn: () => base44.entities.Scooter.list("-updated_date", 300),
+    fetchPage: ({ limit, skip }) => base44.entities.Scooter.list("-updated_date", limit, skip),
+    pageSize: ASSET_PAGE_SIZE,
     staleTime: 30_000,
   });
-  const customersQuery = useQuery({
-    queryKey: ["assetCustomers"],
-    queryFn: () => base44.entities.Customer.list("", 300),
-    staleTime: 5 * 60_000,
-  });
-  const assets = /** @type {Array<Record<string, any>>} */ (assetsQuery.data || []);
+  const customersQuery = useClients(role);
+  const assetRecords = /** @type {Array<Record<string, any>>} */ (assetsQuery.data || []);
+  const assets = useMemo(() => assetRecords.filter((asset) => !asset.archived_at), [assetRecords]);
   const customers = /** @type {Array<Record<string, any>>} */ (customersQuery.data || []);
 
   const ownerName = useMemo(() => {
     const map = {};
     customers.forEach((customer) => {
+      if (customer.reference) map[customer.reference] = customer.full_name || customer.name;
       if (customer.customer_id) map[customer.customer_id] = customer.full_name || customer.name;
       map[customer.id] = customer.full_name || customer.name;
     });
@@ -56,28 +59,12 @@ export default function AssetManagement() {
     });
     try {
       if (data.id) await updateScooter(data.id, { ...fields, customer_id: data.customer_id || "" });
-      else await createScooter("", fields);
+      else await createScooter(data.customer_id, fields);
       await refresh();
       setEditing(null);
       toast.success(data.id ? "Asset updated" : "Asset added");
     } catch (error) {
       toast.error(getSafeErrorMessage(error, "The asset could not be saved."));
-    }
-  };
-
-  const handleDelete = async (asset) => {
-    if (deletingId) return;
-    const assetName = [asset.make, asset.model].filter(Boolean).join(" ") || "this asset";
-    if (!window.confirm(`Delete ${assetName}? This cannot be undone.`)) return;
-    setDeletingId(asset.id);
-    try {
-      await deleteScooter(asset.id);
-      await refresh();
-      toast.success("Asset deleted");
-    } catch (error) {
-      toast.error(getSafeErrorMessage(error, "The asset could not be deleted."));
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -87,6 +74,7 @@ export default function AssetManagement() {
         <div>
           <h1 className="font-heading text-2xl font-extrabold">Asset management</h1>
           <p className="text-sm text-muted-foreground">Browse, search, and edit scooters tracked for customers.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Linked assets are archived from the customer record so their service history remains intact.</p>
         </div>
         <Button type="button" size="touch" onClick={() => setEditing({})}><Plus aria-hidden="true" /> New asset</Button>
       </header>
@@ -99,6 +87,23 @@ export default function AssetManagement() {
         </label>
       ) : null}
 
+      <BoundedDataNotice
+        noun="assets"
+        loadedCount={assets.length}
+        hasMore={assetsQuery.hasNextPage}
+        isLoadingMore={assetsQuery.isFetchingNextPage}
+        onLoadMore={assetsQuery.fetchNextPage}
+        description={`Search currently covers ${assets.length} active assets from ${assetRecords.length} loaded records. Load more to include older assets.`}
+      />
+      <BoundedDataNotice
+        noun="customers"
+        loadedCount={customers.length}
+        hasMore={customersQuery.hasNextPage}
+        isLoadingMore={customersQuery.isFetchingNextPage}
+        onLoadMore={customersQuery.fetchNextPage}
+        description={`Owner names and the asset customer picker currently cover ${customers.length} loaded customers. Load more before assigning an older customer.`}
+      />
+
       {assetsQuery.error && assets.length ? <ErrorState title="Latest asset changes could not be loaded" description="Previously loaded assets remain visible." error={assetsQuery.error} onRetry={assetsQuery.refetch} /> : null}
       {customersQuery.error ? <ErrorState title="Asset owners could not be loaded" description="Scooter details remain available without customer names." error={customersQuery.error} onRetry={customersQuery.refetch} /> : null}
 
@@ -106,25 +111,32 @@ export default function AssetManagement() {
         <TableSkeleton rows={7} columns={6} label="Loading assets" />
       ) : assetsQuery.error && !assets.length ? (
         <ErrorState title="Assets could not be loaded" error={assetsQuery.error} onRetry={assetsQuery.refetch} />
+      ) : !assets.length && assetsQuery.hasNextPage ? (
+        <EmptyState
+          icon={Bike}
+          title="No active assets in the loaded records"
+          description="Older active assets may still exist. Load the next page to continue checking."
+          action={<Button type="button" onClick={() => assetsQuery.fetchNextPage()} disabled={assetsQuery.isFetchingNextPage}>{assetsQuery.isFetchingNextPage ? "Loading assets…" : "Load more assets"}</Button>}
+        />
       ) : !assets.length ? (
         <EmptyState icon={Bike} title="No assets are tracked yet" description="Add a scooter to make it available in customer and job workflows." action={<Button type="button" onClick={() => setEditing({})}><Plus /> New asset</Button>} />
       ) : !filtered.length ? (
         <NoResultsState title="No assets match this search" description="Clear the search to return to all tracked scooters." onClear={() => setSearch("")} />
       ) : (
-        <AssetResults assets={filtered} ownerName={ownerName} deletingId={deletingId} onEdit={setEditing} onDelete={handleDelete} />
+        <AssetResults assets={filtered} ownerName={ownerName} onEdit={setEditing} />
       )}
 
-      {editing ? <AssetEditDialog asset={editing} onSave={handleSave} onClose={() => setEditing(null)} /> : null}
+      {editing ? <AssetEditDialog asset={editing} customers={customers} customersLoading={customersQuery.isLoading} onSave={handleSave} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }
 
 /** @param {{ assets: Array<Record<string, any>>, ownerName: (asset: Record<string, any>) => string, deletingId: string | null, onEdit: (asset: Record<string, any>) => void, onDelete: (asset: Record<string, any>) => void }} props */
-function AssetResults({ assets, ownerName, deletingId, onEdit, onDelete }) {
+function AssetResults({ assets, ownerName, onEdit }) {
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
-        {assets.map((asset) => <AssetCard key={asset.id} asset={asset} owner={ownerName(asset)} deleting={deletingId === asset.id} onEdit={onEdit} onDelete={onDelete} />)}
+        {assets.map((asset) => <AssetCard key={asset.id} asset={asset} owner={ownerName(asset)} onEdit={onEdit} />)}
       </div>
       <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm lg:block">
         <table className="w-full text-sm">
@@ -151,9 +163,6 @@ function AssetResults({ assets, ownerName, deletingId, onEdit, onDelete }) {
                   <td className="px-4 py-3">{formatDate(asset.last_service_date)}</td>
                   <td className="px-2 py-2 text-right">
                     <Button type="button" variant="ghost" size="iconTouch" aria-label={`Edit ${name}`} onClick={() => onEdit({ ...asset })}><Pencil aria-hidden="true" /></Button>
-                    <Button type="button" variant="ghost" size="iconTouch" className="text-destructive hover:text-destructive" aria-label={`Delete ${name}`} disabled={Boolean(deletingId)} onClick={() => onDelete(asset)}>
-                      {deletingId === asset.id ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
-                    </Button>
                   </td>
                 </tr>
               );
@@ -166,7 +175,7 @@ function AssetResults({ assets, ownerName, deletingId, onEdit, onDelete }) {
 }
 
 /** @param {{ asset: Record<string, any>, owner: string, deleting: boolean, onEdit: (asset: Record<string, any>) => void, onDelete: (asset: Record<string, any>) => void }} props */
-function AssetCard({ asset, owner, deleting, onEdit, onDelete }) {
+function AssetCard({ asset, owner, onEdit }) {
   const name = assetName(asset);
   return (
     <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
@@ -180,12 +189,9 @@ function AssetCard({ asset, owner, deleting, onEdit, onDelete }) {
         <div><dt className="text-xs text-muted-foreground">Odometer</dt><dd className="mt-0.5">{asset.odometer_km != null ? `${asset.odometer_km} km` : "Not set"}</dd></div>
         <div><dt className="text-xs text-muted-foreground">Last service</dt><dd className="mt-0.5">{formatDate(asset.last_service_date)}</dd></div>
       </dl>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" size="touch" onClick={() => onEdit({ ...asset })}><Pencil /> Edit</Button>
-        <Button type="button" variant="outline" size="touch" className="text-destructive hover:text-destructive" disabled={deleting} onClick={() => onDelete(asset)}>
-          {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />} {deleting ? "Deleting..." : "Delete"}
-        </Button>
-      </div>
+       <div className="mt-4">
+         <Button type="button" variant="outline" size="touch" onClick={() => onEdit({ ...asset })}><Pencil /> Edit</Button>
+       </div>
     </article>
   );
 }

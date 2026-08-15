@@ -15,8 +15,9 @@
 //   - Or call getErrorHistory() from this module / the browser console
 //   - History is capped (HISTORY_LIMIT) and persisted to localStorage
 //
-// SAFETY: metadata is automatically redacted (passwords/tokens/keys/etc) and
-// a rate limiter prevents runaway logging loops from spamming the console.
+// SAFETY: metadata is automatically redacted (passwords/tokens/keys/etc), only
+// a minimal diagnostic subset survives a browser restart, and a rate limiter
+// prevents runaway logging loops from spamming the console.
 // =============================================================================
 
 const DEBUG_KEY = "otr_debug";
@@ -104,10 +105,29 @@ export function normalizeError(err) {
 }
 
 // ---- History, breadcrumbs, subscribers ------------------------------------------
+function toPersistedEntry(entry) {
+  return {
+    id: entry?.id || null,
+    timestamp: entry?.timestamp || null,
+    level: entry?.level || "error",
+    source: entry?.source || "app",
+    message: entry?.level === "warn" ? "Application warning" : "Application error",
+    route: typeof entry?.route === "string" ? entry.route.split(/[?#]/, 1)[0] : null,
+    userRole: entry?.userRole || null,
+    error: entry?.error ? {
+      name: entry.error.name || "Error",
+      status: entry.error.status || null,
+    } : null,
+  };
+}
+
 let history = [];
 try {
-  history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-  if (!Array.isArray(history)) history = [];
+  const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+  history = Array.isArray(stored) ? stored.slice(-HISTORY_LIMIT).map(toPersistedEntry) : [];
+  // Rewrite legacy entries so previously persisted stacks, metadata, browser
+  // details, and user identifiers do not remain indefinitely.
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 } catch {
   history = [];
 }
@@ -206,7 +226,7 @@ function emit(level, message, error, metadata = {}, source = "app") {
   if (level === "warn" || level === "error") {
     history.push(entry);
     if (history.length > HISTORY_LIMIT) history = history.slice(-HISTORY_LIMIT);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* storage full — keep in memory */ }
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history.map(toPersistedEntry))); } catch { /* storage full — keep in memory */ }
     notify();
   }
   return entry;

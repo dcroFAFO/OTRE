@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { jsPDF } from 'npm:jspdf@4.2.1';
 
 const DEFAULT_BUSINESS = {
@@ -10,8 +10,21 @@ const DEFAULT_BUSINESS = {
   abn: "",
 };
 
+const CANONICAL_ORIGIN = "https://ontherunelectrics.com.au";
+
 const money = (currency, value) => `${currency} ${(Number(value) || 0).toFixed(2)}`;
 const clean = (value, fallback = "") => String(value || fallback || "").trim();
+const moneyMinor = (value) => Math.max(0, Math.round((Number(value) || 0) * 100));
+const brisbaneDate = (value) => {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(value));
+  const pick = (type) => parts.find((part) => part.type === type)?.value || "";
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+};
 const lineTotal = (item) => {
   const base = (Number(item.qty) || 1) * (Number(item.unit_price) || 0);
   const tax = base * ((Number(item.tax_rate) || 0) / 100);
@@ -74,14 +87,14 @@ function normalizeLineItems(items, usageRecords = []) {
       category,
       source_usage_id: clean(item.source_usage_id),
     };
-    normalised.lineTotal = lineTotal(normalised);
-    return normalised;
+    return { ...normalised, lineTotal: lineTotal(normalised) };
   });
 }
 
-function buildLineItems({ invoiceDraft, quote, usageRecords }) {
+function buildLineItems({ invoiceDraft, invoice, quote, usageRecords }) {
   const draftItems = invoiceDraft?.lineItems || invoiceDraft?.line_items;
   if (Array.isArray(draftItems) && draftItems.length > 0) return normalizeLineItems(draftItems, usageRecords);
+  if (Array.isArray(invoice?.line_items) && invoice.line_items.length > 0) return normalizeLineItems(invoice.line_items, usageRecords);
 
   const partItems = (usageRecords || [])
     .filter((usage) => !String(usage.item_id || "").startsWith("labour-"))
@@ -256,6 +269,7 @@ async function loadInvoiceContext(base44, jobId, invoiceId) {
     const invoices = await base44.asServiceRole.entities.Invoice.filter({ job_id: job.id }, "-created_date", 1);
     invoice = invoices[0] || null;
   }
+  if (invoice && invoice.job_id !== job.id) return { error: "Invoice does not belong to this job", status: 409 };
 
   const quotes = await base44.asServiceRole.entities.Quote.filter({ job_id: job.id }, "-created_date", 1);
   const primaryUsage = await base44.asServiceRole.entities.InventoryUsage.filter({ job_id: job.id });
@@ -273,7 +287,6 @@ async function loadInvoiceContext(base44, jobId, invoiceId) {
 
 function validateInvoiceData(job, lineItems) {
   if (!clean(job.customer_name)) return "Invoice could not be generated. Missing customer name.";
-  if (!clean(job.customer_email)) return "Missing customer email.";
   if (!clean(job.reference || job.job_id || job.id)) return "Invoice could not be generated. Missing job/reference number.";
   if (!lineItems.length) return "No billing line items found.";
   const invalidItem = lineItems.find((item) => {
@@ -288,16 +301,21 @@ function validateInvoiceData(job, lineItems) {
 function invoicePayload(job, invoice, invoiceDraft, lineItems) {
   const currency = invoice?.currency || invoiceDraft?.currency || "AUD";
   const amount = lineItems.reduce((sum, item) => sum + lineTotal(item), 0);
+  const status = invoice?.status === "outstanding" ? "issued" : invoice?.status || "draft";
   return {
     invoice_id: invoice?.invoice_id || invoiceDraft?.invoice_id || "",
     quote_id: invoice?.quote_id || "",
     job_id: job.id,
+    customer_account_id: job.customer_account_id || "",
     customer_id: job.customer_id || "",
     number: invoice?.number || invoiceDraft?.number || `INV-${Date.now().toString().slice(-6)}`,
     amount,
+    amount_minor: moneyMinor(amount),
     currency,
-    status: invoice?.status || "outstanding",
+    status,
     invoiceVisibility: invoice?.invoiceVisibility || "internal",
+    issued_at: invoice?.issued_at || invoice?.invoiceSentAt || "",
+    due_date: invoice?.due_date || "",
     internalCostingNotes: invoiceDraft?.internalCostingNotes || invoice?.internalCostingNotes || "",
     customer_notes: invoiceDraft?.customerNotes ?? invoice?.customer_notes ?? "",
     line_items: lineItems.map((item) => ({
@@ -325,165 +343,174 @@ async function persistInvoice(base44, job, invoice, invoiceDraft, lineItems) {
 
   await base44.asServiceRole.entities.Job.update(job.id, {
     invoice_id: saved.id,
-    payment_status: saved.status || "outstanding",
+    payment_status: saved.status === "outstanding" ? "issued" : saved.status || "draft",
   });
 
   return saved;
 }
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL = "On The Run Electrics <info@ontherunelectrics.com.au>";
-
-function getRequestOrigin(req) {
-  const origin = req.headers.get("origin");
-  if (origin) return origin;
-  const referer = req.headers.get("referer");
-  if (referer) { try { return new URL(referer).origin; } catch (_) {} }
-  return "";
+function requestId(req) {
+  return clean(req.headers.get("x-request-id"), crypto.randomUUID()).slice(0, 100);
 }
 
-function invoiceEmailTemplate(content) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
-<div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">On The Run Electrics</h1></div>
-<div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
-<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">On The Run Electrics · Woolloongabba, Brisbane<br>info@ontherunelectrics.com.au · 0415 505 908</p>
-</body></html>`;
+async function requireAdmin(base44) {
+  const user = await base44.auth.me().catch(() => null);
+  if (!user) return { error: "Unauthorized", status: 401 };
+  if (user.role !== "admin") return { error: "Forbidden", status: 403 };
+  return { user };
 }
 
-async function sendInvoiceEmailWithPdf({ to, subject, html, pdfBase64, fileName }) {
-  if (!RESEND_API_KEY) { console.warn("[invoicePdfActions] RESEND_API_KEY not set — email not sent"); return false; }
-  if (!to) { console.warn("[invoicePdfActions] no email recipient — email not sent"); return false; }
+async function enqueueInvoiceIssued(base44, invoice, job, issuedAt) {
+  const db = base44.asServiceRole.entities;
+  const eventKey = `invoice_issued:${invoice.id}:${issuedAt}`;
+  const existing = await db.NotificationEvent.filter({ event_key: eventKey }, "-created_date", 1).catch(() => []);
+  if (existing[0]) return existing[0];
+
+  const customer = job.customer_account_id
+    ? await db.Customer.get(job.customer_account_id).catch(() => null)
+    : null;
+  const payload = {
+    event_key: eventKey,
+    related_entity_type: "Invoice",
+    related_entity_id: invoice.id,
+    job_id: job.id,
+    customer_id: job.customer_id || "",
+    customer_account_id: job.customer_account_id || "",
+    recipient_user_id: customer?.user_id || "",
+    event_version: issuedAt,
+    event_data: {
+      invoice_id: invoice.id,
+      portal_url: `${CANONICAL_ORIGIN}/portal`,
+      due_date: invoice.due_date,
+    },
+    source: "manual",
+    status: "pending",
+    occurred_at: issuedAt,
+  };
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [to],
-        subject,
-        html,
-        attachments: [{ filename: fileName, content: pdfBase64 }],
-      }),
-    });
-    if (!res.ok) { console.error("[invoicePdfActions] invoice email failed:", await res.text()); return false; }
-    return true;
-  } catch (e) { console.error("[invoicePdfActions] invoice email error:", e.message); return false; }
+    return await db.NotificationEvent.create(payload);
+  } catch {
+    const raced = await db.NotificationEvent.filter({ event_key: eventKey }, "-created_date", 1).catch(() => []);
+    if (raced[0]) return raced[0];
+    throw new Error("Invoice notification could not be queued.");
+  }
 }
 
 Deno.serve(async (req) => {
-  const requestMeta = { fn: "invoicePdfActions" };
+  const request = requestId(req);
+  const requestMeta: Record<string, string> = { fn: "invoicePdfActions", request };
   try {
+    if (req.method !== "POST") return Response.json({ error: "Use POST for this action.", request_id: request }, { status: 405 });
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    const isStaff = ["admin", "employee", "technician", "staff"].includes(user.role) || user.is_customer === false || user.data?.is_customer === false;
-    if (!isStaff) return Response.json({ error: "Forbidden" }, { status: 403 });
+    const auth = await requireAdmin(base44);
+    if (auth.error) return Response.json({ error: auth.error, request_id: request }, { status: auth.status });
 
-    const { action, jobId, invoiceId, invoiceDraft = null, notes = "", regenerateCount = 0 } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const action = clean(body.action).slice(0, 40);
+    const jobId = clean(body.jobId).slice(0, 120);
+    const invoiceId = clean(body.invoiceId || body.invoiceDraft?.invoiceId).slice(0, 120);
+    const invoiceDraft = body.invoiceDraft && typeof body.invoiceDraft === "object" ? body.invoiceDraft : null;
+    const notes = clean(body.notes).slice(0, 5000);
+    const regenerateCount = Math.max(0, Math.min(100, Number(body.regenerateCount) || 0));
     requestMeta.action = action;
     requestMeta.jobId = jobId;
-    if (!action || !jobId) return Response.json({ error: "action and jobId are required" }, { status: 400 });
+    if (!action || !jobId) return Response.json({ error: "action and jobId are required", request_id: request }, { status: 400 });
+
+    const supported = new Set(["preview", "generate", "regenerate", "issue", "email"]);
+    if (!supported.has(action)) return Response.json({ error: "Unknown invoice action.", request_id: request }, { status: 400 });
 
     const business = await getBusiness(base44);
-    const context = await loadInvoiceContext(base44, jobId, invoiceId || invoiceDraft?.invoiceId);
-    if (context.error) return Response.json({ error: context.error }, { status: context.status });
+    const context = await loadInvoiceContext(base44, jobId, invoiceId);
+    if (context.error) return Response.json({ error: context.error, request_id: request }, { status: context.status });
     const { job, invoice, quote, usageRecords } = context;
-    const lineItems = buildLineItems({ invoiceDraft, quote, usageRecords });
+    const lineItems = invoice && ["issued", "outstanding"].includes(invoice.status)
+      ? normalizeLineItems(invoice.line_items || [], usageRecords)
+      : buildLineItems({ invoiceDraft, invoice, quote, usageRecords });
     const validationError = validateInvoiceData(job, lineItems);
-    if (validationError) return Response.json({ error: validationError }, { status: 400 });
+    if (validationError) return Response.json({ error: validationError, request_id: request }, { status: 400 });
 
     const previewInvoice = invoicePayload(job, invoice, invoiceDraft, lineItems);
-    let pdfBase64;
-    try {
-      pdfBase64 = generatePdf({ business, job, invoice: previewInvoice, lineItems, notes, regenerateCount });
-    } catch (pdfError) {
-      console.error("[invoicePdfActions] PDF generation failed", JSON.stringify({ ...requestMeta, message: pdfError.message, stack: pdfError.stack }));
-      return Response.json({ error: "PDF generation failed." }, { status: 500 });
-    }
-
     const fileName = `${previewInvoice.number || "tax-invoice"}-${job.reference || job.id}.pdf`.replace(/[^a-zA-Z0-9._-]/g, "-");
 
     if (["preview", "generate", "regenerate"].includes(action)) {
-      return Response.json({ pdfBase64, fileName, invoiceNumber: previewInvoice.number, customerEmail: job.customer_email || "", lineItems });
+      try {
+        const pdfBase64 = generatePdf({ business, job, invoice: previewInvoice, lineItems, notes, regenerateCount });
+        return Response.json({ pdfBase64, fileName, invoiceNumber: previewInvoice.number, customerEmail: job.customer_email || "", lineItems, request_id: request });
+      } catch (pdfError) {
+        console.error("[invoicePdfActions] PDF generation failed", JSON.stringify({ ...requestMeta, message: pdfError?.message || String(pdfError) }));
+        return Response.json({ error: "PDF generation failed.", request_id: request }, { status: 500 });
+      }
     }
 
-    if (action === "email") {
-      let savedInvoice;
-      try {
-        savedInvoice = await persistInvoice(base44, job, invoice, invoiceDraft, lineItems);
-      } catch (persistError) {
-        console.error("[invoicePdfActions] invoice persistence failed", JSON.stringify({ ...requestMeta, message: persistError.message, stack: persistError.stack }));
-        return Response.json({ error: "Invoice could not be generated." }, { status: 500 });
-      }
+    if (invoice && ["paid", "refunded", "void"].includes(invoice.status)) {
+      return Response.json({ error: "Paid, refunded, or void invoices cannot be issued.", request_id: request }, { status: 409 });
+    }
+    if (Number(previewInvoice.amount || 0) <= 0) {
+      return Response.json({ error: "Invoice amount must be greater than zero.", request_id: request }, { status: 400 });
+    }
 
-      const now = new Date().toISOString();
-      const visibleInvoice = await base44.asServiceRole.entities.Invoice.update(savedInvoice.id, {
-        invoiceVisibility: "customer_visible",
-        invoiceVisibleAt: savedInvoice.invoiceVisibleAt || now,
-        invoiceSentAt: savedInvoice.invoiceSentAt || now,
-        invoiceCustomerNotificationSentAt: now,
-      });
-      await base44.asServiceRole.entities.Job.update(job.id, {
-        invoice_id: savedInvoice.id,
-        payment_status: savedInvoice.status || "outstanding",
-        status: ["ready_for_pickup", "paid", "completed"].includes(job.status) ? job.status : "invoice_sent",
-      });
+    let savedInvoice = invoice;
+    if (!savedInvoice || savedInvoice.status === "draft") {
+      try {
+        savedInvoice = await persistInvoice(base44, job, savedInvoice, invoiceDraft, lineItems);
+      } catch (persistError) {
+        console.error("[invoicePdfActions] invoice persistence failed", JSON.stringify({ ...requestMeta, message: persistError?.message || String(persistError) }));
+        return Response.json({ error: "Invoice could not be generated.", request_id: request }, { status: 500 });
+      }
+    }
+
+    if (!["draft", "issued", "outstanding"].includes(savedInvoice.status)) {
+      return Response.json({ error: "This invoice cannot be issued.", request_id: request }, { status: 409 });
+    }
+
+    const now = new Date().toISOString();
+    const issuedAt = savedInvoice.issued_at || savedInvoice.invoiceSentAt || now;
+    const firstIssue = savedInvoice.status !== "issued" || savedInvoice.invoiceVisibility !== "customer_visible";
+    const visibleInvoice = await base44.asServiceRole.entities.Invoice.update(savedInvoice.id, {
+      customer_account_id: job.customer_account_id || "",
+      amount_minor: moneyMinor(savedInvoice.amount),
+      status: "issued",
+      invoiceVisibility: "customer_visible",
+      issued_at: issuedAt,
+      due_date: brisbaneDate(issuedAt),
+      invoiceVisibleAt: savedInvoice.invoiceVisibleAt || issuedAt,
+      invoiceSentAt: issuedAt,
+    });
+    await base44.asServiceRole.entities.Job.update(job.id, {
+      invoice_id: visibleInvoice.id,
+      payment_status: "issued",
+      status: "invoice_outstanding",
+    });
+
+    const notification = await enqueueInvoiceIssued(base44, visibleInvoice, job, issuedAt);
+    if (firstIssue) {
       await base44.asServiceRole.entities.AuditEvent.create({
-        event_type: "invoice_finalised",
-        job_id: job.job_id || job.id,
+        event_type: "invoice_issued",
+        job_id: job.id,
         customer_id: job.customer_id || "",
-        actor_id: user.id,
-        actor_name: user.full_name || "System",
-        actor_role: user.role || "system",
-        summary: "Tax invoice finalised and made visible to the customer",
+        customer_account_id: job.customer_account_id || "",
+        request_id: request,
+        outcome: "succeeded",
+        actor_id: auth.user.id,
+        actor_name: auth.user.full_name || "Administrator",
+        actor_role: "admin",
+        previous_value: savedInvoice.status || "draft",
+        new_value: "issued",
+        summary: "Tax invoice issued to the customer and due on receipt.",
         visibility: "customer",
       });
-
-      // Email the PDF directly to the customer so they have a copy attached.
-      const origin = getRequestOrigin(req);
-      const portalUrl = origin ? `${origin}/portal` : "https://ontherunelectrics.com.au/portal";
-      const amount = `${visibleInvoice.currency || "AUD"} ${(Number(visibleInvoice.amount) || 0).toFixed(2)}`;
-      const emailSubject = `Invoice ${visibleInvoice.number || ""} — ${amount}`;
-      const emailHtml = invoiceEmailTemplate(
-        `<p>Hi ${clean(job.customer_name, "there")},</p>` +
-        `<p>Your invoice is ready. Please review and pay online at your convenience.</p>` +
-        `<p style="background:#e0f2fe;padding:16px;border-radius:8px;text-align:center;"><strong>Invoice:</strong> ${visibleInvoice.number || "N/A"}<br><strong>Amount:</strong> ${amount}</p>` +
-        `<p style="margin-top:24px;"><a href="${portalUrl}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">View & Pay Invoice</a></p>` +
-        `<p style="margin-top:16px;font-size:13px;color:#64748b;">A copy of your tax invoice is attached to this email for your records.</p>`
-      );
-      const emailSent = await sendInvoiceEmailWithPdf({
-        to: job.customer_email,
-        subject: emailSubject,
-        html: emailHtml,
-        pdfBase64,
-        fileName,
-      });
-
-      // Mark the dedup key so sendNotification doesn't send a duplicate email without the PDF.
-      if (emailSent) {
-        await base44.asServiceRole.entities.AuditEvent.create({
-          event_type: `notif:invoice_issued:${visibleInvoice.id}:email`,
-          summary: `Invoice email with PDF attachment sent to ${job.customer_email}`,
-          visibility: "system",
-        }).catch(() => {});
-      }
-
-      if (!savedInvoice.invoiceSentAt || savedInvoice.invoiceVisibility !== "customer_visible") {
-        await base44.asServiceRole.entities.NotificationEvent.create({
-          event_key: "invoice.issued", related_entity_type: "Invoice", related_entity_id: visibleInvoice.id, job_id: job.id,
-          customer_id: job.customer_id || "", recipient_user_id: job.customer_user_id || "",
-          event_version: visibleInvoice.invoiceSentAt || visibleInvoice.updated_date || String(Date.now()),
-          event_data: { customer_name: job.customer_name, customer_email: job.customer_email, customer_phone: job.customer_phone_e164, message: `Invoice ${visibleInvoice.number || ""} is now available in your portal.` },
-          source: "automatic", status: "pending", occurred_at: now,
-        });
-      }
-      return Response.json({ sent: true, emailSent, fileName, invoice: visibleInvoice });
     }
 
-    return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    return Response.json({
+      queued: true,
+      notification_event_id: notification.id,
+      fileName,
+      invoice: visibleInvoice,
+      portal_url: `${CANONICAL_ORIGIN}/portal`,
+      request_id: request,
+    });
   } catch (error) {
-    console.error("[invoicePdfActions] request failed", JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    return Response.json({ error: "Invoice could not be generated." }, { status: 500 });
+    console.error("[invoicePdfActions] request failed", JSON.stringify({ ...requestMeta, message: error?.message || String(error) }));
+    return Response.json({ error: "Invoice could not be generated.", request_id: request }, { status: 500 });
   }
 });

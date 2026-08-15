@@ -1,0 +1,42 @@
+{
+  "name": "PhoneVerificationAttempt",
+  "type": "object",
+  "properties": {
+    "attempt_key": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique verification id plus attempt sequence, used as an atomic attempt reservation."
+    },
+    "phone_verification_id": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "request_ip_hash": {
+      "type": "string"
+    },
+    "attempted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "matched": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "attempt_key",
+    "phone_verification_id",
+    "sequence",
+    "attempted_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

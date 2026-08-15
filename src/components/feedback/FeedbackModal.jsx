@@ -27,10 +27,11 @@ export default function FeedbackModal({ open, onClose, user }) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [submissionKey, setSubmissionKey] = useState(() => crypto.randomUUID());
 
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setErrors((e) => ({ ...e, [k]: undefined })); };
 
-  const reset = () => { setForm(EMPTY); setFile(null); setErrors({}); setDone(false); setSubmitError(""); };
+  const reset = () => { setForm(EMPTY); setFile(null); setErrors({}); setDone(false); setSubmitError(""); setSubmissionKey(crypto.randomUUID()); };
   const close = () => {
     if (submitting) return;
     onClose();
@@ -66,15 +67,26 @@ export default function FeedbackModal({ open, onClose, user }) {
     setSubmitting(true);
     setSubmitError("");
     try {
-      let attachment = "";
+      let attachment_id = "";
       if (file) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        attachment = file_url;
+        const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+        const finalized = await base44.functions.invoke("attachmentActions", {
+          action: "finalize",
+          file_uri,
+          file_name: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          kind: "feedback_evidence",
+          visibility: "internal",
+          description: "Authenticated app feedback evidence",
+        });
+        attachment_id = finalized.data?.data?.attachment?.id || "";
       }
       addBreadcrumb("feedback:submit", { type: form.feedback_type });
       await base44.functions.invoke("submitFeedback", {
         ...form,
-        attachment,
+        idempotency_key: `feedback:${submissionKey}`,
+        attachment_id,
         page_context: window.location.href,
         device_context: deviceContext(),
         app_context: navigator.userAgent,

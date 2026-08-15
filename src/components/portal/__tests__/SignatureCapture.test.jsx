@@ -4,20 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  attachmentCreate: vi.fn(),
-  attachmentFilter: vi.fn(),
-  uploadFile: vi.fn(),
+  invoke: vi.fn(),
+  uploadPrivateFile: vi.fn(),
 }));
 
 vi.mock("@/api/base44Client", () => ({
   base44: {
-    entities: {
-      Attachment: {
-        create: mocks.attachmentCreate,
-        filter: mocks.attachmentFilter,
-      },
-    },
-    integrations: { Core: { UploadFile: mocks.uploadFile } },
+    functions: { invoke: mocks.invoke },
+    integrations: { Core: { UploadPrivateFile: mocks.uploadPrivateFile } },
   },
 }));
 
@@ -42,9 +36,12 @@ function renderSignature(onSigned = vi.fn()) {
 
 describe("SignatureCapture", () => {
   beforeEach(() => {
-    mocks.attachmentCreate.mockReset().mockResolvedValue({ id: "signature-1" });
-    mocks.attachmentFilter.mockReset().mockResolvedValue([]);
-    mocks.uploadFile.mockReset().mockResolvedValue({ file_url: "https://files.example.test/signature.txt" });
+    mocks.invoke.mockReset().mockImplementation((_name, payload) => {
+      if (payload?.action === "list") return Promise.resolve({ data: { data: { items: [] } } });
+      if (payload?.action === "finalize") return Promise.resolve({ data: { data: { attachment: { id: "signature-1" } } } });
+      return Promise.reject(new Error(`Unexpected attachment action: ${payload?.action}`));
+    });
+    mocks.uploadPrivateFile.mockReset().mockResolvedValue({ file_uri: "private://signature.txt" });
   });
 
   it("provides a keyboard-accessible typed signature with consent metadata", async () => {
@@ -56,21 +53,23 @@ describe("SignatureCapture", () => {
     await user.click(screen.getByLabelText(/I confirm this signature is mine/i));
     await user.click(screen.getByRole("button", { name: "Save signature" }));
 
-    await waitFor(() => expect(mocks.attachmentCreate).toHaveBeenCalledOnce());
-    expect(mocks.uploadFile).toHaveBeenCalledWith({ file: expect.objectContaining({ name: "completed-work-signature-job-1-typed.txt", type: "text/plain" }) });
-    expect(mocks.attachmentCreate).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(onSigned).toHaveBeenCalledWith("signature-1"));
+    expect(mocks.uploadPrivateFile).toHaveBeenCalledWith({ file: expect.objectContaining({ name: "completed-work-signature-job-1-typed.txt", type: "text/plain" }) });
+    expect(mocks.invoke).toHaveBeenCalledWith("attachmentActions", expect.objectContaining({
+      action: "finalize",
+      file_uri: "private://signature.txt",
       signature_key: "completed-work",
       signature_idempotency_key: "job-1:completed-work",
       signature_method: "typed",
       signed_name: "Jamie Rider",
       consent_version: "completed-work-v1",
     }));
-    expect(onSigned).toHaveBeenCalledWith("https://files.example.test/signature.txt");
+    expect(onSigned).toHaveBeenCalledWith("signature-1");
   });
 
   it("clears the saving guard and presents a safe retryable error", async () => {
     const user = userEvent.setup();
-    mocks.uploadFile.mockRejectedValue({ response: { status: 500, data: { error: "secret backend detail" } } });
+    mocks.uploadPrivateFile.mockRejectedValue({ response: { status: 500, data: { error: "secret backend detail" } } });
     renderSignature();
 
     await user.click(await screen.findByRole("tab", { name: "Type" }));
@@ -83,4 +82,3 @@ describe("SignatureCapture", () => {
     expect(screen.queryByText("secret backend detail")).not.toBeInTheDocument();
   });
 });
-

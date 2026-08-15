@@ -32,15 +32,18 @@ export default function SignatureCapture({ job, signatureKey, title, description
 
   const signaturesQuery = useQuery({
     queryKey: ["jobSignatures", job.id, signatureKey],
-    queryFn: () => base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50),
+    queryFn: async () => {
+      const response = await base44.functions.invoke("attachmentActions", { action: "list", job_id: job.id });
+      return response.data?.data?.items || [];
+    },
     enabled: !!job?.id,
   });
   const signatures = signaturesQuery.data || [];
   const existing = signatures.find((item) => item.signature_key === signatureKey || item.file_name === fileName);
 
   useEffect(() => {
-    if (existing?.file_url) onSigned?.(existing.file_url);
-  }, [existing?.file_url, onSigned]);
+    if (existing?.id) onSigned?.(existing.id);
+  }, [existing?.id, onSigned]);
 
   const getPoint = (event) => {
     const canvas = canvasRef.current;
@@ -122,22 +125,23 @@ export default function SignatureCapture({ job, signatureKey, title, description
     setSaving(true);
     setSaveError("");
     try {
-      const current = await base44.entities.Attachment.filter({ job_id: job.id }, "-created_date", 50);
+      const currentResponse = await base44.functions.invoke("attachmentActions", { action: "list", job_id: job.id });
+      const current = currentResponse.data?.data?.items || [];
       const duplicate = current.find((item) => item.signature_key === signatureKey || item.file_name === fileName);
       if (duplicate) {
         await queryClient.invalidateQueries({ queryKey: ["jobSignatures", job.id, signatureKey] });
-        onSigned?.(duplicate.file_url);
+        onSigned?.(duplicate.id);
         return;
       }
 
       const signedAt = new Date().toISOString();
       const file = await createSignatureFile(signedAt);
-      const upload = await base44.integrations.Core.UploadFile({ file });
-      if (!upload?.file_url) throw new Error("Signature upload did not return a file.");
-      await base44.entities.Attachment.create({
+      const upload = await base44.integrations.Core.UploadPrivateFile({ file });
+      if (!upload?.file_uri) throw new Error("Signature upload did not return a private file.");
+      const response = await base44.functions.invoke("attachmentActions", {
+        action: "finalize",
         job_id: job.id,
-        customer_id: job.customer_id || "",
-        file_url: upload.file_url,
+        file_uri: upload.file_uri,
         file_name: file.name,
         mime_type: file.type,
         file_size: file.size,
@@ -154,9 +158,25 @@ export default function SignatureCapture({ job, signatureKey, title, description
         signed_at: signedAt,
       });
       await queryClient.invalidateQueries({ queryKey: ["jobSignatures", job.id, signatureKey] });
-      onSigned?.(upload.file_url);
+      onSigned?.(response.data?.data?.attachment?.id);
     } catch (caught) {
       setSaveError(getSafeErrorMessage(caught, "Your signature could not be saved. Please try again."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openExisting = async () => {
+    if (!existing?.id || saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const response = await base44.functions.invoke("attachmentActions", { action: "download", attachment_id: existing.id });
+      const signedUrl = response.data?.data?.signed_url;
+      if (!signedUrl) throw new Error("Signature download link was not returned.");
+      window.location.assign(signedUrl);
+    } catch (caught) {
+      setSaveError(getSafeErrorMessage(caught, "The signature record could not be opened."));
     } finally {
       setSaving(false);
     }
@@ -180,7 +200,7 @@ export default function SignatureCapture({ job, signatureKey, title, description
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span>{existing.signature_method === "typed" ? "Typed signature" : "Signature"} saved{existing.signed_name ? ` by ${existing.signed_name}` : ""}.</span>
-            <a href={existing.file_url} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">View record</a>
+            <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={() => void openExisting()} disabled={saving}>View record</Button>
           </AlertDescription>
         </Alert>
       ) : null}

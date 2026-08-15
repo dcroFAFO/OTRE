@@ -1,5 +1,3 @@
-import { CreditCard, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import StatusPill from "@/components/shared/StatusPill";
 import RewardPicker from "@/components/portal/rewards/RewardPicker";
 import { cn } from "@/lib/utils";
@@ -39,8 +37,6 @@ function InvoiceLineItems({ items, currency }) {
  *  invoice: Record<string, any>,
  *  userId?: string,
  *  onChanged?: () => void,
- *  onPay?: () => void | Promise<void>,
- *  paymentPending?: boolean,
  *  showRewards?: boolean,
  *  className?: string
  * }} props
@@ -49,8 +45,6 @@ export default function CustomerInvoiceCard({
   invoice,
   userId,
   onChanged,
-  onPay,
-  paymentPending = false,
   showRewards = true,
   className,
 }) {
@@ -65,7 +59,7 @@ export default function CustomerInvoiceCard({
           <h3 className="truncate text-sm font-semibold">{invoice.number ? `Invoice ${invoice.number}` : "Invoice"}</h3>
           {invoice.paid_date ? <p className="mt-1 text-xs text-muted-foreground">Paid {new Date(invoice.paid_date).toLocaleDateString("en-AU")}</p> : null}
         </div>
-        <StatusPill value={invoice.status} kind="payment" />
+        <StatusPill value={["issued", "unpaid"].includes(invoice.status) ? "outstanding" : invoice.status} kind="payment" />
       </div>
 
       {invoice.line_items?.length ? <InvoiceLineItems items={invoice.line_items} currency={currency} /> : null}
@@ -77,13 +71,7 @@ export default function CustomerInvoiceCard({
 
       {showRewards && userId && isPayable ? <RewardPicker invoice={invoice} userId={userId} onChanged={onChanged} /> : null}
 
-      {onPay && isPayable ? (
-        <Button type="button" size="touch" className="w-full gap-2 bg-emerald-700 text-white hover:bg-emerald-800" disabled={paymentPending} onClick={() => void onPay()}>
-          {paymentPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CreditCard className="h-4 w-4" aria-hidden="true" />}
-          {paymentPending ? "Starting secure checkout..." : "Pay securely with Stripe"}
-        </Button>
-      ) : null}
+      {isPayable ? <p className="text-xs text-muted-foreground">Due on receipt. Contact the workshop to arrange payment.</p> : null}
     </article>
   );
 }
-

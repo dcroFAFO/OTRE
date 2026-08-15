@@ -5,7 +5,7 @@ import RequireCapability from "@/components/auth/RequireCapability";
 import ActivityLogFilters, { EMPTY_ACTIVITY_FILTERS } from "@/components/admin/activity/ActivityLogFilters";
 import ActivityLogTable from "@/components/admin/activity/ActivityLogTable";
 import { listAllAudit } from "@/services/auditService";
-import { CAPABILITIES } from "@/config/roles";
+import { CAPABILITIES, hasCapability } from "@/config/roles";
 import { Activity } from "lucide-react";
 import { subDays, startOfDay, isAfter } from "date-fns";
 import SEO from "@/components/SEO";
@@ -14,10 +14,12 @@ import { EmptyState, ErrorState, NoResultsState, PageLoader, TableSkeleton } fro
 export default function AdminActivityLog() {
   const { user, isLoading } = useCurrentUser();
   const [filters, setFilters] = useState(EMPTY_ACTIVITY_FILTERS);
+  const canViewLog = hasCapability(user?.role, CAPABILITIES.LOG_VIEW);
 
   const { data: events = [], isLoading: loadingEvents, error, refetch } = useQuery({
     queryKey: ["adminActivityLog"],
     queryFn: () => listAllAudit(1000),
+    enabled: canViewLog,
   });
 
   const actors = useMemo(

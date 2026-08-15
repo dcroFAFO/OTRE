@@ -1,43 +1,74 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.41";
 
 // One-time migration: copies asset-specific fields from job.intake to the
 // matching Scooter record, then clears job.intake. Admin-only.
 // Matching priority: job.asset_id → make/model from intake/booking.
 
+type IntakeRecord = {
+  [key: string]: unknown;
+  battery_condition?: string;
+  physical_condition?: string;
+  accessories_received?: unknown;
+  powers_on?: boolean;
+  initial_issue_notes?: string;
+  intake_by_name?: string;
+  intake_date?: string;
+};
+
+type ScooterUpdates = {
+  serial_number?: string;
+  battery_voltage?: string;
+  odometer_km?: number;
+  intake?: IntakeRecord;
+};
+
+type MigrationError = { job_id: string; error: string };
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function cleanText(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || "").trim().toLowerCase();
 }
 
 function scooterMatches(scooter, make, model, serial) {
   const sSerial = cleanText(scooter.serial_number);
   if (serial && sSerial && sSerial === cleanText(serial)) return true;
-  return !!cleanText(model) && cleanText(scooter.make) === cleanText(make) && cleanText(scooter.model) === cleanText(model);
+  return !!cleanText(model) && cleanText(scooter.make) === cleanText(make) &&
+    cleanText(scooter.model) === cleanText(model);
 }
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== "POST") {
+      return Response.json({ error: "Method not allowed" }, {
+        status: 405,
+        headers: { Allow: "POST" },
+      });
+    }
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (String(user.role || '').toLowerCase() !== 'admin') {
-      return Response.json({ error: 'Admin only' }, { status: 403 });
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role !== "admin") {
+      return Response.json({ error: "Admin only" }, { status: 403 });
     }
 
     const entities = base44.asServiceRole.entities;
-    const jobs = await entities.Job.list('-updated_date', 1000);
+    const jobs = await entities.Job.list("-updated_date", 1000);
     const jobsWithIntake = jobs.filter((j) => j.intake && j.intake.intake_date);
 
     let migrated = 0;
     let skipped = 0;
     let cleared = 0;
-    const errors = [];
+    const errors: MigrationError[] = [];
 
     for (const job of jobsWithIntake) {
       try {
         const intake = job.intake;
-        const make = intake.make || intake.scooterMake || '';
-        const model = intake.model || intake.scooterModel || '';
-        const serial = intake.serial_number || '';
+        const make = intake.make || intake.scooterMake || "";
+        const model = intake.model || intake.scooterModel || "";
+        const serial = String(intake.serial_number || "").trim();
 
         // Find matching scooter
         let scooter = null;
@@ -45,36 +76,64 @@ Deno.serve(async (req) => {
           scooter = await entities.Scooter.get(job.asset_id).catch(() => null);
         }
         if (!scooter && (make || model)) {
-          const stableId = job.customer_id || job.customer_account_id || '';
+          const stableId = job.customer_id || job.customer_account_id || "";
           const candidates = stableId
-            ? await entities.Scooter.filter({ customer_id: stableId }, '-updated_date', 100).catch(() => [])
+            ? await entities.Scooter.filter(
+              { customer_id: stableId },
+              "-updated_date",
+              100,
+            ).catch(() => [])
             : [];
-          scooter = candidates.find((s) => scooterMatches(s, make, model, serial)) || null;
+          scooter = candidates.find((s) =>
+            scooterMatches(s, make, model, serial)
+          ) || null;
         }
 
         if (scooter) {
-          const updates = {};
+          const updates: ScooterUpdates = {};
           // Copy scooter-level fields if missing
           if (serial && !scooter.serial_number) updates.serial_number = serial;
-          if (intake.battery_voltage && !scooter.battery_voltage) updates.battery_voltage = intake.battery_voltage;
-          if (intake.odometer_km != null && intake.odometer_km !== '' && scooter.odometer_km == null) {
-            updates.odometer_km = Number(intake.odometer_km);
+          if (intake.battery_voltage && !scooter.battery_voltage) {
+            updates.battery_voltage = String(intake.battery_voltage);
+          }
+          if (
+            intake.odometer_km != null && intake.odometer_km !== "" &&
+            scooter.odometer_km == null
+          ) {
+            const odometer = Number(intake.odometer_km);
+            if (Number.isFinite(odometer)) updates.odometer_km = odometer;
           }
 
           // Build intake object (asset-specific fields only)
-          const existingIntake = scooter.intake || {};
+          const existingIntake: IntakeRecord =
+            scooter.intake && typeof scooter.intake === "object"
+              ? scooter.intake
+              : {};
           const newIntake = {
             ...existingIntake,
-            battery_condition: existingIntake.battery_condition || intake.battery_condition || undefined,
-            physical_condition: existingIntake.physical_condition || intake.physical_condition || undefined,
-            accessories_received: existingIntake.accessories_received || intake.accessories_received || undefined,
-            powers_on: existingIntake.powers_on !== undefined ? existingIntake.powers_on : (intake.powers_on !== false),
-            initial_issue_notes: existingIntake.initial_issue_notes || intake.initial_issue_notes || intake.issueOrService || undefined,
-            intake_by_name: existingIntake.intake_by_name || intake.intake_by_name || undefined,
-            intake_date: existingIntake.intake_date || intake.intake_date || undefined,
+            battery_condition: existingIntake.battery_condition ||
+              intake.battery_condition || undefined,
+            physical_condition: existingIntake.physical_condition ||
+              intake.physical_condition || undefined,
+            accessories_received: existingIntake.accessories_received ||
+              intake.accessories_received || undefined,
+            powers_on: existingIntake.powers_on !== undefined
+              ? existingIntake.powers_on
+              : (intake.powers_on !== false),
+            initial_issue_notes: existingIntake.initial_issue_notes ||
+              intake.initial_issue_notes || intake.issueOrService || undefined,
+            intake_by_name: existingIntake.intake_by_name ||
+              intake.intake_by_name || undefined,
+            intake_date: existingIntake.intake_date || intake.intake_date ||
+              undefined,
           };
           // Only update if no existing intake or new data adds value
-          if (!existingIntake.intake_date || Object.keys(newIntake).some((k) => !existingIntake[k] && newIntake[k])) {
+          if (
+            !existingIntake.intake_date ||
+            Object.keys(newIntake).some((k) =>
+              !existingIntake[k] && newIntake[k]
+            )
+          ) {
             updates.intake = newIntake;
           }
 
@@ -92,7 +151,7 @@ Deno.serve(async (req) => {
         await entities.Job.update(job.id, { intake: null });
         cleared++;
       } catch (e) {
-        errors.push({ job_id: job.id, error: e.message });
+        errors.push({ job_id: job.id, error: errorMessage(e) });
       }
     }
 
@@ -104,7 +163,13 @@ Deno.serve(async (req) => {
       errors: errors.slice(0, 20),
     });
   } catch (error) {
-    console.error('[migrateIntakeToAssets] failed:', error?.message, error?.stack);
-    return Response.json({ error: error.message || 'Migration failed' }, { status: 500 });
+    console.error(
+      "[migrateIntakeToAssets] failed:",
+      errorMessage(error),
+      error instanceof Error ? error.stack : undefined,
+    );
+    return Response.json({ error: errorMessage(error) || "Migration failed" }, {
+      status: 500,
+    });
   }
 });

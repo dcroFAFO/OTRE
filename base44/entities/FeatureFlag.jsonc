@@ -1,0 +1,37 @@
+{
+  "name": "FeatureFlag",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "unique": true
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "audience": {
+      "type": "string",
+      "enum": ["all", "admin", "customer"],
+      "default": "all"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "updated_by_user_id": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["key", "enabled", "audience"],
+  "rls": {
+    "create": {"user_condition": {"role": "admin"}},
+    "read": {"user_condition": {"role": "admin"}},
+    "update": {"user_condition": {"role": "admin"}},
+    "delete": {"user_condition": {"role": "admin"}}
+  }
+}

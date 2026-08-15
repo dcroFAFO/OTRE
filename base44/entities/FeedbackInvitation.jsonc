@@ -1,0 +1,22 @@
+{
+  "name": "FeedbackInvitation",
+  "type": "object",
+  "properties": {
+    "token_hash": { "type": "string", "unique": true, "maxLength": 64 },
+    "event_key": { "type": "string", "unique": true, "maxLength": 240 },
+    "job_id": { "type": "string" },
+    "invoice_id": { "type": "string" },
+    "customer_account_id": { "type": "string" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "used_at": { "type": "string", "format": "date-time" },
+    "revoked_at": { "type": "string", "format": "date-time" },
+    "feedback_id": { "type": "string" }
+  },
+  "required": ["token_hash", "event_key", "job_id", "invoice_id", "expires_at"],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

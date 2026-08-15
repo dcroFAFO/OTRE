@@ -1,0 +1,50 @@
+{
+  "name": "PhoneVerificationProof",
+  "type": "object",
+  "properties": {
+    "phone_verification_id": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique successful proof issuance for one signup phone challenge."
+    },
+    "attempt_id": {
+      "type": "string",
+      "unique": true
+    },
+    "proof_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the random proof returned once to the signup client."
+    },
+    "email": {
+      "type": "string",
+      "description": "Normalized signup email that the later authenticated claim must match."
+    },
+    "phone_e164": {
+      "type": "string",
+      "description": "Normalized mobile number proven by the SMS challenge."
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proof_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "phone_verification_id",
+    "attempt_id",
+    "proof_hash",
+    "email",
+    "phone_e164",
+    "issued_at",
+    "proof_expires_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

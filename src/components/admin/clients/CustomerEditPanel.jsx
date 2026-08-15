@@ -3,18 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, X, Check, Loader2, Plus, Trash2, Bike, AlertCircle } from "lucide-react";
+import { Archive, Pencil, X, Check, Loader2, Plus, Trash2, Bike, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCOOTER_BRANDS, BRAND_NAMES } from "@/config/scooterBrands";
 import { CLIENT_STATUSES } from "@/config/clientConfig";
-import { updateClient, listCustomerScooters, createScooter, updateScooter, deleteScooter, checkDuplicateContact } from "@/services/clientService";
+import { updateClient, listCustomerScooters, createScooter, updateScooter, deleteScooter, archiveScooter, checkDuplicateContact } from "@/services/clientService";
 import ClientTagEditor from "./ClientTagEditor";
 import AssetIntakeForm from "./AssetIntakeForm";
 import { toast } from "sonner";
 import { logError } from "@/lib/logger";
 import { getSafeErrorMessage } from "@/lib/errors";
 
-const STAFF_ROLES = new Set(["admin", "employee", "technician", "staff"]);
+const STAFF_ROLES = new Set(["admin"]);
 
 function normalizePhone(value) {
   let cleaned = String(value || "").trim().replace(/[^\d+]/g, "");
@@ -66,14 +66,25 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
   const remove = async () => {
     if (deleting) return;
     if (!scooter.id) { onDeleted(); return; }
+    const name = [scooter.make, scooter.model].filter(Boolean).join(" ") || "this scooter";
+    const hasServiceHistory = Number(scooter.related_job_count || 0) > 0;
+    const prompt = hasServiceHistory
+      ? `Archive ${name}? It will be removed from active scooter lists, while its repair history is retained.`
+      : `Remove ${name}? This permanently deletes the unlinked scooter.`;
+    if (!window.confirm(prompt)) return;
     setDeleting(true);
     try {
-      await deleteScooter(scooter.id, customerName, actor);
-      toast.success("Scooter removed");
+      if (hasServiceHistory) {
+        await archiveScooter(scooter.id, "Archived by administrator; service history retained");
+        toast.success("Scooter archived", { description: "Its repair history has been retained." });
+      } else {
+        await deleteScooter(scooter.id, customerName, actor);
+        toast.success("Scooter removed");
+      }
       onDeleted();
     } catch (e) {
-      logError("Scooter delete failed", e);
-      toast.error("Failed to remove scooter");
+      logError("Scooter removal failed", e);
+      toast.error(getSafeErrorMessage(e, hasServiceHistory ? "Failed to archive scooter." : "Failed to remove scooter."));
     } finally { setDeleting(false); }
   };
 
@@ -94,8 +105,8 @@ function ScooterRow({ scooter, customerName, actor, linkedToCurrentJob = false, 
           <Button type="button" variant="ghost" size="iconTouch" onClick={() => setEditing(true)} className="sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={`Edit ${[scooter.make, scooter.model].filter(Boolean).join(" ") || "scooter"}`}>
             <Pencil aria-hidden="true" />
           </Button>
-          <Button type="button" variant="ghost" size="iconTouch" onClick={remove} disabled={deleting} className="text-destructive hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={`Remove ${[scooter.make, scooter.model].filter(Boolean).join(" ") || "scooter"}`}>
-            {deleting ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+          <Button type="button" variant="ghost" size="iconTouch" onClick={remove} disabled={deleting} className="text-destructive hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={Number(scooter.related_job_count || 0) > 0 ? `Archive ${[scooter.make, scooter.model].filter(Boolean).join(" ") || "scooter"}; service history will be retained` : `Remove ${[scooter.make, scooter.model].filter(Boolean).join(" ") || "scooter"}`} title={Number(scooter.related_job_count || 0) > 0 ? "Archive scooter and retain service history" : "Permanently remove unlinked scooter"}>
+            {deleting ? <Loader2 className="animate-spin" aria-hidden="true" /> : Number(scooter.related_job_count || 0) > 0 ? <Archive aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
           </Button>
         </div>
         {scooter.id && (

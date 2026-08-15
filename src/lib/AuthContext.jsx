@@ -1,7 +1,12 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44, clearStoredBase44Token } from '@/api/base44Client';
+import {
+  base44,
+  clearStoredBase44Token,
+  getCurrentUserWithToken,
+  getPublicAppSettings,
+} from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { createAuthCallbackTarget } from '@/lib/authCallbackState';
 
 const AuthContext = createContext(null);
 
@@ -23,19 +28,8 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
       
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
       try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
+        const publicSettings = await getPublicAppSettings();
         setAppPublicSettings(publicSettings);
         
         // If we got the app public settings successfully, check if user is authenticated
@@ -100,16 +94,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setIsLoadingAuth(true);
-      const authClient = createAxiosClient({
-        baseURL: '/api',
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token,
-        interceptResponses: false
-      });
-      const response = await authClient.get(`/apps/${appParams.appId}/entities/User/me`);
-      const currentUser = response.data;
+      const currentUser = await getCurrentUserWithToken(appParams.token);
       base44.setToken(appParams.token);
       setUser(currentUser);
       setIsAuthenticated(true);
@@ -117,7 +102,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setAuthChecked(true);
     } catch (error) {
-      const status = error?.response?.status || error?.status;
+      const status = error?.status;
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       setAuthChecked(true);
@@ -150,8 +135,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    base44.auth.redirectToLogin(createAuthCallbackTarget(window.location.href));
   };
 
   return (

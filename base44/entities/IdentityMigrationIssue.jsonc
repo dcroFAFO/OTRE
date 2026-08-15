@@ -1,0 +1,22 @@
+{
+  "name": "IdentityMigrationIssue",
+  "type": "object",
+  "properties": {
+    "issue_key": {"type": "string", "unique": true},
+    "run_id": {"type": "string"},
+    "severity": {"type": "string", "enum": ["blocking", "warning"]},
+    "issue_type": {"type": "string"},
+    "entity_name": {"type": "string"},
+    "entity_id": {"type": "string"},
+    "related_ids": {"type": "array", "items": {"type": "string"}},
+    "message": {"type": "string", "maxLength": 1000},
+    "resolved_at": {"type": "string", "format": "date-time"}
+  },
+  "required": ["issue_key", "run_id", "severity", "issue_type", "message"],
+  "rls": {
+    "create": false,
+    "read": {"user_condition": {"role": "admin"}},
+    "update": false,
+    "delete": false
+  }
+}

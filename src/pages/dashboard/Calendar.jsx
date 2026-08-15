@@ -11,7 +11,7 @@ import JobDetailModal from "@/components/dashboard/job/JobDetailModal";
 import { useJobs, useInvalidateJobs } from "@/hooks/useJobs";
 import { rescheduleJob } from "@/services/jobService";
 import { cn } from "@/lib/utils";
-import { EmptyState, ErrorState, TableSkeleton } from "@/components/shared";
+import { BoundedDataNotice, EmptyState, ErrorState, TableSkeleton } from "@/components/shared";
 import { toast } from "sonner";
 import { getSafeErrorMessage } from "@/lib/errors";
 
@@ -19,8 +19,6 @@ export default function Calendar() {
   const user = useDashboardUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: jobs = [], isLoading, error, refetch } = useJobs();
-  const invalidate = useInvalidateJobs();
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState(() => (
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "day" : "week"
@@ -30,6 +28,17 @@ export default function Calendar() {
   const selectedId = new URLSearchParams(location.search).get("id");
   const weekStart = useMemo(() => startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 }), [weekOffset]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const weekFilter = useMemo(() => ({
+    scheduled_date: {
+      $gte: format(weekStart, "yyyy-MM-dd"),
+      $lte: format(addDays(weekStart, 6), "yyyy-MM-dd"),
+    },
+  }), [weekStart]);
+  const {
+    data: jobs = [], isLoading, error, refetch,
+    fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useJobs(weekFilter, { preservePreviousData: false });
+  const invalidate = useInvalidateJobs();
 
   useEffect(() => {
     setSelectedDay(format(weekOffset === 0 ? new Date() : weekStart, "yyyy-MM-dd"));
@@ -112,6 +121,15 @@ export default function Calendar() {
           </Button>
         </div>
       </div>
+
+      <BoundedDataNotice
+        noun="scheduled jobs"
+        loadedCount={scheduledThisWeek}
+        hasMore={hasNextPage}
+        isLoadingMore={isFetchingNextPage}
+        onLoadMore={fetchNextPage}
+        description={`The visible week currently shows ${scheduledThisWeek} loaded scheduled jobs. Load more before treating the week count as complete.`}
+      />
 
       {error ? (
         <ErrorState title="Calendar jobs could not be loaded" error={error} onRetry={refetch} />

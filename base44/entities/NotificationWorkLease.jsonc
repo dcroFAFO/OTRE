@@ -1,0 +1,65 @@
+{
+  "name": "NotificationWorkLease",
+  "type": "object",
+  "properties": {
+    "lease_key": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique resource plus monotonic sequence; the compare-and-swap-equivalent lease reservation."
+    },
+    "resource_type": {
+      "type": "string",
+      "enum": [
+        "event",
+        "delivery"
+      ]
+    },
+    "resource_id": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number",
+      "minimum": 1
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "released",
+        "expired"
+      ],
+      "default": "active"
+    },
+    "acquired_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "released_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "lease_key",
+    "resource_type",
+    "resource_id",
+    "sequence",
+    "owner_id",
+    "status",
+    "acquired_at",
+    "expires_at"
+  ],
+  "rls": {
+    "create": false,
+    "read": false,
+    "update": false,
+    "delete": false
+  }
+}

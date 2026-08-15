@@ -15,10 +15,12 @@
       "description": "DEPRECATED \u2014 no longer written. See PublicJobAccess.tokenHash."
     },
     "customer_profile_id": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED presentation link. Never use for authorization."
     },
     "customer_user_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Derived compatibility snapshot of Customer.user_id. Never authorize from this field alone."
     },
     "quote_id": {
       "type": "string",
@@ -32,17 +34,52 @@
       "description": "The single human-facing job identifier, e.g. OTR-48213. Minted by shared/jobReference.ts."
     },
     "customerId": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED compatibility identifier. Never use for authorization."
     },
     "customer_id": {
-      "type": "string"
+      "type": "string",
+      "description": "DEPRECATED compatibility identifier. Never use for authorization."
     },
     "customer_account_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Canonical Customer.id owner. Empty means the job is unclaimed."
     },
     "claimed_by_customer": {
       "type": "boolean",
       "default": false
+    },
+    "claim_status": {
+      "type": "string",
+      "enum": [
+        "unclaimed",
+        "claimed"
+      ],
+      "default": "unclaimed"
+    },
+    "contact_verification_id": {
+      "type": "string",
+      "description": "ContactVerificationChallenge.id used to create an unclaimed guest booking."
+    },
+    "verified_contact_channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms"
+      ]
+    },
+    "verified_contact_hash": {
+      "type": "string",
+      "description": "SHA-256 hash binding the verified email and phone snapshot; no authority by itself."
+    },
+    "claimed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Canonical completion timestamp used to expire public tracking grants after 30 days."
     },
     "customer_name": {
       "type": "string"
@@ -380,6 +417,18 @@
       "type": "boolean",
       "default": false
     },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Administrative archive timestamp. Archived jobs remain available for audit and relationship history."
+    },
+    "archived_by_user_id": {
+      "type": "string"
+    },
+    "archive_reason": {
+      "type": "string",
+      "maxLength": 500
+    },
     "createdAt": {
       "type": "string",
       "format": "date-time"
@@ -434,70 +483,19 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
-      "$or": [
-        {
-          "data.customer_user_id": "{{user.id}}"
-        },
-        {
-          "data.customer_account_id": "{{user.id}}"
-        },
-        {
-          "data.customer_id": "{{user.data.customer_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "delete": {
       "user_condition": {

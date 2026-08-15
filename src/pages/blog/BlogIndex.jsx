@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import BlogPostCard from "@/components/blog/BlogPostCard";
-import ContentfulSyncButton from "@/components/blog/ContentfulSyncButton";
 import NewsLeadStories from "@/components/blog/NewsLeadStories";
 import NewsBrowseControls from "@/components/blog/NewsBrowseControls";
 import LandingNav from "@/components/landing/LandingNav";
@@ -57,9 +56,9 @@ export default function BlogIndex() {
             <h1 className="mt-3 font-heading text-4xl font-bold sm:text-5xl lg:text-6xl">News &amp; insights</h1>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">Practical advice, local rider news and stories from Brisbane’s electric scooter specialists.</p>
           </div>
-          <div className="mt-6 shrink-0 sm:mt-0"><ContentfulSyncButton /></div>
         </header>
         <NewsBrowseControls query={q} onQuery={(value) => { setQ(value); setVisible(13); }} categoryId={categoryId} onCategory={(value) => { setCategoryId(value); setVisible(13); }} tagId={tagId} onTag={(value) => { setTagId(value); setVisible(13); }} categories={categories} tags={tags} />
+        {data?.potentially_truncated ? <p className="my-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">The archive is showing a bounded set of recent articles. Older posts may not appear in search or filters.</p> : null}
         {isLoading ? (
           <CardSkeleton count={6} className="py-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3" />
         ) : isError && posts.length === 0 ? (

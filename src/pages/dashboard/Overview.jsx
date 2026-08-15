@@ -16,12 +16,15 @@ import { isThisWeek } from "date-fns";
 import { DEFAULT_APP_SETTINGS } from "@/config/platformConfig";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CardSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/shared";
+import { BoundedDataNotice, CardSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/shared";
 import { countJobsByCategory, normalizeStatusKey } from "@/config/jobConfig";
 
 export default function Overview() {
   const navigate = useNavigate();
-  const { data: jobs = [], isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useJobs();
+  const {
+    data: jobs = [], isLoading: jobsLoading, error: jobsError, refetch: refetchJobs,
+    fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useJobs();
   const { data: audit = [], isLoading: auditLoading, error: auditError, refetch: refetchAudit } = useQuery({ queryKey: ["recentAudit"], queryFn: () => listRecentAudit(16), staleTime: 60 * 1000 });
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -112,6 +115,15 @@ export default function Overview() {
           )}
         </div>
       </div>
+
+      <BoundedDataNotice
+        noun="jobs"
+        loadedCount={jobs.length}
+        hasMore={hasNextPage}
+        isLoadingMore={isFetchingNextPage}
+        onLoadMore={fetchNextPage}
+        description={`Dashboard metrics, search, monthly summaries, and turnaround figures currently cover ${jobs.length} loaded active jobs. Load more for a broader snapshot.`}
+      />
 
       {/* Pending requests alert */}
       {!jobsLoading && !jobsError && m.requested > 0 && (

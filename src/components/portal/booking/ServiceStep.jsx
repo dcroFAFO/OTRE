@@ -1,5 +1,6 @@
 import React from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { usePlatformConfig } from "@/hooks/usePlatformConfig";
 import { Check } from "lucide-react";
 
@@ -14,7 +15,7 @@ export default function ServiceStep({ data, update }) {
         {tiles.map((t) => {
           const selected = data.service === t.name;
           return (
-            <button key={t.name} type="button" onClick={() => update({ service: t.name })}
+            <button key={t.name} type="button" aria-pressed={selected} onClick={() => update({ service: t.name })}
               className={`relative rounded-xl border p-3 text-left transition ${selected ? "border-accent bg-accent/10" : "border-border hover:border-accent/50"}`}>
               {selected && <Check className="absolute right-2.5 top-2.5 h-4 w-4 text-accent" />}
               <span className="block pr-6 text-sm font-semibold">{t.name === "Other" ? "Other / Not listed" : t.name}</span>
@@ -24,7 +25,10 @@ export default function ServiceStep({ data, update }) {
         })}
       </div>
       {data.service === "Other" && (
-        <Textarea value={data.customIssue} onChange={(e) => update({ customIssue: e.target.value })} placeholder="Describe the issue with your scooter…" className="h-24" />
+        <div className="space-y-1.5">
+          <Label htmlFor="portal-custom-issue">Describe the service or issue</Label>
+          <Textarea id="portal-custom-issue" value={data.customIssue} onChange={(e) => update({ customIssue: e.target.value })} placeholder="Describe the issue with your scooter…" className="h-24" />
+        </div>
       )}
     </div>
   );

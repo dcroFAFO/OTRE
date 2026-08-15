@@ -1,39 +1,32 @@
-**Welcome to your Base44 project** 
+# On The Run Electrics
 
-**About**
+React/Vite frontend and Base44 backend configuration for the On The Run Electrics repair, booking, customer portal, staff operations, invoicing, store, and publishing application.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+The checked-out Git branch is the source of truth. Base44 environments are deployment targets and must be reconciled against a generated release manifest before publishing.
 
-This project contains everything you need to run your app locally.
+## Local setup
 
-**Edit the code in your local development environment**
+1. Use Node 22 (`.nvmrc` and `.node-version`).
+2. Run `npm ci`.
+3. Copy `.env.example` to `.env.local` and set the non-secret `VITE_*` values for an isolated development or staging app.
+4. Run `npm run dev`.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+Never place Stripe, Twilio, Resend, Ecwid, Google, or other provider secrets in `VITE_*` variables. Those values are shipped to browsers.
 
-**Prerequisites:** 
+## Validation
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+- `npm run validate:config` — entity/workflow/route/SEO configuration invariants.
+- `npm run validate:backend` — Deno lint and typecheck for Base44 function/shared TypeScript.
+- `npm run lint` — frontend static analysis.
+- `npm run typecheck` — opt-in JavaScript/JSX type checking. Critical runtime modules use `// @ts-check`; expand this ratchet as legacy JSDoc contracts are repaired.
+- `npm test` — Vitest suite.
+- `npm run build` — production frontend build.
+- `npm run check:bundle` — gzip bundle budgets.
+- `npm run test:e2e:local` — production build followed by Playwright.
+- `npm run release:manifest` — hashes deployable Base44 and frontend release inputs into `dist/release-manifest.json`.
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+## Release operations
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+Start with [deployment.md](docs/runbooks/deployment.md). Rollback, monitoring, connector/workflow, environment, and privacy controls live under `docs/runbooks`, `docs/architecture`, and `ops`.
 
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Local validation is not proof of a live Base44 deployment. Production publishing, schema parity, secrets, connector authorization, workflow activation, backups, and rollback checkpoints require explicit verification in the target environment.

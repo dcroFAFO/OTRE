@@ -1,15 +1,29 @@
 import { base44 } from "@/api/base44Client";
 
-// Thin frontend wrapper — invoice creation and payment transitions run
-// server-side in functions/invoiceActions.
+// Thin frontend wrapper — invoice creation and manual payment-status transitions
+// run server-side in functions/invoiceActions.
 
 const invoke = async (payload) => {
   const res = await base44.functions.invoke("invoiceActions", payload);
-  return res.data;
+  const body = res?.data;
+  if (body?.ok === false) {
+    const detail = typeof body.error === "string" ? body.error : body.error?.message;
+    const error = new Error(detail || "The invoice action could not be completed.");
+    error.code = typeof body.error === "object" ? body.error?.code : undefined;
+    error.status = res?.status;
+    error.response = res;
+    throw error;
+  }
+  if (body?.ok === true && Object.prototype.hasOwnProperty.call(body, "data")) {
+    return body.data;
+  }
+  return body;
 };
 
+const invoiceFrom = (payload) => payload?.invoice || payload;
+
 export async function createInvoice(job, amount, lineItems = []) {
-  return invoke({ action: "create", jobId: job.id, amount, lineItems });
+  return invoiceFrom(await invoke({ action: "create", jobId: job.id, amount, lineItems }));
 }
 
 export async function addPartsToInvoice(job, usageIds) {
@@ -17,26 +31,47 @@ export async function addPartsToInvoice(job, usageIds) {
 }
 
 export async function updateInvoiceLineItems(job, invoice, lineItems, internalCostingNotes = "", customerNotes = "") {
-  return invoke({ action: "update_line_items", jobId: job.id, invoiceId: invoice.id, lineItems, internalCostingNotes, customerNotes });
+  return invoiceFrom(await invoke({ action: "update_line_items", jobId: job.id, invoiceId: invoice.id, lineItems, internalCostingNotes, customerNotes }));
 }
 
 export async function setInvoiceVisibility(job, invoice, invoiceVisibility) {
-  return invoke({ action: "set_visibility", jobId: job.id, invoiceId: invoice.id, invoiceVisibility });
+  return invoiceFrom(await invoke({ action: "set_visibility", jobId: job.id, invoiceId: invoice.id, invoiceVisibility }));
 }
 
 export async function sendInvoiceToCustomer(job, invoice) {
-  return invoke({ action: "send_to_customer", jobId: job.id, invoiceId: invoice.id });
+  return invoiceFrom(await invoke({ action: "send_to_customer", jobId: job.id, invoiceId: invoice.id }));
 }
 
-export async function setPaymentStatus(invoice, job, status) {
-  if (!["outstanding", "paid"].includes(status)) {
-    throw new Error("Only outstanding or paid can be recorded manually.");
-  }
-  return invoke({ action: "set_payment_status", jobId: job.id, invoiceId: invoice.id, status });
+export function manualPaymentOutcome(result) {
+  const reconciliation = result?.reconciliation;
+  const invoice = reconciliation?.invoice || result?.invoice || null;
+  const needsReconciliation = result?.event?.status === "needs_reconciliation"
+    || reconciliation?.complete === false;
+  return {
+    invoice,
+    needsReconciliation,
+    complete: !needsReconciliation && (reconciliation?.complete === true || invoice?.status === "paid"),
+  };
+}
+
+export async function recordManualPayment(invoice, job, { method = "other", reference = "" } = {}) {
+  const amount = Number(invoice.amount || 0);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("A positive invoice amount is required.");
+  const idempotencyKey = `manual_payment:${invoice.id}:${crypto.randomUUID()}`;
+  return invoke({
+    action: "record_manual_payment",
+    jobId: job.id,
+    invoiceId: invoice.id,
+    amount_minor: Math.round(amount * 100),
+    method,
+    reference,
+    occurred_at: new Date().toISOString(),
+    idempotency_key: idempotencyKey,
+  });
 }
 
 export async function sendPaymentReminder(job, invoice) {
-  return invoke({ action: "send_reminder", jobId: job.id, invoiceId: invoice.id });
+  return invoiceFrom(await invoke({ action: "send_reminder", jobId: job.id, invoiceId: invoice.id }));
 }
 
 export async function generateInvoicePdf(job, invoiceDraft, notes = "", regenerateCount = 0) {
@@ -58,53 +93,6 @@ export async function emailInvoicePdf(job, invoiceDraft, notes = "", regenerateC
     notes,
     regenerateCount,
   });
-  return res.data;
-}
-
-// Shown when checkout is attempted from inside the builder preview iframe.
-export const PREVIEW_CHECKOUT_MESSAGE =
-  "Online checkout only works from the published site, not inside the preview.";
-
-function checkoutAttemptId() {
-  return globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-}
-
-function currentReturnPath(fallback) {
-  if (typeof window === "undefined") return fallback;
-  const url = new URL(window.location.href);
-  ["payment", "checkout_result", "session_id", "order", "invoice", "attempt"].forEach((key) => url.searchParams.delete(key));
-  return `${url.pathname}${url.search}` || fallback;
-}
-
-export async function startInvoicePayment(invoice, options = {}) {
-  if (window.self !== window.top) {
-    return { blocked: true, reason: PREVIEW_CHECKOUT_MESSAGE };
-  }
-  const res = await base44.functions.invoke("createInvoiceCheckout", {
-    invoiceId: invoice.id,
-    checkoutAttemptId: options.checkoutAttemptId || checkoutAttemptId(),
-    returnPath: options.returnPath || currentReturnPath("/portal"),
-  });
-  if (res.data?.url) window.location.href = res.data.url;
-  return res.data;
-}
-
-export async function startStorePayment({ customer, items, notes, checkoutAttemptId: attemptId }) {
-  if (window.self !== window.top) {
-    return { blocked: true, reason: PREVIEW_CHECKOUT_MESSAGE };
-  }
-  const res = await base44.functions.invoke("createStoreCheckout", {
-    customer,
-    items,
-    notes,
-    checkoutAttemptId: attemptId,
-  });
-  if (res.data?.url) window.location.href = res.data.url;
-  return res.data;
-}
-
-export async function verifyCheckoutStatus(payload) {
-  const res = await base44.functions.invoke("checkoutStatus", payload);
   return res.data;
 }
 

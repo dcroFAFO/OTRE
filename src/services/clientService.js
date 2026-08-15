@@ -1,5 +1,5 @@
 import { base44 } from "@/api/base44Client";
-import { logAudit } from "@/services/auditService";
+export { mergeClientHistoryPages } from "@/services/clientHistoryMerge";
 
 // All admin client/customer management operations live here, split across three
 // backend functions: customerRead (queries), customerWrite (mutations) and
@@ -7,14 +7,30 @@ import { logAudit } from "@/services/auditService";
 // (event_type "customer_update") so the unified history timeline can surface
 // status / tag / profile changes.
 
-export async function listClients() {
-  const res = await base44.functions.invoke("customerRead", { action: "list" });
-  return res.data.customers || [];
+export async function listClients({ page = 1, limit = 50 } = {}) {
+  const res = await base44.functions.invoke("customerRead", { action: "list", page, limit });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
+  return {
+    customers: res.data.customers || [],
+    page: res.data.page || page,
+    limit: res.data.limit || limit,
+    pagination: res.data.pagination || { page, limit, has_more: false, next_page: null },
+    partial: res.data.partial === true,
+    potentially_truncated: res.data.potentially_truncated === true,
+    truncation: res.data.truncation || {},
+    query_failures: res.data.query_failures || [],
+  };
 }
 
 export async function getClient(id) {
   const res = await base44.functions.invoke("customerRead", { action: "get", customer_id: id });
   return res.data.customer;
+}
+
+export async function searchClients(field, query) {
+  const res = await base44.functions.invoke("customerRead", { action: "search", field, query });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
+  return res.data.customers || [];
 }
 
 // Check if an email or phone already belongs to a DIFFERENT customer
@@ -56,29 +72,31 @@ export async function updateClient(customer, changes, actor) {
 
 // Internal notes (admin-only). Each is timestamped + author-stamped.
 export async function listClientNotes(customerId) {
-  return base44.entities.CustomerNote.filter({ customer_id: customerId }, "-created_date", 200);
+  const res = await base44.functions.invoke("customerRead", { action: "listNotes", customer_id: customerId });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
+  return res.data.notes || [];
+}
+
+export async function updateClientReferral(customerId, changes) {
+  const res = await base44.functions.invoke("customerWrite", { action: "updateReferral", customer_id: customerId, changes });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
+  return res.data.customer;
 }
 
 export async function addClientNote(customer, body, actor) {
-  const note = await base44.entities.CustomerNote.create({
-    customer_id: customer.id,
-    body,
-    author_id: actor?.id || null,
-    author_name: actor?.full_name || "Admin",
-  });
-  await base44.entities.Customer.update(customer.id, { last_activity_date: new Date().toISOString() }).catch(() => null);
-  await logAudit({
-    eventType: "customer_update",
-    actor,
-    summary: `${customer.full_name}: internal note added`,
-    metadata: { customer_id: customer.id },
-  });
-  return note;
+  const res = await base44.functions.invoke("customerWrite", { action: "addNote", customer_id: customer.id, body });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
+  return res.data.note;
 }
 
 // Unified history from the backend (real records only).
-export async function fetchClientHistory(customerId) {
-  const res = await base44.functions.invoke("customerHistory", { customer_id: customerId });
+export async function fetchClientHistory(customerId, { page = 1, limit = 50 } = {}) {
+  const res = await base44.functions.invoke("customerHistory", {
+    customer_id: customerId,
+    page,
+    limit,
+  });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
   return res.data;
 }
 
@@ -102,4 +120,14 @@ export async function updateScooter(scooterId, data, customerName, actor) {
 
 export async function deleteScooter(scooterId, customerName, actor) {
   await base44.functions.invoke("scooterActions", { action: "deleteScooter", scooter_id: scooterId });
+}
+
+export async function archiveScooter(scooterId, reason = "Service history retained") {
+  const res = await base44.functions.invoke("scooterActions", {
+    action: "archiveScooter",
+    scooter_id: scooterId,
+    reason,
+  });
+  if (res.data?.error) throw Object.assign(new Error(res.data.error), { status: res.status || 400, response: res });
+  return res.data.scooter;
 }

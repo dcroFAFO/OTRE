@@ -12,7 +12,8 @@ import AppleIcon from "@/components/AppleIcon";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
 import { isStaff } from "@/config/permissions";
-import { safeReturnTo } from "@/lib/authReturnTo";
+import { sanitizeReturnTarget } from "@/lib/authReturnTo";
+import { createAuthCallbackTarget } from "@/lib/authCallbackState";
 import { getSafeErrorMessage } from "@/lib/errors";
 
 const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
@@ -20,12 +21,14 @@ const DEFAULT_REDIRECT_AFTER_AUTH = "/portal";
 function authParams() {
   const params = new URLSearchParams(window.location.search);
   // ?returnTo= (e.g. the MCP OAuth consent flow) takes precedence over ?next=.
-  const returnTo = safeReturnTo();
-  const next = returnTo !== "/" ? returnTo : (params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH);
+  const rawTarget = params.has("returnTo")
+    ? params.get("returnTo")
+    : (params.get("next") || DEFAULT_REDIRECT_AFTER_AUTH);
+  const next = sanitizeReturnTarget(rawTarget);
   return {
     email: params.get("email") || "",
     phone: params.get("phone") || "",
-    next: next.startsWith("/") ? next : DEFAULT_REDIRECT_AFTER_AUTH,
+    next: next === "/" && rawTarget !== "/" ? DEFAULT_REDIRECT_AFTER_AUTH : next,
     customerFlow: params.get("customerFlow") === "1",
     referralCode: String(params.get("ref") || "").trim().toUpperCase().slice(0, 32),
     oauthComplete: params.get("oauthComplete") === "1",
@@ -34,7 +37,13 @@ function authParams() {
 
 async function finishCustomerAccount(referralCode) {
   const claim = await base44.functions.invoke("claimCustomerJobs", {});
-  if (claim.data?.error) throw Object.assign(new Error(claim.data.error), { status: claim.status || 400, response: claim });
+  if (claim.data?.error) {
+    throw Object.assign(new Error(claim.data.error), {
+      code: claim.data.code,
+      status: claim.status || 400,
+      response: claim,
+    });
+  }
   if (!referralCode) return;
   const reward = await base44.functions.invoke("customerRewards", { action: "claimReferral", code: referralCode });
   if (reward.data?.error) throw Object.assign(new Error(reward.data.error), { status: reward.status || 400, response: reward });
@@ -51,12 +60,14 @@ export default function Register() {
   const [showPhoneOtp, setShowPhoneOtp] = useState(false);
   const [phoneOtpCode, setPhoneOtpCode] = useState("");
   const [maskedPhone, setMaskedPhone] = useState("");
-  const [verifiedPhoneE164, setVerifiedPhoneE164] = useState("");
+  const [phoneVerification, setPhoneVerification] = useState(null);
+  const [phoneClaimed, setPhoneClaimed] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [verified, setVerified] = useState(false);
   const [accountReady, setAccountReady] = useState(false);
   const [oauthSetupFailed, setOauthSetupFailed] = useState(false);
+  const [oauthPhoneRequired, setOauthPhoneRequired] = useState(false);
   const [resendingPhone, setResendingPhone] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
   const setupStarted = useRef(false);
@@ -68,8 +79,12 @@ export default function Register() {
       .then(async (authed) => {
         if (!authed) return;
         const currentUser = await base44.auth.me();
-        if (customerFlow && isStaff(currentUser?.role)) {
-          await base44.auth.logout(window.location.href);
+        if (isStaff(currentUser?.role)) {
+          if (customerFlow) {
+            await base44.auth.logout(window.location.href);
+            return;
+          }
+          window.location.href = next;
           return;
         }
         if (!oauthComplete) {
@@ -80,10 +95,16 @@ export default function Register() {
         setupStarted.current = true;
         setLoading(true);
         try {
-          await base44.auth.updateMe({ is_customer: true });
           await finishCustomerAccount(referralCode);
           window.location.href = next;
         } catch (setupError) {
+          if (setupError?.code === "PHONE_VERIFICATION_REQUIRED") {
+            setEmail(String(currentUser?.email || initialEmail || "").trim());
+            setOauthPhoneRequired(true);
+            setError("");
+            setLoading(false);
+            return;
+          }
           setVerified(true);
           setOauthSetupFailed(true);
           setError(getSafeErrorMessage(setupError, "Your account was created, but setup could not be completed. Please retry."));
@@ -91,12 +112,31 @@ export default function Register() {
         }
       })
       .catch(() => setLoading(false));
-  }, [next, customerFlow, oauthComplete, referralCode]);
+  }, [next, customerFlow, oauthComplete, referralCode, initialEmail]);
+
+  const claimVerifiedPhone = async (verification = phoneVerification) => {
+    if (phoneClaimed || !verification) return;
+    const response = await base44.functions.invoke(
+      "claimSignupPhoneVerification",
+      {
+        verification_id: verification.verification_id,
+        verification_proof: verification.verification_proof,
+      },
+    );
+    if (response.data?.error) {
+      throw Object.assign(new Error(response.data.error), {
+        status: response.status || 400,
+        response,
+      });
+    }
+    setPhoneClaimed(true);
+  };
 
   const completeSetup = async () => {
     setError("");
     setLoading(true);
     try {
+      await claimVerifiedPhone();
       await finishCustomerAccount(referralCode);
       setAccountReady(true);
       setOauthSetupFailed(false);
@@ -112,6 +152,7 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
+      await claimVerifiedPhone();
       await finishCustomerAccount("");
       window.location.href = next;
     } catch (setupError) {
@@ -133,6 +174,11 @@ export default function Register() {
     }
     setLoading(true);
     try {
+      if (phoneVerification) {
+        await base44.auth.register({ email, password });
+        setShowOtp(true);
+        return;
+      }
       const response = await base44.functions.invoke("sendSignupPhoneOtp", { phone, email });
       if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
       setMaskedPhone(response.data?.masked_phone || phone);
@@ -147,15 +193,51 @@ export default function Register() {
   const handleVerifyPhone = async () => {
     setError("");
     setLoading(true);
+    let issuedProof = null;
     try {
-      const response = await base44.functions.invoke("verifySignupPhoneOtp", { phone, code: phoneOtpCode });
+      const response = await base44.functions.invoke("verifySignupPhoneOtp", {
+        phone,
+        email,
+        code: phoneOtpCode,
+      });
       if (response.data?.error) throw Object.assign(new Error(response.data.error), { status: response.status || 400, response });
-      setVerifiedPhoneE164(response.data?.phone_e164 || "");
+      issuedProof = {
+        verification_id: response.data?.verification_id,
+        verification_proof: response.data?.verification_proof,
+        phone_e164: response.data?.phone_e164,
+        proof_expires_at: response.data?.proof_expires_at,
+      };
+      if (!issuedProof.verification_id || !issuedProof.verification_proof) {
+        throw new Error("Mobile verification completed without an account proof.");
+      }
+      setPhoneVerification(issuedProof);
+      setPhoneClaimed(false);
+      if (oauthPhoneRequired) {
+        await claimVerifiedPhone(issuedProof);
+        await finishCustomerAccount(referralCode);
+        setAccountReady(true);
+        setVerified(true);
+        setShowPhoneOtp(false);
+        window.setTimeout(() => { window.location.href = next; }, 600);
+        return;
+      }
       await base44.auth.register({ email, password });
       setShowPhoneOtp(false);
       setShowOtp(true);
     } catch (err) {
-      setError(getSafeErrorMessage(err, "Could not verify the mobile code. Please try again."));
+      if (issuedProof) {
+        setShowPhoneOtp(false);
+        setPhoneOtpCode("");
+        if (oauthPhoneRequired) {
+          setVerified(true);
+          setOauthSetupFailed(true);
+          setError(getSafeErrorMessage(err, "Your mobile was verified, but account setup could not be completed. Please retry."));
+        } else {
+          setError(getSafeErrorMessage(err, "Your mobile was verified, but the account could not be created. Review your email and password, then try again."));
+        }
+      } else {
+        setError(getSafeErrorMessage(err, "Could not verify the mobile code. Please try again."));
+      }
     } finally {
       setLoading(false);
     }
@@ -186,23 +268,20 @@ export default function Register() {
     setLoading(true);
     try {
       const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-        setVerified(true);
-        await base44.auth.updateMe({
-          phone: verifiedPhoneE164 || phone,
-          phone_e164: verifiedPhoneE164,
-          phone_verified: true,
-          is_customer: true,
-        });
-        await finishCustomerAccount(referralCode);
-        setAccountReady(true);
+      if (!result?.access_token) {
+        throw new Error("Verification completed without creating a session.");
       }
+      base44.auth.setToken(result.access_token);
+      setVerified(true);
+      await claimVerifiedPhone();
+      await finishCustomerAccount(referralCode);
+      setAccountReady(true);
       setTimeout(() => {
         window.location.href = next;
       }, 900);
     } catch (err) {
       setError(getSafeErrorMessage(err, "The code or account setup could not be verified. Please try again."));
+    } finally {
       setLoading(false);
     }
   };
@@ -225,15 +304,55 @@ export default function Register() {
     const params = new URLSearchParams({ oauthComplete: "1", next });
     if (referralCode) params.set("ref", referralCode);
     if (customerFlow) params.set("customerFlow", "1");
-    base44.auth.loginWithProvider("google", `/register?${params.toString()}`);
+    base44.auth.loginWithProvider("google", createAuthCallbackTarget(`/register?${params.toString()}`));
   };
 
   const handleApple = () => {
     const params = new URLSearchParams({ oauthComplete: "1", next });
     if (referralCode) params.set("ref", referralCode);
     if (customerFlow) params.set("customerFlow", "1");
-    base44.auth.loginWithProvider("apple", `/register?${params.toString()}`);
+    base44.auth.loginWithProvider("apple", createAuthCallbackTarget(`/register?${params.toString()}`));
   };
+
+  if (oauthPhoneRequired && !showPhoneOtp && !verified) {
+    return (
+      <>
+        <SEO title="Verify Mobile | On The Run Electrics" description="Verify your mobile number to finish setting up your On The Run Electrics customer account." canonical="/register" noindex />
+        <AuthLayout icon={Phone} title="Verify your mobile" subtitle={`Finish setting up ${email || "your account"}`}>
+          {error ? <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</div> : null}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              New customer accounts require a verified mobile number. We will send a one-time security code by SMS.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="oauth-phone">Mobile number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  id="oauth-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  autoFocus
+                  placeholder="04xx xxx xxx"
+                  value={phone}
+                  onChange={(event) => {
+                    setPhone(event.target.value);
+                    setPhoneVerification(null);
+                    setPhoneClaimed(false);
+                  }}
+                  className="h-12 pl-10"
+                  required
+                />
+              </div>
+            </div>
+            <Button type="submit" className="h-12 w-full font-medium" disabled={loading}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Sending code...</> : "Send mobile security code"}
+            </Button>
+          </form>
+        </AuthLayout>
+      </>
+    );
+  }
 
   if (oauthComplete && (verified || oauthSetupFailed)) {
     return (
@@ -260,7 +379,7 @@ export default function Register() {
         subtitle={`We sent a security code to ${maskedPhone || phone}`}
       >
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm" role="alert">
             {error}
           </div>
         )}
@@ -302,6 +421,15 @@ export default function Register() {
             {resendingPhone ? "Resending..." : "Resend"}
           </button>
         </p>
+        <Button
+          type="button"
+          variant="ghost"
+          className="mt-2 h-11 w-full"
+          disabled={loading || resendingPhone}
+          onClick={() => { setShowPhoneOtp(false); setPhoneOtpCode(""); setError(""); }}
+        >
+          {oauthPhoneRequired ? "Edit mobile number" : "Edit email, mobile, or password"}
+        </Button>
         <p className="sr-only" aria-live="polite">{resendingPhone ? "Sending a new mobile code" : ""}</p>
       </AuthLayout>
       </>
@@ -318,12 +446,12 @@ export default function Register() {
         subtitle={`We sent a code to ${email}`}
       >
         {verified && (
-          <div className="mb-4 p-3 rounded-lg bg-accent/10 text-accent text-sm font-medium">
+          <div className="mb-4 p-3 rounded-lg bg-emerald-50 text-emerald-800 text-sm font-medium" role="status">
             Email verified — linking your booking now.
           </div>
         )}
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm" role="alert">
             {error}
           </div>
         )}
@@ -348,15 +476,15 @@ export default function Register() {
         <Button
           className="w-full h-12 font-medium"
           onClick={handleVerify}
-          disabled={loading || otpCode.length < 6}
+          disabled={loading || accountReady || (!verified && otpCode.length < 6)}
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
               Verifying...
             </>
           ) : (
-            verified ? "Retry account setup" : "Verify"
+            accountReady ? "Redirecting…" : verified ? "Retry account setup" : "Verify"
           )}
         </Button>
         {verified && referralCode && error ? <Button variant="ghost" className="mt-2 w-full" onClick={continueWithoutReferral} disabled={loading}>Continue without referral reward</Button> : null}
@@ -374,7 +502,7 @@ export default function Register() {
 
   return (
     <>
-    <SEO title="Create Account | On The Run Electrics" description="Create an On The Run Electrics customer account to book repairs, approve quotes, track jobs and manage invoices online." canonical="/register" noindex />
+    <SEO title="Create Account | On The Run Electrics" description="Create an On The Run Electrics customer account to book repairs, track jobs and view issued invoices online." canonical="/register" noindex />
     <AuthLayout
       icon={UserPlus}
       title="Create your account"
@@ -420,7 +548,7 @@ export default function Register() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm" role="alert">
           {error}
         </div>
       )}
@@ -446,7 +574,11 @@ export default function Register() {
               autoFocus
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setPhoneVerification(null);
+                setPhoneClaimed(false);
+              }}
               className="pl-10 h-12"
               required
             />
@@ -462,7 +594,11 @@ export default function Register() {
               autoComplete="tel"
               placeholder="04xx xxx xxx"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneVerification(null);
+                setPhoneClaimed(false);
+              }}
               className="pl-10 h-12"
               required
             />

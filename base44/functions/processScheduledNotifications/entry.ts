@@ -1,120 +1,318 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.41";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-const TWILIO_FROM_NUMBER = Deno.env.get("TWILIO_FROM_NUMBER");
+const DAY_MS = 24 * 60 * 60 * 1000;
+const FEEDBACK_DELAY_MS = 12 * 60 * 60 * 1000;
+const MAX_SCAN = 200;
+const MAX_QUEUE = 50;
+const CLEANUP_BATCH_LIMIT = 50;
 
-const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
-const BUSINESS_NAME = "On The Run Electrics";
-const FROM_EMAIL = "On The Run Electrics <info@ontherunelectrics.com.au>";
-const BUSINESS_PHONE = "0415 505 908";
-const DEFAULT_ORIGIN = "https://ontherunelectrics.com.au";
-const OVERDUE_HOURS = 24;
-const FEEDBACK_DELAY_HOURS = 12;
-const REMINDER_INTERVAL_HOURS = 24;
-
-function fmtMoney(amount, currency = 'AUD') { return `${currency} ${Number(amount || 0).toFixed(2)}`; }
-
-function emailTemplate(content) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1e293b;">
-<div style="background:#0ea5e9;padding:20px 24px;border-radius:12px 12px 0 0;"><h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">${BUSINESS_NAME}</h1></div>
-<div style="background:#f8fafc;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:none;">${content}</div>
-<p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;line-height:1.6;">${BUSINESS_NAME} · Woolloongabba, Brisbane<br>info@ontherunelectrics.com.au · ${BUSINESS_PHONE}</p>
-</body></html>`;
+function requestId(req: Request) {
+  return req.headers.get("x-request-id") || crypto.randomUUID();
 }
 
-async function sendEmail(to, subject, html) {
-  if (!RESEND_API_KEY || !to) return false;
+function ok(data: unknown, id: string, status = 200) {
+  return Response.json({ ok: true, data, request_id: id }, { status });
+}
+
+function fail(code: string, message: string, id: string, status: number) {
+  return Response.json(
+    { ok: false, error: { code, message }, request_id: id },
+    { status },
+  );
+}
+
+function clean(value: unknown, maxLength = 240) {
+  return String(value || "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(
+    0,
+    maxLength,
+  );
+}
+
+function automationsEnabled() {
+  return Deno.env.get("AUTOMATIONS_ENABLED") === "true";
+}
+
+function timestamp(value: unknown) {
+  const parsed = new Date(String(value || "")).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function requireAdmin(base44: any) {
+  const user = await base44.auth.me().catch(() => null);
+  if (!user) return { error: "unauthorized", status: 401 };
+  // Scheduled automations execute as their creator. Production must use the
+  // durable admin automation-owner account, never a staff member's identity.
+  if (user.role !== "admin") return { error: "forbidden", status: 403 };
+  return { user };
+}
+
+async function reserveFeedbackEvent(db: any, invoice: any, job: any) {
+  const paidAt = clean(
+    invoice.paid_at || invoice.paid_date || invoice.updated_date,
+    100,
+  );
+  const eventKey = `feedback_request:${invoice.id}:${paidAt}`;
+  const existing = await db.NotificationEvent.filter(
+    { event_key: eventKey },
+    "-created_date",
+    1,
+  ).catch(() => []);
+  if (existing[0]) return { record: existing[0], created: false };
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
+    const record = await db.NotificationEvent.create({
+      event_key: eventKey,
+      related_entity_type: "Invoice",
+      related_entity_id: invoice.id,
+      job_id: job.id,
+      customer_id: invoice.customer_id || job.customer_id || "",
+      customer_account_id: invoice.customer_account_id ||
+        job.customer_account_id || "",
+      event_version: paidAt,
+      event_data: { invoice_id: invoice.id },
+      source: "scheduled",
+      status: "pending",
+      occurred_at: new Date().toISOString(),
     });
-    if (!res.ok) { console.error('[processScheduled] email failed:', await res.text()); return false; }
-    return true;
-  } catch (e) { console.error('[processScheduled] email error:', e.message); return false; }
+    return { record, created: true };
+  } catch {
+    const raced = await db.NotificationEvent.filter(
+      { event_key: eventKey },
+      "-created_date",
+      1,
+    ).catch(() => []);
+    if (!raced[0]) {
+      throw new Error("Could not reserve feedback notification event.");
+    }
+    return { record: raced[0], created: false };
+  }
 }
 
-async function sendSMS(to, body) {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER || !to || !to.startsWith('+')) return false;
-  try {
-    const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ From: TWILIO_FROM_NUMBER, To: to, Body: body }),
-    });
-    if (!res.ok) { console.error('[processScheduled] SMS failed:', await res.text()); return false; }
-    return true;
-  } catch (e) { console.error('[processScheduled] SMS error:', e.message); return false; }
+function retentionPolicies(now: number) {
+  const cutoff = (ageMs: number) => new Date(now - ageMs).toISOString();
+  return [
+    {
+      name: "contact_verification_attempts_30d",
+      entity: "ContactVerificationAttempt",
+      query: { attempted_at: { $lt: cutoff(30 * DAY_MS) } },
+      sort: "attempted_at",
+      cutoff: cutoff(30 * DAY_MS),
+      eligible: () => true,
+    },
+    {
+      name: "contact_verification_proofs_expired_7d",
+      entity: "ContactVerificationProof",
+      query: { proof_expires_at: { $lt: cutoff(7 * DAY_MS) } },
+      sort: "proof_expires_at",
+      cutoff: cutoff(7 * DAY_MS),
+      eligible: () => true,
+    },
+    {
+      name: "phone_verification_proofs_expired_7d",
+      entity: "PhoneVerificationProof",
+      query: { proof_expires_at: { $lt: cutoff(7 * DAY_MS) } },
+      sort: "proof_expires_at",
+      cutoff: cutoff(7 * DAY_MS),
+      eligible: () => true,
+    },
+    {
+      name: "phone_verification_uses_90d",
+      entity: "PhoneVerificationUse",
+      query: { status: { $in: ["completed", "failed", "reserved"] } },
+      sort: "created_date",
+      cutoff: cutoff(90 * DAY_MS),
+      eligible: (row: any) => {
+        const age = now - timestamp(
+          row.completed_at || row.consumed_at || row.reserved_at ||
+            row.created_date,
+        );
+        if (row.status === "completed") return age >= 90 * DAY_MS;
+        if (row.status === "failed") return age >= 30 * DAY_MS;
+        return row.status === "reserved" && age >= 7 * DAY_MS;
+      },
+    },
+    {
+      name: "rate_limit_hits_14d",
+      entity: "RateLimitHit",
+      query: { occurred_at: { $lt: cutoff(14 * DAY_MS) } },
+      sort: "occurred_at",
+      cutoff: cutoff(14 * DAY_MS),
+      eligible: () => true,
+    },
+    {
+      name: "notification_leases_terminal_7d",
+      entity: "NotificationWorkLease",
+      query: {
+        status: { $in: ["released", "expired"] },
+        expires_at: { $lt: cutoff(7 * DAY_MS) },
+      },
+      sort: "expires_at",
+      cutoff: cutoff(7 * DAY_MS),
+      eligible: () => true,
+    },
+    {
+      name: "notification_leases_stale_active_1d",
+      entity: "NotificationWorkLease",
+      query: {
+        status: "active",
+        expires_at: { $lt: cutoff(DAY_MS) },
+      },
+      sort: "expires_at",
+      cutoff: cutoff(DAY_MS),
+      eligible: () => true,
+    },
+  ];
 }
 
-async function getStaffUsers(base44) {
-  const users = await base44.asServiceRole.entities.User.list('-created_date', 200).catch(() => []);
-  return users.filter((u) => STAFF_ROLES.has(String(u.role || '').toLowerCase()) && u.email);
-}
-
-async function alreadySent(base44, key) {
-  const existing = await base44.asServiceRole.entities.AuditEvent.filter({ event_type: key }, '-created_date', 1).catch(() => []);
-  return existing.length > 0;
-}
-
-async function markSent(base44, key, summary) {
-  await base44.asServiceRole.entities.AuditEvent.create({ event_type: key, summary, visibility: 'system' }).catch(() => {});
-}
-
-function hoursSince(dateStr) {
-  if (!dateStr) return Infinity;
-  return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
-}
-
-Deno.serve(async (req) => {
-  try {
-    const base44 = createClientFromRequest(req);
-    const db = base44.asServiceRole.entities;
-    let origin = req.headers.get('origin') || '';
-    if (!origin) {
+async function runRetentionCleanup(db: any, now: number) {
+  const policies = [];
+  for (const policy of retentionPolicies(now)) {
+    const summary = {
+      policy: policy.name,
+      entity: policy.entity,
+      cutoff: policy.cutoff,
+      scanned: 0,
+      eligible: 0,
+      deleted: 0,
+      failed: 0,
+      status: "ok",
+    };
+    const entity = db[policy.entity];
+    let rows;
+    try {
+      rows = await entity.filter(
+        policy.query,
+        policy.sort,
+        CLEANUP_BATCH_LIMIT,
+      );
+    } catch {
+      summary.status = "scan_failed";
+      policies.push(summary);
+      continue;
+    }
+    summary.scanned = rows.length;
+    for (const row of rows) {
+      if (!policy.eligible(row) || !row.id) continue;
+      summary.eligible += 1;
       try {
-        const profiles = await db.BusinessProfile.list('-created_date', 1).catch(() => []);
-        if (profiles[0]?.website_url) origin = profiles[0].website_url.replace(/\/$/, '');
-      } catch (_) {}
+        await entity.delete(row.id);
+        summary.deleted += 1;
+      } catch {
+        summary.failed += 1;
+        summary.status = "partial";
+      }
     }
-    if (!origin) origin = DEFAULT_ORIGIN;
-    const results = { feedback: 0 };
+    policies.push(summary);
+  }
+  return {
+    batch_limit_per_policy: CLEANUP_BATCH_LIMIT,
+    policies,
+    deleted: policies.reduce((total, policy) => total + policy.deleted, 0),
+    failed: policies.reduce((total, policy) => total + policy.failed, 0),
+  };
+}
 
-    // Overdue invoice reminders have been removed — staff send reminders manually
-    // from the invoice panel (see invoiceActions → send_reminder).
-    const invoices = await db.Invoice.list('-created_date', 500).catch(() => []);
-
-    // ── FEEDBACK EMAILS (12h after payment) ──
-    const paidInvoices = invoices.filter((inv) => {
-      if (inv.status !== 'paid') return false;
-      if (!inv.paid_date) return false;
-      if (hoursSince(inv.paid_date) < FEEDBACK_DELAY_HOURS) return false;
-      return true;
-    });
-
-    for (const invoice of paidInvoices) {
-      const feedbackKey = `notif:feedback_request:${invoice.id}:email`;
-      if (await alreadySent(base44, feedbackKey)) continue;
-
-      const job = invoice.job_id ? await db.Job.get(invoice.job_id).catch(() => null) : null;
-      const customerName = job?.customer_name || 'there';
-      const customerEmail = job?.customer_email || '';
-      if (!customerEmail) continue;
-
-      const subject = `How did we do? — ${BUSINESS_NAME}`;
-      const body = `<p>Hi ${customerName},</p><p>We hope you're happy with your recent repair. We'd love to hear your feedback — it only takes a minute and helps us improve our service.</p><p style="margin-top:24px;"><a href="${origin}/feedback${job?.id ? `?job_id=${job.id}` : ''}" style="background:#0ea5e9;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Leave Feedback</a></p>`;
-      const sent = await sendEmail(customerEmail, subject, emailTemplate(body));
-      if (sent) { await markSent(base44, feedbackKey, `Feedback email sent to ${customerEmail}`); results.feedback++; }
+Deno.serve(async (req: Request) => {
+  const id = requestId(req);
+  try {
+    if (req.method !== "POST") {
+      return fail("method_not_allowed", "Use POST for this action.", id, 405);
+    }
+    if (!automationsEnabled()) {
+      return fail(
+        "automation_disabled",
+        "Scheduled notification automations are disabled.",
+        id,
+        503,
+      );
+    }
+    const base44 = createClientFromRequest(req);
+    const principal = await requireAdmin(base44);
+    if (principal.error) {
+      return fail(
+        principal.error,
+        principal.error === "unauthorized"
+          ? "An administrator session is required."
+          : "Administrator access is required.",
+        id,
+        principal.status,
+      );
     }
 
-    return Response.json({ ok: true, ...results });
+    const db = base44.asServiceRole.entities;
+    const invoices = await db.Invoice.filter(
+      { status: "paid" },
+      "-paid_at",
+      MAX_SCAN,
+    ).catch(() => []);
+    const now = Date.now();
+    let queued = 0;
+    let duplicates = 0;
+    let skipped = 0;
+
+    for (const invoice of invoices) {
+      if (queued >= MAX_QUEUE) break;
+      const paidAt = timestamp(
+        invoice.paid_at || invoice.paid_date || invoice.updated_date,
+      );
+      if (paidAt <= 0 || now - paidAt < FEEDBACK_DELAY_MS) {
+        skipped += 1;
+        continue;
+      }
+      const job = invoice.job_id
+        ? await db.Job.get(invoice.job_id).catch(() => null)
+        : null;
+      if (
+        !job || job.customer_account_id !== invoice.customer_account_id ||
+        !job.completed_at
+      ) {
+        skipped += 1;
+        continue;
+      }
+      const reserved = await reserveFeedbackEvent(db, invoice, job);
+      if (reserved.created) queued += 1;
+      else duplicates += 1;
+    }
+
+    const retention = await runRetentionCleanup(db, now);
+    console.info("[processScheduledNotifications:retention]", JSON.stringify({
+      request_id: id,
+      deleted: retention.deleted,
+      failed: retention.failed,
+      policies: retention.policies.map((policy) => ({
+        policy: policy.policy,
+        status: policy.status,
+        scanned: policy.scanned,
+        deleted: policy.deleted,
+        failed: policy.failed,
+      })),
+    }));
+
+    const workerResponse = await base44.functions.invoke(
+      "processNotificationOutbox",
+      {},
+    ).catch(() => null);
+    const worker = workerResponse?.data?.data || workerResponse?.data || null;
+    return ok({
+      queued,
+      duplicates,
+      skipped,
+      scanned: invoices.length,
+      scan_limit: MAX_SCAN,
+      queue_limit: MAX_QUEUE,
+      retention,
+      worker,
+    }, id, queued ? 202 : 200);
   } catch (error) {
-    console.error('[processScheduledNotifications] failed:', error.message, error.stack);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("[processScheduledNotifications]", JSON.stringify({
+      request_id: id,
+      code: "scheduled_notification_failed",
+      message: clean(error?.message || error, 500),
+    }));
+    return fail(
+      "internal_error",
+      "Scheduled notifications could not be queued.",
+      id,
+      500,
+    );
   }
 });

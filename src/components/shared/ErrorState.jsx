@@ -26,7 +26,7 @@ export default function ErrorState({
       <AlertDescription>
         <p>{safeDescription}</p>
         {onRetry && (
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void onRetry()}>
+          <Button type="button" variant="outline" size="sm" className="mt-3 text-foreground" onClick={() => void onRetry()}>
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             {retryLabel}
           </Button>

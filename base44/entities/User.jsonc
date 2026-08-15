@@ -6,11 +6,10 @@
       "type": "string",
       "enum": [
         "admin",
-        "technician",
         "customer"
       ],
       "default": "customer",
-      "description": "App role for access control. Hierarchy: admin > technician > customer."
+      "description": "Canonical platform-issued application role. Only the top-level authenticated user.role may be used for authorization. Legacy staff, employee and technician values are migrated to admin; all other values migrate to customer."
     },
     "phone": {
       "type": "string",
@@ -31,17 +30,21 @@
     },
     "customer_id": {
       "type": "string",
-      "description": "Unique customer account identifier used to associate jobs with this customer. No two customer accounts should share the same customer_id.",
-      "unique": true
+      "description": "DEPRECATED compatibility field. Never use this mutable User field for authorization. Resolve the canonical Customer row by Customer.user_id instead."
     },
     "job_id": {
       "type": "string",
-      "description": "Comma-separated list of Job entity IDs associated with this user."
+      "description": "DEPRECATED compatibility field. Never use this mutable User field for authorization or ownership."
     },
     "is_customer": {
       "type": "boolean",
       "default": true,
-      "description": "Whether this user should be treated as a customer account."
+      "description": "DEPRECATED compatibility field. Never use this mutable User field for authorization; use the platform-issued top-level role."
+    },
+    "identity_version": {
+      "type": "number",
+      "default": 2,
+      "description": "Identity model version last applied by the controlled identity migration."
     },
     "hasSeenCustomerPortalTutorial": {
       "type": "boolean",

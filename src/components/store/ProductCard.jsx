@@ -2,11 +2,10 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package } from "lucide-react";
-import { useCart } from "@/lib/CartContext";
+import { MessageCircle, Package } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function ProductCard({ product }) {
-  const { addItem } = useCart();
   const price = Number(product.price || 0);
 
   return (
@@ -16,11 +15,13 @@ export default function ProductCard({ product }) {
           <img
             src={product.image_url}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="h-full w-full grid place-items-center text-muted-foreground">
-            <Package className="h-10 w-10" />
+            <Package className="h-10 w-10" aria-hidden="true" />
           </div>
         )}
       </div>
@@ -36,14 +37,11 @@ export default function ProductCard({ product }) {
           <span className="font-heading font-bold">
             {price > 0 ? `$${price.toFixed(2)}` : "POA"}
           </span>
-          <Button
-            size="sm"
-            disabled={!product.in_stock}
-            onClick={() => addItem(product)}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground"
-          >
-            <Plus className="h-4 w-4" /> Add
-          </Button>
+           <Button asChild size="touch" variant="outline">
+             <Link to={`/contact?product=${encodeURIComponent(product.id)}`} aria-label={`Enquire about ${product.name}`}>
+               <MessageCircle className="h-4 w-4" aria-hidden="true" /> Enquire
+             </Link>
+           </Button>
         </div>
       </div>
     </Card>

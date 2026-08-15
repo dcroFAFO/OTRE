@@ -8,13 +8,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { base44 } from "@/api/base44Client";
 import StatusPill from "@/components/shared/StatusPill";
-import { getJobInvoice, createInvoice, setPaymentStatus, generateInvoicePdf, emailInvoicePdf, startInvoicePayment, updateInvoiceLineItems, sendPaymentReminder } from "@/services/paymentService";
+import { getJobInvoice, createInvoice, recordManualPayment, manualPaymentOutcome, generateInvoicePdf, emailInvoicePdf, updateInvoiceLineItems, sendPaymentReminder } from "@/services/paymentService";
 import InvoicePdfPreviewDialog from "./InvoicePdfPreviewDialog";
 import PartPickerModal from "./PartPickerModal";
 import LabourConsumablePickerModal from "./LabourConsumablePickerModal";
 import InvoiceLineItemCard from "./InvoiceLineItemCard";
 import { DEFAULT_INVOICE_SETTINGS } from "@/config/platformConfig";
-import { AlertCircle, Bell, CheckCircle2, Clock, CreditCard, FileText, Loader2, Lock, MoreHorizontal, Package, Plus, Save, Send, Wrench } from "lucide-react";
+import { AlertCircle, Bell, CheckCircle2, Clock, FileText, Loader2, Lock, MoreHorizontal, Package, Plus, Save, Send, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { PARTS_MARKUP_PERCENT, getUsageCustomerUnitPrice, roundMoney } from "@/lib/partsPricing";
 import { addInventoryParts, generateAndSendInvoice } from "@/services/jobService";
@@ -106,7 +106,6 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pdfDocument, setPdfDocument] = useState(null);
   const [pdfRevision, setPdfRevision] = useState(0);
-  const [paying, setPaying] = useState(false);
   const [savingLines, setSavingLines] = useState(false);
   const [draftItems, setDraftItems] = useState([]);
   const [internalNotes, setInternalNotes] = useState("");
@@ -294,27 +293,23 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
     if (!invoice || !pendingPaymentStatus || paymentStatusPending) return;
     setPaymentStatusPending(true);
     try {
-      const inv = await setPaymentStatus(invoice, job, pendingPaymentStatus);
-      setInvoice(inv);
-      toast.success(pendingPaymentStatus === "paid" ? "Payment recorded and job completed." : "Invoice marked outstanding.");
+      const result = await recordManualPayment(invoice, job);
+      const outcome = manualPaymentOutcome(result);
+      if (outcome.invoice) setInvoice(outcome.invoice);
+      if (outcome.needsReconciliation || !outcome.complete) {
+        toast.warning("Payment recorded; reconciliation is still pending.", {
+          description: "The final invoice and job status need administrator review before they are treated as complete.",
+        });
+        onChange?.();
+        return;
+      }
+      toast.success("Payment recorded and job completed.");
       onChange?.();
     } catch (error) {
       toast.error(getSafeErrorMessage(error, "Payment status could not be updated."));
     } finally {
       setPaymentStatusPending(false);
       setPendingPaymentStatus(null);
-    }
-  };
-
-  const payOnline = async () => {
-    if (!invoice) return;
-    setPaying(true);
-    try {
-      const result = await startInvoicePayment(invoice);
-      if (result?.blocked) setPaying(false);
-    } catch (err) {
-      toast.error(getSafeErrorMessage(err, "Failed to start checkout."));
-      setPaying(false);
     }
   };
 
@@ -402,7 +397,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
         </h3>
         <div className="flex items-center gap-2">
           <FinaliseBadge status={finaliseStatus} />
-          {invoice && <StatusPill kind="payment" value={invoice.status} />}
+          {invoice && <StatusPill kind="payment" value={["issued", "unpaid"].includes(invoice.status) ? "outstanding" : invoice.status} />}
         </div>
       </div>
 
@@ -499,13 +494,12 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
               <Button size="sm" variant="outline" onClick={() => setLabourPickerOpen(true)} disabled={addingLabour} className="gap-1.5">
                 {addingLabour ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />} Add labour / consumable
               </Button>
-              {invoice.status !== "paid" && invoice.status !== "refunded" && <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={payOnline} disabled={paying}>{paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Pay with Stripe</Button>}
               {invoice.status !== "paid" && invoice.status !== "refunded" && invoice.invoiceSentAt && (
                 <Button size="sm" variant="outline" onClick={handleSendReminder} disabled={sendingReminder || !job.customer_email} className="gap-1.5">
                   {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />} Send reminder
                 </Button>
               )}
-              {invoice.status !== "refunded" && (
+              {invoice.status !== "paid" && invoice.status !== "refunded" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="outline" disabled={paymentStatusPending} className="gap-1.5">
@@ -516,11 +510,8 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Manual payment record</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem disabled={invoice.status === "paid"} onSelect={() => setPendingPaymentStatus("paid")}>
+                    <DropdownMenuItem onSelect={() => setPendingPaymentStatus("paid")}>
                       Mark paid
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled={invoice.status === "outstanding"} onSelect={() => setPendingPaymentStatus("outstanding")}>
-                      Mark outstanding
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -581,12 +572,10 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pendingPaymentStatus === "paid" ? "Record this invoice as paid?" : "Mark this invoice outstanding?"}
+              Record this invoice as paid?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingPaymentStatus === "paid"
-                ? "Only continue after verifying payment outside Stripe. This completes the job and creates an audit record."
-                : "This reopens billing, clears the paid date, and moves the job to Invoice Outstanding. An audit record will be created."}
+              Only continue after verifying the full payment through the workshop’s approved manual process. This completes the job and creates an immutable payment event and audit record.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -599,7 +588,7 @@ export default function InvoicePanel({ job, actor, canEdit, onChange, buttonOnly
               }}
             >
               {paymentStatusPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {pendingPaymentStatus === "paid" ? "Record paid" : "Mark outstanding"}
+              Record paid
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

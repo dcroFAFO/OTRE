@@ -1,18 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { CUSTOMER_JOB_MILESTONES, getCustomerJobProgress, getStatus, normalizeStatusKey } from "@/config/jobConfig";
 import { AlertCircle, CheckCircle2, Circle, Clock, Wrench, Receipt } from "lucide-react";
-import { startInvoicePayment } from "@/services/paymentService";
 import SignatureCapture from "@/components/portal/SignatureCapture";
 import CustomerInvoiceCard from "@/components/portal/CustomerInvoiceCard";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/shared";
-import { getSafeErrorMessage } from "@/lib/errors";
-import { toast } from "sonner";
+import { getCustomerPortalJob } from "@/services/customerPortalService";
 
 function normalizedStatus(status) {
   return normalizeStatusKey(status);
@@ -72,46 +69,33 @@ function StatusTab({ job }) {
 function jobBalance(job, invoices) {
   const jobInvoices = invoices.filter((inv) => inv.job_id === job.id && inv.invoiceVisibility === "customer_visible" && inv.status && inv.status !== "draft");
   if (!jobInvoices.length) return "Balance unavailable";
-  const owing = jobInvoices.filter((inv) => inv.status !== "paid" && inv.status !== "refunded").reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  const finalStatuses = new Set(["paid", "refunded", "cancelled", "void"]);
+  const owing = jobInvoices.filter((inv) => !finalStatuses.has(inv.status)).reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
   if (owing > 0) return `Owing: $${owing.toFixed(2)}`;
   const paid = jobInvoices.filter((inv) => inv.status === "paid").reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
   if (paid > 0) return `Paid: $${paid.toFixed(2)}`;
   return "Balance: $0.00";
 }
 
-function HistoryTab({ userEmail }) {
-  const jobsQuery = useQuery({
-    queryKey: ["portalHistory", userEmail],
-    queryFn: () => base44.entities.Job.filter({ customer_email: userEmail, archived: false }, "-created_date", 50),
-    enabled: !!userEmail,
-  });
-  // RLS restricts results to the customer's own customer-visible invoices.
-  const invoicesQuery = useQuery({
-    queryKey: ["portalHistoryInvoices", userEmail],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 100),
-    enabled: !!userEmail,
-  });
-  const jobs = jobsQuery.data || [];
-  const invoices = invoicesQuery.data || [];
-
-  if (jobsQuery.isLoading) return <CardSkeleton compact label="Loading repair history" className="py-2" />;
-  if (jobsQuery.error) return <ErrorState title="Repair history could not be loaded" error={jobsQuery.error} onRetry={jobsQuery.refetch} />;
+function HistoryTab({ jobs = [], invoices = [], isLoading, error, onRetry }) {
+  if (isLoading) return <CardSkeleton compact label="Loading repair history" className="py-2" />;
+  if (error) return <ErrorState title="Repair history could not be loaded" error={error} onRetry={onRetry} />;
   if (!jobs.length) return <EmptyState compact icon={Wrench} title="No repair history yet" description="Completed and previous repairs will appear here." />;
 
   return (
     <div className="space-y-3 py-2">
-      {invoicesQuery.isLoading ? <CardSkeleton compact label="Loading repair balances" /> : null}
-      {invoicesQuery.error ? <ErrorState title="Repair balances could not be loaded" error={invoicesQuery.error} onRetry={invoicesQuery.refetch} /> : null}
       <ul className="space-y-3">
         {jobs.map((job) => {
           const statusDef = getStatus(job.status);
-          const balance = invoicesQuery.error || invoicesQuery.isLoading ? "Balance unavailable" : jobBalance(job, invoices);
+          const balance = jobBalance(job, invoices);
           return (
             <li key={job.id} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-foreground">{job.asset_label || job.scooter_label || "Scooter"}</p>
                 <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{job.issue_description || "No issue description supplied"}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{job.reference} · {new Date(job.created_date).toLocaleDateString("en-AU")}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {[job.reference, job.created_date ? new Date(job.created_date).toLocaleDateString("en-AU") : "Date unavailable"].filter(Boolean).join(" · ")}
+                </p>
                 <p className={`mt-1 text-xs font-semibold ${balance.startsWith("Owing") ? "text-rose-700" : balance.startsWith("Paid") ? "text-emerald-700" : "text-muted-foreground"}`}>{balance}</p>
               </div>
               <Badge variant="outline" className="shrink-0 text-xs">{statusDef?.label || job.status}</Badge>
@@ -124,26 +108,7 @@ function HistoryTab({ userEmail }) {
 }
 
 function InvoiceTab({ invoices = [], isLoading, error, onRetry, userId, onChanged }) {
-  const [paying, setPaying] = useState(null);
   const visible = invoices.filter((i) => i.invoiceVisibility === "customer_visible" && i.status && i.status !== "draft");
-
-  const pay = async (invoice) => {
-    if (paying) return;
-    setPaying(invoice.id);
-    try {
-      const result = await startInvoicePayment(invoice);
-      if (result?.blocked) {
-        toast.error(result.reason);
-        setPaying(null);
-      } else if (!result?.url) {
-        toast.error("Secure checkout could not be started. Please try again.");
-        setPaying(null);
-      }
-    } catch (caught) {
-      toast.error(getSafeErrorMessage(caught, "Could not start payment. Please try again."));
-      setPaying(null);
-    }
-  };
 
   if (isLoading) return <CardSkeleton compact label="Loading job invoices" className="py-2" />;
   if (error) return <ErrorState title="Invoices could not be loaded" error={error} onRetry={onRetry} />;
@@ -157,33 +122,41 @@ function InvoiceTab({ invoices = [], isLoading, error, onRetry, userId, onChange
           invoice={invoice}
           userId={userId}
           onChanged={onChanged}
-          onPay={() => pay(invoice)}
-          paymentPending={paying === invoice.id}
         />
       ))}
     </div>
   );
 }
 
-/** @param {{ job: any, open: boolean, onClose: () => void, onUpdate?: () => void, userEmail?: string, userId?: string }} props */
-export default function CustomerJobModal({ job, open, onClose, onUpdate, userEmail, userId }) {
+/** @param {{ job: any, open: boolean, onClose: () => void, onUpdate?: () => void, jobs?: any[], invoices?: any[], historyLoading?: boolean, historyError?: Error, onRetryHistory?: () => void, userId?: string }} props */
+export default function CustomerJobModal({ job, open, onClose, onUpdate, jobs = [], invoices = [], historyLoading = false, historyError, onRetryHistory, userId }) {
   const [tab, setTab] = useState("status");
-  // All invoices issued to this customer — RLS restricts results to their own customer-visible invoices.
-  const { data: invoices = [], isLoading: invoicesLoading, error: invoicesError, refetch: refetchInvoices } = useQuery({
-    queryKey: ["portalInvoices", userEmail],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 50),
-    enabled: open,
+  useEffect(() => {
+    if (open) setTab("status");
+  }, [job?.id, open]);
+  const detailQuery = useQuery({
+    queryKey: ["customerPortalJob", job?.id],
+    queryFn: () => getCustomerPortalJob(job.id),
+    enabled: open && !!job?.id,
   });
 
   if (!job) return null;
+  const currentJob = detailQuery.data?.job
+    ? { ...detailQuery.data.job, customer_name: job.customer_name }
+    : job;
+  const jobInvoices = detailQuery.data?.invoices || [];
+  const refreshInvoices = async () => {
+    await detailQuery.refetch();
+    onUpdate?.();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-extrabold flex items-center gap-2">
-            <span>{job.asset_label || job.scooter_label || "Your Repair"}</span>
-            {job.reference && <span className="text-xs font-normal text-muted-foreground">#{job.reference}</span>}
+            <span>{currentJob.asset_label || currentJob.scooter_label || "Your Repair"}</span>
+            {currentJob.reference && <span className="text-xs font-normal text-muted-foreground">#{currentJob.reference}</span>}
           </DialogTitle>
         </DialogHeader>
         <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
@@ -193,9 +166,36 @@ export default function CustomerJobModal({ job, open, onClose, onUpdate, userEma
             <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
           </TabsList>
           <div className="overflow-y-auto flex-1 pr-1">
-            <TabsContent value="status" className="mt-0">{tab === "status" && <StatusTab job={job} />}</TabsContent>
-            <TabsContent value="invoice" className="mt-0">{tab === "invoice" && <InvoiceTab invoices={invoices} isLoading={invoicesLoading} error={invoicesError} onRetry={refetchInvoices} userId={userId} onChanged={refetchInvoices} />}</TabsContent>
-            <TabsContent value="history" className="mt-0">{tab === "history" && <HistoryTab userEmail={userEmail} />}</TabsContent>
+            <TabsContent value="status" className="mt-0">
+              {tab === "status" && (detailQuery.isLoading
+                ? <CardSkeleton compact label="Loading repair status" className="py-2" />
+                : detailQuery.error
+                  ? <ErrorState title="Repair details could not be loaded" error={detailQuery.error} onRetry={detailQuery.refetch} />
+                  : <StatusTab job={currentJob} />)}
+            </TabsContent>
+            <TabsContent value="invoice" className="mt-0">
+              {tab === "invoice" && (
+                <InvoiceTab
+                  invoices={jobInvoices}
+                  isLoading={detailQuery.isLoading}
+                  error={detailQuery.error}
+                  onRetry={detailQuery.refetch}
+                  userId={userId}
+                  onChanged={refreshInvoices}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="history" className="mt-0">
+              {tab === "history" && (
+                <HistoryTab
+                  jobs={jobs}
+                  invoices={invoices}
+                  isLoading={historyLoading}
+                  error={historyError}
+                  onRetry={onRetryHistory}
+                />
+              )}
+            </TabsContent>
           </div>
         </Tabs>
       </DialogContent>

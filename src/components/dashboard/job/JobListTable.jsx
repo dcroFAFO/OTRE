@@ -53,6 +53,14 @@ export default function JobListTable({ jobs, onOpen, selectedIds = [], onSelecti
     category: c,
     sectionJobs: jobs.filter((j) => c.statuses.includes(normalizeStatusKey(j.status))),
   }));
+  const knownStatuses = new Set(SECTION_CATEGORIES.flatMap((category) => category.statuses));
+  const reviewJobs = jobs.filter((job) => !knownStatuses.has(normalizeStatusKey(job.status)));
+  if (reviewJobs.length) {
+    grouped.push({
+      category: { key: "review", label: "Needs status review" },
+      sectionJobs: reviewJobs,
+    });
+  }
 
   return (
     <>

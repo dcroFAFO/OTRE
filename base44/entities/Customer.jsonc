@@ -43,7 +43,27 @@
     },
     "user_id": {
       "type": "string",
-      "description": "Linked User record id for portal access"
+      "description": "Canonical authenticated User.id for this customer account. One User may own at most one Customer and ownership is never inferred from email or phone.",
+      "unique": true
+    },
+    "identity_version": {
+      "type": "number",
+      "default": 2,
+      "description": "Canonical identity model version."
+    },
+    "identity_linked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When user_id was established by an authenticated or verified claim flow."
+    },
+    "identity_link_source": {
+      "type": "string",
+      "enum": [
+        "authenticated_signup",
+        "verified_guest_claim",
+        "admin_migration"
+      ],
+      "description": "Auditable source of the canonical user_id link."
     },
     "createdAt": {
       "type": "string",
@@ -140,54 +160,19 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "technician"
-          }
-        },
-        {
-          "data.email": "{{user.email}}"
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "employee"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "delete": {
       "user_condition": {

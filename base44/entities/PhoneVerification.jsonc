@@ -5,8 +5,9 @@
     "phone_e164": {
       "type": "string"
     },
-    "email": {
-      "type": "string"
+    "email_hash": {
+      "type": "string",
+      "description": "Keyed SHA-256 rate-limit binding for the normalized signup email; plaintext email is not required for OTP verification."
     },
     "purpose": {
       "type": "string",
@@ -27,6 +28,20 @@
       "type": "number",
       "default": 0
     },
+    "consumed_by_user_id": {
+      "type": "string"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proof_id": {
+      "type": "string"
+    },
+    "locked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "delivery_channel": {
       "type": "string",
       "enum": [
@@ -40,6 +55,30 @@
     "booking_created_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "delivery_status": {
+      "type": "string",
+      "enum": [
+        "sending",
+        "sent",
+        "failed",
+        "ambiguous"
+      ]
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivery_failed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provider_message_id": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "request_ip_hash": {
+      "type": "string"
     },
     "description": {
       "type": "string",

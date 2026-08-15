@@ -13,9 +13,9 @@ const LAST_UPDATED = "13 August 2026";
 const SECTIONS = [
   ["privacy", "Privacy Policy"],
   ["collection", "What we collect & why"],
-  ["cookies", "Cookies, analytics & advertising"],
+  ["cookies", "Cookies & site operation"],
   ["google", "Google services & limited use"],
-  ["payments", "Payments & Stripe"],
+  ["payments", "Payments"],
   ["rewards", "Referral & loyalty rewards"],
   ["communications", "Email & SMS communications"],
   ["rights", "Your data rights, retention & security"],
@@ -91,7 +91,7 @@ export default function Terms() {
               <li><strong>Contact details</strong> — name, email, phone number and address, so we can identify you, confirm bookings and provide updates.</li>
               <li><strong>Booking &amp; repair information</strong> — scooter make, model, serial number, fault descriptions, photos, notes, quotes, invoices and service history.</li>
               <li><strong>Account information</strong> — login identifiers and, if you sign in with Google, your Google account name, email and profile photo.</li>
-              <li><strong>Payment information</strong> — processed by our payment provider; we do not store your full card details.</li>
+              <li><strong>Invoice records</strong> — amounts, manual payment status and any reference recorded by the workshop. This website does not collect card details.</li>
               <li><strong>Technical &amp; usage data</strong> — IP address, browser and device type, pages viewed and referring links, used for security, troubleshooting and improving the site.</li>
             </ul>
             <p>
@@ -100,42 +100,33 @@ export default function Terms() {
             </p>
             <p>
               We share information only with service providers who help us run the business (hosting and app platform, email and SMS delivery,
-              payment processing, cloud spreadsheets and calendars, parts suppliers where a part must be ordered for your repair), and where required
+              invoice administration and parts suppliers where a part must be ordered for your repair), and where required
               or permitted by law. Some of these providers may store data overseas.
             </p>
           </LegalSection>
 
-          <LegalSection id="cookies" title="3. Cookies, analytics & advertising">
+          <LegalSection id="cookies" title="3. Cookies & site operation">
             <p>
-              We use cookies and similar technologies that are necessary for the site to function (for example keeping you signed in), plus
-              analytics and advertising cookies. We use <strong>Google Analytics</strong> and <strong>Google Ads</strong> conversion tracking to
-              understand how visitors find and use the site and to measure our advertising.
+              We use cookies and similar browser storage that are necessary for the site and customer account to function, for example keeping you signed in and protecting authenticated requests.
             </p>
             <p>
-              These tools may set cookies and collect device and usage identifiers. You can control cookies through your browser settings, opt out of
-              Google Analytics using Google&apos;s browser add-on, and manage ad personalisation in your Google account settings. Blocking some cookies
-              may affect how parts of the site work.
+              We do not currently load Google Analytics or Google Ads tracking on this website. You can control cookies through your browser settings, although blocking necessary storage may prevent account features from working.
             </p>
           </LegalSection>
 
           <LegalSection id="google" title="4. Google services & limited use">
             <p>
-              Our site and portal use Google services including Google Sign-In, Google Maps, Google Calendar, Google Sheets and Google APIs. Your use
+              If you choose Google Sign-In, Google processes the authentication needed to connect your account. Links to directions may open Google Maps. Your use
               of those features is also subject to Google&apos;s Terms of Service and Privacy Policy.
             </p>
             <p>
-              Where we access data from Google APIs, that use is limited to providing and improving the features you have asked for — such as
-              scheduling your booking, mapping our location, or maintaining our internal customer records. We do not transfer Google user data to
-              third parties except as necessary to provide those features, comply with the law, or as part of a merger or acquisition; we do not use
-              it for advertising; and we do not allow humans to read it unless you ask us to, we need to for security or legal reasons, or the data is
-              aggregated and de-identified.
+              Google account data received through sign-in is used only to authenticate you and connect your customer account. We do not use that Google account data for advertising or sell it to third parties. We may disclose it only where needed to operate authentication, meet legal or security obligations, or complete a business transfer permitted by law.
             </p>
           </LegalSection>
 
-          <LegalSection id="payments" title="5. Payments & Stripe">
+          <LegalSection id="payments" title="5. Payments">
             <p>
-              Online payments for quotes, invoices and store orders are processed by Stripe. Card details are entered on Stripe&apos;s secure systems and
-              are handled under Stripe&apos;s privacy policy and terms. We receive only a payment confirmation, the amount, and limited reference details.
+              Online and card checkout are not offered through this website. Invoice payments are arranged directly with the workshop using the available payment methods confirmed by our team.
             </p>
             <p>
               Prices are in Australian dollars and are payable before collection of your scooter unless we agree otherwise in writing. Refunds are
@@ -148,7 +139,7 @@ export default function Terms() {
               <li>A new customer may claim one valid referral code during account registration and before making their first booking.</li>
               <li>The referred customer receives $10 off their first eligible invoice for 90 days. After that invoice is paid, the referrer receives 10% off one later invoice, capped at $50 and valid for 90 days.</li>
               <li>Every five distinct repairs paid after the loyalty program launch earns 10% off labour on one invoice, capped at $50 and valid for 180 days.</li>
-              <li>Only one reward may be applied to an invoice. A reward can be removed until Stripe checkout begins and is redeemed only when the invoice settles.</li>
+              <li>Only one reward may be applied to an invoice. A reward is redeemed only after the workshop records the invoice as paid.</li>
               <li>Rewards are account-specific, have no cash value, cannot be transferred, and may be cancelled where issued through error, abuse, fraud or an invalid transaction.</li>
             </ul>
             <p>Public reviews are optional and are never required to receive a reward.</p>

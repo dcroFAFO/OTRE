@@ -1,175 +1,407 @@
-import {
-  cleanEmail,
-  isCustomerUserRecord,
-  isStaff,
-  normalizePhone,
-  resolveStaffContext,
-  userField,
-} from '../../shared/customerCore.ts';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.41";
 
-// Read-only customer queries for the admin client list. Any staff role may read.
+type EntityRecord = Record<string, unknown>;
+type Entities = ReturnType<
+  typeof createClientFromRequest
+>["asServiceRole"]["entities"];
 
-async function listCustomers(entities) {
-  const [rawCustomers, profiles, users, scooters, jobs] = await Promise.all([
-    entities.Customer.list('-updated_date', 1000).catch(() => []),
-    entities.CustomerProfile.list('-updated_at', 1000).catch(() => []),
-    entities.User.list('-updated_date', 1000).catch(() => []),
-    entities.Scooter.list('-updated_date', 1000).catch(() => []),
-    entities.Job.list('-updated_date', 1000).catch(() => []),
-  ]);
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 100;
+const MAX_PAGE = 10_000;
+const RELATED_QUERY_LIMIT = 5_000;
+const DUPLICATE_QUERY_LIMIT = 10;
+const SEARCH_LIMIT = 8;
+const NOTE_LIMIT = 200;
 
-  const customersByKey = new Map();
-  const remember = (customer) => {
-    if (!customer?.id) return customer;
-    customersByKey.set(customer.id, customer);
-    if (customer.customer_id) customersByKey.set(customer.customer_id, customer);
-    if (customer.email) customersByKey.set(`email:${cleanEmail(customer.email)}`, customer);
-    if (customer.user_id) customersByKey.set(`user:${customer.user_id}`, customer);
-    return customer;
-  };
-  rawCustomers.forEach(remember);
+const CUSTOMER_FIELDS = [
+  "id",
+  "customer_id",
+  "full_name",
+  "name",
+  "email",
+  "phone",
+  "phone_e164",
+  "phone_display",
+  "status",
+  "referral_code",
+  "referred_by_customer_id",
+  "referral_status",
+  "referral_eligible",
+  "user_id",
+  "tags",
+  "last_activity_date",
+  "notes",
+  "referral_notes",
+  "created_date",
+  "updated_date",
+];
 
-  const existingFor = (source) => {
-    const email = cleanEmail(source.email);
-    return (source.customer_id && customersByKey.get(source.customer_id))
-      || (source.user_id && customersByKey.get(`user:${source.user_id}`))
-      || (email && customersByKey.get(`email:${email}`))
-      || null;
-  };
-  // Build an in-memory customer object for sources without an existing Customer
-  // record. Listing must NOT persist new records — otherwise deleted customers
-  // are immediately recreated on the next list fetch, making deletes appear to fail.
-  const buildFromSource = (source) => {
-    const found = existingFor(source);
-    if (found) return found;
-    const email = cleanEmail(source.email);
-    const phone = source.phone || source.phone_e164 || source.phone_display || '';
-    const phoneE164 = source.phone_e164 || normalizePhone(phone) || '';
-    const fullName = source.full_name || source.name || source.display_name || email || 'Customer';
-    return {
-      customer_id: source.customer_id || source.profile_id || source.user_id || crypto.randomUUID(),
-      full_name: fullName,
-      name: source.name || fullName,
-      email,
-      phone: phoneE164 || phone,
-      phone_e164: phoneE164,
-      phone_display: source.phone_display || phone || phoneE164,
-      user_id: source.user_id || '',
-      status: 'active',
-      tags: ['customer'],
-      createdAt: source.createdAt || source.created_date || new Date().toISOString(),
-      last_activity_date: source.last_activity_date || source.updated_date || new Date().toISOString(),
-    };
-  };
+const JOB_SUMMARY_FIELDS = [
+  "id",
+  "customer_account_id",
+  "created_date",
+  "updated_date",
+];
 
-  const virtualCustomers = [];
-  for (const user of users.filter(isCustomerUserRecord)) {
-    const virtual = buildFromSource({
-      user_id: user.id,
-      customer_id: userField(user, 'customer_id') || user.id,
-      full_name: user.full_name,
-      name: user.full_name,
-      email: user.email,
-      phone: user.phone || user.phone_number || userField(user, 'phone'),
-      phone_e164: user.phone_e164 || userField(user, 'phone_e164'),
-      phone_display: user.phone_display || userField(user, 'phone_display'),
-      created_date: user.created_date,
-      last_activity_date: user.updated_date,
-    });
-    if (!virtual.id) virtualCustomers.push(virtual);
-  }
+const SCOOTER_SUMMARY_FIELDS = [
+  "id",
+  "customer_account_id",
+  "make",
+  "model",
+  "updated_date",
+];
 
-  for (const profile of profiles) {
-    const virtual = buildFromSource({
-      profile_id: profile.id,
-      user_id: profile.auth_user_id,
-      customer_id: profile.id,
-      full_name: profile.full_name || profile.display_name || profile.name,
-      name: profile.name || profile.display_name || profile.full_name,
-      email: profile.email,
-      phone: profile.phone_e164,
-      phone_e164: profile.phone_e164,
-      phone_display: profile.phone_e164,
-      created_date: profile.created_date || profile.created_at,
-      last_activity_date: profile.updated_date || profile.updated_at,
-    });
-    if (!virtual.id) virtualCustomers.push(virtual);
-  }
-
-  const staffUsers = users.filter(isStaff);
-  const staffUserIds = new Set(staffUsers.map((user) => user.id).filter(Boolean));
-  const staffEmails = new Set(staffUsers.map((user) => cleanEmail(user.email)).filter(Boolean));
-  const byId = [...new Map([...customersByKey.values(), ...virtualCustomers].map((customer) => [customer.id || customer.customer_id || customer.user_id, customer])).values()]
-    .filter((customer) => customer.email || customer.full_name || customer.name)
-    .filter((customer) => !staffUserIds.has(customer.user_id) && !staffEmails.has(cleanEmail(customer.email)));
-  const byIdentity = new Map();
-  const scoreCustomer = (customer) => Number(!!customer.user_id) * 4 + Number(!!customer.job_id) * 2 + Number(!!customer.customer_id);
-  for (const customer of byId) {
-    const key = customer.email ? `email:${cleanEmail(customer.email)}` : customer.user_id ? `user:${customer.user_id}` : `customer:${customer.customer_id || customer.id}`;
-    const current = byIdentity.get(key);
-    if (!current || scoreCustomer(customer) > scoreCustomer(current) || String(customer.updated_date || '') > String(current.updated_date || '')) {
-      byIdentity.set(key, customer);
-    }
-  }
-  const uniqueCustomers = [...byIdentity.values()]
-    .sort((a, b) => String(b.last_activity_date || b.updated_date || b.created_date || '').localeCompare(String(a.last_activity_date || a.updated_date || a.created_date || '')));
-
-  return uniqueCustomers.map((customer) => {
-    const stableId = customer.customer_id || customer.id;
-    const normalizedPhone = normalizePhone(customer.phone_e164 || customer.phone || customer.phone_display);
-    const customerScooters = scooters.filter((s) => s.customer_id === stableId || s.customer_id === customer.id || s.customer_account_id === customer.id);
-    const customerJobs = jobs.filter((j) => {
-      if (j.customer_id && j.customer_id !== stableId && j.customer_id !== customer.id) return false;
-      if (j.customer_account_id && j.customer_account_id !== customer.id) return false;
-      if (j.customer_id === stableId || j.customerId === stableId || j.customer_profile_id === stableId || j.customer_account_id === customer.id || (customer.user_id && j.customer_user_id === customer.user_id)) return true;
-      const emailMatches = customer.email && cleanEmail(j.customer_email) === cleanEmail(customer.email);
-      const phoneMatches = normalizedPhone && normalizePhone(j.customer_phone_e164 || j.customer_phone || j.customer_phone_display) === normalizedPhone;
-      return (emailMatches || phoneMatches) && !j.customer_id && !j.customer_account_id && !j.customer_user_id;
-    });
-    const latestJobDate = customerJobs.reduce((latest, job) => {
-      const date = job.updated_date || job.created_date || '';
-      return date > latest ? date : latest;
-    }, '');
-    return {
-      ...customer,
-      scooter_count: customerScooters.length,
-      scooters: customerScooters.slice(0, 3).map((s) => [s.make, s.model].filter(Boolean).join(' ') || s.model || 'Scooter'),
-      job_count: customerJobs.length,
-      last_job_date: latestJobDate,
-      last_activity_date: customer.last_activity_date || latestJobDate || customer.updated_date,
-    };
-  });
+function text(value: unknown) {
+  return typeof value === "string" ? value : "";
 }
 
-async function checkDuplicateContact(entities, email, phone, excludeCustomerId) {
-  const results = { emailConflict: null, phoneConflict: null };
-  if (email) {
-    const byEmail = await entities.Customer.filter({ email: cleanEmail(email) }, '-updated_date', 10).catch(() => []);
-    results.emailConflict = byEmail.find((c) => c.id !== excludeCustomerId) || null;
+function cleanEmail(value: unknown) {
+  return text(value).trim().toLowerCase();
+}
+
+function normalizePhone(value: unknown) {
+  let cleaned = text(value).trim().replace(/[^\d+]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("+61")) cleaned = cleaned.slice(3);
+  else if (cleaned.startsWith("61")) cleaned = cleaned.slice(2);
+  if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+  const phone = `+61${cleaned.replace(/\D/g, "")}`;
+  return /^\+614\d{8}$/.test(phone) ? phone : "";
+}
+
+function boundedInteger(value: unknown, fallback: number, maximum: number) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, maximum);
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function staffCustomerDto(customer: EntityRecord) {
+  const id = text(customer.id);
+  return {
+    id,
+    reference: text(customer.customer_id) || id,
+    name: text(customer.full_name) || text(customer.name),
+    email: cleanEmail(customer.email),
+    phone_e164: text(customer.phone_e164),
+    status: text(customer.status) || "active",
+    referral_code: text(customer.referral_code),
+    referred_by_customer_id: text(customer.referred_by_customer_id),
+    referral_status: text(customer.referral_status) || "none",
+    referral_eligible: Boolean(customer.referral_eligible),
+    user_id: text(customer.user_id),
+    phone: text(customer.phone),
+    phone_display: text(customer.phone_display),
+    tags: stringArray(customer.tags),
+    last_activity_date: text(customer.last_activity_date) || null,
+    notes: text(customer.notes),
+    referral_notes: text(customer.referral_notes),
+  };
+}
+
+function staffNoteDto(note: EntityRecord) {
+  return {
+    id: text(note.id),
+    customer_id: text(note.customer_id),
+    body: text(note.body),
+    author_id: text(note.author_id),
+    author_name: text(note.author_name) || "Administrator",
+    created_date: text(note.created_date) || null,
+    updated_date: text(note.updated_date) || null,
+  };
+}
+
+function groupByCustomer(records: EntityRecord[]) {
+  const grouped = new Map<string, EntityRecord[]>();
+  for (const record of records) {
+    const customerId = text(record.customer_account_id);
+    if (!customerId) continue;
+    const current = grouped.get(customerId);
+    if (current) current.push(record);
+    else grouped.set(customerId, [record]);
   }
-  if (phone) {
-    const byPhone = await entities.Customer.filter({ phone_e164: normalizePhone(phone) || phone }, '-updated_date', 10).catch(() => []);
-    results.phoneConflict = byPhone.find((c) => c.id !== excludeCustomerId) || null;
+  return grouped;
+}
+
+async function listCustomers(entities: Entities, payload: EntityRecord) {
+  const page = boundedInteger(payload.page, 1, MAX_PAGE);
+  const limit = boundedInteger(payload.limit, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+  const skip = (page - 1) * limit;
+  const customerRows = await entities.Customer.list(
+    "-updated_date",
+    limit + 1,
+    skip,
+    CUSTOMER_FIELDS,
+  ) as EntityRecord[];
+  const hasMore = customerRows.length > limit;
+  const customers = customerRows.slice(0, limit);
+  const customerIds = customers.map((customer) => text(customer.id)).filter(
+    Boolean,
+  );
+
+  let jobs: EntityRecord[] = [];
+  let scooters: EntityRecord[] = [];
+  let jobsFailed = false;
+  let scootersFailed = false;
+
+  if (customerIds.length) {
+    const [jobResult, scooterResult] = await Promise.allSettled([
+      entities.Job.filter(
+        { customer_account_id: { $in: customerIds } },
+        "-updated_date",
+        RELATED_QUERY_LIMIT,
+        0,
+        JOB_SUMMARY_FIELDS,
+      ),
+      entities.Scooter.filter(
+        { customer_account_id: { $in: customerIds } },
+        "-updated_date",
+        RELATED_QUERY_LIMIT,
+        0,
+        SCOOTER_SUMMARY_FIELDS,
+      ),
+    ]);
+    if (jobResult.status === "fulfilled") {
+      jobs = jobResult.value as EntityRecord[];
+    } else jobsFailed = true;
+    if (scooterResult.status === "fulfilled") {
+      scooters = scooterResult.value as EntityRecord[];
+    } else scootersFailed = true;
   }
-  return results;
+
+  const jobsByCustomer = groupByCustomer(jobs);
+  const scootersByCustomer = groupByCustomer(scooters);
+  const customerDtos = customers.map((customer) => {
+    const customerId = text(customer.id);
+    const customerJobs = jobsByCustomer.get(customerId) || [];
+    const customerScooters = scootersByCustomer.get(customerId) || [];
+    let latestJobDate = "";
+    for (const job of customerJobs) {
+      const date = text(job.updated_date) || text(job.created_date);
+      if (date > latestJobDate) latestJobDate = date;
+    }
+    return {
+      ...staffCustomerDto(customer),
+      scooter_count: customerScooters.length,
+      scooters: customerScooters.slice(0, 3).map((scooter) => (
+        [text(scooter.make), text(scooter.model)].filter(Boolean).join(" ") ||
+        text(scooter.model) || "Scooter"
+      )),
+      job_count: customerJobs.length,
+      last_job_date: latestJobDate,
+      last_activity_date: text(customer.last_activity_date) || latestJobDate ||
+        text(customer.updated_date),
+    };
+  }).sort((left, right) => (
+    String(right.last_activity_date || "").localeCompare(
+      String(left.last_activity_date || ""),
+    )
+  ));
+
+  const jobsPotentiallyTruncated = jobs.length === RELATED_QUERY_LIMIT;
+  const scootersPotentiallyTruncated = scooters.length === RELATED_QUERY_LIMIT;
+  const potentiallyTruncated = page > 1 || hasMore ||
+    jobsPotentiallyTruncated || scootersPotentiallyTruncated || jobsFailed ||
+    scootersFailed;
+  const partial = potentiallyTruncated;
+
+  return {
+    customers: customerDtos,
+    page,
+    limit,
+    partial,
+    potentially_truncated: potentiallyTruncated,
+    pagination: {
+      page,
+      limit,
+      has_more: hasMore,
+      next_page: hasMore ? page + 1 : null,
+    },
+    truncation: {
+      customers: page > 1 || hasMore,
+      jobs: jobsPotentiallyTruncated,
+      scooters: scootersPotentiallyTruncated,
+    },
+    query_failures: [
+      ...(jobsFailed ? ["jobs"] : []),
+      ...(scootersFailed ? ["scooters"] : []),
+    ],
+  };
+}
+
+async function checkDuplicateContact(
+  entities: Entities,
+  email: unknown,
+  phone: unknown,
+  excludeCustomerId: unknown,
+) {
+  const normalizedEmail = cleanEmail(email);
+  const normalizedPhone = normalizePhone(phone);
+  const excludedId = text(excludeCustomerId);
+  const [emailRows, phoneRows] = await Promise.all([
+    normalizedEmail
+      ? entities.Customer.filter(
+        { email: normalizedEmail },
+        "-updated_date",
+        DUPLICATE_QUERY_LIMIT + 1,
+        0,
+        CUSTOMER_FIELDS,
+      )
+      : Promise.resolve([]),
+    normalizedPhone
+      ? entities.Customer.filter(
+        { phone_e164: normalizedPhone },
+        "-updated_date",
+        DUPLICATE_QUERY_LIMIT + 1,
+        0,
+        CUSTOMER_FIELDS,
+      )
+      : Promise.resolve([]),
+  ]);
+  const byEmail = emailRows as EntityRecord[];
+  const byPhone = phoneRows as EntityRecord[];
+  const emailConflict = byEmail.slice(0, DUPLICATE_QUERY_LIMIT)
+    .find((customer) => text(customer.id) !== excludedId) || null;
+  const phoneConflict = byPhone.slice(0, DUPLICATE_QUERY_LIMIT)
+    .find((customer) => text(customer.id) !== excludedId) || null;
+  const potentiallyTruncated = byEmail.length > DUPLICATE_QUERY_LIMIT ||
+    byPhone.length > DUPLICATE_QUERY_LIMIT;
+
+  return {
+    emailConflict: emailConflict ? staffCustomerDto(emailConflict) : null,
+    phoneConflict: phoneConflict ? staffCustomerDto(phoneConflict) : null,
+    partial: potentiallyTruncated,
+    potentially_truncated: potentiallyTruncated,
+  };
+}
+
+async function searchCustomers(entities: Entities, payload: EntityRecord) {
+  const field = text(payload.field);
+  const rawQuery = text(payload.query).trim();
+  if (!rawQuery || !["name", "email", "phone"].includes(field)) {
+    return { customers: [], partial: false, potentially_truncated: false };
+  }
+
+  const filters: Array<Record<string, string>> = [];
+  if (field === "name") filters.push({ full_name: rawQuery });
+  if (field === "email") filters.push({ email: cleanEmail(rawQuery) });
+  if (field === "phone") {
+    const normalized = normalizePhone(rawQuery);
+    if (normalized) filters.push({ phone_e164: normalized });
+    filters.push({ phone: rawQuery });
+  }
+
+  const results = await Promise.all(filters.map((filter) =>
+    entities.Customer.filter(
+      filter,
+      "-updated_date",
+      SEARCH_LIMIT + 1,
+      0,
+      CUSTOMER_FIELDS,
+    )
+  ));
+  const rows = [...new Map(
+    (results.flat() as EntityRecord[]).map((customer) => [text(customer.id), customer]),
+  ).values()].filter((customer) => text(customer.id));
+  return {
+    customers: rows.slice(0, SEARCH_LIMIT).map(staffCustomerDto),
+    partial: rows.length > SEARCH_LIMIT,
+    potentially_truncated: rows.length > SEARCH_LIMIT,
+    limit: SEARCH_LIMIT,
+  };
+}
+
+async function listCustomerNotes(entities: Entities, payload: EntityRecord) {
+  const customerId = text(payload.customer_id);
+  if (!customerId) throw new Error("customer_id is required");
+  const customer = await entities.Customer.get(customerId).catch(() => null);
+  if (!customer) return null;
+  const rows = await entities.CustomerNote.filter(
+    { customer_id: customerId },
+    "-created_date",
+    NOTE_LIMIT + 1,
+  ) as EntityRecord[];
+  return {
+    notes: rows.slice(0, NOTE_LIMIT).map(staffNoteDto),
+    partial: rows.length > NOTE_LIMIT,
+    potentially_truncated: rows.length > NOTE_LIMIT,
+    limit: NOTE_LIMIT,
+  };
 }
 
 Deno.serve(async (req) => {
   try {
-    const ctx = await resolveStaffContext(req);
-    if (ctx.error) return ctx.error;
-    const { entities } = ctx;
+    if (req.method !== "POST") {
+      return Response.json({ error: "Method not allowed" }, { status: 405 });
+    }
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-    const payload = await req.json().catch(() => ({}));
-    const action = payload.action;
-
-    if (action === 'list') return Response.json({ customers: await listCustomers(entities) });
-    if (action === 'get') return Response.json({ customer: await entities.Customer.get(payload.customer_id) });
-    if (action === 'checkDuplicateContact') return Response.json(await checkDuplicateContact(entities, payload.email, payload.phone, payload.exclude_customer_id));
-
-    return Response.json({ error: 'Unknown action' }, { status: 400 });
+    const payload = await req.json().catch(() => ({})) as EntityRecord;
+    const entities = base44.asServiceRole.entities;
+    if (payload.action === "list") {
+      return Response.json(await listCustomers(entities, payload));
+    }
+    if (payload.action === "search") {
+      return Response.json(await searchCustomers(entities, payload));
+    }
+    if (payload.action === "get") {
+      const customerId = text(payload.customer_id);
+      if (!customerId) {
+        return Response.json({ error: "customer_id is required" }, {
+          status: 400,
+        });
+      }
+      let customer = await entities.Customer.get(customerId).catch(() =>
+        null
+      ) as EntityRecord | null;
+      if (!customer) {
+        const matches = await entities.Customer.filter(
+          { customer_id: customerId },
+          "-updated_date",
+          2,
+          0,
+          CUSTOMER_FIELDS,
+        ) as EntityRecord[];
+        customer = matches.length === 1 ? matches[0] : null;
+      }
+      return customer
+        ? Response.json({
+          customer: staffCustomerDto(customer),
+          partial: false,
+          potentially_truncated: false,
+        })
+        : Response.json({ error: "Customer not found" }, { status: 404 });
+    }
+    if (payload.action === "checkDuplicateContact") {
+      return Response.json(
+        await checkDuplicateContact(
+          entities,
+          payload.email,
+          payload.phone,
+          payload.exclude_customer_id,
+        ),
+      );
+    }
+    if (payload.action === "listNotes") {
+      const result = await listCustomerNotes(entities, payload);
+      return result
+        ? Response.json(result)
+        : Response.json({ error: "Customer not found" }, { status: 404 });
+    }
+    return Response.json({ error: "Unknown action" }, { status: 400 });
   } catch (error) {
-    console.error('[customerRead] failed:', error?.message, error?.stack);
-    return Response.json({ error: error.message || 'Customer read failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[customerRead] failed", message);
+    return Response.json({ error: "Customer read failed" }, { status: 500 });
   }
 });

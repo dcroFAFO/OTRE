@@ -1,37 +1,31 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { resolveTrustedOrigin, isTrustedFileUrl } from '../../shared/origin.ts';
-import { checkRateLimit, clientIp, findRecentDuplicateJob } from '../../shared/rateLimit.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
+import { checkRateLimit, clientIpThrottle } from '../../shared/rateLimit.ts';
 import { mintJobReference } from '../../shared/jobReference.ts';
-import { addIdList, cleanEmail, isStaff, normalizePhone, scooterMatches } from '../../shared/customerCore.ts';
+import { addIdList, scooterMatches } from '../../shared/customerCore.ts';
+import {
+  completeVerificationUse,
+  contactHash,
+  ensureCanonicalCustomer,
+  randomToken,
+  reserveVerificationProof,
+  sha256,
+} from '../../shared/identityAuth.ts';
+import { isAdmin, isCustomer, normalizeAustralianMobile, normalizeEmail } from '../../shared/identityPolicy.ts';
 
 const SLUG = 'otr-scooters';
 const MAX_BOOKINGS_PER_IP = 5;
+const MAX_GLOBAL_BOOKINGS = 300;
 const MAX_BOOKINGS_PER_EMAIL = 3;
 const INTAKE_STATUS = 'requested';
-const JOB_TYPE = 'repair';
-const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice', 'pay_invoice'];
-const DEFAULT_SERVICE_TYPE = 'general_repair';
-const E164_PATTERN = /^\+614\d{8}$/;
+const DEFAULT_PERMISSIONS = ['view_status', 'view_booking', 'add_note', 'upload_file', 'view_invoice'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const encoder = new TextEncoder();
 const FALLBACK_PHONE = '0415 505 908';
 
-async function sha256(value) {
-  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(value));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function makeToken() {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function bookingMake(form) {
+function bookingMake(form: any) {
   return form.scooterMake || form.scooterBrand || (form.asset_make === 'Other' ? form.asset_custom_make : form.asset_make) || '';
 }
 
-function bookingModel(form) {
+function bookingModel(form: any) {
   return form.scooterModel || (form.asset_model === 'Other' ? form.asset_custom_model : form.asset_model) || '';
 }
 
@@ -49,225 +43,292 @@ function classifyServiceType(text = '') {
   if (/diagnostic|diagnosis|inspect|assessment/.test(value)) return 'diagnostic';
   if (/warranty/.test(value)) return 'warranty';
   if (/custom|modify|modification/.test(value)) return 'custom_work';
-  return DEFAULT_SERVICE_TYPE;
+  return 'general_repair';
 }
 
-function bookingSnapshot(form, email, phone) {
+function bookingSnapshot(form: any, email: string, phone: string, name: string) {
   const make = bookingMake(form);
   const model = bookingModel(form);
-  // Only persist file URLs that point at our own storage. Anything else is an
-  // attacker-supplied link that staff would later click from the job record.
-  const submittedFiles = [form.photo_url, ...(Array.isArray(form.file_urls) ? form.file_urls : []), ...(Array.isArray(form.files) ? form.files : [])].filter(Boolean);
-  const files = submittedFiles.filter((url) => {
-    if (isTrustedFileUrl(url)) return true;
-    console.warn('[createBooking] rejected untrusted file url');
-    return false;
-  });
   const issueText = [form.issue_description, form.serviceRequested, form.issue_type].filter(Boolean).join(' ');
   return {
-    customerName: form.customer_name || form.customerName || '',
+    customerName: name,
     customerEmail: email,
     customerPhone: phone,
     customerPhoneE164: phone,
     phoneCountryCode: '+61',
-    scooterIssueSummary: form.scooter_issue_summary || '',
-    scooterMakeModel: form.scooter_make_model || '',
-    rideableStatus: form.rideable_status || '',
-    urgencyOrSafetyNotes: form.urgency_or_safety_notes || '',
-    suspectedServiceCategory: form.suspected_service_category || '',
-    scooterMake: make,
-    scooterBrand: make,
-    scooterModel: model,
-    serial_number: form.serial_number || form.serialNumber || '',
-    colour: form.colour || form.color || '',
-    assetLabel: form.asset_label || [make, model].filter(Boolean).join(' '),
-    issueOrService: form.issue_description || form.serviceRequested || '',
-    issueDescription: form.issue_description || '',
-    serviceRequested: form.serviceRequested || form.issue_type || '',
+    scooterIssueSummary: String(form.scooter_issue_summary || '').slice(0, 1000),
+    scooterMakeModel: String(form.scooter_make_model || '').slice(0, 240),
+    rideableStatus: String(form.rideable_status || '').slice(0, 80),
+    urgencyOrSafetyNotes: String(form.urgency_or_safety_notes || '').slice(0, 2000),
+    suspectedServiceCategory: String(form.suspected_service_category || '').slice(0, 120),
+    scooterMake: String(make).slice(0, 120),
+    scooterBrand: String(make).slice(0, 120),
+    scooterModel: String(model).slice(0, 120),
+    serial_number: String(form.serial_number || form.serialNumber || '').slice(0, 160),
+    colour: String(form.colour || form.color || '').slice(0, 80),
+    assetLabel: String(form.asset_label || [make, model].filter(Boolean).join(' ')).slice(0, 240),
+    issueOrService: String(form.issue_description || form.serviceRequested || '').slice(0, 4000),
+    issueDescription: String(form.issue_description || '').slice(0, 4000),
+    serviceRequested: String(form.serviceRequested || form.issue_type || '').slice(0, 240),
     serviceType: form.service_type || classifyServiceType(issueText),
     preferredDate: form.preferred_date || form.preferredDate || '',
-    preferredTimeWindow: form.preferred_time_window || form.preferredTimeWindow || '',
+    preferredTimeWindow: String(form.preferred_time_window || form.preferredTimeWindow || '').slice(0, 120),
     isRideable: typeof form.rideable === 'boolean' ? form.rideable : form.isRideable,
     asap: !!form.asap,
-    photos: files,
-    files,
+    photos: [],
+    files: [],
     submittedAt: new Date().toISOString(),
   };
 }
 
-function isCustomerUser(user) {
-  return !!user?.id && !isStaff(user) && user.is_customer !== false && user.data?.is_customer !== false;
+async function currentUser(base44: any) {
+  try { return await base44.auth.me(); } catch { return null; }
 }
 
-async function currentUser(base44) {
-  try { return await base44.auth.me(); } catch (_) { return null; }
-}
-
-async function getBusinessPhone(base44) {
+async function getBusinessPhone(base44: any) {
   const profiles = await base44.asServiceRole.entities.BusinessProfile.filter({ is_default: true }, '-updated_date', 1).catch(() => []);
   const profile = profiles[0] || (await base44.asServiceRole.entities.BusinessProfile.list('-updated_date', 1).catch(() => []))[0];
   return String(profile?.phone_display || profile?.phone || FALLBACK_PHONE).trim() || FALLBACK_PHONE;
 }
 
-async function verifyGuestBooking(base44, form, email, phone) {
-  const verificationId = String(form.verification_id || '').trim();
-  if (!verificationId) return null;
-  const record = await base44.asServiceRole.entities.PhoneVerification.get(verificationId).catch(() => null);
-  if (!record || record.purpose !== 'booking' || record.booking_id || !record.consumed_at) return null;
-  const consumedAt = new Date(record.consumed_at).getTime();
-  const isRecent = Number.isFinite(consumedAt) && consumedAt >= Date.now() - 30 * 60 * 1000;
-  const detailsMatch = normalizePhone(record.phone_e164) === phone && cleanEmail(record.email) === email;
-  return isRecent && detailsMatch ? record : null;
+function parseVerificationCredential(form: any) {
+  const explicitChallenge = String(form.challenge_id || '').trim();
+  const explicitProof = String(form.verification_proof || '').trim();
+  if (explicitChallenge && explicitProof) return { challengeId: explicitChallenge, proof: explicitProof };
+  const opaque = String(form.verification_id || '').trim();
+  const separator = opaque.indexOf('.');
+  if (separator < 1) return { challengeId: '', proof: '' };
+  return { challengeId: opaque.slice(0, separator), proof: opaque.slice(separator + 1) };
 }
 
-async function findOrCreateProfile(base44, { name, email, phone, user, now }) {
-  let profile = null;
-  const emailMatches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 1).catch(() => []);
-  profile = emailMatches[0] || null;
-  if (!profile && phone) {
-    const phoneMatches = await base44.asServiceRole.entities.CustomerProfile.filter({ phone_e164: phone }, '-created_date', 1).catch(() => []);
-    profile = phoneMatches[0] || null;
-  }
-  const authUserId = isCustomerUser(user) ? user.id : null;
-  if (!profile) {
-    profile = await base44.asServiceRole.entities.CustomerProfile.create({ name, display_name: name, full_name: name, email, phone_e164: phone, auth_user_id: authUserId || undefined, email_verified: !!authUserId, created_from_booking: true, created_at: now, updated_at: now });
-  } else {
-    const updates = { updated_at: now };
-    if (!profile.name && name) updates.name = name;
-    if (!profile.display_name && name) updates.display_name = name;
-    if (!profile.full_name && name) updates.full_name = name;
-    if (phone && profile.phone_e164 !== phone) updates.phone_e164 = phone;
-    if (authUserId && !profile.auth_user_id) { updates.auth_user_id = authUserId; updates.email_verified = true; }
-    if (Object.keys(updates).length > 1) { await base44.asServiceRole.entities.CustomerProfile.update(profile.id, updates); profile = { ...profile, ...updates }; }
-  }
-  return profile;
-}
-
-async function syncLegacyCustomer(base44, { profile, name, email, phone, user, now }) {
-  try {
-    const matches = await base44.asServiceRole.entities.Customer.filter({ email }, '-created_date', 1);
-    const existing = matches[0] || null;
-    const data = { customer_id: profile.id, name, full_name: name, email, phone, phone_e164: phone, phone_display: phone, phone_country_code: '+61', user_id: isCustomerUser(user) ? user.id : existing?.user_id, status: existing?.status || 'active', last_activity_date: now };
-    if (existing) return await base44.asServiceRole.entities.Customer.update(existing.id, data);
-    return await base44.asServiceRole.entities.Customer.create({ ...data, createdAt: now });
-  } catch (error) { console.warn('[createBooking] legacy customer sync skipped:', error.message); return null; }
-}
-
-async function resolveBookingScooter(base44, customer, booking) {
-  if (!customer) return null;
+async function resolveBookingScooter(entities: any, customer: any, booking: any) {
   const stableId = customer.customer_id || customer.id;
-  const data = { make: booking.scooterMake || booking.scooterBrand || '', model: booking.scooterModel || '', serial_number: booking.serial_number || '', colour: booking.colour || booking.color || '', color: booking.color || booking.colour || '', notes: booking.urgencyOrSafetyNotes || booking.issueOrService || '' };
+  const data = {
+    make: booking.scooterMake || booking.scooterBrand || '', model: booking.scooterModel || '',
+    serial_number: booking.serial_number || '', colour: booking.colour || '', color: booking.colour || '',
+    notes: booking.urgencyOrSafetyNotes || booking.issueOrService || '',
+  };
   if (!data.make && !data.model && !data.serial_number) return null;
   const [byStable, byAccount] = await Promise.all([
-    base44.asServiceRole.entities.Scooter.filter({ customer_id: stableId }, '-updated_date', 100).catch(() => []),
-    base44.asServiceRole.entities.Scooter.filter({ customer_account_id: customer.id }, '-updated_date', 100).catch(() => []),
+    entities.Scooter.filter({ customer_id: stableId }, '-updated_date', 100).catch(() => []),
+    entities.Scooter.filter({ customer_account_id: customer.id }, '-updated_date', 100).catch(() => []),
   ]);
-  const existing = [...new Map([...byStable, ...byAccount].map((s) => [s.id, s])).values()].find((s) => scooterMatches(s, data));
-  if (existing) return await base44.asServiceRole.entities.Scooter.update(existing.id, { customer_id: stableId, customer_account_id: customer.id });
-  return await base44.asServiceRole.entities.Scooter.create({ ...data, customer_id: stableId, customer_account_id: customer.id });
+  const existing = [...new Map([...byStable, ...byAccount].map((s: any) => [s.id, s])).values()].find((s: any) => scooterMatches(s, data));
+  if (existing) return await entities.Scooter.update(existing.id, { customer_id: stableId, customer_account_id: customer.id });
+  return await entities.Scooter.create({ ...data, customer_id: stableId, customer_account_id: customer.id });
+}
+
+function responseFor(job: any, rawToken: string | null, customer: any, scooter: any, email: string, duplicate = false) {
+  const managePath = customer ? '/portal' : null;
+  const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
+  return {
+    reference: job.reference,
+    managePath,
+    accountPath,
+    trackingPath: rawToken ? `/track/${encodeURIComponent(rawToken)}` : null,
+    job_id: job.id,
+    customer_profile_id: '',
+    customer_account_id: customer?.id || '',
+    asset_id: scooter?.id || job.asset_id || '',
+    linked: !!customer,
+    duplicate,
+  };
+}
+
+async function ensureGuestGrant(entities: any, job: any, rawToken: string, now = new Date().toISOString()) {
+  if (!rawToken || job.customer_account_id || job.claim_status === 'claimed') return null;
+  const tokenHash = await sha256(rawToken);
+  const existing = await entities.PublicJobAccess.filter({ tokenHash }, '-created_date', 2).catch(() => []);
+  if (existing[0]) {
+    if ((existing[0].jobId || existing[0].job_id) !== job.id) throw new Error('Tracking token collision detected.');
+    return existing[0];
+  }
+  try {
+    return await entities.PublicJobAccess.create({ jobId: job.id, job_id: job.id, tokenHash, token_hash: tokenHash, permissions: DEFAULT_PERMISSIONS, expires_after_completion_days: 30, createdAt: now });
+  } catch (error) {
+    const retry = await entities.PublicJobAccess.filter({ tokenHash }, '-created_date', 2).catch(() => []);
+    if (retry[0] && (retry[0].jobId || retry[0].job_id) === job.id) return retry[0];
+    throw error;
+  }
 }
 
 Deno.serve(async (req) => {
-  const requestMeta = { fn: 'createBooking' };
   let businessPhone = FALLBACK_PHONE;
+  let reserved: any = null;
   try {
+    if (req.method !== 'POST') return Response.json({ error: 'Method not allowed' }, { status: 405 });
     const base44 = createClientFromRequest(req);
-    const form = await req.json();
+    const entities = base44.asServiceRole.entities;
+    const form = await req.json().catch(() => ({}));
     const user = await currentUser(base44);
-    requestMeta.fields = Object.keys(form || {});
+    if (isAdmin(user)) return Response.json({ error: 'Admin accounts must create jobs from the staff workflow.' }, { status: 403 });
 
-    if (!form.customer_name || !form.customer_email || !form.phone || !form.asset_label || !form.issue_description) return Response.json({ error: 'Name, email, phone, scooter details and issue description are required.' }, { status: 400 });
-    const email = cleanEmail(form.customer_email);
-    const phone = normalizePhone(form.phone_e164 || form.customer_phone_e164 || form.phone);
+    const authenticatedCustomer = isCustomer(user);
+    const submittedEmail = normalizeEmail(form.customer_email || form.customerEmail);
+    const email = authenticatedCustomer ? normalizeEmail(user.email) : submittedEmail;
+    const phone = normalizeAustralianMobile(form.phone_e164 || form.customer_phone_e164 || form.phone);
+    const name = String((authenticatedCustomer && user.full_name) || form.customer_name || form.customerName || '').trim().slice(0, 160);
+    const assetLabel = String(form.asset_label || '').trim();
+    const issue = String(form.issue_description || '').trim();
+    if (!name || !email || !phone || !assetLabel || !issue) return Response.json({ error: 'Name, email, phone, scooter details and issue description are required.' }, { status: 400 });
     if (!EMAIL_PATTERN.test(email)) return Response.json({ error: 'Enter a valid email address.' }, { status: 400 });
-    if (!E164_PATTERN.test(phone)) return Response.json({ error: 'Enter a valid Australian mobile number' }, { status: 400 });
+    if (!phone) return Response.json({ error: 'Enter a valid Australian mobile number.' }, { status: 400 });
     businessPhone = await getBusinessPhone(base44);
 
-    const guestVerification = isCustomerUser(user) ? null : await verifyGuestBooking(base44, form, email, phone);
-    if (!isCustomerUser(user) && !guestVerification) {
-      return Response.json({ error: 'Please verify your contact details before submitting this booking.' }, { status: 403 });
-    }
+    const ipThrottle = clientIpThrottle(req, MAX_BOOKINGS_PER_IP, MAX_GLOBAL_BOOKINGS);
+    const [ipLimit, emailLimit] = await Promise.all([
+      checkRateLimit(base44, `booking:ip:${ipThrottle.key}`, ipThrottle.limit),
+      checkRateLimit(base44, `booking:email:${email}`, MAX_BOOKINGS_PER_EMAIL),
+    ]);
+    if (!ipLimit.allowed || !emailLimit.allowed) return Response.json({ error: `You've submitted several booking requests just now. Please wait or call us on ${businessPhone}.` }, { status: 429 });
 
-    // Abuse controls — this endpoint is unauthenticated and sends metered SMS/email.
-    const ipLimit = await checkRateLimit(base44, `booking:ip:${clientIp(req)}`, MAX_BOOKINGS_PER_IP);
-    const emailLimit = await checkRateLimit(base44, `booking:email:${email}`, MAX_BOOKINGS_PER_EMAIL);
-    if (!ipLimit.allowed || !emailLimit.allowed) {
-      console.warn('[createBooking] rate limited', JSON.stringify({ ip: ipLimit.count, email: emailLimit.count }));
-      return Response.json({ error: `You've submitted several booking requests just now. Please wait a few minutes or call us on ${businessPhone}.` }, { status: 429 });
-    }
-
-    // Idempotency — a repeated submission returns the original booking instead of
-    // creating a duplicate job, customer and notification set.
-    const duplicate = await findRecentDuplicateJob(base44, email, form.issue_description);
-    if (duplicate) {
-      if (guestVerification) await base44.asServiceRole.entities.PhoneVerification.update(guestVerification.id, { booking_id: duplicate.id, booking_created_at: new Date().toISOString() });
-      return Response.json({ reference: duplicate.reference, managePath: duplicate.customer_user_id ? '/portal' : null, accountPath: `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`, job_id: duplicate.id, duplicate: true });
+    let customer = null;
+    let verifiedChallenge = null;
+    let verificationUse = null;
+    let rawToken: string | null = null;
+    if (authenticatedCustomer) {
+      customer = await ensureCanonicalCustomer(entities, user, { full_name: name, phone_e164: phone }, 'authenticated_signup');
+    } else {
+      const credential = parseVerificationCredential(form);
+      const operationId = credential.challengeId ? `guest-booking:${credential.challengeId}` : '';
+      reserved = await reserveVerificationProof(entities, {
+        ...credential,
+        operationId,
+        purpose: 'guest_booking',
+        email,
+        phone,
+      });
+      verifiedChallenge = reserved.challenge;
+      verificationUse = reserved.use;
+      rawToken = await sha256(`guest-tracking:${credential.challengeId}:${credential.proof}`);
+      if (reserved.replay && verificationUse.status === 'failed' && verifiedChallenge.status === 'verified') {
+        verificationUse = await entities.VerificationUse.update(verificationUse.id, { status: 'reserved', failure_code: '' });
+        reserved = { ...reserved, use: verificationUse, replay: false };
+      }
+      if (reserved.replay) {
+        if (verificationUse.status !== 'completed' || !verificationUse.subject_id) {
+          const recoverable = await entities.Job.filter({ contact_verification_id: verifiedChallenge.id }, '-created_date', 2).catch(() => []);
+          if (recoverable.length === 1 && recoverable[0].verified_contact_hash === verifiedChallenge.contact_hash) {
+            await completeVerificationUse(entities, verifiedChallenge, verificationUse, 'Job', recoverable[0].id);
+            await ensureGuestGrant(entities, recoverable[0], rawToken);
+            return Response.json(responseFor(recoverable[0], recoverable[0].claim_status === 'claimed' ? null : rawToken, null, null, email, true));
+          }
+          return Response.json({ error: recoverable.length > 1 ? 'This booking requires support review.' : 'This verified booking submission is already being processed.' }, { status: 409 });
+        }
+        const existing = await entities.Job.get(verificationUse.subject_id).catch(() => null);
+        if (!existing) return Response.json({ error: 'The previous booking result could not be recovered. Please contact support.' }, { status: 409 });
+        await ensureGuestGrant(entities, existing, rawToken);
+        return Response.json(responseFor(existing, existing.claim_status === 'claimed' ? null : rawToken, null, null, email, true));
+      }
     }
 
     const now = new Date().toISOString();
-    const profile = await findOrCreateProfile(base44, { name: form.customer_name, email, phone, user, now });
-    const customerRecord = await syncLegacyCustomer(base44, { profile, name: form.customer_name, email, phone, user, now });
-    const stableCustomerId = customerRecord?.customer_id || profile.id;
+    const submitted = bookingSnapshot(form, email, phone, name);
+    const scooter = customer ? await resolveBookingScooter(entities, customer, submitted) : null;
+    const resolvedAssetLabel = scooter ? [scooter.make, scooter.model].filter(Boolean).join(' ') : submitted.assetLabel;
+    const reference = await mintJobReference(entities);
+    const stableCustomerId = customer?.customer_id || '';
+    const fingerprint = authenticatedCustomer ? '' : await contactHash(email, phone);
+    const intake = {
+      customerName: name, customerEmail: email, customerPhone: phone, customerPhoneE164: phone,
+      scooterMake: submitted.scooterMake, scooterModel: submitted.scooterModel, make: submitted.scooterMake,
+      model: submitted.scooterModel, serial_number: submitted.serial_number, issueOrService: submitted.issueOrService,
+      initial_issue_notes: [submitted.issueOrService, submitted.urgencyOrSafetyNotes].filter(Boolean).join('\n'),
+      service_type: submitted.serviceType, date: submitted.preferredDate, isRideable: submitted.isRideable,
+      booking_files: submitted.files,
+    };
 
-    const customerUserId = isCustomerUser(user) ? user.id : null;
-    const rawToken = customerUserId ? null : makeToken();
-    const reference = await mintJobReference(base44.asServiceRole.entities);
-    const submittedBooking = bookingSnapshot(form, email, phone);
-    await base44.asServiceRole.entities.CustomerProfile.update(profile.id, {
-      display_name: profile.display_name || form.customer_name,
-      name: profile.name || form.customer_name,
-      full_name: profile.full_name || form.customer_name,
-      scooter_make: submittedBooking.scooterMake || profile.scooter_make || '',
-      scooter_model: submittedBooking.scooterModel || profile.scooter_model || '',
-      scooter_make_model: submittedBooking.assetLabel || profile.scooter_make_model || profile.default_scooter_make_model || '',
-      default_scooter_make_model: submittedBooking.assetLabel || profile.default_scooter_make_model || profile.scooter_make_model || '',
-      updated_at: now,
-    }).catch((profileErr) => console.warn('[createBooking] profile details sync skipped:', profileErr.message));
-    const scooter = await resolveBookingScooter(base44, customerRecord, submittedBooking);
-    const resolvedAssetLabel = scooter ? [scooter.make, scooter.model].filter(Boolean).join(' ') : (form.asset_label || submittedBooking.assetLabel);
-    const initialIntake = { customerName: submittedBooking.customerName, customerEmail: submittedBooking.customerEmail, customerPhone: submittedBooking.customerPhone, customerPhoneE164: submittedBooking.customerPhoneE164, scooterMake: submittedBooking.scooterMake, scooterModel: submittedBooking.scooterModel, make: submittedBooking.scooterMake, model: submittedBooking.scooterModel, serial_number: submittedBooking.serial_number || '', issueOrService: submittedBooking.issueOrService, initial_issue_notes: [submittedBooking.issueOrService, submittedBooking.urgencyOrSafetyNotes].filter(Boolean).join('\n'), service_type: submittedBooking.serviceType, date: submittedBooking.preferredDate, isRideable: submittedBooking.isRideable, booking_files: submittedBooking.files };
-    // NOTE: the raw public access token is deliberately NOT stored on the Job.
-    // Only its SHA-256 hash is persisted, on PublicJobAccess below.
-    const job = await base44.asServiceRole.entities.Job.create({ reference, customer_profile_id: profile.id, customer_user_id: customerUserId, customerId: stableCustomerId, customer_id: stableCustomerId, customer_account_id: customerRecord?.id || '', claimed_by_customer: !!customerUserId, customer_name: form.customer_name, customer_email: email, customer_phone: phone, customer_phone_e164: phone, customer_phone_display: phone, asset_id: scooter?.id || '', asset_label: resolvedAssetLabel, scooter_make_model: resolvedAssetLabel, scooterDetails: resolvedAssetLabel, scooter_details: resolvedAssetLabel, issueDescription: form.issue_description, issue_description: form.issue_description, issue_summary: form.issue_description, rideable_status: submittedBooking.isRideable ? 'Rideable' : 'Not rideable', job_status: INTAKE_STATUS, source: 'public_booking', job_type: JOB_TYPE, service_type: submittedBooking.serviceType, priority: 'medium', status: INTAKE_STATUS, scheduled_date: form.asap ? null : (form.preferred_date || null), preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window, rideable: submittedBooking.isRideable, intake: initialIntake, booking_submission: submittedBooking, business_slug: SLUG, createdAt: now, created_at: now, updatedAt: now });
-
-    if (guestVerification) {
-      await base44.asServiceRole.entities.PhoneVerification.update(guestVerification.id, { booking_id: job.id, booking_created_at: now });
-    }
-
-    if (scooter?.id) await base44.asServiceRole.entities.Scooter.update(scooter.id, { job_id: addIdList(scooter.job_id, job.id), last_service_date: job.scheduled_date || scooter.last_service_date || '' }).catch((assetErr) => console.warn('[createBooking] scooter job link skipped:', assetErr.message));
-    if (customerRecord?.id) await base44.asServiceRole.entities.Customer.update(customerRecord.id, { job_id: addIdList(customerRecord.job_id, job.id), last_activity_date: now }).catch((customerErr) => console.warn('[createBooking] customer job link skipped:', customerErr.message));
-    if (submittedBooking.files.length > 0) await Promise.all(submittedBooking.files.map((fileUrl, index) => base44.asServiceRole.entities.Attachment.create({ job_id: job.id, customer_id: stableCustomerId, file_url: fileUrl, file_name: `booking_upload_${index + 1}`, kind: 'photo', visibility: 'customer', uploaded_by_name: submittedBooking.customerName })));
-    if (rawToken) { const tokenHash = await sha256(rawToken); await base44.asServiceRole.entities.PublicJobAccess.create({ jobId: job.id, job_id: job.id, tokenHash, token_hash: tokenHash, permissions: DEFAULT_PERMISSIONS, createdAt: now }); }
-    await base44.asServiceRole.entities.AuditEvent.create({ event_type: 'booking_created', job_id: job.id, customer_id: customerRecord?.id || stableCustomerId, actor_name: form.customer_name, actor_role: customerUserId ? 'customer_account' : 'guest_customer', summary: `Booking request received from ${form.customer_name}`, visibility: 'system', metadata: { customer_id: customerRecord?.id || '', stable_customer_id: stableCustomerId, scooter_id: scooter?.id || '' } }).catch((auditErr) => console.warn('[createBooking] audit log skipped:', auditErr.message));
-
-    // Send booking confirmation notifications directly (customer email + SMS, staff email + SMS).
-    // The entity automation may not reliably deliver the payload, so we invoke sendNotification directly.
-    const notifOrigin = await resolveTrustedOrigin(req, base44);
-    // A failed dispatch must never fail the booking itself — but it can't stay
-    // silent either, or staff would never know the customer wasn't contacted.
-    await base44.functions.invoke('sendNotification', { event_type: 'booking_request', job_id: job.id, origin: notifOrigin }).catch(async (notifErr) => {
-      const reason = notifErr?.message || String(notifErr);
-      console.error('[createBooking] notification dispatch failed:', reason);
-      await base44.asServiceRole.entities.AuditEvent.create({
-        event_type: 'notification_failed',
-        job_id: job.id,
-        customer_id: customerRecord?.id || stableCustomerId,
-        actor_name: 'System',
-        actor_role: 'system',
-        summary: `Booking confirmation for ${job.reference} could not be sent — follow up with the customer`,
-        visibility: 'internal',
-        metadata: { channel: 'dispatch', recipient: email, reason: reason.slice(0, 500), event_type: 'booking_request' },
-      }).catch((auditErr) => console.warn('[createBooking] failure audit skipped:', auditErr.message));
+    const job = await entities.Job.create({
+      reference,
+      customer_profile_id: '',
+      customer_user_id: customer ? user.id : '',
+      customerId: stableCustomerId,
+      customer_id: stableCustomerId,
+      customer_account_id: customer?.id || '',
+      claimed_by_customer: !!customer,
+      claim_status: customer ? 'claimed' : 'unclaimed',
+      claimed_at: customer ? now : undefined,
+      contact_verification_id: verifiedChallenge?.id || '',
+      verified_contact_channel: verifiedChallenge?.channel || undefined,
+      verified_contact_hash: fingerprint,
+      customer_name: name,
+      customer_email: email,
+      customer_phone: phone,
+      customer_phone_e164: phone,
+      customer_phone_display: phone,
+      asset_id: scooter?.id || '',
+      asset_label: resolvedAssetLabel,
+      scooter_make_model: resolvedAssetLabel,
+      scooterDetails: resolvedAssetLabel,
+      scooter_details: resolvedAssetLabel,
+      issueDescription: issue,
+      issue_description: issue,
+      issue_summary: issue,
+      rideable_status: submitted.isRideable ? 'Rideable' : 'Not rideable',
+      source: 'public_booking',
+      job_type: 'repair',
+      service_type: submitted.serviceType,
+      priority: 'medium',
+      status: INTAKE_STATUS,
+      scheduled_date: form.asap ? null : (form.preferred_date || null),
+      preferred_time_window: form.asap ? 'ASAP' : form.preferred_time_window,
+      rideable: submitted.isRideable,
+      intake,
+      booking_submission: submitted,
+      business_slug: SLUG,
+      createdAt: now,
+      created_at: now,
+      updatedAt: now,
     });
 
-    const managePath = customerUserId ? '/portal' : null;
-    const accountPath = `/register?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/profile-setup?next=%2Fportal%3Fbook%3D1')}&customerFlow=1`;
-    // The raw token is returned once, here — it is never readable from the DB again.
-    const trackingPath = rawToken ? `/track/${encodeURIComponent(rawToken)}` : null;
-    return Response.json({ reference: job.reference, managePath, accountPath, trackingPath, job_id: job.id, customer_profile_id: profile.id, customer_account_id: customerRecord?.id || '', asset_id: scooter?.id || '', linked: !!customerUserId });
+    if (verificationUse) await completeVerificationUse(entities, verifiedChallenge, verificationUse, 'Job', job.id);
+    if (scooter?.id) await entities.Scooter.update(scooter.id, { job_id: addIdList(scooter.job_id, job.id), last_service_date: job.scheduled_date || scooter.last_service_date || '' }).catch(() => null);
+    if (customer?.id) await entities.Customer.update(customer.id, { job_id: addIdList(customer.job_id, job.id), last_activity_date: now }).catch(() => null);
+    if (rawToken) await ensureGuestGrant(entities, job, rawToken, now);
+    await entities.AuditEvent.create({
+      event_type: 'booking_created', job_id: job.id, customer_id: stableCustomerId,
+      customer_account_id: customer?.id || '', actor_id: customer ? user.id : '', actor_name: name,
+      actor_role: customer ? 'customer' : 'guest_customer', outcome: 'succeeded',
+      summary: `Booking request received from ${name}`, visibility: 'system',
+      metadata: { identity_version: 2, claim_status: customer ? 'claimed' : 'unclaimed', verified_channel: verifiedChallenge?.channel || '' },
+    }).catch(() => null);
+
+    const notificationKey = `booking_request:${job.id}:${job.created_date || now}`;
+    const queued = await entities.NotificationEvent.filter({ event_key: notificationKey }, '-created_date', 1).catch(() => []);
+    if (!queued[0]) {
+      await entities.NotificationEvent.create({
+        event_key: notificationKey,
+        related_entity_type: 'Job',
+        related_entity_id: job.id,
+        job_id: job.id,
+        customer_id: stableCustomerId,
+        customer_account_id: customer?.id || '',
+        event_version: job.created_date || now,
+        event_data: { job_id: job.id },
+        source: 'automatic',
+        status: 'pending',
+        occurred_at: now,
+      }).catch(async (error: any) => {
+        await entities.AuditEvent.create({ event_type: 'notification_failed', job_id: job.id, customer_account_id: customer?.id || '', actor_name: 'System', actor_role: 'system', outcome: 'failed', summary: `Booking confirmation for ${job.reference} could not be queued`, visibility: 'internal', metadata: { reason: String(error?.message || error).slice(0, 500) } }).catch(() => null);
+      });
+    }
+
+    return Response.json(responseFor(job, rawToken, customer, scooter, email));
   } catch (error) {
-    // Detail stays in the logs — unauthenticated callers get a generic message.
-    console.error('[createBooking] FAILED:', JSON.stringify({ ...requestMeta, message: error.message, stack: error.stack }));
-    return Response.json({ error: `Sorry — we couldn't submit your booking just now. Please try again or call us on ${businessPhone}.` }, { status: 500 });
+    if (reserved?.use?.id && !reserved.replay) {
+      const base44 = createClientFromRequest(req);
+      await base44.asServiceRole.entities.VerificationUse.update(reserved.use.id, { status: 'failed', failure_code: error?.code || 'BOOKING_FAILED' }).catch(() => null);
+    }
+    const phoneVerificationRequired = error?.code === 'PHONE_VERIFICATION_REQUIRED';
+    const status = String(error?.code || '').startsWith('VERIFICATION_') || error?.code === 'CONTACT_MISMATCH' || phoneVerificationRequired ? 403 : 500;
+    console.error('[createBooking] failed', JSON.stringify({ code: error?.code || '', message: error?.message || String(error) }));
+    return Response.json({
+      error: phoneVerificationRequired
+        ? 'Verify your mobile number before creating a customer account.'
+        : status === 403
+        ? 'Please verify your contact details before submitting this booking.'
+        : `Sorry — we couldn't submit your booking just now. Please try again or call us on ${businessPhone}.`,
+      ...(phoneVerificationRequired ? { code: 'PHONE_VERIFICATION_REQUIRED' } : {}),
+    }, { status });
   }
 });

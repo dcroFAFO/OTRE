@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import ScooterFormDialog from "@/components/portal/settings/ScooterFormDialog";
 import { toast } from "sonner";
-import { Bike, Plus, Pencil, Trash2, Loader2, Lock } from "lucide-react";
+import { Archive, Bike, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { EmptyState } from "@/components/shared";
 import { getSafeErrorMessage } from "@/lib/errors";
 
@@ -12,11 +12,17 @@ export default function ScootersCard({ scooters, onChanged }) {
   const [deletingId, setDeletingId] = useState(null);
 
   const remove = async (scooter) => {
+    const name = [scooter.make, scooter.model].filter(Boolean).join(" ") || "this scooter";
+    const prompt = scooter.has_jobs
+      ? `Archive ${name}? It will no longer appear in active scooter lists, but its service history will be retained.`
+      : `Remove ${name}? This permanently deletes the scooter.`;
+    if (!window.confirm(prompt)) return;
     setDeletingId(scooter.id);
     try {
-      const res = await base44.functions.invoke("customerSettings", { action: "deleteScooter", scooter_id: scooter.id });
+      const action = scooter.has_jobs ? "archiveScooter" : "deleteScooter";
+      const res = await base44.functions.invoke("customerSettings", { action, scooter_id: scooter.id });
       if (res.data?.error) throw new Error(res.data.error);
-      toast.success("Scooter removed");
+      toast.success(scooter.has_jobs ? "Scooter archived" : "Scooter removed", scooter.has_jobs ? { description: "Your service history has been retained." } : undefined);
       onChanged?.();
     } catch (err) {
       toast.error(getSafeErrorMessage(err, "This scooter could not be removed. Please try again."));
@@ -52,15 +58,18 @@ export default function ScootersCard({ scooters, onChanged }) {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <Button variant="ghost" size="icon" onClick={() => setEditing(s)} aria-label="Edit scooter"><Pencil className="h-4 w-4" /></Button>
-              {s.has_jobs ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground" title="Linked to past repair jobs — kept for your service history.">
-                  <Lock className="h-3 w-3" /> Kept for history
-                </span>
-              ) : (
-                <Button variant="ghost" size="icon" onClick={() => remove(s)} disabled={deletingId === s.id} aria-label="Remove scooter" className="text-destructive hover:text-destructive">
-                  {deletingId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="iconTouch"
+                onClick={() => remove(s)}
+                disabled={deletingId === s.id}
+                aria-label={s.has_jobs ? "Archive scooter and retain service history" : "Remove scooter permanently"}
+                title={s.has_jobs ? "Archive scooter; service history is retained" : "Permanently remove unlinked scooter"}
+                className="text-destructive hover:text-destructive"
+              >
+                {deletingId === s.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : s.has_jobs ? <Archive className="h-4 w-4" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+              </Button>
             </div>
           </div>
         ))}

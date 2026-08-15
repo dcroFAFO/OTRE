@@ -1,118 +1,170 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
+import {
+  completeVerificationUse,
+  ensureCanonicalCustomer,
+  findCanonicalCustomer,
+  reserveVerificationProof,
+  revokeGuestGrants,
+} from '../../shared/identityAuth.ts';
+import { customerAccountDto, isCustomer } from '../../shared/identityPolicy.ts';
 
-const STAFF_ROLES = new Set(['admin', 'employee', 'technician', 'staff']);
-const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
-const cleanText = (value) => String(value || '').trim().toLowerCase();
-
-function normalizePhone(value) {
-  let cleaned = String(value || '').trim().replace(/[^\d+]/g, '');
-  if (cleaned.startsWith('+61')) cleaned = cleaned.slice(3);
-  else if (cleaned.startsWith('61')) cleaned = cleaned.slice(2);
-  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-  const phone = `+61${cleaned.replace(/\D/g, '')}`;
-  return /^\+614\d{8}$/.test(phone) ? phone : '';
+function parseCredential(payload: any) {
+  const explicitChallenge = String(payload.challenge_id || '').trim();
+  const explicitProof = String(payload.verification_proof || '').trim();
+  if (explicitChallenge && explicitProof) return { challengeId: explicitChallenge, proof: explicitProof };
+  const opaque = String(payload.verification_id || '').trim();
+  const separator = opaque.indexOf('.');
+  if (separator < 1) return { challengeId: '', proof: '' };
+  return { challengeId: opaque.slice(0, separator), proof: opaque.slice(separator + 1) };
 }
-function isStaffAccount(user) { return STAFF_ROLES.has(String(user.role || '').toLowerCase()) || user.is_customer === false || user.data?.is_customer === false; }
-function addIdList(existing, nextId) { const ids = String(existing || '').split(',').map((id) => id.trim()).filter(Boolean); if (nextId && !ids.includes(nextId)) ids.push(nextId); return ids.join(','); }
-function userPhoto(user) { return user.picture || user.avatar_url || user.photo_url || user.image || user.data?.picture || user.data?.avatar_url || ''; }
-function userProvider(user) { return user.oauth_provider || user.auth_provider || user.provider || user.provider_name || user.identities?.[0]?.provider || user.data?.oauth_provider || ''; }
-function scooterLabel(profileData, profile, jobs) { return profileData.scooter_make_model || profileData.default_scooter_make_model || profile?.scooter_make_model || profile?.default_scooter_make_model || jobs[0]?.asset_label || jobs[0]?.scooter_make_model || jobs[0]?.scooter_details || ''; }
-function scooterMatches(a, b) { const aSerial = cleanText(a.serial_number); const bSerial = cleanText(b.serial_number); if (aSerial && bSerial && aSerial === bSerial) return true; return !!cleanText(a.model) && cleanText(a.make) === cleanText(b.make) && cleanText(a.model) === cleanText(b.model); }
-function splitAssetLabel(label = '') { const parts = String(label || '').trim().split(/\s+/); return { make: parts[0] || '', model: parts.slice(1).join(' ') || '' }; }
 
-async function ensureProfile(base44, user, email, jobs, profileData = {}) {
-  const matches = await base44.asServiceRole.entities.CustomerProfile.filter({ email }, '-created_date', 10).catch(() => []);
-  let profile = matches.find((p) => !p.auth_user_id || p.auth_user_id === user.id) || matches[0] || null;
-  const now = new Date().toISOString();
-  const phone = normalizePhone(profileData.phone_e164) || normalizePhone(user.phone) || normalizePhone(jobs[0]?.customer_phone_e164) || normalizePhone(jobs[0]?.customer_phone) || normalizePhone(profile?.phone_e164);
-  const defaultScooter = scooterLabel(profileData, profile, jobs);
-  const provider = profileData.oauth_provider || userProvider(user);
-  const photo = profileData.display_photo || userPhoto(user);
-  if (!profile) {
-    profile = await base44.asServiceRole.entities.CustomerProfile.create({ display_name: profileData.display_name || user.full_name || jobs[0]?.customer_name || email, name: profileData.full_name || profileData.display_name || user.full_name || jobs[0]?.customer_name || email, full_name: profileData.full_name || user.full_name || '', email, phone_e164: phone, display_photo: photo, oauth_provider: provider, scooter_make: profileData.scooter_make || '', scooter_model: profileData.scooter_model || '', scooter_make_model: defaultScooter, default_scooter_make_model: defaultScooter, auth_user_id: user.id, email_verified: true, created_from_booking: jobs.length > 0, created_at: now, updated_at: now });
-  } else {
-    const updates = { updated_at: now, email_verified: true };
-    if (!profile.auth_user_id) updates.auth_user_id = user.id;
-    if (phone && profile.phone_e164 !== phone) updates.phone_e164 = phone;
-    if (profileData.display_name) updates.display_name = profileData.display_name;
-    if (profileData.full_name) updates.full_name = profileData.full_name;
-    if (!profile.name && (profileData.full_name || profileData.display_name || user.full_name)) updates.name = profileData.full_name || profileData.display_name || user.full_name;
-    if (photo) updates.display_photo = photo;
-    if (provider) updates.oauth_provider = provider;
-    if (profileData.scooter_make) updates.scooter_make = profileData.scooter_make;
-    if (profileData.scooter_model) updates.scooter_model = profileData.scooter_model;
-    if (defaultScooter) { updates.scooter_make_model = defaultScooter; updates.default_scooter_make_model = defaultScooter; }
-    await base44.asServiceRole.entities.CustomerProfile.update(profile.id, updates);
-    profile = { ...profile, ...updates };
+async function claimGuestJob(entities: any, user: any, customer: any, payload: any) {
+  const jobId = String(payload.job_id || '').trim();
+  if (!jobId) return { error: Response.json({ error: 'job_id is required' }, { status: 400 }) };
+  const job = await entities.Job.get(jobId).catch(() => null);
+  if (!job) return { error: Response.json({ error: 'Job not found' }, { status: 404 }) };
+  if (job.customer_account_id || job.claim_status === 'claimed' || job.claimed_by_customer) {
+    if (job.customer_account_id === customer.id) {
+      await revokeGuestGrants(entities, job.id, 'job_claimed');
+      return { customer, job, alreadyClaimed: true };
+    }
+    return { error: Response.json({ error: 'This job has already been claimed.' }, { status: 409 }) };
   }
-  return profile;
-}
+  if (!job.verified_contact_hash || !job.contact_verification_id) {
+    return { error: Response.json({ error: 'This legacy job cannot be self-claimed. Contact support for a reviewed migration.' }, { status: 409 }) };
+  }
 
-async function ensureCustomer(base44, user, profile, email, jobs, profileData = {}) {
-  const existing = await base44.asServiceRole.entities.Customer.filter({ email }, '-created_date', 1).catch(() => []);
+  const credential = parseCredential(payload);
+  const operationId = `guest-claim:${job.id}:${credential.challengeId}`;
+  const reservation = await reserveVerificationProof(entities, {
+    ...credential,
+    operationId,
+    purpose: 'guest_claim',
+    expectedContactHash: job.verified_contact_hash,
+  });
+  if (reservation.challenge.job_id !== job.id) {
+    return { error: Response.json({ error: 'Verification does not match this job.' }, { status: 403 }) };
+  }
+  if (reservation.replay) {
+    const existing = await entities.BookingClaim.filter({ job_id: job.id }, '-claimed_at', 1).catch(() => []);
+    if (existing[0]?.user_id === user.id) {
+      const now = new Date().toISOString();
+      const reconciledJob = await entities.Job.update(job.id, {
+        customer_account_id: customer.id,
+        customer_user_id: user.id,
+        customer_id: customer.customer_id || customer.id,
+        customerId: customer.customer_id || customer.id,
+        claimed_by_customer: true,
+        claim_status: 'claimed',
+        claimed_at: existing[0].claimed_at || now,
+        updatedAt: now,
+      });
+      const grants = await revokeGuestGrants(entities, job.id, 'job_claimed');
+      if (reservation.use.status !== 'completed') await completeVerificationUse(entities, reservation.challenge, reservation.use, 'BookingClaim', existing[0].id);
+      await entities.BookingClaim.update(existing[0].id, { guest_grants_revoked_at: grants.revokedAt });
+      return { customer, job: reconciledJob, alreadyClaimed: true };
+    }
+    return { error: Response.json({ error: 'This verification proof has already been used.' }, { status: 409 }) };
+  }
+
   const now = new Date().toISOString();
-  const phone = profile.phone_e164 || normalizePhone(profileData.phone_e164) || normalizePhone(jobs[0]?.customer_phone_e164) || normalizePhone(jobs[0]?.customer_phone) || '';
-  const data = { customer_id: profile.id, user_id: user.id, name: profile.name || profile.full_name || user.full_name || email, full_name: profile.full_name || profile.name || user.full_name || email, email, phone, phone_e164: phone, phone_display: phone, status: existing[0]?.status || 'active', tags: existing[0]?.tags || ['customer'], last_activity_date: now };
-  if (existing[0]) return await base44.asServiceRole.entities.Customer.update(existing[0].id, data);
-  return await base44.asServiceRole.entities.Customer.create({ ...data, createdAt: now });
-}
+  let claim;
+  try {
+    claim = await entities.BookingClaim.create({
+      job_id: job.id,
+      customer_account_id: customer.id,
+      user_id: user.id,
+      verification_use_id: reservation.use.id,
+      verified_channel: reservation.challenge.channel,
+      claimed_at: now,
+      status: 'completed',
+    });
+  } catch (error) {
+    const existing = await entities.BookingClaim.filter({ job_id: job.id }, '-claimed_at', 1).catch(() => []);
+    if (existing[0]?.user_id !== user.id) throw error;
+    claim = existing[0];
+  }
 
-async function resolveScooter(base44, customer, source = {}, jobId = '') {
-  const stableId = customer.customer_id || customer.id;
-  const fromLabel = splitAssetLabel(source.asset_label || source.scooter_make_model || source.scooter_details || '');
-  const data = { make: source.scooter_make || source.scooterMake || source.make || source.booking_submission?.scooterMake || source.intake?.make || fromLabel.make, model: source.scooter_model || source.scooterModel || source.model || source.booking_submission?.scooterModel || source.intake?.model || fromLabel.model, serial_number: source.serial_number || source.intake?.serial_number || source.booking_submission?.serial_number || '', colour: source.colour || source.color || source.booking_submission?.colour || '', notes: source.notes || source.intake?.physical_condition || source.booking_submission?.urgencyOrSafetyNotes || '' };
-  if (!data.make && !data.model && !data.serial_number) return null;
-  const [byStable, byAccount] = await Promise.all([
-    base44.asServiceRole.entities.Scooter.filter({ customer_id: stableId }, '-updated_date', 100).catch(() => []),
-    base44.asServiceRole.entities.Scooter.filter({ customer_account_id: customer.id }, '-updated_date', 100).catch(() => []),
-  ]);
-  const existing = [...new Map([...byStable, ...byAccount].map((s) => [s.id, s])).values()].find((s) => scooterMatches(s, data));
-  if (existing) return await base44.asServiceRole.entities.Scooter.update(existing.id, { customer_id: stableId, customer_account_id: customer.id, job_id: addIdList(existing.job_id, jobId) });
-  return await base44.asServiceRole.entities.Scooter.create({ ...data, color: data.colour, customer_id: stableId, customer_account_id: customer.id, job_id: jobId || '' });
+  const updatedJob = await entities.Job.update(job.id, {
+    customer_account_id: customer.id,
+    customer_user_id: user.id,
+    customer_id: customer.customer_id || customer.id,
+    customerId: customer.customer_id || customer.id,
+    customer_profile_id: '',
+    claimed_by_customer: true,
+    claim_status: 'claimed',
+    claimed_at: now,
+    updatedAt: now,
+  });
+  const grantResult = await revokeGuestGrants(entities, job.id, 'job_claimed');
+  await entities.BookingClaim.update(claim.id, { guest_grants_revoked_at: grantResult.revokedAt });
+  await completeVerificationUse(entities, reservation.challenge, reservation.use, 'BookingClaim', claim.id);
+  await entities.Customer.update(customer.id, { last_activity_date: now }).catch(() => null);
+  await entities.AuditEvent.create({
+    event_type: 'guest_job_claimed',
+    job_id: job.id,
+    customer_id: customer.customer_id || customer.id,
+    customer_account_id: customer.id,
+    actor_id: user.id,
+    actor_name: user.full_name || user.email || 'Customer',
+    actor_role: 'customer',
+    outcome: 'succeeded',
+    summary: `Guest booking ${job.reference || job.id} claimed by authenticated customer`,
+    visibility: 'internal',
+    metadata: { identity_version: 2, verified_channel: reservation.challenge.channel, guest_grants_revoked: grantResult.revoked },
+  }).catch(() => null);
+  return { customer, job: updatedJob, alreadyClaimed: false };
 }
 
 Deno.serve(async (req) => {
   try {
+    if (req.method !== 'POST') return Response.json({ error: 'Method not allowed' }, { status: 405 });
     const base44 = createClientFromRequest(req);
-    const payload = await req.json().catch(() => ({}));
-    const user = await base44.auth.me();
+    const user = await base44.auth.me().catch(() => null);
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    if (isStaffAccount(user)) return Response.json({ linked: 0, skipped: 'staff account' });
-    const email = normalizeEmail(user.email);
-    if (!email) return Response.json({ error: 'Your account needs an email address to manage jobs.' }, { status: 400 });
-
-    const [byUser, byEmail] = await Promise.all([
-      base44.asServiceRole.entities.Job.filter({ customer_user_id: user.id }, '-created_date', 100),
-      base44.asServiceRole.entities.Job.filter({ customer_email: email }, '-created_date', 100),
-    ]);
-    const jobs = [...new Map([...byUser, ...byEmail].map((job) => [job.id, job])).values()];
-    const profile = await ensureProfile(base44, user, email, jobs, payload.profile || {});
-    const customer = await ensureCustomer(base44, user, profile, email, jobs, payload.profile || {});
-    const stableCustomerId = customer.customer_id || profile.id;
-
-    await resolveScooter(base44, customer, payload.profile || {}, '');
-    let jobIdList = user.job_id || customer.job_id || '';
-    let linked = 0;
-    for (const job of jobs) {
-      const stableJobId = job.job_id || job.id;
-      jobIdList = addIdList(jobIdList, stableJobId);
-      const scooter = await resolveScooter(base44, customer, job, job.id);
-      const assetLabel = scooter ? [scooter.make, scooter.model].filter(Boolean).join(' ') : (job.asset_label || job.scooter_make_model || '');
-      await base44.asServiceRole.entities.Job.update(job.id, { job_id: stableJobId, customer_profile_id: profile.id, customer_user_id: user.id, customer_id: stableCustomerId, customerId: stableCustomerId, customer_account_id: customer.id, asset_id: scooter?.id || job.asset_id || '', asset_label: assetLabel, scooter_make_model: assetLabel || job.scooter_make_model || '', claimed_by_customer: true, updatedAt: new Date().toISOString() });
-      linked += 1;
+    if (!isCustomer(user)) return Response.json({ error: 'Customer account required' }, { status: 403 });
+    const payload = await req.json().catch(() => ({}));
+    const profile = payload.profile || {};
+    const entities = base44.asServiceRole.entities;
+    const existingCustomer = await findCanonicalCustomer(entities, user.id);
+    if (!existingCustomer) {
+      const completedPhoneUses = await entities.PhoneVerificationUse.filter(
+        { user_id: user.id, status: 'completed' },
+        '-completed_at',
+        2,
+      ).catch(() => []);
+      if (!completedPhoneUses[0]) {
+        return Response.json({
+          error: 'Verify your mobile number before creating a customer account.',
+          code: 'PHONE_VERIFICATION_REQUIRED',
+        }, { status: 403 });
+      }
     }
-    await base44.asServiceRole.entities.Customer.update(customer.id, { job_id: jobIdList, last_activity_date: new Date().toISOString() });
-    const userUpdates = { is_customer: true, customer_id: stableCustomerId, customer_account_id: customer.id };
-    if (jobIdList) userUpdates.job_id = jobIdList;
-    await base44.asServiceRole.entities.User.update(user.id, userUpdates);
+    const customer = existingCustomer || await ensureCanonicalCustomer(
+      entities,
+      user,
+      profile,
+      'authenticated_signup',
+    );
 
-    // Trigger welcome email to customer and notification to staff
-    const origin = req.headers.get('origin') || '';
-    await base44.functions.invoke('sendNotification', { event_type: 'user_welcome', user_id: user.id, origin }).catch((e) => console.warn('[claimCustomerJobs] welcome notification failed:', e.message));
+    if (payload.action === 'claimGuestJob' || payload.job_id) {
+      const result = await claimGuestJob(entities, user, customer, payload);
+      if (result.error) return result.error;
+      return Response.json({
+        linked: result.alreadyClaimed ? 0 : 1,
+        claimed: !result.alreadyClaimed,
+        job_id: result.job.id,
+        customer_account: customerAccountDto(result.customer, user),
+      });
+    }
 
-    return Response.json({ linked, customer_profile_id: profile.id, customer_account_id: customer.id });
+    // Backwards-compatible bootstrap action used after login/registration. It
+    // creates only the caller's canonical account and never searches or claims
+    // jobs by email, phone, or mutable User fields.
+    return Response.json({ linked: 0, customer_account: customerAccountDto(customer, user) });
   } catch (error) {
-    console.error('[claimCustomerJobs] Error:', error.message, error.stack);
-    return Response.json({ error: 'Your customer account could not be linked. Please try again.' }, { status: 500 });
+    const status = String(error?.code || '').includes('CONFLICT') || String(error?.code || '').includes('LINK') ? 409 : 500;
+    console.error('[claimCustomerJobs] failed', JSON.stringify({ code: error?.code || '', message: error?.message || String(error) }));
+    return Response.json({ error: status === 409 ? 'Your account has an identity conflict that requires support review.' : 'Your customer account could not be prepared. Please try again.' }, { status });
   }
 });

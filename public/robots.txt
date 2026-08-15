@@ -15,7 +15,12 @@ Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /oauth/consent
+Disallow: /feedback
 Disallow: /book/guest
 Disallow: /track/
+Disallow: /customers
+Disallow: /job-board
+Disallow: /parts-catalogue
 
 Sitemap: https://ontherunelectrics.com.au/sitemap.xml

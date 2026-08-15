@@ -31,14 +31,14 @@ export default function PortalPreviewSection() {
             Track your repair from your phone
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed max-w-md">
-            Every job has its own live status. Approve quotes, check progress, and know the moment your scooter is ready — no phone calls needed.
+            Every repair has its own current status. Check progress, review workshop updates, and know when your scooter is ready.
           </p>
 
           <ul className="mt-6 space-y-3">
             {[
               { icon: CheckCircle2, text: "Real-time job status updates" },
-              { icon: Clock,        text: "Approve or decline quotes online" },
-              { icon: CreditCard,   text: "View and pay invoices securely" },
+              { icon: Clock,        text: "Review repair updates and milestones" },
+              { icon: CreditCard,   text: "View issued invoices and payment status" },
               { icon: Wrench,       text: "Full repair history on file" },
             ].map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3 text-sm text-muted-foreground">

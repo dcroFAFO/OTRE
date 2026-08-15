@@ -1,27 +1,10 @@
-// Simple permission helpers for the admin > technician > customer hierarchy.
+// UI capability helpers for the canonical admin/customer role model.
 
 import { isStaffRole, hasCapability, hasAtLeastRole, normalizeRole } from "./roles";
 
 const ACTION_PERMISSIONS = {
   admin: ["*"],
-  technician: [
-    "job.view.all",
-    "job.create",
-    "job.update",
-    "job.status.change",
-    "job.assign",
-    "job.reschedule",
-    "job.note.internal",
-    "job.note.customer",
-    "job.attach",
-    "job.quote.manage",
-    "job.invoice.manage",
-    "job.payment.manage",
-    "job.reopen",
-    "job.checklist.update",
-    "dashboard.view",
-  ],
-  customer: ["job.view.own", "quote.approve", "quote.reject", "customer.upload", "customer.message", "invoice.pay"],
+  customer: ["job.view.own", "customer.upload", "customer.message"],
 };
 
 export function can(role, action) {

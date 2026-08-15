@@ -1,16 +1,16 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { resolveInlineImages, generateBlogImage } from '../../shared/blogImages.ts';
 
 const slugify = (value) => String(value || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90);
 const wordCount = (text) => String(text || "").trim().split(/\s+/).filter(Boolean).length;
 const readingTime = (text) => Math.max(1, Math.ceil(wordCount(text) / 220));
-const isStaff = (user) => ["admin", "employee", "technician"].includes(user?.role) || user?.data?.is_customer === false;
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || !isStaff(user)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
     const input = await req.json();
     if (!input.topic) return Response.json({ error: "Topic is required" }, { status: 400 });
 
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     };
     const lengthSpec = LENGTH_MAP[input.article_length] || LENGTH_MAP.medium;
 
-    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    const result: any = await base44.asServiceRole.integrations.Core.InvokeLLM({
       model: "gemini_3_1_pro",
       add_context_from_internet: true,
       prompt: `You are a professional content writer for On The Run Electrics, a Brisbane-based electric scooter repair and service workshop. Write a high-quality, SEO-friendly blog article that reads like it was written by a real human mechanic who knows their stuff.

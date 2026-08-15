@@ -2,6 +2,11 @@
   "name": "RateLimit",
   "type": "object",
   "properties": {
+    "bucket_key": {
+      "type": "string",
+      "unique": true,
+      "description": "Unique rate-limit scope plus fixed-window timestamp used to reserve a single counter bucket under concurrency."
+    },
     "scope_key": {
       "type": "string",
       "description": "Throttle bucket identifier, e.g. 'booking:ip:1.2.3.4' or 'booking:email:someone@example.com'."
@@ -14,7 +19,7 @@
     "count": {
       "type": "number",
       "default": 0,
-      "description": "Number of requests seen for this scope_key within the window."
+      "description": "Best-effort observability count. RateLimitHit unique sequences are authoritative for enforcement."
     },
     "last_seen_at": {
       "type": "string",

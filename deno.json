@@ -1,0 +1,20 @@
+{
+  "lock": false,
+  "nodeModulesDir": "none",
+  "compilerOptions": {
+    "strict": false,
+    "useUnknownInCatchVariables": false
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-import-prefix",
+        "no-explicit-any",
+        "no-control-regex",
+        "no-empty",
+        "no-unused-vars",
+        "require-await"
+      ]
+    }
+  }
+}

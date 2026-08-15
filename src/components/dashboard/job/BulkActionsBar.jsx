@@ -1,19 +1,20 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { changeStatus } from "@/services/jobService";
+import { archiveJob, changeStatus } from "@/services/jobService";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { X, Loader2, Bell, Trash2 } from "lucide-react";
-import { getStatus, JOB_STATUSES } from "@/config/jobConfig";
+import { X, Loader2, Archive } from "lucide-react";
+import { JOB_STATUSES } from "@/config/jobConfig";
 import { toast } from "sonner";
 
-export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }) {
+export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone, actorRole }) {
   const [statusValue, setStatusValue] = useState("");
   const [loading, setLoading] = useState(false);
 
   const count = selectedIds.length;
-  const emailableCount = allJobs.filter((j) => selectedIds.includes(j.id) && j.customer_email).length;
+  const canManage = actorRole === "admin";
+
+  if (!canManage) return null;
 
   const applyStatus = async () => {
     if (!statusValue) return;
@@ -31,38 +32,15 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
     }
   };
 
-  const deleteJobs = async () => {
+  const archiveJobs = async () => {
     setLoading(true);
     try {
-      await Promise.all(selectedIds.map((id) => base44.entities.Job.delete(id)));
-      toast.success(`Deleted ${count} job${count !== 1 ? "s" : ""}`, { description: "The selected jobs have been permanently removed." });
+      const selectedJobs = allJobs.filter((job) => selectedIds.includes(job.id));
+      await Promise.all(selectedJobs.map((job) => archiveJob(job, "Bulk archive from job management")));
+      toast.success(`Archived ${count} job${count !== 1 ? "s" : ""}`, { description: "Linked records and customer history were retained." });
       onDone();
     } catch (err) {
-      toast.error("Couldn't delete jobs", { description: "Please try again." });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendNotifications = async () => {
-    setLoading(true);
-    const selectedJobs = allJobs.filter((j) => selectedIds.includes(j.id));
-    try {
-      await Promise.all(
-        selectedJobs
-          .filter((j) => j.customer_email)
-          .map((j) =>
-            base44.integrations.Core.SendEmail({
-              to: j.customer_email,
-              subject: `Update on your job: ${j.asset_label || j.reference || "your repair"}`,
-              body: `Hi ${j.customer_name},\n\nThis is an update regarding your job (${j.reference || j.id}).\n\nCurrent status: ${getStatus(j.status).label}\n\nPlease contact us if you have any questions.\n\nThank you.`,
-            })
-          )
-      );
-      toast.success("Notifications sent", { description: `Emailed ${selectedJobs.filter(j => j.customer_email).length} customer${selectedJobs.filter(j => j.customer_email).length !== 1 ? "s" : ""}` });
-      onDone();
-    } catch (err) {
-      toast.error("Couldn't send notifications", { description: "Please try again." });
+      toast.error("Couldn't archive jobs", { description: "Please try again." });
     } finally {
       setLoading(false);
     }
@@ -78,8 +56,8 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
 
       {/* Status change */}
       <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-[180px]">
-        <Select value={statusValue} onValueChange={setStatusValue}>
-          <SelectTrigger className="h-8 flex-1 sm:w-44 text-xs">
+        <Select value={statusValue} onValueChange={setStatusValue} disabled={loading}>
+          <SelectTrigger className="h-11 flex-1 sm:w-44 text-xs">
             <SelectValue placeholder="Set status…" />
           </SelectTrigger>
           <SelectContent>
@@ -88,58 +66,32 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
             ))}
           </SelectContent>
         </Select>
-        <Button size="sm" disabled={!statusValue || loading} onClick={applyStatus} className="h-8 text-xs">
+        <Button size="sm" disabled={!statusValue || loading} onClick={applyStatus} className="h-11 text-xs">
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
         </Button>
       </div>
 
       <div className="hidden sm:block h-4 w-px bg-border" />
 
-      {/* Send notifications */}
+      {/* Bulk archive */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={loading}>
-            <Bell className="h-3.5 w-3.5" />
-            Send notification
+          <Button size="sm" variant="outline" className="h-11 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={loading}>
+            <Archive className="h-3.5 w-3.5" />
+            Archive
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Email {emailableCount} customer{emailableCount !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogTitle>Archive {count} job{count !== 1 ? "s" : ""}?</AlertDialogTitle>
             <AlertDialogDescription>
-              A status update email will be sent immediately to each selected customer with an email address. This cannot be undone.
+              Archived jobs leave active work lists, while linked invoices, assets, notes, and customer history are retained.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={sendNotifications} disabled={emailableCount === 0}>
-              Send {emailableCount} email{emailableCount !== 1 ? "s" : ""}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="hidden sm:block h-4 w-px bg-border" />
-
-      {/* Bulk delete */}
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive" disabled={loading}>
-            <Trash2 className="h-3.5 w-3.5" />
-            Delete
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {count} job{count !== 1 ? "s" : ""}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the selected job{count !== 1 ? "s" : ""} and cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteJobs} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete {count} job{count !== 1 ? "s" : ""}
+            <AlertDialogAction onClick={archiveJobs}>
+              Archive {count} job{count !== 1 ? "s" : ""}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -147,7 +99,7 @@ export default function BulkActionsBar({ selectedIds, allJobs, onClear, onDone }
 
       <div className="flex-1" />
 
-      <Button size="sm" variant="ghost" className="h-8 text-xs gap-1 text-muted-foreground" onClick={onClear}>
+      <Button size="sm" variant="ghost" className="h-11 text-xs gap-1 text-muted-foreground" onClick={onClear}>
         <X className="h-3.5 w-3.5" /> Clear
       </Button>
     </div>

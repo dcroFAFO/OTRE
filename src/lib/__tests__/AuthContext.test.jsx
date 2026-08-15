@@ -3,10 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  authGet: vi.fn(),
   clearStoredBase44Token: vi.fn(),
-  createAxiosClient: vi.fn(),
-  publicGet: vi.fn(),
+  getCurrentUserWithToken: vi.fn(),
+  getPublicAppSettings: vi.fn(),
   setToken: vi.fn(),
 }));
 
@@ -19,6 +18,8 @@ vi.mock("@/api/base44Client", () => ({
     },
   },
   clearStoredBase44Token: mocks.clearStoredBase44Token,
+  getCurrentUserWithToken: mocks.getCurrentUserWithToken,
+  getPublicAppSettings: mocks.getPublicAppSettings,
 }));
 
 vi.mock("@/lib/app-params", () => ({
@@ -26,10 +27,6 @@ vi.mock("@/lib/app-params", () => ({
     appId: "test-app",
     token: "stored-token",
   },
-}));
-
-vi.mock("@base44/sdk/dist/utils/axios-client", () => ({
-  createAxiosClient: mocks.createAxiosClient,
 }));
 
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
@@ -50,14 +47,11 @@ function AuthProbe() {
 
 describe("AuthProvider stored-token handling", () => {
   beforeEach(() => {
-    mocks.publicGet.mockResolvedValue({ id: "test-app", public_settings: "public_without_login" });
-    mocks.createAxiosClient.mockImplementation(({ baseURL }) => ({
-      get: baseURL === "/api/apps/public" ? mocks.publicGet : mocks.authGet,
-    }));
+    mocks.getPublicAppSettings.mockResolvedValue({ id: "test-app", public_settings: "public_without_login" });
   });
 
   it("treats an expired stored token as signed out without an app-wide error", async () => {
-    mocks.authGet.mockRejectedValue({ response: { status: 401 } });
+    mocks.getCurrentUserWithToken.mockRejectedValue({ status: 401 });
 
     render(
       <AuthProvider>
@@ -73,7 +67,7 @@ describe("AuthProvider stored-token handling", () => {
   });
 
   it("applies a verified stored token before rendering authenticated routes", async () => {
-    mocks.authGet.mockResolvedValue({ data: { id: "user-1", email: "rider@example.com" } });
+    mocks.getCurrentUserWithToken.mockResolvedValue({ id: "user-1", email: "rider@example.com" });
 
     render(
       <AuthProvider>

@@ -8,11 +8,12 @@ import BlogArticleHeader from "@/components/blog/BlogArticleHeader";
 import BlogShareBar from "@/components/blog/BlogShareBar";
 import BlogComments from "@/components/blog/BlogComments";
 import NewsPageShell from "@/components/blog/NewsPageShell";
+import { CardSkeleton, ErrorState } from "@/components/shared";
 import { listPublicBlog } from "@/services/blogService";
 
 export default function BlogPostPage() {
   const { slug } = useParams();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["publicBlog", "post", slug],
     queryFn: () => listPublicBlog({ action: "post", slug }),
   });
@@ -24,7 +25,16 @@ export default function BlogPostPage() {
   if (isLoading) {
     return (
       <Page>
-        <p className="text-center text-sm text-muted-foreground">Loading post…</p>
+        <CardSkeleton count={2} label="Loading article" />
+      </Page>
+    );
+  }
+
+  if (error) {
+    return (
+      <Page>
+        <SEO title="Article unavailable | On The Run Electrics" noindex />
+        <ErrorState title="This article could not be loaded" error={error} onRetry={refetch} />
       </Page>
     );
   }

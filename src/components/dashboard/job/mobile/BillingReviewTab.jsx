@@ -35,7 +35,7 @@ export default function BillingReviewTab({ job, actor, canEdit, invoiceReadOnly,
             <h3 className="font-heading text-sm font-extrabold text-emerald-800">Payment received externally?</h3>
           </div>
           <p className="text-xs text-emerald-700">
-            Mark this invoice as settled if payment was received via cash, bank transfer, or another method not handled by the online checkout.
+            Mark this invoice as settled only after confirming payment was received by the workshop.
           </p>
           <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={settling} onClick={settleInvoice}>
             {settling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}

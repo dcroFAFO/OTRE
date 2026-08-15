@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 const STATUS_LABELS = {
   available: "Available",
   applied: "Applied",
-  locked: "In checkout",
+  locked: "Locked for processing",
   redeemed: "Used",
   expired: "Expired",
   released: "Released",

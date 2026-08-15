@@ -4,14 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import SEO from "@/components/SEO";
 import BlogPostCard from "@/components/blog/BlogPostCard";
 import NewsPageShell from "@/components/blog/NewsPageShell";
+import { CardSkeleton, ErrorState } from "@/components/shared";
 import { listPublicBlog } from "@/services/blogService";
 
 export default function BlogTagPage() {
   const { slug } = useParams();
-  const { data, isLoading } = useQuery({ queryKey: ["publicBlog", "tag", slug], queryFn: () => listPublicBlog({ action: "tag", slug }) });
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: ["publicBlog", "tag", slug], queryFn: () => listPublicBlog({ action: "tag", slug }) });
   const tag = data?.tag;
   const categories = data?.categories || [];
   const title = `${tag?.name || "News Topic"} | On The Run Electrics`;
   const description = tag?.description || `Explore On The Run Electrics articles about ${tag?.name || "electric scooter repair"}, servicing, maintenance and rider safety.`;
-  return <NewsPageShell><SEO title={title} description={description} canonical={`/blog/tag/${slug}`} noindex={!isLoading && !tag} /><Link to="/blog" className="text-sm font-semibold text-accent">← News and Events</Link><h1 className="mt-4 border-b-4 border-foreground pb-4 font-heading text-4xl font-extrabold">#{tag?.name || "Topic"}</h1>{tag?.description && <p className="mt-3 text-muted-foreground">{tag.description}</p>}{isLoading ? <p className="mt-8 text-sm text-muted-foreground">Loading articles…</p> : <div className="mt-8 grid gap-6 md:grid-cols-3">{(data?.posts || []).map((post) => <BlogPostCard key={post.id} post={post} category={categories.find((c) => c.id === post.category_id)} />)}</div>}{!isLoading && (data?.posts || []).length === 0 && <p className="mt-8 text-muted-foreground">No published articles with this topic.</p>}</NewsPageShell>;
+  return <NewsPageShell><SEO title={title} description={description} canonical={`/blog/tag/${slug}`} noindex={Boolean(error) || (!isLoading && !tag)} /><Link to="/blog" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent">← News and Events</Link><h1 className="mt-4 border-b-4 border-foreground pb-4 font-heading text-4xl font-extrabold">#{tag?.name || "Topic"}</h1>{tag?.description && <p className="mt-3 text-muted-foreground">{tag.description}</p>}{isLoading && <CardSkeleton count={3} className="mt-8 md:grid-cols-3" label="Loading topic articles" />}{error && <ErrorState className="mt-8" title="Topic articles could not be loaded" error={error} onRetry={refetch} />}{!isLoading && !error && !tag && <p className="mt-8 rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">This news topic could not be found.</p>}{!isLoading && !error && tag && <div className="mt-8 grid gap-6 md:grid-cols-3">{(data?.posts || []).map((post) => <BlogPostCard key={post.id} post={post} category={categories.find((c) => c.id === post.category_id)} />)}</div>}{!isLoading && !error && tag && (data?.posts || []).length === 0 && <p className="mt-8 text-muted-foreground">No published articles with this topic.</p>}</NewsPageShell>;
 }
